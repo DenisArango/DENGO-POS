@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary: 37, 99, 235;
+    --secondary: 239, 68, 68;
+    --background: 255, 255, 255;
+    --foreground: 15, 23, 42;
+  }
+
+  body {
+    @apply bg-white text-slate-900;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-600 active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply btn bg-secondary-600 text-white hover:bg-secondary-700 focus-visible:ring-secondary-600 active:scale-[0.98];
+  }
+
+  .btn-outline {
+    @apply btn border border-gray-300 bg-white hover:bg-gray-50 focus-visible:ring-gray-500;
+  }
+
+  .btn-sm {
+    @apply h-8 px-3 text-sm;
+  }
+
+  .btn-md {
+    @apply h-10 px-4 text-sm;
+  }
+
+  .btn-lg {
+    @apply h-12 px-6;
+  }
+
+  .card {
+    @apply rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md;
+  }
+
+  .input {
+    @apply flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .label {
+    @apply text-sm font-medium text-gray-700;
+  }
+
+  /* Animaciones para elementos que entran */
+  .animate-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  /* Scrollbar personalizado */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+  }
+}
+
+/* Utilidades para animaciones con Framer Motion */
+.will-change-transform {
+  will-change: transform;
+}

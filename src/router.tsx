@@ -25,6 +25,10 @@ const CashFlowReport = lazy(() => import('./pages/reports/CashFlowReport'))
 const SalesByPeriodReport = lazy(() => import('./pages/reports/SalesByPeriodReport'))
 const HourlySalesReport = lazy(() => import('./pages/reports/HourlySalesReport'))
 const ProfitMarginsReport = lazy(() => import('./pages/reports/ProfitMarginsReport'))
+const ProductRotationReport = lazy(() => import('./pages/reports/ProductRotationReport'))
+const CreditSalesReport = lazy(() => import('./pages/reports/CreditSalesReport'))
+const UserActivityReport = lazy(() => import('./pages/reports/UserActivityReport'))
+const InventoryMovementsReport = lazy(() => import('./pages/reports/InventoryMovementsReport'))
 
 export default function Router() {
   return (
@@ -56,6 +60,10 @@ export default function Router() {
           <Route path="/reports/sales-by-period" element={<SalesByPeriodReport />} />
           <Route path="/reports/hourly-sales" element={<HourlySalesReport />} />
           <Route path="/reports/profit-margins" element={<ProfitMarginsReport />} />
+          <Route path="/reports/product-rotation" element={<ProductRotationReport />} />
+          <Route path="/reports/credit-sales" element={<CreditSalesReport />} />
+          <Route path="/reports/user-activity" element={<UserActivityReport />} />
+          <Route path="/reports/inventory-movements" element={<InventoryMovementsReport />} />
         </Route>
 
         {/* 404 */}

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { Toaster } from 'sonner'
 import Router from './router'
+import { StoreProvider } from './contexts/StoreContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,19 +17,21 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Router />
-        <Toaster 
-          position="top-right"
-          richColors
-          closeButton
-          expand={false}
-          duration={3000}
-        />
-      </BrowserRouter>
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
+    <StoreProvider>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <Router />
+          <Toaster 
+            position="top-right"
+            richColors
+            closeButton
+            expand={false}
+            duration={3000}
+          />
+        </BrowserRouter>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    </StoreProvider>
   )
 }
 

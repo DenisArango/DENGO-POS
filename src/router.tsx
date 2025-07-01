@@ -4,6 +4,10 @@ import MainLayout from './components/layout/MainLayout'
 import AuthLayout from './components/layout/AuthLayout'
 import LoadingScreen from './components/common/LoadingScreen'
 import ProtectedRoute from './components/auth/ProtectedRoute'
+import StoreSelectionLogin from './components/auth/StoreSelectionLogin'
+import UsersManagement from './pages/Users'
+import RolesPermissions from './pages/RolesPermissions'
+import StoresManagement from './pages/StoresManagment'
 
 // Lazy loading de páginas
 const Login = lazy(() => import('./pages/Login'))
@@ -37,6 +41,7 @@ export default function Router() {
         {/* Rutas públicas */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
+          <Route path="/select-store" element={<StoreSelectionLogin />} />
         </Route>
 
         {/* Rutas protegidas */}
@@ -64,6 +69,9 @@ export default function Router() {
           <Route path="/reports/credit-sales" element={<CreditSalesReport />} />
           <Route path="/reports/user-activity" element={<UserActivityReport />} />
           <Route path="/reports/inventory-movements" element={<InventoryMovementsReport />} />
+          <Route path="/settings/users" element={<UsersManagement />} />
+          <Route path="/settings/roles" element={<RolesPermissions />} />
+          <Route path="/settings/stores" element={<StoresManagement />} />
         </Route>
 
         {/* 404 */}

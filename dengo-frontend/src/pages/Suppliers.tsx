@@ -585,11 +585,11 @@ export default function Suppliers() {
                     setShowCreateModal(false)
                     setShowEditModal(false)
                   }}
-                  className="btn-secondary"
+                  className="btn-outline btn-md"
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary">
+                <button type="submit" className="btn-primary btn-md">
                   {showCreateModal ? 'Crear' : 'Actualizar'} Proveedor
                 </button>
               </div>
@@ -755,10 +755,10 @@ export default function Suppliers() {
                   ¿Estás seguro de que deseas eliminar este proveedor? Esta acción no se puede deshacer.
                 </p>
                 <div className="flex gap-3 justify-end">
-                  <button onClick={() => setShowDeleteConfirm(null)} className="btn-secondary">
+                  <button onClick={() => setShowDeleteConfirm(null)} className="btn-outline btn-md">
                     Cancelar
                   </button>
-                  <button onClick={() => handleDelete(showDeleteConfirm)} className="btn-danger">
+                  <button onClick={() => handleDelete(showDeleteConfirm)} className="btn-danger btn-md">
                     Eliminar
                   </button>
                 </div>

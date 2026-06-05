@@ -22,6 +22,8 @@ import transferRoutes from './routes/transfers.js'
 import quotationRoutes from './routes/quotations.js'
 import reportRoutes from './routes/reports.js'
 import auditRoutes from './routes/audit.js'
+import unitRoutes from './routes/units.js'
+import aiRoutes from './routes/ai.js'
 
 const fastify = Fastify({
   logger: {
@@ -74,6 +76,8 @@ async function bootstrap() {
   await fastify.register(quotationRoutes,    { prefix: '/api/quotations' })
   await fastify.register(reportRoutes,       { prefix: '/api/reports' })
   await fastify.register(auditRoutes,        { prefix: '/api/audit' })
+  await fastify.register(unitRoutes,         { prefix: '/api/units' })
+  await fastify.register(aiRoutes,           { prefix: '/api/ai' })
 
   // Global error handler
   fastify.setErrorHandler((error, _request, reply) => {
@@ -91,6 +95,10 @@ async function bootstrap() {
   fastify.setNotFoundHandler((_request, reply) => {
     reply.status(404).send({ error: 'Ruta no encontrada' })
   })
+
+  // Warm up DB connection pool before accepting requests
+  await prisma.$connect()
+  fastify.log.info('✅ Database connected')
 
   // Start
   await fastify.listen({ port: config.port, host: config.host })

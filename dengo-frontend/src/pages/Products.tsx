@@ -33,7 +33,9 @@ interface Product {
   brand?: string
   productName?: string
   category?: Category | string
+  categoryId?: string
   baseUnit?: string
+  baseUnitId?: string
   basePrice: number
   cost?: number
   stock?: number
@@ -46,6 +48,7 @@ interface Product {
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [units, setUnits] = useState<{ id: string; name: string; abbreviation: string; type: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -60,21 +63,31 @@ export default function Products() {
     Promise.all([
       api.get<Product[]>('/api/products'),
       api.get<Category[]>('/api/categories'),
+      api.get<{ id: string; name: string; abbreviation: string; type: string }[]>('/api/units'),
     ])
-      .then(([prods, cats]) => {
+      .then(([prods, cats, unitList]) => {
         // Normalise backend shape → UI shape
         const normalised = prods.map(p => ({
           ...p,
           fullName: p.fullName ?? p.name ?? '',
           category: typeof p.category === 'object' ? (p.category as Category)?.name ?? '' : p.category ?? '',
+          categoryId: typeof p.category === 'object' ? (p.category as Category)?.id : (p as any).categoryId,
           sku: p.sku ?? '',
-          baseUnit: p.baseUnit ?? 'Pieza',
-          stock: p.stock ?? 0,
-          minStock: p.minStock ?? 0,
-          variations: p.variations ?? [],
+          baseUnit: typeof p.baseUnit === 'object' ? (p.baseUnit as { name?: string })?.name ?? 'u' : p.baseUnit ?? 'u',
+          baseUnitId: typeof p.baseUnit === 'object' ? (p.baseUnit as { id?: string })?.id : (p as any).baseUnitId,
+          basePrice: Number(p.basePrice ?? 0),
+          cost: Number(p.cost ?? 0),
+          minStock: Number(p.minStock ?? 0),
+          stock: Number(p.stock ?? 0),
+          variations: (p.variations ?? []).map((v: ProductVariation) => ({
+            ...v,
+            price: Number(v.price ?? 0),
+            conversionFactor: Number(v.conversionFactor ?? 1),
+          })),
         }))
         setProducts(normalised)
         setCategories(cats)
+        setUnits(unitList)
       })
       .catch(e => toast.error(e.message))
       .finally(() => setLoading(false))
@@ -114,6 +127,15 @@ export default function Products() {
     const isEdit = modalMode === 'edit' && editingProduct?.id
     const isDuplicate = modalMode === 'duplicate'
 
+    const resolvedCategoryId =
+      product.categoryId ??
+      (typeof product.category === 'object' ? (product.category as Category)?.id : undefined) ??
+      categories.find(c => c.name === product.category)?.id
+
+    const resolvedBaseUnitId =
+      product.baseUnitId ??
+      units.find(u => u.name === product.baseUnit || u.abbreviation === product.baseUnit)?.id
+
     const payload = {
       name: product.fullName ?? product.name,
       barcode: product.barcode,
@@ -122,7 +144,8 @@ export default function Products() {
       basePrice: product.basePrice,
       cost: product.cost,
       minStock: product.minStock,
-      categoryId: product.categoryId ?? (typeof product.category === 'object' ? product.category?.id : undefined),
+      categoryId: resolvedCategoryId,
+      baseUnitId: resolvedBaseUnitId,
       variations: product.variations,
       isActive: product.isActive !== false,
     }
@@ -449,6 +472,8 @@ export default function Products() {
         onSave={handleSaveProduct}
         editingProduct={editingProduct}
         mode={modalMode}
+        categories={categories}
+        units={units}
       />
     </div>
   )

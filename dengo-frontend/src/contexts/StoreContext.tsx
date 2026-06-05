@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import type { Store } from '../types'
+import { useAuthStore } from '../store'
 
 interface StoreContextType {
   currentStore: Store | null
@@ -12,97 +13,99 @@ interface StoreContextType {
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined)
 
-// Hook personalizado para usar el contexto
 export const useStore = () => {
   const context = useContext(StoreContext)
-  if (!context) {
-    throw new Error('useStore debe ser usado dentro de StoreProvider')
-  }
+  if (!context) throw new Error('useStore debe ser usado dentro de StoreProvider')
   return context
 }
 
-interface StoreProviderProps {
-  children: ReactNode
+function branchToStore(b: any): Store {
+  const rawStatus = (b.status ?? 'active').toLowerCase()
+  const status: Store['status'] =
+    rawStatus === 'inactive' ? 'inactive' :
+    rawStatus === 'maintenance' ? 'maintenance' : 'active'
+
+  return {
+    id: b.id,
+    name: b.name,
+    code: b.code ?? b.id.slice(0, 8).toUpperCase(),
+    type: b.type === 'main' ? 'main' : 'branch',
+    address: b.address ?? '',
+    city: b.city ?? b.name,
+    phone: b.phone ?? '',
+    email: b.email ?? '',
+    manager: b.manager ?? '',
+    status,
+    openTime: b.openTime ?? '08:00',
+    closeTime: b.closeTime ?? '20:00',
+    config: {
+      currency: b.currency ?? 'GTQ',
+      timezone: b.timezone ?? 'America/Guatemala',
+      taxRate: Number(b.taxRate ?? 0.12) * (Number(b.taxRate ?? 0.12) <= 1 ? 100 : 1),
+      printerEnabled: b.printerEnabled ?? true,
+    },
+    createdAt: b.createdAt ?? new Date().toISOString(),
+    updatedAt: b.updatedAt ?? new Date().toISOString(),
+  }
 }
 
-// Datos de ejemplo - En producción vendrían de la API
-const mockStores: Store[] = [
-  {
-    id: '1',
-    name: 'Tienda Central',
-    code: 'TC001',
-    type: 'main',
-    address: 'Av. Principal #123, Zona 1',
-    city: 'Ciudad de Guatemala',
-    phone: '+502 2222-3333',
-    email: 'central@empresa.com',
-    manager: 'Juan Pérez',
-    status: 'active',
-    openTime: '07:00',
-    closeTime: '21:00',
-    config: {
-      currency: 'GTQ',
-      timezone: 'America/Guatemala',
-      taxRate: 12,
-      printerEnabled: true
-    },
-    createdAt: '2023-01-15T00:00:00.000Z',
-    updatedAt: '2024-01-15T00:00:00.000Z'
-  },
-  {
-    id: '2',
-    name: 'Sucursal Norte',
-    code: 'SN001',
-    type: 'branch',
-    address: 'Centro Comercial Norte, Local 45',
-    city: 'Mixco',
-    phone: '+502 2222-4444',
-    email: 'norte@empresa.com',
-    manager: 'María García',
-    status: 'active',
-    openTime: '08:00',
-    closeTime: '20:00',
-    config: {
-      currency: 'GTQ',
-      timezone: 'America/Guatemala',
-      taxRate: 12,
-      printerEnabled: true
-    },
-    createdAt: '2023-02-20T00:00:00.000Z',
-    updatedAt: '2024-01-15T00:00:00.000Z'
-  }
-]
-
-export function StoreProvider({ children }: StoreProviderProps) {
+export function StoreProvider({ children }: { children: ReactNode }) {
+  const { token, user } = useAuthStore()
   const [currentStore, setCurrentStore] = useState<Store | null>(null)
   const [availableStores, setAvailableStores] = useState<Store[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [canSwitchStore, setCanSwitchStore] = useState(true)
 
-  // Cargar tiendas disponibles al iniciar
+  // Load branches whenever the token changes (login/logout)
   useEffect(() => {
-    loadStores()
-  }, [])
+    if (!token) {
+      setAvailableStores([])
+      setCurrentStore(null)
+      setIsLoading(false)
+      return
+    }
+    loadStores(token)
+  }, [token])
 
-  const loadStores = async () => {
+  // All authenticated users can switch stores (backend enforces data-level restrictions)
+  useEffect(() => {
+    setCanSwitchStore(true)
+  }, [user?.role])
+
+  const loadStores = async (authToken: string) => {
+    setIsLoading(true)
     try {
-      setIsLoading(true)
-      // Simular carga desde API
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      // En producción, esto vendría de la API basado en el usuario autenticado
-      setAvailableStores(mockStores)
-      
-      // Verificar si hay una tienda guardada en localStorage
-      const savedStoreId = localStorage.getItem('selectedStoreId')
-      if (savedStoreId) {
-        const savedStore = mockStores.find(s => s.id === savedStoreId)
-        if (savedStore && savedStore.status === 'active') {
-          setCurrentStore(savedStore)
-        }
+      const apiUrl = import.meta.env.VITE_API_URL as string
+      const res = await fetch(`${apiUrl}/api/branches`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      })
+
+      if (!res.ok) {
+        // If unauthorized, the global api handler will redirect to login
+        setIsLoading(false)
+        return
       }
-    } catch (error) {
-      console.error('Error al cargar tiendas:', error)
+
+      const branches: any[] = await res.json()
+      if (!Array.isArray(branches) || branches.length === 0) {
+        setIsLoading(false)
+        return
+      }
+
+      const stores: Store[] = branches.map(branchToStore)
+      setAvailableStores(stores)
+
+      // Restore last selected branch or default to first
+      const savedId = localStorage.getItem('selectedStoreId')
+      const saved = stores.find(s => s.id === savedId && s.status === 'active')
+      if (saved) {
+        setCurrentStore(saved)
+      } else if (stores.length > 0) {
+        setCurrentStore(stores[0])
+        localStorage.setItem('selectedStoreId', stores[0].id)
+      }
+    } catch (err) {
+      console.error('Error al cargar sucursales:', err)
     } finally {
       setIsLoading(false)
     }
@@ -111,8 +114,6 @@ export function StoreProvider({ children }: StoreProviderProps) {
   const handleSetCurrentStore = (store: Store) => {
     setCurrentStore(store)
     localStorage.setItem('selectedStoreId', store.id)
-    
-    // Aquí se podría emitir un evento para notificar el cambio
     window.dispatchEvent(new CustomEvent('storeChanged', { detail: store }))
   }
 
@@ -123,68 +124,41 @@ export function StoreProvider({ children }: StoreProviderProps) {
     }
   }
 
-  // Determinar si el usuario puede cambiar de tienda basado en su rol
-  // En producción esto vendría del contexto de autenticación
-  useEffect(() => {
-    const userRole = 'admin'
-    setCanSwitchStore(['admin', 'manager'].includes(userRole))
-  }, [])
-
   return (
-    <StoreContext.Provider 
-      value={{
-        currentStore,
-        availableStores,
-        setCurrentStore: handleSetCurrentStore,
-        switchStore,
-        canSwitchStore,
-        isLoading
-      }}
-    >
+    <StoreContext.Provider value={{
+      currentStore,
+      availableStores,
+      setCurrentStore: handleSetCurrentStore,
+      switchStore,
+      canSwitchStore,
+      isLoading,
+    }}>
       {children}
     </StoreContext.Provider>
   )
 }
 
-// Hook para verificar permisos basados en la tienda
 export const useStorePermissions = () => {
   const { currentStore } = useStore()
-  
   const hasPermission = (permission: string): boolean => {
-    // Lógica de permisos basada en la tienda
     if (!currentStore) return false
-    
-    // Por ejemplo, algunas funciones solo están disponibles en la tienda principal
-    if (permission === 'manage_all_stores' && currentStore.type !== 'main') {
-      return false
-    }
-    
-    // Verificar si la tienda está activa
+    if (permission === 'manage_all_stores' && currentStore.type !== 'main') return false
     if (currentStore.status !== 'active') {
-      // Limitar permisos en tiendas inactivas o en mantenimiento
-      const readOnlyPermissions = ['view_inventory', 'view_reports', 'view_sales']
-      return readOnlyPermissions.includes(permission)
+      return ['view_inventory', 'view_reports', 'view_sales'].includes(permission)
     }
-    
     return true
   }
-  
   return { hasPermission }
 }
 
-// Hook para obtener configuración específica de la tienda
 export const useStoreConfig = () => {
   const { currentStore } = useStore()
-  
   return {
     currency: currentStore?.config?.currency || 'GTQ',
-    currencySymbol: currentStore?.config?.currency === 'GTQ' ? 'Q' : '$',
+    currencySymbol: 'Q',
     timezone: currentStore?.config?.timezone || 'America/Guatemala',
     taxRate: currentStore?.config?.taxRate || 12,
     printerEnabled: currentStore?.config?.printerEnabled || false,
-    formatCurrency: (amount: number) => {
-      const symbol = currentStore?.config?.currency === 'GTQ' ? 'Q' : '$'
-      return `${symbol}${amount.toFixed(2)}`
-    }
+    formatCurrency: (amount: number) => `Q${amount.toFixed(2)}`,
   }
 }

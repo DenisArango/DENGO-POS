@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma.js'
-import type { MovementType } from '@prisma/client'
+
+type MovementType = 'IN' | 'OUT' | 'ADJUSTMENT' | 'TRANSFER' | 'SALE' | 'RETURN'
 
 interface UpdateStockOptions {
   type: MovementType
@@ -21,15 +22,22 @@ export async function updateStock(
     const before = Number(current?.quantity ?? 0)
     const after = Math.max(0, before + delta)
 
-    await tx.inventory.upsert({
-      where: { productId_branchId: { productId, branchId } },
-      create: { productId, branchId, quantity: after },
-      update: {
-        quantity: after,
-        ...(options.type === 'SALE' ? { lastSaleAt: new Date() } : {}),
-        ...(options.type === 'IN'   ? { lastRestockAt: new Date() } : {}),
-      },
-    })
+    // Use explicit create/update instead of upsert — Prisma's SQL Server upsert
+    // can incorrectly attempt INSERT when a record already exists, violating the unique constraint.
+    if (current) {
+      await tx.inventory.update({
+        where: { productId_branchId: { productId, branchId } },
+        data: {
+          quantity: after,
+          ...(options.type === 'SALE' ? { lastSaleAt: new Date() } : {}),
+          ...(options.type === 'IN'   ? { lastRestockAt: new Date() } : {}),
+        },
+      })
+    } else {
+      await tx.inventory.create({
+        data: { productId, branchId, quantity: after },
+      })
+    }
 
     await tx.stockMovement.create({
       data: {
@@ -38,8 +46,8 @@ export async function updateStock(
         quantity: Math.abs(delta),
         quantityBefore: before,
         quantityAfter: after,
-        reason: options.reason,
-        referenceId: options.referenceId,
+        reason: options.reason ?? null,
+        referenceId: options.referenceId ?? null,
         performedById: options.performedById,
       },
     })

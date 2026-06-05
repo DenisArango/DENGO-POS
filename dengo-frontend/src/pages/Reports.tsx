@@ -5,7 +5,7 @@ import {
   Users, ShoppingCart, Calendar, Clock,
   AlertTriangle, BarChart3, PieChart, LineChart,
   FileText, Download, ArrowRight, Warehouse,
-  CreditCard, UserCheck, History, ArrowUpDown
+  CreditCard, UserCheck, History, ArrowUpDown, Sparkles
 } from 'lucide-react'
 
 interface ReportCard {
@@ -15,10 +15,22 @@ interface ReportCard {
   icon: React.ComponentType<any>
   path: string
   color: string
-  category: 'sales' | 'inventory' | 'financial' | 'audit'
+  category: 'sales' | 'inventory' | 'financial' | 'audit' | 'ai'
+  badge?: string
 }
 
 const reportCards: ReportCard[] = [
+  // Consultas con IA
+  {
+    id: 'custom-reports',
+    title: 'Consultas con IA',
+    description: 'Pídele a la IA cualquier análisis en lenguaje natural. Genera reportes personalizados y guárdalos.',
+    icon: Sparkles,
+    path: '/reports/custom',
+    color: 'bg-gradient-to-r from-primary-600 to-purple-600',
+    category: 'ai',
+    badge: 'NUEVO',
+  },
   // Reportes de Ventas
   {
     id: 'daily-sales',
@@ -146,6 +158,7 @@ const reportCards: ReportCard[] = [
 ]
 
 const categories = [
+  { id: 'ai', name: 'IA', icon: Sparkles },
   { id: 'sales', name: 'Ventas', icon: ShoppingCart },
   { id: 'inventory', name: 'Inventario', icon: Package },
   { id: 'financial', name: 'Financiero', icon: DollarSign },
@@ -236,7 +249,7 @@ export default function Reports() {
         <div key={category.id} className="space-y-4">
           <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
             <category.icon size={20} />
-            Reportes de {category.name}
+            {category.id === 'ai' ? 'Inteligencia Artificial' : `Reportes de ${category.name}`}
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -249,15 +262,21 @@ export default function Reports() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.1 }}
                   onClick={() => handleReportClick(report.path)}
-                  className="bg-white rounded-lg shadow-sm p-6 hover:shadow-lg transition-all cursor-pointer group"
+                  className={`bg-white rounded-lg shadow-sm p-6 hover:shadow-lg transition-all cursor-pointer group ${report.category === 'ai' ? 'ring-2 ring-primary-200' : ''}`}
                 >
                   <div className="flex items-start justify-between mb-4">
-                    <div className={`p-3 rounded-lg ${report.color} bg-opacity-10`}>
-                      <report.icon className={`${report.color.replace('bg-', 'text-')}`} size={24} />
+                    <div className={`p-3 rounded-lg ${report.color} ${report.category === 'ai' ? '' : 'bg-opacity-10'}`}>
+                      <report.icon className={report.category === 'ai' ? 'text-white' : report.color.replace('bg-', 'text-').split(' ')[0]} size={24} />
                     </div>
-                    <ArrowRight className="text-gray-400 group-hover:text-gray-600 transition-colors" size={20} />
+                    <div className="flex items-center gap-2">
+                      {report.badge && (
+                        <span className="text-[10px] font-bold bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded">
+                          {report.badge}
+                        </span>
+                      )}
+                      <ArrowRight className="text-gray-400 group-hover:text-gray-600 transition-colors" size={20} />
+                    </div>
                   </div>
-                  
                   <h3 className="font-semibold text-gray-800 mb-2">{report.title}</h3>
                   <p className="text-sm text-gray-600 line-clamp-2">{report.description}</p>
                 </motion.div>

@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
   ArrowUpDown, Plus, Search, Filter, Package,
-  Building2, Calendar, Truck, Clock, CheckCircle,
-  XCircle, AlertCircle, ArrowRight, ChevronDown,
-  FileText, Download, Eye, BarChart3
+  Building2, Truck, Clock, CheckCircle,
+  XCircle, ArrowRight, ChevronDown,
+  Download, Eye, BarChart3, ArrowLeft, Minus
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -17,14 +17,27 @@ interface Branch {
   name: string
 }
 
+interface ProductVariation {
+  id: string
+  productId: string
+  name: string
+  conversionFactor: number
+  price: number
+  barcode?: string
+  isDefault?: boolean
+}
+
 interface Product {
   id: string
   name: string
   fullName?: string
   sku?: string
   barcode?: string
+  basePrice?: number
   unitCost?: number
   cost?: number
+  isActive?: boolean
+  variations?: ProductVariation[]
 }
 
 interface TransferItem {
@@ -34,6 +47,7 @@ interface TransferItem {
   quantity: number
   unitCost: number
   totalCost: number
+  availableStock?: number
 }
 
 interface Transfer {
@@ -59,33 +73,70 @@ interface Transfer {
 
 export default function StoreTransfers() {
   const { user } = useAuthStore()
+
+  const [view, setView] = useState<'list' | 'create'>('list')
   const [transfers, setTransfers] = useState<Transfer[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
-  const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [showCreateModal, setShowCreateModal] = useState(false)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null)
 
-  const [newTransfer, setNewTransfer] = useState({
-    fromStore: '',
-    toStore: '',
-    items: [] as TransferItem[],
-    notes: ''
+  // ── Create view state ──────────────────────────────────────────────────────
+  const [fromStore, setFromStore] = useState('')
+  const [toStore, setToStore] = useState('')
+  const [notes, setNotes] = useState('')
+  const [transferItems, setTransferItems] = useState<TransferItem[]>([])
+
+  // Product search
+  const [posSearch, setPosSearch] = useState('')
+  const [searchResults, setSearchResults] = useState<Product[]>([])
+  const [showSearchResults, setShowSearchResults] = useState(false)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Variation modal
+  const [showVariationModal, setShowVariationModal] = useState(false)
+  const [selectedProductForVariation, setSelectedProductForVariation] = useState<Product | null>(null)
+
+  // ── Normalizers ────────────────────────────────────────────────────────────
+  const normalizeTransferStatus = (s: string): Transfer['status'] => {
+    switch ((s ?? '').toUpperCase()) {
+      case 'PENDING': return 'pending'
+      case 'IN_TRANSIT': return 'in_transit'
+      case 'RECEIVED': return 'completed'
+      case 'REJECTED': return 'rejected'
+      case 'CANCELLED': case 'CANCELED': return 'cancelled'
+      default: return (s ?? 'pending').toLowerCase() as Transfer['status']
+    }
+  }
+
+  const normalizeTransfer = (t: any): Transfer => ({
+    ...t,
+    status: normalizeTransferStatus(t.status),
+    items: (t.items ?? []).map((item: any) => {
+      const qty = Number(item.quantity ?? 0)
+      // unitCost: prefer stored value, fall back to product.cost (cost field from Products table)
+      const unitCost = Number(item.unitCost ?? item.product?.cost ?? 0)
+      const totalCost = Number(item.totalCost ?? 0) || qty * unitCost
+      return {
+        productId: item.productId ?? item.product?.id ?? '',
+        productName: item.product?.name ?? item.productName ?? '',
+        productCode: item.product?.barcode ?? item.product?.sku ?? item.productCode ?? item.productId ?? '',
+        quantity: qty,
+        unitCost,
+        totalCost,
+      }
+    }),
   })
 
-  const [productSearch, setProductSearch] = useState('')
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [quantity, setQuantity] = useState('')
-
+  // ── Data fetching ──────────────────────────────────────────────────────────
   const fetchTransfers = () => {
     setLoading(true)
-    api.get<Transfer[]>('/api/transfers')
-      .then(setTransfers)
+    api.get<any[]>('/api/transfers')
+      .then(list => setTransfers((list ?? []).map(normalizeTransfer)))
       .catch(e => toast.error(e.message))
       .finally(() => setLoading(false))
   }
@@ -93,9 +144,143 @@ export default function StoreTransfers() {
   useEffect(() => {
     fetchTransfers()
     api.get<Branch[]>('/api/branches').then(setBranches).catch(e => toast.error(e.message))
-    api.get<Product[]>('/api/products').then(setProducts).catch(e => toast.error(e.message))
   }, [])
 
+  // ── Debounced product search ───────────────────────────────────────────────
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    if (!posSearch.trim()) { setSearchResults([]); setShowSearchResults(false); return }
+    searchDebounceRef.current = setTimeout(() => performSearch(posSearch.trim()), 250)
+    return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current) }
+  }, [posSearch])
+
+  async function performSearch(query: string) {
+    try {
+      const data = await api.get<Product[]>(`/api/products?search=${encodeURIComponent(query)}&isActive=true`)
+      const results = (data ?? []).filter(p => p.isActive !== false).slice(0, 8)
+      setSearchResults(results)
+      setShowSearchResults(results.length > 0)
+    } catch {
+      setSearchResults([])
+      setShowSearchResults(false)
+    }
+  }
+
+  // ── Create view helpers ────────────────────────────────────────────────────
+  function handleSelectProduct(product: Product) {
+    setPosSearch('')
+    setShowSearchResults(false)
+    const variations = product.variations?.length ? product.variations : null
+    if (variations && variations.length > 1) {
+      setSelectedProductForVariation(product)
+      setShowVariationModal(true)
+    } else {
+      addTransferItem(product, variations?.[0] ?? null, 1)
+    }
+  }
+
+  async function addTransferItem(product: Product, variation: ProductVariation | null, qty: number) {
+    const name = variation && !variation.isDefault
+      ? `${product.fullName ?? product.name} (${variation.name})`
+      : (product.fullName ?? product.name)
+    const code = product.barcode ?? product.sku ?? product.id
+    const cost = Number(product.cost ?? product.unitCost ?? 0)
+    // Always use product.id — TRANSFER_ITEMS.PRODUCT_ID references PRODUCTS(ID), not PRODUCT_VARIATIONS
+    const productId = product.id
+    // Use product+variation combo as dedup key so different variants are separate rows
+    const dedupKey = variation && !variation.isDefault ? `${product.id}__${variation.id}` : product.id
+
+    // Fetch available stock from origin branch
+    let availableStock: number | undefined
+    if (fromStore) {
+      try {
+        const inv = await api.get<{ quantity: number }>(`/api/inventory/${product.id}/${fromStore}`)
+        availableStock = Number(inv?.quantity ?? 0)
+        if (availableStock === 0) {
+          toast.warning(`"${name}" no tiene stock disponible en la sucursal de origen`)
+        }
+      } catch { /* no inventory record */ }
+    }
+
+    setTransferItems(prev => {
+      const existing = prev.find(i => i.productId === dedupKey)
+      if (existing) {
+        return prev.map(i => i.productId === dedupKey
+          ? { ...i, quantity: i.quantity + qty, totalCost: (i.quantity + qty) * i.unitCost, availableStock }
+          : i
+        )
+      }
+      return [...prev, { productId: dedupKey, productName: name, productCode: code, quantity: qty, unitCost: cost, totalCost: qty * cost, availableStock }]
+    })
+  }
+
+  function updateItemQty(productId: string, delta: number) {
+    setTransferItems(prev => prev.map(i => {
+      if (i.productId !== productId) return i
+      const newQty = Math.max(1, i.quantity + delta)
+      return { ...i, quantity: newQty, totalCost: newQty * i.unitCost }
+    }))
+  }
+
+  function removeTransferItem(productId: string) {
+    setTransferItems(prev => prev.filter(i => i.productId !== productId))
+  }
+
+  function resetCreateForm() {
+    setFromStore(''); setToStore(''); setNotes(''); setTransferItems([])
+    setPosSearch(''); setSearchResults([]); setShowSearchResults(false)
+  }
+
+  // Re-fetch stock when origin branch changes
+  useEffect(() => {
+    if (!fromStore || transferItems.length === 0) return
+    Promise.all(
+      transferItems.map(async (item) => {
+        try {
+          // Strip dedup suffix to get real product ID
+          const realProductId = item.productId.includes('__') ? item.productId.split('__')[0] : item.productId
+          const inv = await api.get<{ quantity: number }>(`/api/inventory/${realProductId}/${fromStore}`)
+          return { ...item, availableStock: Number(inv?.quantity ?? 0) }
+        } catch { return item }
+      })
+    ).then(updated => setTransferItems(updated))
+  }, [fromStore])
+
+  const handleCreateTransfer = () => {
+    if (!fromStore || !toStore) { toast.error('Debes seleccionar tienda de origen y destino'); return }
+    if (fromStore === toStore) { toast.error('La tienda de origen y destino no pueden ser la misma'); return }
+    if (transferItems.length === 0) { toast.error('Debes agregar al menos un producto'); return }
+
+    // Warn (don't block) if quantities exceed available stock
+    const overStockItems = transferItems.filter(i => i.availableStock !== undefined && i.quantity > i.availableStock)
+    if (overStockItems.length > 0) {
+      const names = overStockItems.map(i => `${i.productName} (disponible: ${i.availableStock})`).join(', ')
+      toast.warning(`Stock bajo en origen: ${names}. El traslado se creará de todas formas.`, { duration: 4000 })
+    }
+
+    setSaving(true)
+    api.post('/api/transfers', {
+      fromBranchId: fromStore,
+      toBranchId: toStore,
+      // Strip the dedup suffix (__variationId) to send the real product ID to the backend
+      items: transferItems.map(i => ({
+        productId: i.productId.includes('__') ? i.productId.split('__')[0] : i.productId,
+        quantity: i.quantity,
+      })),
+      notes: notes || undefined,
+      requestedById: user?.id,
+    })
+      .then(() => {
+        toast.success('Transferencia creada exitosamente')
+        resetCreateForm()
+        setView('list')
+        fetchTransfers()
+      })
+      .catch(e => toast.error(e.message))
+      .finally(() => setSaving(false))
+  }
+
+  // ── List view helpers ──────────────────────────────────────────────────────
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'text-yellow-600 bg-yellow-100'
@@ -137,113 +322,29 @@ export default function StoreTransfers() {
     return t.toBranch?.name ?? t.toStore ?? t.toBranchId ?? '—'
   }
 
-  const handleAddProduct = () => {
-    if (!selectedProduct || !quantity) {
-      toast.error('Selecciona un producto y cantidad')
-      return
-    }
-    const quantityNum = parseInt(quantity)
-    if (quantityNum <= 0) { toast.error('La cantidad debe ser mayor a 0'); return }
-
-    const existingItem = newTransfer.items.find(item => item.productId === selectedProduct.id)
-    if (existingItem) { toast.error('Este producto ya está en la transferencia'); return }
-
-    const cost = selectedProduct.cost ?? selectedProduct.unitCost ?? 0
-    const newItem: TransferItem = {
-      productId: selectedProduct.id,
-      productName: selectedProduct.fullName ?? selectedProduct.name,
-      productCode: selectedProduct.sku ?? selectedProduct.barcode ?? selectedProduct.id,
-      quantity: quantityNum,
-      unitCost: cost,
-      totalCost: quantityNum * cost
-    }
-
-    setNewTransfer({ ...newTransfer, items: [...newTransfer.items, newItem] })
-    setSelectedProduct(null)
-    setQuantity('')
-    setProductSearch('')
-    toast.success(`${newItem.productName} agregado a la transferencia`)
-  }
-
-  const handleRemoveProduct = (index: number) => {
-    setNewTransfer({ ...newTransfer, items: newTransfer.items.filter((_, i) => i !== index) })
-  }
-
-  const handleCreateTransfer = () => {
-    if (!newTransfer.fromStore || !newTransfer.toStore) {
-      toast.error('Debes seleccionar tienda de origen y destino')
-      return
-    }
-    if (newTransfer.fromStore === newTransfer.toStore) {
-      toast.error('La tienda de origen y destino no pueden ser la misma')
-      return
-    }
-    if (newTransfer.items.length === 0) {
-      toast.error('Debes agregar al menos un producto')
-      return
-    }
-
-    setSaving(true)
-    api.post('/api/transfers', {
-      fromBranchId: newTransfer.fromStore,
-      toBranchId: newTransfer.toStore,
-      items: newTransfer.items.map(i => ({ productId: i.productId, quantity: i.quantity })),
-      notes: newTransfer.notes || undefined,
-      requestedById: user?.id,
-    })
-      .then(() => {
-        toast.success('Transferencia creada exitosamente')
-        setShowCreateModal(false)
-        setNewTransfer({ fromStore: '', toStore: '', items: [], notes: '' })
-        fetchTransfers()
-      })
-      .catch(e => toast.error(e.message))
-      .finally(() => setSaving(false))
-  }
-
   const handleApproveTransfer = (transfer: Transfer) => {
-    api.patch(`/api/transfers/${transfer.id}/approve`, {})
-      .then(() => {
-        toast.success('Transferencia aprobada.')
-        fetchTransfers()
-        if (selectedTransfer?.id === transfer.id) setShowDetailsModal(false)
-      })
+    api.put(`/api/transfers/${transfer.id}/approve`, {})
+      .then(() => { toast.success('Transferencia aprobada.'); fetchTransfers(); if (selectedTransfer?.id === transfer.id) setShowDetailsModal(false) })
       .catch(e => toast.error(e.message))
   }
 
   const handleReceiveTransfer = (transfer: Transfer) => {
-    api.patch(`/api/transfers/${transfer.id}/receive`, {})
-      .then(() => {
-        toast.success('Recepción confirmada. Inventario actualizado.')
-        fetchTransfers()
-        if (selectedTransfer?.id === transfer.id) setShowDetailsModal(false)
-      })
+    api.put(`/api/transfers/${transfer.id}/receive`, {})
+      .then(() => { toast.success('Recepción confirmada. Inventario actualizado.'); fetchTransfers(); if (selectedTransfer?.id === transfer.id) setShowDetailsModal(false) })
       .catch(e => toast.error(e.message))
   }
 
   const handleRejectTransfer = (transfer: Transfer) => {
-    api.patch(`/api/transfers/${transfer.id}/reject`, {})
-      .then(() => {
-        toast.success('Transferencia rechazada.')
-        fetchTransfers()
-        if (selectedTransfer?.id === transfer.id) setShowDetailsModal(false)
-      })
+    api.put(`/api/transfers/${transfer.id}/reject`, {})
+      .then(() => { toast.success('Transferencia rechazada.'); fetchTransfers(); if (selectedTransfer?.id === transfer.id) setShowDetailsModal(false) })
       .catch(e => toast.error(e.message))
-  }
-
-  const handleViewDetails = (transfer: Transfer) => {
-    setSelectedTransfer(transfer)
-    setShowDetailsModal(true)
   }
 
   const filteredTransfers = transfers.filter(transfer => {
     const from = displayName(transfer, 'from').toLowerCase()
     const to = displayName(transfer, 'to').toLowerCase()
     const code = (transfer.code ?? transfer.id ?? '').toLowerCase()
-    const matchesSearch =
-      code.includes(searchTerm.toLowerCase()) ||
-      from.includes(searchTerm.toLowerCase()) ||
-      to.includes(searchTerm.toLowerCase())
+    const matchesSearch = code.includes(searchTerm.toLowerCase()) || from.includes(searchTerm.toLowerCase()) || to.includes(searchTerm.toLowerCase())
     const matchesStatus = selectedStatus === 'all' || transfer.status === selectedStatus
     return matchesSearch && matchesStatus
   })
@@ -256,11 +357,246 @@ export default function StoreTransfers() {
     totalValue: transfers.reduce((sum, t) => sum + (t.totalValue ?? t.items.reduce((s, i) => s + i.totalCost, 0)), 0)
   }
 
-  const filteredProducts = products.filter(p =>
-    (p.fullName ?? p.name ?? '').toLowerCase().includes(productSearch.toLowerCase()) ||
-    (p.sku ?? '').toLowerCase().includes(productSearch.toLowerCase())
-  )
+  // ── Render: CREATE VIEW ───────────────────────────────────────────────────
+  if (view === 'create') {
+    return (
+      <div className="flex flex-col gap-3 h-[calc(100vh-7rem)]">
 
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center gap-3">
+          <button
+            onClick={() => { resetCreateForm(); setView('list') }}
+            className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-800 transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold text-gray-800">Nueva Transferencia</h1>
+            <p className="text-xs text-gray-500">
+              {transferItems.length > 0
+                ? `${transferItems.length} producto(s) · $${transferItems.reduce((s, i) => s + i.totalCost, 0).toFixed(2)}`
+                : 'Sin productos agregados'}
+            </p>
+          </div>
+        </div>
+
+        {/* Split layout */}
+        <div className="flex gap-3 flex-1 min-h-0">
+
+          {/* LEFT: Search + items */}
+          <div className="flex-1 bg-white rounded-lg shadow-sm flex flex-col min-h-0">
+
+            {/* Search bar */}
+            <div className="p-3 border-b relative">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Buscar producto por nombre o código..."
+                value={posSearch}
+                onChange={e => setPosSearch(e.target.value)}
+                onFocus={() => posSearch.trim() && setShowSearchResults(true)}
+                onBlur={() => setTimeout(() => setShowSearchResults(false), 150)}
+                className="input pl-10 w-full"
+                autoFocus
+              />
+              {showSearchResults && (
+                <div className="absolute left-3 right-3 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto">
+                  {searchResults.length > 0 ? searchResults.map(p => (
+                    <div
+                      key={p.id}
+                      onMouseDown={() => handleSelectProduct(p)}
+                      className="px-3 py-2.5 hover:bg-primary-50 cursor-pointer flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{p.fullName ?? p.name}</p>
+                        <p className="text-xs text-gray-400">{p.barcode ?? p.sku ?? p.id}</p>
+                      </div>
+                      {p.variations && p.variations.length > 1 && (
+                        <span className="text-xs text-blue-500 ml-3 flex-shrink-0">{p.variations.length} variantes</span>
+                      )}
+                    </div>
+                  )) : (
+                    <p className="px-3 py-3 text-sm text-gray-500 text-center">Sin resultados para "{posSearch}"</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Column header */}
+            <div
+              className="grid items-center px-4 py-2 border-b bg-gray-50 rounded-none text-xs font-semibold text-gray-500 uppercase tracking-wide"
+              style={{ gridTemplateColumns: '1fr 140px 32px' }}
+            >
+              <span>Producto</span>
+              <span className="text-center">Cantidad</span>
+              <span></span>
+            </div>
+
+            {/* Item list */}
+            <div className="flex-1 overflow-y-auto">
+              {transferItems.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-gray-400 py-16">
+                  <Package size={48} className="mb-3 opacity-30" />
+                  <p className="text-sm">Busca productos para agregar a la transferencia</p>
+                  {!fromStore && <p className="text-xs mt-2 text-orange-500">Selecciona primero la sucursal de origen</p>}
+                </div>
+              ) : (
+                transferItems.map(item => {
+                  const overStock = item.availableStock !== undefined && item.quantity > item.availableStock
+                  return (
+                    <div
+                      key={item.productId}
+                      className={`grid items-center px-4 py-3 border-b hover:bg-gray-50 ${overStock ? 'bg-red-50' : ''}`}
+                      style={{ gridTemplateColumns: '1fr 140px 32px' }}
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{item.productName}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-xs text-gray-400">{item.productCode}</p>
+                          {item.availableStock !== undefined && (
+                            <span className={`text-xs font-medium ${overStock ? 'text-red-600' : 'text-green-600'}`}>
+                              · Disponible: {item.availableStock}
+                            </span>
+                          )}
+                        </div>
+                        {overStock && (
+                          <p className="text-xs text-red-600 mt-0.5">⚠ Cantidad supera el stock disponible</p>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-center gap-2">
+                        <button onClick={() => updateItemQty(item.productId, -1)} className="p-1 rounded hover:bg-gray-200 text-gray-500">
+                          <Minus size={14} />
+                        </button>
+                        <span className={`w-10 text-center font-semibold text-sm ${overStock ? 'text-red-600' : 'text-gray-800'}`}>
+                          {item.quantity}
+                        </span>
+                        <button onClick={() => updateItemQty(item.productId, 1)} className="p-1 rounded hover:bg-gray-200 text-gray-500">
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                      <button onClick={() => removeTransferItem(item.productId)} className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded">
+                        <XCircle size={16} />
+                      </button>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="border-t p-3 flex items-center justify-between bg-gray-50 rounded-b-lg text-sm">
+              <span className="text-gray-500">{transferItems.length} producto(s)</span>
+              <span className="font-semibold text-gray-800">
+                ${transferItems.reduce((s, i) => s + i.totalCost, 0).toFixed(2)}
+              </span>
+            </div>
+          </div>
+
+          {/* RIGHT: Form */}
+          <div className="w-72 flex flex-col gap-3">
+
+            {/* Branch selection */}
+            <div className="bg-white rounded-lg shadow-sm p-4 space-y-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                <Building2 size={12} /> Tiendas
+              </p>
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Origen *</label>
+                <select
+                  value={fromStore}
+                  onChange={e => setFromStore(e.target.value)}
+                  className="input w-full"
+                >
+                  <option value="">-- Selecciona --</option>
+                  {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Destino *</label>
+                <select
+                  value={toStore}
+                  onChange={e => setToStore(e.target.value)}
+                  className="input w-full"
+                >
+                  <option value="">-- Selecciona --</option>
+                  {branches.filter(b => b.id !== fromStore).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">
+                Comentario
+              </label>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="Instrucciones o notas adicionales..."
+                className="input w-full text-sm resize-none"
+                rows={4}
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleCreateTransfer}
+                disabled={saving || !fromStore || !toStore || transferItems.length === 0}
+                className="btn-primary btn-md flex items-center justify-center gap-2 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving
+                  ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  : <ArrowRight size={16} />}
+                Crear Transferencia
+              </button>
+              <button
+                onClick={() => { resetCreateForm(); setView('list') }}
+                className="btn-outline btn-md w-full"
+                disabled={saving}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Variation modal */}
+        {showVariationModal && selectedProductForVariation && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full">
+              <h3 className="text-lg font-bold text-gray-800 mb-1">Seleccionar Variante</h3>
+              <p className="text-sm text-gray-500 mb-4">{selectedProductForVariation.fullName ?? selectedProductForVariation.name}</p>
+              <div className="space-y-2">
+                {(selectedProductForVariation.variations ?? []).map(v => (
+                  <button
+                    key={v.id}
+                    onMouseDown={() => {
+                      addTransferItem(selectedProductForVariation, v, 1)
+                      setShowVariationModal(false)
+                      setSelectedProductForVariation(null)
+                    }}
+                    className="w-full flex items-center justify-between p-3 border rounded-lg hover:bg-primary-50 hover:border-primary-300 transition-colors text-left"
+                  >
+                    <span className="font-medium text-gray-800">{v.name}</span>
+                    <span className="text-xs text-gray-400">x{v.conversionFactor}</span>
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => { setShowVariationModal(false); setSelectedProductForVariation(null) }}
+                className="mt-4 w-full btn-outline btn-md"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── Render: LIST VIEW ─────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -285,7 +621,7 @@ export default function StoreTransfers() {
             Exportar
           </button>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => setView('create')}
             className="btn-primary btn-md flex items-center gap-2"
           >
             <Plus size={18} />
@@ -301,7 +637,7 @@ export default function StoreTransfers() {
         </div>
       )}
 
-      {/* Estadísticas */}
+      {/* Stats */}
       {!loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-sm p-4">
@@ -312,7 +648,6 @@ export default function StoreTransfers() {
             <p className="text-2xl font-bold text-gray-800">{stats.total}</p>
             <p className="text-xs text-gray-500 mt-1">Este mes</p>
           </motion.div>
-
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-gray-600 text-sm">Pendientes</span>
@@ -321,7 +656,6 @@ export default function StoreTransfers() {
             <p className="text-2xl font-bold text-gray-800">{stats.pending}</p>
             <p className="text-xs text-yellow-600 mt-1">Por enviar</p>
           </motion.div>
-
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-gray-600 text-sm">En Tránsito</span>
@@ -330,7 +664,6 @@ export default function StoreTransfers() {
             <p className="text-2xl font-bold text-gray-800">{stats.inTransit}</p>
             <p className="text-xs text-blue-600 mt-1">En camino</p>
           </motion.div>
-
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-gray-600 text-sm">Completadas</span>
@@ -339,21 +672,18 @@ export default function StoreTransfers() {
             <p className="text-2xl font-bold text-gray-800">{stats.completed}</p>
             <p className="text-xs text-green-600 mt-1">Recibidas</p>
           </motion.div>
-
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-white rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-gray-600 text-sm">Valor Total</span>
               <Package className="text-purple-600" size={20} />
             </div>
-            <p className="text-2xl font-bold text-gray-800">
-              ${stats.totalValue.toLocaleString()}
-            </p>
+            <p className="text-2xl font-bold text-gray-800">${stats.totalValue.toLocaleString()}</p>
             <p className="text-xs text-purple-600 mt-1">En transferencias</p>
           </motion.div>
         </div>
       )}
 
-      {/* Filtros */}
+      {/* Filters */}
       {!loading && (
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="flex flex-col md:flex-row gap-4">
@@ -367,7 +697,6 @@ export default function StoreTransfers() {
                 className="input pl-10 w-full"
               />
             </div>
-
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
@@ -381,7 +710,6 @@ export default function StoreTransfers() {
               <option value="cancelled">Canceladas</option>
               <option value="rejected">Rechazadas</option>
             </select>
-
             <button className="btn-outline btn-md flex items-center gap-2">
               <Filter size={18} />
               Más filtros
@@ -391,7 +719,7 @@ export default function StoreTransfers() {
         </div>
       )}
 
-      {/* Lista de transferencias */}
+      {/* Transfer list */}
       {!loading && (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -443,17 +771,13 @@ export default function StoreTransfers() {
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <p className="text-sm">
-                          {format(new Date(transfer.createdAt), "d MMM", { locale: es })}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {format(new Date(transfer.createdAt), "HH:mm", { locale: es })}
-                        </p>
+                        <p className="text-sm">{format(new Date(transfer.createdAt), "d MMM", { locale: es })}</p>
+                        <p className="text-xs text-gray-500">{format(new Date(transfer.createdAt), "HH:mm", { locale: es })}</p>
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => handleViewDetails(transfer)}
+                            onClick={() => { setSelectedTransfer(transfer); setShowDetailsModal(true) }}
                             className="p-1 hover:bg-gray-100 rounded transition-colors"
                             title="Ver detalles"
                           >
@@ -484,9 +808,7 @@ export default function StoreTransfers() {
                 })}
                 {filteredTransfers.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-gray-500">
-                      No se encontraron transferencias
-                    </td>
+                    <td colSpan={8} className="py-12 text-center text-gray-500">No se encontraron transferencias</td>
                   </tr>
                 )}
               </tbody>
@@ -495,206 +817,7 @@ export default function StoreTransfers() {
         </div>
       )}
 
-      {/* Modal de crear transferencia */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto"
-          >
-            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <ArrowUpDown size={24} />
-              Nueva Transferencia
-            </h2>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tienda de Origen
-                  </label>
-                  <select
-                    value={newTransfer.fromStore}
-                    onChange={(e) => setNewTransfer({ ...newTransfer, fromStore: e.target.value })}
-                    className="input w-full"
-                    required
-                  >
-                    <option value="">Seleccionar tienda...</option>
-                    {branches.map(branch => (
-                      <option key={branch.id} value={branch.id}>{branch.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tienda de Destino
-                  </label>
-                  <select
-                    value={newTransfer.toStore}
-                    onChange={(e) => setNewTransfer({ ...newTransfer, toStore: e.target.value })}
-                    className="input w-full"
-                    required
-                  >
-                    <option value="">Seleccionar tienda...</option>
-                    {branches
-                      .filter(branch => branch.id !== newTransfer.fromStore)
-                      .map(branch => (
-                        <option key={branch.id} value={branch.id}>{branch.name}</option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notas (Opcional)
-                </label>
-                <textarea
-                  value={newTransfer.notes}
-                  onChange={(e) => setNewTransfer({ ...newTransfer, notes: e.target.value })}
-                  className="input w-full"
-                  rows={2}
-                  placeholder="Ej: Urgente, stock bajo en destino..."
-                />
-              </div>
-
-              <div className="border-t pt-4">
-                <h3 className="font-medium text-gray-800 mb-3">Productos a Transferir</h3>
-
-                <div className="flex gap-2 mb-4">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                    <input
-                      type="text"
-                      placeholder="Buscar producto..."
-                      value={productSearch}
-                      onChange={(e) => setProductSearch(e.target.value)}
-                      className="input pl-10 w-full"
-                    />
-                  </div>
-                  <input
-                    type="number"
-                    placeholder="Cantidad"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    className="input w-32"
-                    min="1"
-                  />
-                  <button
-                    onClick={handleAddProduct}
-                    disabled={!selectedProduct || !quantity}
-                    className="btn-primary btn-md"
-                  >
-                    <Plus size={18} />
-                  </button>
-                </div>
-
-                {/* Lista de productos buscados */}
-                {productSearch && (
-                  <div className="mb-4 max-h-32 overflow-y-auto border rounded-lg">
-                    {filteredProducts.map(product => (
-                      <div
-                        key={product.id}
-                        onClick={() => setSelectedProduct(product)}
-                        className={`p-2 hover:bg-gray-50 cursor-pointer flex justify-between ${
-                          selectedProduct?.id === product.id ? 'bg-primary-50' : ''
-                        }`}
-                      >
-                        <div>
-                          <p className="text-sm font-medium">{product.fullName ?? product.name}</p>
-                          <p className="text-xs text-gray-500">{product.sku ?? product.barcode ?? product.id}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-gray-500">${product.cost ?? product.unitCost ?? 0}</p>
-                        </div>
-                      </div>
-                    ))}
-                    {filteredProducts.length === 0 && (
-                      <p className="p-3 text-sm text-gray-500 text-center">Sin resultados</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Productos añadidos */}
-                {newTransfer.items.length > 0 && (
-                  <div className="border rounded-lg overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Producto</th>
-                          <th className="text-center py-2 px-3 text-sm font-medium text-gray-700">Cantidad</th>
-                          <th className="text-right py-2 px-3 text-sm font-medium text-gray-700">Costo Unit.</th>
-                          <th className="text-right py-2 px-3 text-sm font-medium text-gray-700">Total</th>
-                          <th className="text-center py-2 px-3 text-sm font-medium text-gray-700"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {newTransfer.items.map((item, index) => (
-                          <tr key={index} className="border-b">
-                            <td className="py-2 px-3">
-                              <p className="text-sm font-medium">{item.productName}</p>
-                              <p className="text-xs text-gray-500">{item.productCode}</p>
-                            </td>
-                            <td className="py-2 px-3 text-center">{item.quantity}</td>
-                            <td className="py-2 px-3 text-right">${item.unitCost.toFixed(2)}</td>
-                            <td className="py-2 px-3 text-right font-medium">${item.totalCost.toFixed(2)}</td>
-                            <td className="py-2 px-3 text-center">
-                              <button
-                                onClick={() => handleRemoveProduct(index)}
-                                className="text-red-600 hover:bg-red-50 p-1 rounded"
-                              >
-                                <XCircle size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot className="bg-gray-50">
-                        <tr>
-                          <td colSpan={3} className="py-2 px-3 text-right font-medium">Total:</td>
-                          <td className="py-2 px-3 text-right font-bold">
-                            ${newTransfer.items.reduce((sum, item) => sum + item.totalCost, 0).toFixed(2)}
-                          </td>
-                          <td></td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                )}
-
-                {newTransfer.items.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <Package size={48} className="mx-auto mb-2 opacity-50" />
-                    <p>No hay productos añadidos</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-6 mt-6 border-t">
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="btn-outline btn-md flex-1"
-                disabled={saving}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleCreateTransfer}
-                disabled={!newTransfer.fromStore || !newTransfer.toStore || newTransfer.items.length === 0 || saving}
-                className="btn-primary btn-md flex-1 flex items-center justify-center gap-2"
-              >
-                {saving && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
-                Crear Transferencia
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Modal de detalles */}
+      {/* Details modal */}
       {showDetailsModal && selectedTransfer && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <motion.div
@@ -703,13 +826,8 @@ export default function StoreTransfers() {
             className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-800">
-                Detalles de Transferencia
-              </h2>
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="p-1 hover:bg-gray-100 rounded transition-colors"
-              >
+              <h2 className="text-xl font-bold text-gray-800">Detalles de Transferencia</h2>
+              <button onClick={() => setShowDetailsModal(false)} className="p-1 hover:bg-gray-100 rounded transition-colors">
                 <XCircle size={20} />
               </button>
             </div>
@@ -745,7 +863,7 @@ export default function StoreTransfers() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Creado</p>
+                  <p className="text-sm text-gray-600 mb-1">Creado por</p>
                   <p className="font-medium">{selectedTransfer.requestedBy?.name ?? selectedTransfer.createdBy ?? '—'}</p>
                   <p className="text-xs text-gray-500">
                     {format(new Date(selectedTransfer.createdAt), "d 'de' MMMM, HH:mm", { locale: es })}
@@ -810,33 +928,19 @@ export default function StoreTransfers() {
             </div>
 
             <div className="flex gap-3 pt-4 mt-4 border-t">
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="btn-outline btn-md flex-1"
-              >
-                Cerrar
-              </button>
+              <button onClick={() => setShowDetailsModal(false)} className="btn-outline btn-md flex-1">Cerrar</button>
               {selectedTransfer.status === 'pending' && (
                 <>
-                  <button
-                    onClick={() => handleRejectTransfer(selectedTransfer)}
-                    className="btn-danger btn-md"
-                  >
+                  <button onClick={() => handleRejectTransfer(selectedTransfer)} className="btn-danger btn-md">
                     Rechazar
                   </button>
-                  <button
-                    onClick={() => handleApproveTransfer(selectedTransfer)}
-                    className="btn-primary btn-md flex-1"
-                  >
+                  <button onClick={() => handleApproveTransfer(selectedTransfer)} className="btn-primary btn-md flex-1">
                     Aprobar Transferencia
                   </button>
                 </>
               )}
               {(selectedTransfer.status === 'in_transit' || selectedTransfer.status === 'approved') && (
-                <button
-                  onClick={() => handleReceiveTransfer(selectedTransfer)}
-                  className="btn-primary btn-md flex-1"
-                >
+                <button onClick={() => handleReceiveTransfer(selectedTransfer)} className="btn-primary btn-md flex-1">
                   Confirmar Recepción
                 </button>
               )}

@@ -16,6 +16,8 @@ import {
   PlusCircle
 } from 'lucide-react'
 import { api } from '../lib/api'
+import { useAuthStore } from '../store'
+import { useStore } from '../contexts/StoreContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,8 +69,6 @@ interface DashboardData {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const BRANCH_ID = 'branch-001'
 
 const METHOD_COLORS: Record<string, string> = {
   EFECTIVO: 'bg-green-100 text-green-700',
@@ -133,8 +133,8 @@ function normaliseTransactions(raw: any[]): RecentTransaction[] {
       tx.customer ??
       'Cliente general'
     const amountLabel =
-      typeof tx.total === 'number'
-        ? `Q${tx.total.toFixed(2)}`
+      tx.total != null
+        ? `Q${Number(tx.total).toFixed(2)}`
         : tx.amount ?? 'Q0.00'
     const timeLabel =
       tx.createdAt
@@ -209,6 +209,9 @@ const itemVariants = {
 export default function Dashboard() {
   const greeting = getGreeting()
   const dateLabel = formatDate()
+  const { user } = useAuthStore()
+  const { currentStore } = useStore()
+  const branchId = currentStore?.id ?? user?.branchId ?? ''
 
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<DashboardStats>({
@@ -223,62 +226,29 @@ export default function Dashboard() {
   const [inventoryAlerts, setInventoryAlerts] = useState<InventoryAlert[]>([])
 
   useEffect(() => {
-    fetchDashboard()
-  }, [])
+    if (branchId) fetchDashboard()
+  }, [branchId])
 
   async function fetchDashboard() {
     setLoading(true)
     try {
-      const data = await api.get<DashboardData>(`/api/reports/dashboard?branchId=${BRANCH_ID}`)
+      const branchQ = branchId ? `?branchId=${branchId}` : ''
+      const data = await api.get<any>(`/api/reports/dashboard${branchQ}`)
+      const s = data.stats ?? {}
 
-      // Stats
-      const s = data.stats ?? (data as any)
       setStats({
-        dailySales: s.dailySales ?? s.totalSales ?? 0,
-        dailyTransactions: s.dailyTransactions ?? s.totalTransactions ?? s.transactionCount ?? 0,
-        lowStockCount: s.lowStockCount ?? s.lowStock ?? 0,
-        cashBalance: s.cashBalance ?? s.cashRegisterBalance ?? 0,
-        dailySalesChange: s.dailySalesChange ?? s.salesChange,
-        dailyTransactionsChange: s.dailyTransactionsChange ?? s.transactionsChange,
+        dailySales: s.dailySales ?? 0,
+        dailyTransactions: s.dailyTransactions ?? 0,
+        lowStockCount: s.lowStockCount ?? 0,
+        cashBalance: s.cashBalance ?? 0,
       })
 
-      // Charts
-      setHourlySales(normaliseHourly(data.hourlySales ?? (data as any).hourlySales ?? []))
-      setCategorySales(normaliseCategory(data.categorySales ?? (data as any).categorySales ?? []))
-
-      // Recent transactions
-      setRecentTransactions(
-        normaliseTransactions(data.recentTransactions ?? (data as any).recentTransactions ?? [])
-      )
-
-      // Inventory alerts
-      setInventoryAlerts(normaliseAlerts(data.inventoryAlerts ?? (data as any).inventoryAlerts ?? []))
+      setHourlySales(normaliseHourly(data.hourlySales ?? []))
+      setCategorySales(normaliseCategory(data.categorySales ?? []))
+      setRecentTransactions(normaliseTransactions(data.recentTransactions ?? []))
+      setInventoryAlerts(normaliseAlerts(data.inventoryAlerts ?? []))
     } catch {
-      // If the dashboard endpoint doesn't exist yet, fall back to individual endpoints
-      try {
-        const [alertsRes, salesRes] = await Promise.allSettled([
-          api.get<any[]>(`/api/inventory/alerts?branchId=${BRANCH_ID}`),
-          api.get<any>(`/api/reports/daily?branchId=${BRANCH_ID}`),
-        ])
-
-        if (alertsRes.status === 'fulfilled') {
-          setInventoryAlerts(normaliseAlerts(alertsRes.value ?? []))
-          setStats(prev => ({ ...prev, lowStockCount: (alertsRes.value ?? []).length }))
-        }
-        if (salesRes.status === 'fulfilled') {
-          const s = salesRes.value ?? {}
-          setStats(prev => ({
-            ...prev,
-            dailySales: s.totalSales ?? s.dailySales ?? prev.dailySales,
-            dailyTransactions: s.transactionCount ?? s.dailyTransactions ?? prev.dailyTransactions,
-          }))
-          setHourlySales(normaliseHourly(s.hourlySales ?? s.byHour ?? []))
-          setCategorySales(normaliseCategory(s.categorySales ?? s.byCategory ?? []))
-          setRecentTransactions(normaliseTransactions(s.recentTransactions ?? s.recent ?? []))
-        }
-      } catch {
-        // Silently fail — dashboard is read-only, showing zeros is acceptable
-      }
+      // Silently fail — dashboard is read-only, showing zeros is acceptable
     } finally {
       setLoading(false)
     }

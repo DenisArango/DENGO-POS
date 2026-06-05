@@ -9,7 +9,7 @@ const include = {
   requestedBy: { select: { id: true, name: true } },
   approvedBy: { select: { id: true, name: true } },
   receivedBy: { select: { id: true, name: true } },
-  items: { include: { product: { select: { id: true, name: true, barcode: true } } } },
+  items: { include: { product: { select: { id: true, name: true, barcode: true, sku: true, cost: true } } } },
 }
 
 export default async function transferRoutes(fastify: FastifyInstance) {

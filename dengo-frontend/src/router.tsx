@@ -48,6 +48,7 @@ const ProductRotationReport = lazy(() => import('./pages/reports/ProductRotation
 const CreditSalesReport = lazy(() => import('./pages/reports/CreditSalesReport'))
 const UserActivityReport = lazy(() => import('./pages/reports/UserActivityReport'))
 const InventoryMovementsReport = lazy(() => import('./pages/reports/InventoryMovementsReport'))
+const CustomReports = lazy(() => import('./pages/reports/CustomReports'))
 
 export default function Router() {
   return (
@@ -89,6 +90,7 @@ export default function Router() {
           <Route path="/reports/user-activity" element={<UserActivityReport />} />
           <Route path="/reports/inventory-movements" element={<InventoryMovementsReport />} />
           <Route path="/reports/sales-history" element={<SalesHistoryReport />} />
+          <Route path="/reports/custom" element={<CustomReports />} />
           {/* Rutas de configuración */}
           <Route path="/settings/users" element={<UsersManagement />} />
           <Route path="/settings/roles" element={<RolesPermissions />} />

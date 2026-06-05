@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { validateUser, logLogin } from '../services/auth.service.js'
 import { log } from '../services/audit.service.js'
+import { prisma } from '../lib/prisma.js'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -28,15 +29,41 @@ export default async function authRoutes(fastify: FastifyInstance) {
         { expiresIn: '8h' }
       )
 
-      const { prisma } = await import('../lib/prisma.js')
-      const full = await prisma.user.findUnique({
-        where: { id: user.id },
-        include: { branch: true },
+      const branch = await prisma.branch.findUnique({ where: { id: user.branchId } })
+
+      return reply.send({
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          branchId: user.branchId,
+          isActive: user.isActive,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+          branch: branch ? {
+            id: branch.id,
+            name: branch.name,
+            code: branch.code,
+            type: branch.type,
+            address: branch.address,
+            city: branch.city,
+            phone: branch.phone,
+            email: branch.email,
+            manager: branch.manager,
+            status: branch.status,
+            openTime: branch.openTime,
+            closeTime: branch.closeTime,
+            currency: branch.currency,
+            timezone: branch.timezone,
+            taxRate: branch.taxRate,
+            printerEnabled: branch.printerEnabled,
+            createdAt: branch.createdAt,
+            updatedAt: branch.updatedAt,
+          } : null,
+        },
       })
-
-      const { passwordHash: _pw, ...safeUser } = full!
-
-      return reply.send({ token, user: safeUser })
     } catch (err: any) {
       await logLogin({ email, success: false, ipAddress: ip, ...(ua && { userAgent: ua }), ...(err.message && { failReason: err.message }) })
       return reply.status(401).send({ error: 'Credenciales incorrectas' })

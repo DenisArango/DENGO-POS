@@ -1,339 +1,193 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import {
-  ArrowLeft, Calendar, Download, Printer, DollarSign,
-  ShoppingCart, Clock, CreditCard, TrendingUp, Users,
-  Package, FileText, Filter, ChevronDown
-} from 'lucide-react'
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { ArrowLeft, Calendar, DollarSign, ShoppingCart, TrendingUp, Package } from 'lucide-react'
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { api } from '../../lib/api'
+import { useAuthStore } from '../../store'
+import AIRecommendations from '../../components/reports/AIRecommendations'
 
-// Datos de ejemplo
-const salesByHour = [
-  { hour: '08:00', sales: 120 },
-  { hour: '09:00', sales: 280 },
-  { hour: '10:00', sales: 450 },
-  { hour: '11:00', sales: 520 },
-  { hour: '12:00', sales: 680 },
-  { hour: '13:00', sales: 750 },
-  { hour: '14:00', sales: 620 },
-  { hour: '15:00', sales: 480 },
-  { hour: '16:00', sales: 390 },
-  { hour: '17:00', sales: 420 },
-  { hour: '18:00', sales: 580 },
-  { hour: '19:00', sales: 490 },
-  { hour: '20:00', sales: 320 },
-]
-
-const paymentMethods = [
-  { name: 'Efectivo', value: 1850, color: '#10B981' },
-  { name: 'Tarjeta', value: 980, color: '#3B82F6' },
-  { name: 'Transferencia', value: 420, color: '#8B5CF6' },
-  { name: 'Crédito', value: 195, color: '#F59E0B' },
-]
-
-const topProducts = [
-  { name: 'Coca Cola 600ml', quantity: 45, revenue: 675 },
-  { name: 'Sabritas Original', quantity: 38, revenue: 703 },
-  { name: 'Galletas Oreo', quantity: 32, revenue: 528 },
-  { name: 'Agua Ciel 1L', quantity: 28, revenue: 280 },
-  { name: 'Chocolate Snickers', quantity: 25, revenue: 550 },
-]
-
-const salesByCategory = [
-  { category: 'Bebidas', sales: 1245, percentage: 35 },
-  { category: 'Snacks', sales: 892, percentage: 25 },
-  { category: 'Dulces', sales: 678, percentage: 19 },
-  { category: 'Papelería', sales: 463, percentage: 13 },
-  { category: 'Otros', sales: 267, percentage: 8 },
-]
+const PAYMENT_COLORS: Record<string, string> = { CASH: '#10B981', CARD: '#3B82F6', TRANSFER: '#8B5CF6', CREDIT: '#F59E0B', MIXED: '#6B7280' }
+const PAYMENT_LABELS: Record<string, string> = { CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia', CREDIT: 'Crédito', MIXED: 'Mixto' }
 
 export default function DailySalesReport() {
   const navigate = useNavigate()
-  const [selectedDate, setSelectedDate] = useState(new Date())
-  const [showFilters, setShowFilters] = useState(false)
+  const { user } = useAuthStore()
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [loading, setLoading] = useState(false)
+  const [sales, setSales] = useState<any[]>([])
 
-  const stats = {
-    totalSales: 3445.00,
-    transactions: 142,
-    averageTicket: 24.26,
-    itemsSold: 389,
-    newCustomers: 12,
-    creditSales: 195.00
+  useEffect(() => { fetchSales() }, [selectedDate])
+
+  async function fetchSales() {
+    setLoading(true)
+    try {
+      const branchQ = user?.branchId ? `&branchId=${user.branchId}` : ''
+      const data = await api.get<any[]>(`/api/reports/sales-history?from=${selectedDate}T00:00:00&to=${selectedDate}T23:59:59${branchQ}`)
+      setSales(data ?? [])
+    } catch { setSales([]) } finally { setLoading(false) }
   }
+
+  const totalSales = sales.reduce((s, x) => s + Number(x.total), 0)
+  const transactions = sales.length
+  const avgTicket = transactions > 0 ? totalSales / transactions : 0
+  const itemsSold = sales.reduce((s, x) => s + (x.items?.reduce((a: number, i: any) => a + Number(i.quantity), 0) ?? 0), 0)
+
+  const hourlyMap: Record<number, number> = {}
+  for (let h = 6; h <= 22; h++) hourlyMap[h] = 0
+  for (const sale of sales) {
+    const h = new Date(sale.createdAt).getHours()
+    hourlyMap[h] = (hourlyMap[h] ?? 0) + Number(sale.total)
+  }
+  const byHour = Object.entries(hourlyMap).map(([h, v]) => ({ hour: `${String(h).padStart(2, '0')}:00`, sales: Math.round(v * 100) / 100 }))
+
+  const methodMap: Record<string, number> = {}
+  for (const sale of sales) { const m = sale.paymentMethod ?? 'CASH'; methodMap[m] = (methodMap[m] ?? 0) + Number(sale.total) }
+  const byMethod = Object.entries(methodMap).map(([m, v]) => ({ name: PAYMENT_LABELS[m] ?? m, value: Math.round(v * 100) / 100, color: PAYMENT_COLORS[m] ?? '#6B7280' }))
+
+  const prodMap: Record<string, { name: string; quantity: number; revenue: number }> = {}
+  for (const sale of sales) {
+    for (const item of sale.items ?? []) {
+      const name = item.product?.name ?? item.productName ?? '–'
+      if (!prodMap[name]) prodMap[name] = { name, quantity: 0, revenue: 0 }
+      prodMap[name]!.quantity += Number(item.quantity); prodMap[name]!.revenue += Number(item.total)
+    }
+  }
+  const topProducts = Object.values(prodMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5)
+
+  const catMap: Record<string, number> = {}
+  for (const sale of sales) {
+    for (const item of sale.items ?? []) {
+      const cat = item.product?.category?.name ?? 'Sin categoría'
+      catMap[cat] = (catMap[cat] ?? 0) + Number(item.total)
+    }
+  }
+  const byCategory = Object.entries(catMap)
+    .map(([c, v]) => ({ category: c, sales: v, percentage: totalSales > 0 ? Math.round((v / totalSales) * 100) : 0 }))
+    .sort((a, b) => b.sales - a.sales).slice(0, 6)
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('/reports')}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Reporte de Ventas del Día</h1>
-            <p className="text-gray-600 text-sm mt-1">
-              {format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex gap-3">
-          <button className="btn-outline btn-md flex items-center gap-2">
-            <Printer size={18} />
-            Imprimir
-          </button>
-          <button className="btn-primary btn-md flex items-center gap-2">
-            <Download size={18} />
-            Exportar
-          </button>
+      <div className="flex items-center gap-4">
+        <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft size={20} /></button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Ventas del Día</h1>
+          <p className="text-gray-600 text-sm mt-0.5">
+            {format(new Date(selectedDate + 'T12:00:00'), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+          </p>
         </div>
       </div>
 
-      {/* Controles */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 flex items-center gap-4">
-            <Calendar className="text-gray-400" size={20} />
-            <input
-              type="date"
-              value={format(selectedDate, 'yyyy-MM-dd')}
-              onChange={(e) => setSelectedDate(new Date(e.target.value))}
-              className="input"
-            />
-          </div>
-          
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="btn-outline btn-md flex items-center gap-2"
-          >
-            <Filter size={18} />
-            Filtros
-            <ChevronDown size={16} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-          </button>
-        </div>
+      <div className="bg-white rounded-lg shadow-sm p-4 flex items-center gap-3">
+        <Calendar className="text-gray-400" size={18} />
+        <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="input" />
+        {loading && <span className="text-sm text-gray-400">Cargando...</span>}
       </div>
 
-      {/* KPIs principales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-lg shadow-sm p-4"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Ventas Totales</span>
-            <DollarSign className="text-green-600" size={20} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total ventas', value: `Q${totalSales.toFixed(2)}`, icon: DollarSign, color: 'text-green-600 bg-green-100' },
+          { label: 'Transacciones', value: String(transactions), icon: ShoppingCart, color: 'text-blue-600 bg-blue-100' },
+          { label: 'Ticket promedio', value: `Q${avgTicket.toFixed(2)}`, icon: TrendingUp, color: 'text-purple-600 bg-purple-100' },
+          { label: 'Artículos vendidos', value: String(Math.round(itemsSold)), icon: Package, color: 'text-orange-600 bg-orange-100' },
+        ].map(s => (
+          <div key={s.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
+            <div className={`p-2.5 rounded-lg ${s.color}`}><s.icon size={20} /></div>
+            <div><p className="text-xs text-gray-400">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
           </div>
-          <p className="text-2xl font-bold text-gray-800">${stats.totalSales.toFixed(2)}</p>
-          <p className="text-xs text-green-600 mt-1">+15% vs ayer</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-lg shadow-sm p-4"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Transacciones</span>
-            <ShoppingCart className="text-blue-600" size={20} />
-          </div>
-          <p className="text-2xl font-bold text-gray-800">{stats.transactions}</p>
-          <p className="text-xs text-blue-600 mt-1">+8 vs ayer</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white rounded-lg shadow-sm p-4"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Ticket Promedio</span>
-            <TrendingUp className="text-purple-600" size={20} />
-          </div>
-          <p className="text-2xl font-bold text-gray-800">${stats.averageTicket.toFixed(2)}</p>
-          <p className="text-xs text-purple-600 mt-1">+$2.15 vs ayer</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white rounded-lg shadow-sm p-4"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Productos Vendidos</span>
-            <Package className="text-orange-600" size={20} />
-          </div>
-          <p className="text-2xl font-bold text-gray-800">{stats.itemsSold}</p>
-          <p className="text-xs text-orange-600 mt-1">2.74 por venta</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white rounded-lg shadow-sm p-4"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Clientes Nuevos</span>
-            <Users className="text-teal-600" size={20} />
-          </div>
-          <p className="text-2xl font-bold text-gray-800">{stats.newCustomers}</p>
-          <p className="text-xs text-teal-600 mt-1">+3 vs ayer</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="bg-white rounded-lg shadow-sm p-4"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Ventas a Crédito</span>
-            <CreditCard className="text-yellow-600" size={20} />
-          </div>
-          <p className="text-2xl font-bold text-gray-800">${stats.creditSales.toFixed(2)}</p>
-          <p className="text-xs text-yellow-600 mt-1">5.7% del total</p>
-        </motion.div>
+        ))}
       </div>
 
-      {/* Gráficos principales */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Ventas por hora */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Clock size={20} />
-            Ventas por Hora
-          </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={salesByHour}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="hour" />
-              <YAxis />
-              <Tooltip formatter={(value) => `$${value}`} />
-              <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="sales" 
-                stroke="#3B82F6" 
-                strokeWidth={2}
-                name="Ventas"
-                dot={{ fill: '#3B82F6' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+        <div className="bg-white rounded-xl shadow-sm p-5">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">Ventas por hora</h2>
+          {sales.length === 0
+            ? <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Sin ventas en este día</div>
+            : <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={byHour}><CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip formatter={(v: any) => [`Q${Number(v).toFixed(2)}`, 'Ventas']} />
+                  <Bar dataKey="sales" fill="#6366F1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+          }
         </div>
 
-        {/* Métodos de pago */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <CreditCard size={20} />
-            Métodos de Pago
-          </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={paymentMethods}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {paymentMethods.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => `$${value}`} />
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="bg-white rounded-xl shadow-sm p-5">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">Métodos de pago</h2>
+          {byMethod.length === 0
+            ? <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Sin datos</div>
+            : <div className="flex items-center gap-4">
+                <ResponsiveContainer width="50%" height={180}>
+                  <PieChart><Pie data={byMethod} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value">
+                    {byMethod.map((e, i) => <Cell key={i} fill={e.color} />)}
+                  </Pie><Tooltip formatter={(v: any) => [`Q${Number(v).toFixed(2)}`]} /></PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-2 flex-1">
+                  {byMethod.map(m => (
+                    <div key={m.name} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: m.color }} />
+                        <span className="text-gray-600">{m.name}</span>
+                      </div>
+                      <span className="font-semibold">Q{m.value.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+          }
         </div>
       </div>
 
-      {/* Tablas de detalle */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top productos */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Package size={20} />
-            Productos Más Vendidos
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 px-4 text-sm font-medium text-gray-700">Producto</th>
-                  <th className="text-center py-2 px-4 text-sm font-medium text-gray-700">Cantidad</th>
-                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-700">Ingresos</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topProducts.map((product, index) => (
-                  <tr key={index} className="border-b">
-                    <td className="py-2 px-4 text-sm">{product.name}</td>
-                    <td className="py-2 px-4 text-sm text-center">{product.quantity}</td>
-                    <td className="py-2 px-4 text-sm text-right font-medium">${product.revenue.toFixed(2)}</td>
+        <div className="bg-white rounded-xl shadow-sm p-5">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">Top 5 productos</h2>
+          {topProducts.length === 0
+            ? <p className="text-sm text-gray-400 text-center py-6">Sin datos</p>
+            : <table className="w-full text-sm"><thead className="bg-gray-50"><tr>
+                <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Producto</th>
+                <th className="text-right px-3 py-2 text-xs text-gray-500 font-medium">Cant.</th>
+                <th className="text-right px-3 py-2 text-xs text-gray-500 font-medium">Ingresos</th>
+              </tr></thead>
+              <tbody className="divide-y divide-gray-100">
+                {topProducts.map(p => (
+                  <tr key={p.name}>
+                    <td className="px-3 py-2.5 font-medium text-gray-800">{p.name}</td>
+                    <td className="px-3 py-2.5 text-right text-gray-600">{p.quantity % 1 === 0 ? p.quantity : p.quantity.toFixed(2)}</td>
+                    <td className="px-3 py-2.5 text-right font-semibold">Q{p.revenue.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          }
         </div>
 
-        {/* Ventas por categoría */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <BarChart size={20} />
-            Ventas por Categoría
-          </h3>
-          <div className="space-y-3">
-            {salesByCategory.map((item, index) => (
-              <div key={index}>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm text-gray-700">{item.category}</span>
-                  <span className="text-sm font-medium">${item.sales.toFixed(2)}</span>
+        {byCategory.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <h2 className="text-sm font-semibold text-gray-700 mb-4">Ventas por categoría</h2>
+            <div className="space-y-3">
+              {byCategory.map(c => (
+                <div key={c.category}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-700">{c.category}</span>
+                    <span className="font-semibold">Q{c.sales.toFixed(2)} ({c.percentage}%)</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary-500 rounded-full" style={{ width: `${c.percentage}%` }} />
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-primary-600 h-2 rounded-full transition-all"
-                    style={{ width: `${item.percentage}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Resumen del día */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <FileText size={20} />
-          Resumen del Día
-        </h3>
-        <div className="prose prose-sm max-w-none text-gray-600">
-          <p>
-            El día registró un total de <strong>${stats.totalSales.toFixed(2)}</strong> en ventas a través de{' '}
-            <strong>{stats.transactions}</strong> transacciones. El horario de mayor actividad fue entre las{' '}
-            <strong>12:00 y 14:00</strong>, representando el 28% de las ventas diarias.
-          </p>
-          <p>
-            El método de pago más utilizado fue <strong>efectivo</strong> con el 53.7% de las transacciones,
-            seguido por <strong>tarjeta</strong> con 28.4%. Se registraron <strong>{stats.newCustomers}</strong>{' '}
-            clientes nuevos y <strong>${stats.creditSales.toFixed(2)}</strong> en ventas a crédito.
-          </p>
-        </div>
-      </div>
+      <AIRecommendations
+        reportData={{ type: 'daily_sales', data: { totalSales, transactions, avgTicket, itemsSold, topProducts: topProducts.slice(0, 5), byCategory: byCategory.slice(0, 6), byMethod, date: selectedDate } }}
+        autoGenerate={sales.length > 0}
+      />
     </div>
   )
 }

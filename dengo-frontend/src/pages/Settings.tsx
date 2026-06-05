@@ -207,15 +207,15 @@ export default function Settings() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <p className="text-sm text-gray-600">Versión del Sistema</p>
-            <p className="font-medium">v2.0.1</p>
+            <p className="font-medium text-gray-800">v2.0</p>
           </div>
           <div>
             <p className="text-sm text-gray-600">Última Actualización</p>
-            <p className="font-medium">20 de Enero, 2024</p>
+            <p className="font-medium text-gray-800">29 de Mayo, 2026</p>
           </div>
           <div>
             <p className="text-sm text-gray-600">Licencia</p>
-            <p className="font-medium">Premium - Válida hasta 31/12/2024</p>
+            <p className="font-medium text-green-700">Premium — Válida hasta 29/05/2027</p>
           </div>
         </div>
       </div>

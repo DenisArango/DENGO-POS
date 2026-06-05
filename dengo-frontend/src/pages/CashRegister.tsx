@@ -10,6 +10,16 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../lib/api'
 import { useAuthStore } from '../store'
+import { useStore } from '../contexts/StoreContext'
+
+interface CashSales {
+  total: number
+  count: number
+  cash: number
+  card: number
+  transfer: number
+  credit: number
+}
 
 interface CashRegisterRecord {
   id: string
@@ -25,13 +35,7 @@ interface CashRegisterRecord {
   difference?: number
   branchId?: string
   status: 'OPEN' | 'CLOSED'
-  sales?: {
-    total: number
-    count: number
-    cash: number
-    card: number
-    transfer: number
-  }
+  sales?: CashSales
   movements: CashMovement[]
 }
 
@@ -44,10 +48,35 @@ interface CashMovement {
   createdAt: string
 }
 
-const BRANCH_ID = 'branch-001'
+function normalizeRegister(reg: any): CashRegisterRecord {
+  return {
+    ...reg,
+    initialAmount: Number(reg.initialAmount ?? 0),
+    finalAmount: reg.finalAmount != null ? Number(reg.finalAmount) : undefined,
+    expectedAmount: reg.expectedAmount != null ? Number(reg.expectedAmount) : undefined,
+    difference: reg.difference != null ? Number(reg.difference) : undefined,
+    openedBy: reg.openedBy?.name ?? reg.openedBy ?? undefined,
+    closedBy: reg.closedBy?.name ?? reg.closedBy ?? undefined,
+    sales: reg.sales ? {
+      total: Number(reg.sales.total ?? 0),
+      count: Number(reg.sales.count ?? 0),
+      cash: Number(reg.sales.cash ?? 0),
+      card: Number(reg.sales.card ?? 0),
+      transfer: Number(reg.sales.transfer ?? 0),
+      credit: Number(reg.sales.credit ?? 0),
+    } : undefined,
+    movements: (reg.movements ?? []).map((m: any) => ({
+      ...m,
+      amount: Number(m.amount ?? 0),
+      performedBy: m.performedBy?.name ?? m.performedBy ?? undefined,
+    })),
+  }
+}
 
 export default function CashRegisterPage() {
   const { user } = useAuthStore()
+  const { currentStore } = useStore()
+  const BRANCH_ID = currentStore?.id ?? user?.branchId ?? ''
   const [cashRegisters, setCashRegisters] = useState<CashRegisterRecord[]>([])
   const [currentRegister, setCurrentRegister] = useState<CashRegisterRecord | null>(null)
   const [loading, setLoading] = useState(false)
@@ -62,35 +91,29 @@ export default function CashRegisterPage() {
 
   const [initialAmount, setInitialAmount] = useState('')
   const [finalCount, setFinalCount] = useState('')
+  const [nextOpenAmount, setNextOpenAmount] = useState('')
   const [movementType, setMovementType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE')
   const [movementAmount, setMovementAmount] = useState('')
   const [movementDescription, setMovementDescription] = useState('')
 
   const fetchRegisters = () => {
+    if (!BRANCH_ID) return
     setLoading(true)
-    api.get<{ current: CashRegisterRecord | null; history: CashRegisterRecord[] }>(
-      `/api/cash-registers/current?branchId=${BRANCH_ID}`
-    )
-      .then(data => {
-        setCurrentRegister(data.current ?? null)
-        setCashRegisters(data.history ?? [])
+    Promise.all([
+      api.get<any>(`/api/cash-registers/current?branchId=${BRANCH_ID}`),
+      api.get<any[]>(`/api/cash-registers?branchId=${BRANCH_ID}`),
+    ])
+      .then(([current, list]) => {
+        setCurrentRegister(current ? normalizeRegister(current) : null)
+        setCashRegisters((list ?? []).map(normalizeRegister))
       })
-      .catch(() => {
-        // Fallback: try fetching just history
-        api.get<CashRegisterRecord[]>(`/api/cash-registers?branchId=${BRANCH_ID}`)
-          .then(list => {
-            const open = list.find(r => r.status === 'OPEN') ?? null
-            setCurrentRegister(open)
-            setCashRegisters(list)
-          })
-          .catch(e => toast.error(e.message))
-      })
+      .catch(e => toast.error(e.message))
       .finally(() => setLoading(false))
   }
 
   useEffect(() => {
     fetchRegisters()
-  }, [])
+  }, [BRANCH_ID])
 
   const handleOpenRegister = () => {
     if (!initialAmount || parseFloat(initialAmount) < 0) {
@@ -98,12 +121,12 @@ export default function CashRegisterPage() {
       return
     }
     setSaving(true)
-    api.post<CashRegisterRecord>('/api/cash-registers', {
+    api.post<any>('/api/cash-registers/open', {
       branchId: BRANCH_ID,
       initialAmount: parseFloat(initialAmount),
-      openedById: user?.id,
     })
-      .then(newReg => {
+      .then(raw => {
+        const newReg = normalizeRegister(raw)
         setCurrentRegister(newReg)
         setCashRegisters(prev => [newReg, ...prev])
         setShowOpenModal(false)
@@ -121,16 +144,18 @@ export default function CashRegisterPage() {
       return
     }
     setSaving(true)
-    api.patch<CashRegisterRecord>(`/api/cash-registers/${currentRegister.id}/close`, {
+    api.post<any>(`/api/cash-registers/${currentRegister.id}/close`, {
       finalAmount: parseFloat(finalCount),
-      closedById: user?.id,
     })
-      .then(closedReg => {
+      .then(raw => {
+        const closedReg = normalizeRegister(raw)
         setCashRegisters(prev => prev.map(r => r.id === closedReg.id ? closedReg : r))
         setSelectedRegister(closedReg)
         setCurrentRegister(null)
         setShowCloseModal(false)
         setFinalCount('')
+        if (nextOpenAmount) setInitialAmount(nextOpenAmount)
+        setNextOpenAmount('')
         setShowReportModal(true)
         const diff = closedReg.difference ?? 0
         if (diff !== 0) {
@@ -157,12 +182,17 @@ export default function CashRegisterPage() {
       return
     }
     setSaving(true)
-    api.post<CashMovement>(`/api/cash-registers/${currentRegister.id}/movements`, {
+    api.post<any>(`/api/cash-registers/${currentRegister.id}/movements`, {
       type: movementType,
       amount: parseFloat(movementAmount),
       description: movementDescription,
     })
-      .then(newMovement => {
+      .then((raw: any) => {
+        const newMovement: CashMovement = {
+          ...raw,
+          amount: Number(raw.amount ?? 0),
+          performedBy: raw.performedBy?.name ?? raw.performedBy ?? undefined,
+        }
         const updatedRegister = {
           ...currentRegister,
           movements: [...(currentRegister.movements ?? []), newMovement]
@@ -266,51 +296,53 @@ export default function CashRegisterPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white bg-opacity-10 rounded-lg p-4">
               <p className="text-sm opacity-90 mb-1">Monto Inicial</p>
-              <p className="text-2xl font-bold">
-                ${currentRegister.initialAmount.toFixed(2)}
-              </p>
+              <p className="text-2xl font-bold">Q{currentRegister.initialAmount.toFixed(2)}</p>
             </div>
 
             <div className="bg-white bg-opacity-10 rounded-lg p-4">
-              <p className="text-sm opacity-90 mb-1">Ventas en Efectivo</p>
-              <p className="text-2xl font-bold">
-                ${(currentRegister.sales?.cash ?? 0).toFixed(2)}
-              </p>
-              <p className="text-xs opacity-75">{currentRegister.sales?.count ?? 0} ventas</p>
+              <p className="text-sm opacity-90 mb-1">Ventas del Día</p>
+              <p className="text-2xl font-bold">Q{(currentRegister.sales?.total ?? 0).toFixed(2)}</p>
+              <p className="text-xs opacity-75">{currentRegister.sales?.count ?? 0} transacciones</p>
             </div>
 
             <div className="bg-white bg-opacity-10 rounded-lg p-4">
-              <p className="text-sm opacity-90 mb-1">Movimientos</p>
-              <div className="flex items-center gap-4">
-                <div>
-                  <p className="text-sm opacity-75">Entradas</p>
-                  <p className="font-bold text-green-300">
-                    +${(currentRegister.movements ?? [])
-                      .filter(m => m.type === 'INCOME')
-                      .reduce((sum, m) => sum + m.amount, 0)
-                      .toFixed(2)}
-                  </p>
+              <p className="text-sm opacity-90 mb-2">Por Método de Pago</p>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="opacity-75">Efectivo:</span>
+                  <span className="font-semibold">Q{(currentRegister.sales?.cash ?? 0).toFixed(2)}</span>
                 </div>
-                <div>
-                  <p className="text-sm opacity-75">Salidas</p>
-                  <p className="font-bold text-red-300">
-                    -${(currentRegister.movements ?? [])
-                      .filter(m => m.type === 'EXPENSE')
-                      .reduce((sum, m) => sum + m.amount, 0)
-                      .toFixed(2)}
-                  </p>
+                <div className="flex justify-between">
+                  <span className="opacity-75">Tarjeta:</span>
+                  <span className="font-semibold">Q{(currentRegister.sales?.card ?? 0).toFixed(2)}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="opacity-75">Transferencia:</span>
+                  <span className="font-semibold">Q{(currentRegister.sales?.transfer ?? 0).toFixed(2)}</span>
+                </div>
+                {(currentRegister.sales?.credit ?? 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="opacity-75">Crédito:</span>
+                    <span className="font-semibold">Q{currentRegister.sales!.credit.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="bg-white bg-opacity-10 rounded-lg p-4">
-              <p className="text-sm opacity-90 mb-1">Efectivo Esperado</p>
-              <p className="text-2xl font-bold">
-                ${calculateCurrentBalance().toFixed(2)}
-              </p>
+              <p className="text-sm opacity-90 mb-1">Efectivo en Caja</p>
+              <p className="text-2xl font-bold">Q{calculateCurrentBalance().toFixed(2)}</p>
+              <div className="flex gap-3 mt-1 text-xs opacity-75">
+                <span className="text-green-300">
+                  +Q{(currentRegister.movements ?? []).filter(m => m.type === 'INCOME').reduce((s, m) => s + m.amount, 0).toFixed(2)} ent.
+                </span>
+                <span className="text-red-300">
+                  -Q{(currentRegister.movements ?? []).filter(m => m.type === 'EXPENSE').reduce((s, m) => s + m.amount, 0).toFixed(2)} sal.
+                </span>
+              </div>
             </div>
           </div>
 
@@ -531,11 +563,11 @@ export default function CashRegisterPage() {
                 <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                   <div>
                     <p className="text-gray-600">Monto Inicial:</p>
-                    <p className="font-bold">${currentRegister.initialAmount.toFixed(2)}</p>
+                    <p className="font-bold">Q{currentRegister.initialAmount.toFixed(2)}</p>
                   </div>
                   <div>
                     <p className="text-gray-600">Ventas Efectivo:</p>
-                    <p className="font-bold text-green-600">+${(currentRegister.sales?.cash ?? 0).toFixed(2)}</p>
+                    <p className="font-bold text-green-600">+Q{(currentRegister.sales?.cash ?? 0).toFixed(2)}</p>
                   </div>
                   <div>
                     <p className="text-gray-600">Entradas:</p>
@@ -586,6 +618,19 @@ export default function CashRegisterPage() {
                     </p>
                   </div>
                 )}
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Monto para abrir la siguiente caja
+                </label>
+                <input
+                  type="number" value={nextOpenAmount}
+                  onChange={(e) => setNextOpenAmount(e.target.value)}
+                  placeholder="0.00 (opcional)" className="input w-full"
+                  min="0" step="0.01"
+                />
+                <p className="text-xs text-gray-400 mt-1">Se pre-llenará al abrir la siguiente caja</p>
               </div>
 
               <div className="flex gap-3">
@@ -952,6 +997,14 @@ export default function CashRegisterPage() {
                   </div>
                 </div>
               </div>
+
+              {initialAmount && (
+                <div className="border-2 border-primary-200 rounded-lg p-4 bg-primary-50 mb-4">
+                  <p className="text-sm font-semibold text-primary-700 mb-1">Apertura de siguiente caja</p>
+                  <p className="text-2xl font-bold text-primary-800">${parseFloat(initialAmount).toFixed(2)}</p>
+                  <p className="text-xs text-primary-600 mt-1">Este monto se usará al abrir la siguiente caja</p>
+                </div>
+              )}
 
               <div className="flex gap-3 pt-4 border-t">
                 <button onClick={() => setShowReportModal(false)} className="flex-1 btn-outline btn-md">

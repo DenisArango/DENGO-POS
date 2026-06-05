@@ -9,6 +9,7 @@ import { useCartStore } from '../store'
 import { useAuthStore } from '../store'
 import { api } from '../lib/api'
 import { toast } from 'sonner'
+import { useStore } from '../contexts/StoreContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,10 +86,6 @@ interface CompletedSale {
   createdAt: string
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const BRANCH_ID = 'branch-001'
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getCustomerName(c: CustomerRecord): string {
@@ -99,13 +96,25 @@ function getCustomerNit(c: CustomerRecord): string {
   return c.nit ?? 'CF'
 }
 
+function normaliseProduct(p: ProductRecord): ProductRecord {
+  return {
+    ...p,
+    basePrice: Number(p.basePrice ?? 0),
+    variations: (p.variations ?? []).map(v => ({
+      ...v,
+      price: Number(v.price ?? 0),
+      conversionFactor: Number(v.conversionFactor ?? 1),
+    })),
+  }
+}
+
 function buildDefaultVariation(product: ProductRecord): ProductVariation {
   return {
     id: `${product.id}-default`,
     productId: product.id,
     name: 'Pieza',
     conversionFactor: 1,
-    price: product.basePrice,
+    price: Number(product.basePrice ?? 0),
     isDefault: true,
   }
 }
@@ -119,6 +128,8 @@ function getVariations(product: ProductRecord): ProductVariation[] {
 
 export default function POS() {
   const { user } = useAuthStore()
+  const { currentStore } = useStore()
+  const BRANCH_ID = currentStore?.id ?? user?.branchId ?? ''
 
   // Search
   const [searchTerm, setSearchTerm] = useState('')
@@ -154,6 +165,10 @@ export default function POS() {
 
   // Saving
   const [saving, setSaving] = useState(false)
+
+  // Stock warning
+  const [stockIssues, setStockIssues] = useState<{ name: string; available: number; requested: number }[]>([])
+  const [showStockWarning, setShowStockWarning] = useState(false)
 
   // ── Fetch customers on mount ───────────────────────────────────────────────
   useEffect(() => {
@@ -191,9 +206,9 @@ export default function POS() {
   async function performSearch(query: string) {
     try {
       const data = await api.get<ProductRecord[]>(
-        `/api/products?search=${encodeURIComponent(query)}&branchId=${BRANCH_ID}&isActive=true`
+        `/api/products?search=${encodeURIComponent(query)}&isActive=true`
       )
-      const results = (data ?? []).filter(p => p.isActive !== false).slice(0, 8)
+      const results = (data ?? []).filter(p => p.isActive !== false).slice(0, 8).map(normaliseProduct)
       setSearchResults(results)
       setShowSearchResults(results.length > 0 || query.length > 0)
     } catch {
@@ -317,11 +332,22 @@ export default function POS() {
 
     // Try fetching by barcode directly
     try {
-      const data = await api.get<ProductRecord[]>(
-        `/api/products?barcode=${encodeURIComponent(barcode)}&branchId=${BRANCH_ID}`
+      const data = await api.get<{ product: ProductRecord; variation?: ProductVariation }>(
+        `/api/products/barcode/${encodeURIComponent(barcode)}`
       )
-      if (data && data.length > 0) {
-        handleAddProduct(data[0])
+      if (data?.product) {
+        const product = normaliseProduct(data.product)
+        const variation = data.variation
+          ? { ...data.variation, price: Number(data.variation.price ?? 0), conversionFactor: Number(data.variation.conversionFactor ?? 1) }
+          : undefined
+        if (variation) {
+          addToCart(product, variation, 1)
+          setSearchTerm('')
+          setShowSearchResults(false)
+          toast.success(`${product.name} (${variation.name}) agregado`)
+        } else {
+          handleAddProduct(product)
+        }
       } else {
         toast.error('Producto no encontrado')
       }
@@ -349,34 +375,31 @@ export default function POS() {
     }
   }
 
-  const handleCompleteSale = async () => {
-    if (cartItems.length === 0) { toast.error('El carrito está vacío'); return }
-    if (saleType === 'CREDIT' && !selectedCustomer) {
-      toast.error('Selecciona un cliente para venta a crédito'); return
-    }
-    if (paymentMethod === 'CASH' && saleType !== 'CREDIT') {
-      if (!cashReceived || parseFloat(cashReceived) < total) {
-        toast.error('Ingresa el efectivo recibido'); return
-      }
-    }
-
+  const completeSaleRequest = async () => {
     setSaving(true)
     try {
       const payload = {
         branchId: BRANCH_ID,
-        cashierId: user?.id,
-        customerId: selectedCustomer?.id ?? null,
+        customerId: selectedCustomer?.id,
         saleType,
         paymentMethod,
-        cashReceived: paymentMethod === 'CASH' && cashReceived ? parseFloat(cashReceived) : undefined,
-        items: cartItems.map(item => ({
-          productId: item.product.id,
-          variationId: item.variation?.id,
-          quantity: item.quantity,
-          unitPrice: item.variation ? item.variation.price : item.product.basePrice,
-          discount: itemDiscounts[getItemKey(item.product.id, item.variation?.id)] || 0,
-        })),
+        items: cartItems.map(item => {
+          const key = getItemKey(item.product.id, item.variation?.id)
+          const unitPrice = item.variation ? item.variation.price : item.product.basePrice
+          const discPct = itemDiscounts[key] || 0
+          const isRealVariation = item.variation && !item.variation.id.endsWith('-default')
+          return {
+            productId: item.product.id,
+            variationId: isRealVariation ? item.variation!.id : undefined,
+            quantity: item.quantity,
+            unitPrice,
+            discount: discPct / 100,
+            total: unitPrice * item.quantity * (1 - discPct / 100),
+          }
+        }),
         subtotal,
+        tax: 0,
+        discount: 0,
         total,
       }
 
@@ -421,6 +444,40 @@ export default function POS() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleCompleteSale = async () => {
+    if (cartItems.length === 0) { toast.error('El carrito está vacío'); return }
+    if (saleType === 'CREDIT' && !selectedCustomer) { toast.error('Selecciona un cliente para venta a crédito'); return }
+    if (paymentMethod === 'CASH' && saleType !== 'CREDIT') {
+      if (!cashReceived || parseFloat(cashReceived) < total) { toast.error('Ingresa el efectivo recibido'); return }
+    }
+
+    // Check inventory availability
+    if (BRANCH_ID) {
+      const issues: { name: string; available: number; requested: number }[] = []
+      await Promise.all(cartItems.map(async (item) => {
+        try {
+          const productId = item.variation && !item.variation.id.endsWith('-default')
+            ? item.variation.productId
+            : item.product.id
+          const inv = await api.get<{ quantity: number }>(`/api/inventory/${productId}/${BRANCH_ID}`)
+          const available = Number(inv?.quantity ?? 0)
+          if (available < item.quantity) {
+            const name = item.product.name + (item.variation && !item.variation.id.endsWith('-default') ? ` (${item.variation.name})` : '')
+            issues.push({ name, available, requested: item.quantity })
+          }
+        } catch { /* no inventory record = allow sale */ }
+      }))
+
+      if (issues.length > 0) {
+        setStockIssues(issues)
+        setShowStockWarning(true)
+        return
+      }
+    }
+
+    await completeSaleRequest()
   }
 
   const paymentMethodLabel: Record<PaymentMethodType, string> = {
@@ -473,7 +530,7 @@ export default function POS() {
                       </p>
                     </div>
                     <div className="text-right ml-4">
-                      <p className="text-sm font-bold text-primary-600">Q{product.basePrice.toFixed(2)}</p>
+                      <p className="text-sm font-bold text-primary-600">Q{Number(product.basePrice).toFixed(2)}</p>
                       {variations.length > 1 && (
                         <p className="text-xs text-gray-400">{variations.length} variantes</p>
                       )}
@@ -544,7 +601,7 @@ export default function POS() {
                           <p className="text-xs text-gray-400">{item.variation.name}</p>
                         )}
                       </div>
-                      <p className="text-right text-sm text-gray-600">Q{price.toFixed(2)}</p>
+                      <p className="text-right text-sm text-gray-600">Q{Number(price).toFixed(2)}</p>
                       {/* Quantity control */}
                       <div className="flex items-center justify-center gap-1">
                         <button
@@ -878,6 +935,56 @@ export default function POS() {
               <button onClick={() => setShowCustomerModal(false)} className="btn-outline btn-md w-full mt-4">
                 Cancelar
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Stock Warning Modal ── */}
+      <AnimatePresence>
+        {showStockWarning && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-lg p-6 max-w-md w-full"
+            >
+              <div className="flex items-start gap-3 mb-4">
+                <div className="p-2 bg-orange-100 rounded-lg flex-shrink-0">
+                  <AlertCircle size={24} className="text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800">Stock insuficiente</h3>
+                  <p className="text-sm text-gray-600 mt-1">Los siguientes productos no tienen suficiente stock en esta sucursal:</p>
+                </div>
+              </div>
+              <div className="space-y-2 mb-6">
+                {stockIssues.map((issue, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg text-sm">
+                    <span className="font-medium text-gray-800 truncate flex-1">{issue.name}</span>
+                    <div className="text-right ml-3 flex-shrink-0">
+                      <span className="text-orange-700 font-semibold">Disponible: {issue.available}</span>
+                      <span className="text-gray-500 ml-2">/ Pedido: {issue.requested}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowStockWarning(false)}
+                  className="btn-outline btn-md flex-1"
+                >
+                  Revisar carrito
+                </button>
+                <button
+                  onClick={() => { setShowStockWarning(false); completeSaleRequest() }}
+                  className="btn-primary btn-md flex-1"
+                >
+                  Vender de todas formas
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

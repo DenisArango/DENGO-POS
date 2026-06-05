@@ -5,12 +5,15 @@ import {
   TrendingDown, TrendingUp, FileText, Download,
   Filter, ChevronDown, Plus, Minus, RotateCcw,
   History, CheckCircle, XCircle, AlertCircle,
-  BarChart3, ArrowUpDown, Calendar, User
+  BarChart3, ArrowUpDown, Calendar, User, X
 } from 'lucide-react'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import ProductModal from '../components/products/ProductModal'
 import { api } from '../lib/api'
 import { useAuthStore } from '../store'
+import { useStore } from '../contexts/StoreContext'
 
 interface InventoryItem {
   productId: string
@@ -24,11 +27,11 @@ interface InventoryItem {
     barcode?: string
     brand?: string
     category?: string | { id: string; name: string; color?: string }
-    baseUnit?: string
+    baseUnit?: string | { id?: string; name?: string; abbreviation?: string }
     minStock?: number
     basePrice?: number
     cost?: number
-    variations?: { name: string; conversionFactor: number; price: number }[]
+    variations?: { id?: string; name: string; conversionFactor: number; price: number; isDefault?: boolean }[]
   }
 }
 
@@ -52,6 +55,16 @@ interface StockAdjustment {
   notes?: string
 }
 
+interface StockMovement {
+  id: string
+  type: string
+  quantity: number
+  reason?: string
+  referenceId?: string
+  createdAt: string
+  performedBy?: { id: string; name: string }
+}
+
 const adjustmentReasons = [
   'Rotura/Daño',
   'Vencimiento',
@@ -63,8 +76,6 @@ const adjustmentReasons = [
   'Otro'
 ]
 
-const BRANCH_ID = 'branch-001'
-
 function computeStatus(quantity: number, minStock: number): InventoryItemWithStatus['status'] {
   if (quantity === 0) return 'critical'
   if (quantity <= minStock * 0.5) return 'critical'
@@ -75,19 +86,37 @@ function computeStatus(quantity: number, minStock: number): InventoryItemWithSta
 
 function normaliseItem(item: InventoryItem): InventoryItemWithStatus {
   const p = item.product
+  const quantity = Number(item.quantity ?? 0)
   const displayName = p.fullName ?? p.name ?? ''
   const categoryName = typeof p.category === 'object' ? (p.category as { name: string })?.name ?? '' : p.category ?? ''
   const sku = p.sku ?? ''
   const barcode = p.barcode ?? ''
-  const baseUnit = p.baseUnit ?? 'Pieza'
-  const minStock = p.minStock ?? 0
-  const cost = p.cost ?? 0
-  const status = computeStatus(item.quantity, minStock)
-  return { ...item, status, displayName, categoryName, sku, barcode, baseUnit, minStock, cost }
+  const baseUnit = typeof p.baseUnit === 'object'
+    ? (p.baseUnit as { name?: string; abbreviation?: string })?.name ?? 'Pieza'
+    : p.baseUnit ?? 'Pieza'
+  const minStock = Number(p.minStock ?? 0)
+  const cost = Number(p.cost ?? 0)
+  const status = computeStatus(quantity, minStock)
+  return { ...item, quantity, status, displayName, categoryName, sku, barcode, baseUnit, minStock, cost }
+}
+
+function getMovementTypeLabel(type: string) {
+  switch (type) {
+    case 'IN': return { label: 'Entrada', color: 'text-green-700 bg-green-50' }
+    case 'OUT': return { label: 'Salida', color: 'text-red-700 bg-red-50' }
+    case 'ADJUSTMENT': return { label: 'Ajuste', color: 'text-blue-700 bg-blue-50' }
+    case 'RETURN': return { label: 'Devolución', color: 'text-purple-700 bg-purple-50' }
+    case 'TRANSFER_IN': return { label: 'Transferencia +', color: 'text-teal-700 bg-teal-50' }
+    case 'TRANSFER_OUT': return { label: 'Transferencia -', color: 'text-orange-700 bg-orange-50' }
+    default: return { label: type, color: 'text-gray-700 bg-gray-50' }
+  }
 }
 
 export default function Inventory() {
   const { user } = useAuthStore()
+  const { currentStore } = useStore()
+  const branchId = currentStore?.id ?? user?.branchId ?? ''
+
   const [inventory, setInventory] = useState<InventoryItemWithStatus[]>([])
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState<string[]>([])
@@ -95,24 +124,31 @@ export default function Inventory() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+
+  // Adjustment modal
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false)
-  const [showProductModal, setShowProductModal] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<any>(null)
   const [selectedItem, setSelectedItem] = useState<InventoryItemWithStatus | null>(null)
   const [savingAdjustment, setSavingAdjustment] = useState(false)
-
   const [adjustment, setAdjustment] = useState<StockAdjustment>({
-    productId: '',
-    branchId: BRANCH_ID,
-    currentStock: 0,
-    newStock: 0,
-    reason: '',
-    notes: ''
+    productId: '', branchId, currentStock: 0, newStock: 0, reason: '', notes: ''
   })
+
+  // Edit product modal
+  const [showProductModal, setShowProductModal] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<any>(null)
+  const [savingProduct, setSavingProduct] = useState(false)
+  const [productCategories, setProductCategories] = useState<{ id: string; name: string; color?: string }[]>([])
+  const [productUnits, setProductUnits] = useState<{ id: string; name: string; abbreviation: string; type: string }[]>([])
+
+  // History modal
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [historyItem, setHistoryItem] = useState<InventoryItemWithStatus | null>(null)
+  const [movements, setMovements] = useState<StockMovement[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
 
   const fetchInventory = () => {
     setLoading(true)
-    api.get<InventoryItem[]>(`/api/inventory?branchId=${BRANCH_ID}`)
+    api.get<InventoryItem[]>(`/api/inventory?branchId=${branchId}`)
       .then(items => {
         const normalised = items.map(normaliseItem)
         setInventory(normalised)
@@ -124,7 +160,14 @@ export default function Inventory() {
   }
 
   useEffect(() => {
-    fetchInventory()
+    if (branchId) fetchInventory()
+  }, [branchId])
+
+  useEffect(() => {
+    api.get<{ id: string; name: string; color?: string }[]>('/api/categories')
+      .then(setProductCategories).catch(() => {})
+    api.get<{ id: string; name: string; abbreviation: string; type: string }[]>('/api/units')
+      .then(setProductUnits).catch(() => {})
   }, [])
 
   const filteredInventory = inventory.filter(item => {
@@ -144,6 +187,7 @@ export default function Inventory() {
     overstock: inventory.filter(item => item.status === 'overstock').length
   }
 
+  // ── Adjustment ────────────────────────────────────────────────────────────
   const handleAdjustStock = (item: InventoryItemWithStatus) => {
     setSelectedItem(item)
     setAdjustment({
@@ -157,31 +201,18 @@ export default function Inventory() {
     setShowAdjustmentModal(true)
   }
 
-  const handleEditProduct = (product: any) => {
-    setEditingProduct(product)
-    setShowProductModal(true)
-  }
-
   const saveAdjustment = () => {
-    if (!adjustment.reason) {
-      toast.error('Seleccione una razón para el ajuste')
-      return
-    }
-    if (adjustment.newStock === adjustment.currentStock) {
-      toast.error('El nuevo stock debe ser diferente al actual')
-      return
-    }
+    if (!adjustment.reason) { toast.error('Seleccione una razón para el ajuste'); return }
+    if (adjustment.newStock === adjustment.currentStock) { toast.error('El nuevo stock debe ser diferente al actual'); return }
 
     setSavingAdjustment(true)
     api.put(`/api/inventory/${adjustment.productId}/${adjustment.branchId}`, {
       quantity: adjustment.newStock,
       reason: adjustment.reason,
-      userId: user?.id,
     })
       .then(() => {
-        const difference = adjustment.newStock - adjustment.currentStock
-        const action = difference > 0 ? 'incrementado' : 'reducido'
-        toast.success(`Stock ${action} exitosamente. Diferencia: ${Math.abs(difference)} unidades`)
+        const diff = adjustment.newStock - adjustment.currentStock
+        toast.success(`Stock ${diff > 0 ? 'incrementado' : 'reducido'} exitosamente (${diff > 0 ? '+' : ''}${diff})`)
         setShowAdjustmentModal(false)
         fetchInventory()
       })
@@ -189,6 +220,68 @@ export default function Inventory() {
       .finally(() => setSavingAdjustment(false))
   }
 
+  // ── Edit product ──────────────────────────────────────────────────────────
+  const handleEditProduct = (item: InventoryItemWithStatus) => {
+    const p = item.product
+    const catName = typeof p.category === 'object' ? (p.category as any)?.name ?? '' : p.category ?? ''
+    const unitName = typeof p.baseUnit === 'object' ? (p.baseUnit as any)?.name ?? '' : p.baseUnit ?? ''
+    setEditingProduct({
+      ...p,
+      id: p.id,
+      productName: p.fullName ?? p.name,
+      category: catName,
+      baseUnit: unitName,
+    })
+    setShowProductModal(true)
+  }
+
+  const handleProductSave = (productData: any) => {
+    const id = editingProduct?.id
+    if (!id) return
+
+    setSavingProduct(true)
+    api.put(`/api/products/${id}`, {
+      name: productData.productName ?? productData.name ?? productData.fullName,
+      barcode: productData.barcode,
+      sku: productData.sku,
+      brand: productData.brand || undefined,
+      basePrice: Number(productData.basePrice ?? 0),
+      cost: Number(productData.cost ?? 0),
+      minStock: Number(productData.minStock ?? 0),
+      imageUrl: productData.imageUrl || undefined,
+      categoryId: productData.categoryId,
+      baseUnitId: productData.baseUnitId,
+      variations: (productData.variations ?? []).map((v: any) => ({
+        id: v.id,
+        name: v.name,
+        barcode: v.barcode || undefined,
+        conversionFactor: Number(v.conversionFactor ?? 1),
+        price: Number(v.price ?? 0),
+        isDefault: v.isDefault ?? false,
+      })),
+    })
+      .then(() => {
+        toast.success('Producto actualizado exitosamente')
+        setShowProductModal(false)
+        setEditingProduct(null)
+        fetchInventory()
+      })
+      .catch(e => toast.error(e.message))
+      .finally(() => setSavingProduct(false))
+  }
+
+  // ── History ───────────────────────────────────────────────────────────────
+  const handleViewHistory = (item: InventoryItemWithStatus) => {
+    setHistoryItem(item)
+    setShowHistoryModal(true)
+    setLoadingHistory(true)
+    api.get<StockMovement[]>(`/api/inventory/movements?productId=${item.productId}&branchId=${item.branchId}`)
+      .then(data => setMovements(data ?? []))
+      .catch(e => { toast.error(e.message); setMovements([]) })
+      .finally(() => setLoadingHistory(false))
+  }
+
+  // ── Status helpers ────────────────────────────────────────────────────────
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'normal': return 'text-green-600 bg-green-50'
@@ -229,10 +322,6 @@ export default function Inventory() {
         </h1>
         <div className="flex gap-3">
           <button className="btn-outline btn-md flex items-center gap-2">
-            <History size={18} />
-            Historial
-          </button>
-          <button className="btn-outline btn-md flex items-center gap-2">
             <Download size={18} />
             Exportar
           </button>
@@ -249,56 +338,21 @@ export default function Inventory() {
       {/* Estadísticas */}
       {!loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-lg shadow-sm p-4"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Total Productos</span>
-              <Package className="text-primary-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-gray-800">{stats.totalProducts}</p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white rounded-lg shadow-sm p-4"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Valor Total</span>
-              <BarChart3 className="text-green-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-gray-800">${stats.totalValue.toFixed(2)}</p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white rounded-lg shadow-sm p-4"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Stock Bajo</span>
-              <TrendingDown className="text-yellow-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-gray-800">{stats.lowStock}</p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white rounded-lg shadow-sm p-4"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Sobrestock</span>
-              <TrendingUp className="text-blue-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-gray-800">{stats.overstock}</p>
-          </motion.div>
+          {[
+            { label: 'Total Productos', value: stats.totalProducts, Icon: Package, color: 'text-primary-600' },
+            { label: 'Valor Total', value: `Q${stats.totalValue.toFixed(2)}`, Icon: BarChart3, color: 'text-green-600' },
+            { label: 'Stock Bajo', value: stats.lowStock, Icon: TrendingDown, color: 'text-yellow-600' },
+            { label: 'Sobrestock', value: stats.overstock, Icon: TrendingUp, color: 'text-blue-600' },
+          ].map(({ label, value, Icon, color }, i) => (
+            <motion.div key={label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }} className="bg-white rounded-lg shadow-sm p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-gray-600 text-sm">{label}</span>
+                <Icon className={color} size={20} />
+              </div>
+              <p className="text-2xl font-bold text-gray-800">{value}</p>
+            </motion.div>
+          ))}
         </div>
       )}
 
@@ -307,90 +361,47 @@ export default function Inventory() {
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1 relative">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+              <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar por nombre, SKU o código..."
-                className="input pl-10 w-full"
-              />
+                className="input pl-10 w-full" />
               <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
             </div>
-
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="btn-outline btn-md flex items-center gap-2"
-            >
-              <Filter size={18} />
-              Filtros
+            <button onClick={() => setShowFilters(!showFilters)} className="btn-outline btn-md flex items-center gap-2">
+              <Filter size={18} /> Filtros
               <ChevronDown size={16} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
             </button>
           </div>
 
-          {/* Filtros expandibles */}
           <AnimatePresence>
             {showFilters && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="mt-4 pt-4 border-t overflow-hidden"
-              >
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }} className="mt-4 pt-4 border-t overflow-hidden">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Filtro por categoría */}
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-2 block">Categoría</label>
                     <div className="flex gap-2 flex-wrap">
-                      <button
-                        onClick={() => setSelectedCategory(null)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                          !selectedCategory
-                            ? 'bg-primary-600 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
+                      <button onClick={() => setSelectedCategory(null)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${!selectedCategory ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                         Todas
                       </button>
-                      {categories.map((category) => (
-                        <button
-                          key={category}
-                          onClick={() => setSelectedCategory(category)}
-                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                            selectedCategory === category
-                              ? 'bg-primary-600 text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
-                          {category}
+                      {categories.map(cat => (
+                        <button key={cat} onClick={() => setSelectedCategory(cat)}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${selectedCategory === cat ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                          {cat}
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  {/* Filtro por estado */}
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-2 block">Estado</label>
                     <div className="flex gap-2 flex-wrap">
-                      <button
-                        onClick={() => setSelectedStatus(null)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                          !selectedStatus
-                            ? 'bg-primary-600 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
+                      <button onClick={() => setSelectedStatus(null)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${!selectedStatus ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                         Todos
                       </button>
-                      {['normal', 'low', 'critical', 'overstock'].map((status) => (
-                        <button
-                          key={status}
-                          onClick={() => setSelectedStatus(status)}
-                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                            selectedStatus === status
-                              ? 'bg-primary-600 text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
+                      {['normal', 'low', 'critical', 'overstock'].map(status => (
+                        <button key={status} onClick={() => setSelectedStatus(status)}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${selectedStatus === status ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                           {getStatusLabel(status)}
                         </button>
                       ))}
@@ -403,14 +414,14 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* Tabla de inventario */}
+      {/* Tabla */}
       {!loading && (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">SKU</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-700">SKU / Código</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">Producto</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">Categoría</th>
                   <th className="text-center py-3 px-4 font-medium text-gray-700">Stock Actual</th>
@@ -421,28 +432,22 @@ export default function Inventory() {
                 </tr>
               </thead>
               <tbody>
-                {filteredInventory.map((item) => (
-                  <motion.tr
-                    key={`${item.productId}-${item.branchId}`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="border-b hover:bg-gray-50 transition-colors"
-                  >
+                {filteredInventory.map(item => (
+                  <motion.tr key={`${item.productId}-${item.branchId}`}
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="border-b hover:bg-gray-50 transition-colors">
                     <td className="py-3 px-4">
-                      <p className="font-medium text-gray-800">{item.sku}</p>
-                      <p className="text-xs text-gray-500">{item.barcode}</p>
+                      <p className="font-medium text-gray-800">{item.sku || '—'}</p>
+                      <p className="text-xs text-gray-500">{item.barcode || '—'}</p>
                     </td>
                     <td className="py-3 px-4">
                       <p className="font-medium text-gray-800">{item.displayName}</p>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-sm text-gray-600">{item.categoryName}</span>
+                      <span className="text-sm text-gray-600">{item.categoryName || '—'}</span>
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <span className={`font-medium ${
-                        item.status === 'critical' ? 'text-red-600' :
-                        item.status === 'low' ? 'text-yellow-600' : 'text-gray-800'
-                      }`}>
+                      <span className={`font-medium ${item.status === 'critical' ? 'text-red-600' : item.status === 'low' ? 'text-yellow-600' : 'text-gray-800'}`}>
                         {item.quantity} {item.baseUnit}
                       </span>
                     </td>
@@ -456,28 +461,20 @@ export default function Inventory() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right font-medium text-gray-800">
-                      ${(item.quantity * item.cost).toFixed(2)}
+                      Q{(item.quantity * item.cost).toFixed(2)}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex justify-center gap-2">
-                        <button
-                          onClick={() => handleAdjustStock(item)}
-                          className="p-1.5 hover:bg-gray-100 rounded transition-colors"
-                          title="Ajustar inventario"
-                        >
+                        <button onClick={() => handleAdjustStock(item)}
+                          className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Ajustar stock">
                           <ArrowUpDown size={16} className="text-gray-600" />
                         </button>
-                        <button
-                          onClick={() => handleEditProduct(item.product)}
-                          className="p-1.5 hover:bg-gray-100 rounded transition-colors"
-                          title="Editar producto"
-                        >
+                        <button onClick={() => handleEditProduct(item)}
+                          className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Editar producto">
                           <Edit2 size={16} className="text-gray-600" />
                         </button>
-                        <button
-                          className="p-1.5 hover:bg-gray-100 rounded transition-colors"
-                          title="Ver historial"
-                        >
+                        <button onClick={() => handleViewHistory(item)}
+                          className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Ver historial SKU">
                           <History size={16} className="text-gray-600" />
                         </button>
                       </div>
@@ -497,129 +494,67 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* Modal de Ajuste de Inventario */}
+      {/* Modal de Ajuste */}
       <AnimatePresence>
         {showAdjustmentModal && selectedItem && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-            onClick={() => setShowAdjustmentModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
+            onClick={() => setShowAdjustmentModal(false)}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg p-6 max-w-md w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
+              className="bg-white rounded-lg p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
               <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <ArrowUpDown size={24} />
-                Ajustar Inventario
+                <ArrowUpDown size={24} /> Ajustar Inventario
               </h2>
-
               <div className="space-y-4">
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-medium text-gray-800 mb-2">{selectedItem.displayName}</h3>
-                  <p className="text-sm text-gray-600">SKU: {selectedItem.sku}</p>
+                  <h3 className="font-medium text-gray-800 mb-1">{selectedItem.displayName}</h3>
+                  <p className="text-sm text-gray-600">SKU: {selectedItem.sku || '—'}</p>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="label">Stock Actual</label>
                     <div className="bg-gray-100 p-3 rounded-lg text-center">
-                      <p className="text-2xl font-bold text-gray-800">
-                        {adjustment.currentStock}
-                      </p>
+                      <p className="text-2xl font-bold text-gray-800">{adjustment.currentStock}</p>
                       <p className="text-sm text-gray-600">{selectedItem.baseUnit}</p>
                     </div>
                   </div>
-
                   <div>
                     <label className="label">Nuevo Stock</label>
-                    <input
-                      type="number"
-                      value={adjustment.newStock}
-                      onChange={(e) => setAdjustment(prev => ({
-                        ...prev,
-                        newStock: parseInt(e.target.value) || 0
-                      }))}
-                      className="input text-center text-2xl font-bold"
-                      min="0"
-                    />
+                    <input type="number" value={adjustment.newStock}
+                      onChange={(e) => setAdjustment(prev => ({ ...prev, newStock: parseInt(e.target.value) || 0 }))}
+                      className="input text-center text-2xl font-bold" min="0" />
                   </div>
                 </div>
-
                 {adjustment.newStock !== adjustment.currentStock && (
-                  <div className={`p-3 rounded-lg flex items-center gap-2 ${
-                    adjustment.newStock > adjustment.currentStock
-                      ? 'bg-green-50 text-green-700'
-                      : 'bg-red-50 text-red-700'
-                  }`}>
-                    {adjustment.newStock > adjustment.currentStock ? (
-                      <Plus size={20} />
-                    ) : (
-                      <Minus size={20} />
-                    )}
-                    <span className="font-medium">
-                      Diferencia: {Math.abs(adjustment.newStock - adjustment.currentStock)} {selectedItem.baseUnit}
-                    </span>
+                  <div className={`p-3 rounded-lg flex items-center gap-2 ${adjustment.newStock > adjustment.currentStock ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    {adjustment.newStock > adjustment.currentStock ? <Plus size={20} /> : <Minus size={20} />}
+                    <span className="font-medium">Diferencia: {Math.abs(adjustment.newStock - adjustment.currentStock)} {selectedItem.baseUnit}</span>
                   </div>
                 )}
-
                 <div>
                   <label className="label">Razón del Ajuste *</label>
-                  <select
-                    value={adjustment.reason}
-                    onChange={(e) => setAdjustment(prev => ({ ...prev, reason: e.target.value }))}
-                    className="input"
-                  >
+                  <select value={adjustment.reason}
+                    onChange={(e) => setAdjustment(prev => ({ ...prev, reason: e.target.value }))} className="input">
                     <option value="">Seleccionar razón</option>
-                    {adjustmentReasons.map(reason => (
-                      <option key={reason} value={reason}>{reason}</option>
-                    ))}
+                    {adjustmentReasons.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
-
                 <div>
                   <label className="label">Notas (opcional)</label>
-                  <textarea
-                    value={adjustment.notes}
+                  <textarea value={adjustment.notes}
                     onChange={(e) => setAdjustment(prev => ({ ...prev, notes: e.target.value }))}
-                    className="input"
-                    rows={3}
-                    placeholder="Detalles adicionales del ajuste..."
-                  />
+                    className="input" rows={2} placeholder="Detalles adicionales..." />
                 </div>
-
                 <div className="bg-yellow-50 p-3 rounded-lg flex items-start gap-2">
-                  <AlertCircle size={20} className="text-yellow-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-yellow-800">
-                    <p className="font-medium mb-1">Importante:</p>
-                    <p>Este ajuste quedará registrado en el historial con su nombre de usuario y la fecha/hora actual.</p>
-                  </div>
+                  <AlertCircle size={18} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-yellow-800">Este ajuste quedará registrado en el historial con fecha y usuario.</p>
                 </div>
               </div>
-
               <div className="mt-6 flex justify-end gap-3">
-                <button
-                  onClick={() => setShowAdjustmentModal(false)}
-                  className="btn-outline btn-md"
-                  disabled={savingAdjustment}
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={saveAdjustment}
-                  className="btn-primary btn-md flex items-center gap-2"
-                  disabled={savingAdjustment}
-                >
-                  {savingAdjustment ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                  ) : (
-                    <CheckCircle size={18} />
-                  )}
+                <button onClick={() => setShowAdjustmentModal(false)} className="btn-outline btn-md" disabled={savingAdjustment}>Cancelar</button>
+                <button onClick={saveAdjustment} className="btn-primary btn-md flex items-center gap-2" disabled={savingAdjustment}>
+                  {savingAdjustment ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> : <CheckCircle size={18} />}
                   Confirmar Ajuste
                 </button>
               </div>
@@ -628,22 +563,83 @@ export default function Inventory() {
         )}
       </AnimatePresence>
 
-      {/* Modal de Producto */}
+      {/* Modal de Historial SKU */}
+      <AnimatePresence>
+        {showHistoryModal && historyItem && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            onClick={() => setShowHistoryModal(false)}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}>
+
+              <div className="flex items-center justify-between p-5 border-b">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <History size={20} /> Historial de Movimientos
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-0.5">{historyItem.displayName} · SKU: {historyItem.sku || '—'}</p>
+                </div>
+                <button onClick={() => setShowHistoryModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5">
+                {loadingHistory ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+                  </div>
+                ) : movements.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <History size={40} className="mx-auto mb-3 opacity-30" />
+                    <p>No hay movimientos registrados para este producto</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {movements.map(mv => {
+                      const { label, color } = getMovementTypeLabel(mv.type)
+                      const qty = Number(mv.quantity ?? 0)
+                      const isPositive = ['IN', 'TRANSFER_IN', 'RETURN', 'ADJUSTMENT'].includes(mv.type)
+                        ? mv.type === 'ADJUSTMENT' ? qty >= 0 : true
+                        : false
+                      return (
+                        <div key={mv.id} className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50">
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0 mt-0.5 ${color}`}>{label}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800">{mv.reason || 'Sin descripción'}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {mv.performedBy?.name ?? 'Sistema'} · {format(new Date(mv.createdAt), "d MMM yyyy, HH:mm", { locale: es })}
+                            </p>
+                          </div>
+                          <span className={`text-sm font-bold flex-shrink-0 ${qty >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {qty >= 0 ? '+' : ''}{qty}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t p-4 flex justify-end">
+                <button onClick={() => setShowHistoryModal(false)} className="btn-outline btn-md">Cerrar</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Edición de Producto */}
       <ProductModal
         isOpen={showProductModal}
-        onClose={() => {
-          setShowProductModal(false)
-          setEditingProduct(null)
-        }}
-        onSave={(product) => {
-          console.log('Producto guardado:', product)
-          toast.success('Producto actualizado exitosamente')
-          setShowProductModal(false)
-          setEditingProduct(null)
-          fetchInventory()
-        }}
+        onClose={() => { setShowProductModal(false); setEditingProduct(null) }}
+        onSave={handleProductSave}
         editingProduct={editingProduct}
         mode="edit"
+        categories={productCategories}
+        units={productUnits}
       />
     </div>
   )

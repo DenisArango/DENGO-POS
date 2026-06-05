@@ -85,9 +85,40 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
     const delta = body.data.type === 'OUT' ? -body.data.quantity : body.data.quantity
     await updateStock(body.data.productId, body.data.branchId, delta, {
       type: body.data.type,
-      reason: body.data.reason,
+      ...(body.data.reason !== undefined ? { reason: body.data.reason } : {}),
       performedById: request.user.id,
     })
     return reply.status(201).send({ message: 'Movimiento registrado' })
+  })
+
+  // POST /api/inventory/intake  (batch stock intake — used by Purchases module)
+  fastify.post('/intake', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const body = z.object({
+      branchId: z.string(),
+      items: z.array(z.object({
+        productId: z.string(),
+        productName: z.string(),
+        quantity: z.number().min(0.001),
+        unitCost: z.number().min(0),
+      })).min(1),
+      notes: z.string().optional(),
+    }).safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+
+    const referenceId = `INTAKE-${Date.now()}`
+    for (const item of body.data.items) {
+      await updateStock(item.productId, body.data.branchId, item.quantity, {
+        type: 'IN',
+        performedById: request.user.id,
+        referenceId,
+        reason: body.data.notes || `Ingreso de compra — ${item.productName}`,
+      })
+    }
+
+    return reply.status(201).send({
+      referenceId,
+      itemCount: body.data.items.length,
+      totalUnits: body.data.items.reduce((s, i) => s + i.quantity, 0),
+    })
   })
 }

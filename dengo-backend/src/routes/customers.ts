@@ -14,7 +14,7 @@ const schema = z.object({
 export default async function customerRoutes(fastify: FastifyInstance) {
   fastify.get('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const q = request.query as { search?: string }
-    return reply.send(await prisma.customer.findMany({
+    const customers = await prisma.customer.findMany({
       where: {
         isActive: true,
         ...(q.search ? {
@@ -25,7 +25,13 @@ export default async function customerRoutes(fastify: FastifyInstance) {
         } : {}),
       },
       orderBy: { name: 'asc' },
-    }))
+    })
+    return reply.send(customers.map(c => ({
+      ...c,
+      creditLimit: Number(c.creditLimit),
+      creditUsed: Number(c.creditUsed),
+      creditAvailable: Number(c.creditLimit) - Number(c.creditUsed),
+    })))
   })
 
   fastify.get('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {

@@ -1,104 +1,77 @@
-import { Bell, Search } from 'lucide-react'
+import { Search, Building2 } from 'lucide-react'
 import { useAuthStore } from '../../store'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import StoreSelector from './StoreSelector'
-import { useState } from 'react'
+import NotificationPanel from './NotificationPanel'
+import { useStore } from '../../contexts/StoreContext'
 
 export default function Header() {
   const user = useAuthStore((state) => state.user)
+  const { currentStore, availableStores, switchStore, canSwitchStore, isLoading } = useStore()
 
-  // Datos de ejemplo para probar el StoreSelector
-  const availableStores = [
-    {
-      id: '1',
-      name: 'Tienda Central',
-      code: 'TC001',
-      type: 'main' as const,
-      city: 'Ciudad de Guatemala',
-      status: 'active' as const,
-      stats: {
-        dailySales: 4500,
-        employees: 8,
-        lowStock: 12
-      }
-    },
-    {
-      id: '2',
-      name: 'Sucursal Norte',
-      code: 'SN001',
-      type: 'branch' as const,
-      city: 'Mixco',
-      status: 'active' as const,
-      stats: {
-        dailySales: 2800,
-        employees: 5,
-        lowStock: 8
-      }
-    },
-    {
-      id: '3',
-      name: 'Sucursal Sur',
-      code: 'SS001',
-      type: 'branch' as const,
-      city: 'Villa Nueva',
-      status: 'maintenance' as const,
-      stats: {
-        dailySales: 0,
-        employees: 4,
-        lowStock: 15
-      }
+  const storeOptions = availableStores.map(s => ({
+    id: s.id,
+    name: s.name,
+    code: s.code,
+    type: s.type as 'main' | 'branch',
+    city: s.city || s.name,
+    status: s.status as 'active' | 'inactive' | 'maintenance',
+  }))
+
+  const renderStoreSelector = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400" />
+          <span className="hidden sm:inline">Cargando…</span>
+        </div>
+      )
     }
-  ]
-
-  // Estado temporal para la tienda actual
-  const [currentStoreId, setCurrentStoreId] = useState('1')
-  
-  const handleStoreChange = (storeId: string) => {
-    console.log('Cambiando a tienda:', storeId)
-    setCurrentStoreId(storeId)
+    if (storeOptions.length === 0 || !currentStore) {
+      return (
+        <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500">
+          <Building2 size={18} className="text-gray-400" />
+        </div>
+      )
+    }
+    return (
+      <StoreSelector
+        stores={storeOptions}
+        currentStoreId={currentStore.id}
+        onStoreChange={switchStore}
+        canChangeStore={canSwitchStore}
+      />
+    )
   }
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-between">
-      {/* Left side */}
+      {/* Left */}
       <div className="flex items-center space-x-4">
-        {/* StoreSelector aquí en lugar del Building/Branch */}
-        <StoreSelector 
-          stores={availableStores}
-          currentStoreId={currentStoreId}
-          onStoreChange={handleStoreChange}
-          canChangeStore={true}
-        />
-        
-        <div className="text-sm text-gray-500 border-l pl-4">
+        {renderStoreSelector()}
+        <div className="text-sm text-gray-500 border-l pl-4 hidden md:block">
           {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
         </div>
       </div>
 
-      {/* Right side */}
-      <div className="flex items-center space-x-4">
-        {/* Search */}
-        <div className="relative">
+      {/* Right */}
+      <div className="flex items-center space-x-3">
+        <div className="relative hidden lg:block">
           <input
             type="text"
             placeholder="Buscar..."
-            className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
           />
-          <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
+          <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
         </div>
 
-        {/* Notifications */}
-        <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
-          <Bell size={20} className="text-gray-600" />
-          <span className="absolute top-0 right-0 w-2 h-2 bg-secondary-500 rounded-full"></span>
-        </button>
+        <NotificationPanel branchId={currentStore?.id ?? user?.branchId} />
 
-        {/* User info (opcional) */}
-        <div className="flex items-center space-x-2 border-l pl-4">
+        <div className="flex items-center space-x-2 border-l pl-3">
           <div className="text-sm text-right">
-            <p className="font-medium text-gray-800">{user?.name || 'Usuario'}</p>
-            <p className="text-xs text-gray-500">{user?.role || 'Rol'}</p>
+            <p className="font-medium text-gray-800 leading-none">{user?.name || 'Usuario'}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{user?.role || 'Rol'}</p>
           </div>
         </div>
       </div>

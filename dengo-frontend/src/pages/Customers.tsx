@@ -75,7 +75,7 @@ export default function Customers() {
     total: customers.length,
     active: customers.filter(c => c.isActive !== false).length,
     withCredit: customers.filter(c => (c.creditLimit ?? 0) > 0).length,
-    totalCreditUsed: customers.reduce((s, c) => s + (c.creditUsed ?? 0), 0),
+    totalCreditUsed: customers.reduce((s, c) => s + Number(c.creditUsed ?? 0), 0),
   }
 
   const openCreate = () => {
@@ -108,7 +108,6 @@ export default function Customers() {
     if (editingCustomer) {
       api.put(`/api/customers/${editingCustomer.id}`, {
         ...formData,
-        creditAvailable: formData.creditLimit - (editingCustomer.creditUsed ?? 0),
       })
         .then(() => {
           toast.success('Cliente actualizado')
@@ -132,7 +131,7 @@ export default function Customers() {
   }
 
   const handleDelete = (id: string) => {
-    api.put(`/api/customers/${id}`, { isActive: false })
+    api.delete(`/api/customers/${id}`)
       .then(() => {
         toast.success('Cliente eliminado')
         setShowDeleteConfirm(null)
@@ -142,8 +141,9 @@ export default function Customers() {
   }
 
   const creditPct = (c: Customer) => {
-    if (!c.creditLimit) return 0
-    return Math.round(((c.creditUsed ?? 0) / c.creditLimit) * 100)
+    const limit = Number(c.creditLimit)
+    if (!limit) return 0
+    return Math.round((Number(c.creditUsed ?? 0) / limit) * 100)
   }
 
   if (loading) return (

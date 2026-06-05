@@ -130,12 +130,12 @@ export default async function productRoutes(fastify: FastifyInstance) {
       })
 
       // Log price changes if any
-      if (old && productData.basePrice !== undefined && old.basePrice !== productData.basePrice) {
+      if (old && productData.basePrice !== undefined && Number(old.basePrice) !== productData.basePrice) {
         await prisma.priceHistory.create({
           data: { productId: id, field: 'BasePrice', oldValue: old.basePrice, newValue: productData.basePrice, changedById: request.user.id },
         })
       }
-      if (old && productData.cost !== undefined && old.cost !== productData.cost) {
+      if (old && productData.cost !== undefined && Number(old.cost) !== productData.cost) {
         await prisma.priceHistory.create({
           data: { productId: id, field: 'Cost', oldValue: old.cost, newValue: productData.cost, changedById: request.user.id },
         })

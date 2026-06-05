@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Palette, Sun, Moon, Monitor } from 'lucide-react'
+import { ArrowLeft, Palette, Sun, Moon, Monitor } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 
@@ -43,15 +43,17 @@ export default function Appearance() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <button onClick={() => navigate('/settings')} className="text-sm text-gray-600 hover:text-gray-800 mb-2">
-            ← Volver a Configuración
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate('/settings')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <ArrowLeft size={20} />
           </button>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Palette size={28} />
-            Apariencia
-          </h1>
-          <p className="text-gray-600 text-sm mt-1">Personalizar colores, temas y preferencias visuales</p>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <Palette size={28} />
+              Apariencia
+            </h1>
+            <p className="text-gray-600 text-sm mt-1">Personalizar colores, temas y preferencias visuales</p>
+          </div>
         </div>
         <button onClick={handleSave} disabled={!hasChanges} className={`btn-primary btn-md ${!hasChanges ? 'opacity-50 cursor-not-allowed' : ''}`}>
           Guardar Cambios

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { CreditCard, DollarSign, Building2, Smartphone, Check, X } from 'lucide-react'
+import { ArrowLeft, CreditCard, DollarSign, Building2, Smartphone, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 
@@ -82,20 +82,22 @@ export default function PaymentMethods() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/settings')}
-            className="text-sm text-gray-600 hover:text-gray-800 mb-2 flex items-center gap-1"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            ← Volver a Configuración
+            <ArrowLeft size={20} />
           </button>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <CreditCard size={28} />
-            Métodos de Pago
-          </h1>
-          <p className="text-gray-600 text-sm mt-1">
-            Configurar métodos de pago aceptados y comisiones
-          </p>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <CreditCard size={28} />
+              Métodos de Pago
+            </h1>
+            <p className="text-gray-600 text-sm mt-1">
+              Configurar métodos de pago aceptados y comisiones
+            </p>
+          </div>
         </div>
 
         <button

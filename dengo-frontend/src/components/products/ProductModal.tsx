@@ -12,6 +12,8 @@ interface ProductModalProps {
   onSave: (product: any) => void
   editingProduct?: any
   mode?: 'create' | 'edit' | 'duplicate'
+  categories?: { id: string; name: string; color?: string }[]
+  units?: { id: string; name: string; abbreviation: string; type: string }[]
 }
 
 interface ProductFormData {
@@ -34,24 +36,6 @@ interface ProductFormData {
   }[]
 }
 
-// Datos de ejemplo - en producción vendrían de la API
-const mockUnits = [
-  { id: '1', name: 'Pieza', abbreviation: 'pza', type: 'DISCRETE' },
-  { id: '2', name: 'Caja', abbreviation: 'cja', type: 'DISCRETE' },
-  { id: '3', name: 'Docena', abbreviation: 'doc', type: 'DISCRETE' },
-  { id: '4', name: 'Mililitro', abbreviation: 'ml', type: 'CONTINUOUS' },
-  { id: '5', name: 'Litro', abbreviation: 'L', type: 'CONTINUOUS' },
-  { id: '6', name: 'Metro', abbreviation: 'm', type: 'CONTINUOUS' },
-  { id: '7', name: 'Yarda', abbreviation: 'yd', type: 'CONTINUOUS' },
-]
-
-const mockCategories = [
-  { id: '1', name: 'Bebidas', color: '#3B82F6' },
-  { id: '2', name: 'Snacks', color: '#F59E0B' },
-  { id: '3', name: 'Papelería', color: '#8B5CF6' },
-  { id: '4', name: 'Telas y Mercería', color: '#06B6D4' },
-]
-
 const productTemplates: { [key: string]: string[] } = {
   'Bebidas': ['Capacidad', 'Sabor'],
   'Snacks': ['Peso', 'Sabor'],
@@ -59,12 +43,14 @@ const productTemplates: { [key: string]: string[] } = {
   'Telas y Mercería': ['Material', 'Color', 'Ancho'],
 }
 
-export default function ProductModal({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  editingProduct, 
-  mode = 'create' 
+export default function ProductModal({
+  isOpen,
+  onClose,
+  onSave,
+  editingProduct,
+  mode = 'create',
+  categories = [],
+  units = [],
 }: ProductModalProps) {
   const [formData, setFormData] = useState<ProductFormData>({
     barcode: '',
@@ -83,27 +69,28 @@ export default function ProductModal({
 
   useEffect(() => {
     if (editingProduct && (mode === 'edit' || mode === 'duplicate')) {
+      const resolvedName = editingProduct.productName ?? editingProduct.fullName ?? editingProduct.name ?? ''
       setFormData({
-        barcode: mode === 'duplicate' ? '' : editingProduct.barcode,
-        sku: mode === 'duplicate' ? '' : editingProduct.sku,
-        brand: editingProduct.brand,
-        productName: mode === 'duplicate' ? editingProduct.productName + ' (Copia)' : editingProduct.productName,
-        attributes: Object.entries(editingProduct.attributes || {}).map(([name, value]) => ({ 
-          name, 
-          value: value as string 
+        barcode: mode === 'duplicate' ? '' : (editingProduct.barcode ?? ''),
+        sku: mode === 'duplicate' ? '' : (editingProduct.sku ?? ''),
+        brand: editingProduct.brand ?? '',
+        productName: mode === 'duplicate' ? resolvedName + ' (Copia)' : resolvedName,
+        attributes: Object.entries(editingProduct.attributes || {}).map(([name, value]) => ({
+          name,
+          value: value as string
         })),
-        category: editingProduct.category,
-        baseUnit: editingProduct.baseUnit,
-        basePrice: editingProduct.basePrice,
-        cost: editingProduct.cost,
-        minStock: editingProduct.minStock,
+        category: editingProduct.category ?? '',
+        baseUnit: editingProduct.baseUnit ?? '',
+        basePrice: Number(editingProduct.basePrice ?? 0),
+        cost: Number(editingProduct.cost ?? 0),
+        minStock: Number(editingProduct.minStock ?? 0),
         variations: (editingProduct.variations || [])
           .filter((v: any) => !v.isDefault)
           .map((v: any) => ({
-            name: v.name,
-            barcode: mode === 'duplicate' ? '' : (v.barcode || ''),
-            conversionFactor: v.conversionFactor,
-            price: v.price,
+            name: v.name ?? '',
+            barcode: mode === 'duplicate' ? '' : (v.barcode ?? ''),
+            conversionFactor: Number(v.conversionFactor ?? 1),
+            price: Number(v.price ?? 0),
             isDefault: false
           }))
       })
@@ -145,8 +132,8 @@ export default function ProductModal({
   }
 
   const handleSave = () => {
-    if (!formData.barcode || !formData.productName || !formData.category) {
-      toast.error('Complete los campos obligatorios')
+    if (!formData.barcode || !formData.productName || !formData.category || !formData.baseUnit) {
+      toast.error('Complete los campos obligatorios (código, nombre, categoría y unidad)')
       return
     }
 
@@ -156,11 +143,16 @@ export default function ProductModal({
       ...formData.attributes.map(attr => attr.value).filter(Boolean)
     ].filter(Boolean).join(' ')
 
+    const selectedCategory = categories.find(c => c.name === formData.category)
+    const selectedUnit = units.find(u => u.name === formData.baseUnit || u.abbreviation === formData.baseUnit)
+
     const productData = {
       ...formData,
       fullName,
       imageUrl: productImage,
-      id: editingProduct?.id || Date.now().toString()
+      id: editingProduct?.id || Date.now().toString(),
+      categoryId: selectedCategory?.id,
+      baseUnitId: selectedUnit?.id,
     }
 
     onSave(productData)
@@ -203,14 +195,14 @@ export default function ProductModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]"
           onClick={handleClose}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -228,7 +220,7 @@ export default function ProductModal({
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto pr-1">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left column - Basic info */}
                 <div className="lg:col-span-2 space-y-6">
@@ -249,7 +241,7 @@ export default function ProductModal({
                             className="input pl-10"
                             placeholder="7501234567890"
                           />
-                          <Barcode className="absolute left-3 top-2.5 text-gray-400" size={20} />
+                          <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
                         </div>
                       </div>
 
@@ -272,7 +264,7 @@ export default function ProductModal({
                           className="input"
                         >
                           <option value="">Seleccionar categoría</option>
-                          {mockCategories.map(cat => (
+                          {categories.map((cat: { id: string; name: string }) => (
                             <option key={cat.id} value={cat.name}>{cat.name}</option>
                           ))}
                         </select>
@@ -355,7 +347,7 @@ export default function ProductModal({
                           className="input"
                         >
                           <option value="">Seleccionar unidad</option>
-                          {mockUnits.map(unit => (
+                          {units.map((unit: { id: string; name: string; abbreviation: string }) => (
                             <option key={unit.id} value={unit.name}>
                               {unit.name} ({unit.abbreviation})
                             </option>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Building2, Save, Upload, MapPin, Phone, Mail, Globe, FileText, Hash } from 'lucide-react'
+import { ArrowLeft, Building2, Save, Upload, MapPin, Phone, Mail, Globe, FileText, Hash } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 
@@ -68,20 +68,22 @@ export default function Company() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/settings')}
-            className="text-sm text-gray-600 hover:text-gray-800 mb-2 flex items-center gap-1"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            ← Volver a Configuración
+            <ArrowLeft size={20} />
           </button>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Building2 size={28} />
-            Información de Empresa
-          </h1>
-          <p className="text-gray-600 text-sm mt-1">
-            Datos fiscales, logo y configuración general de la empresa
-          </p>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <Building2 size={28} />
+              Información de Empresa
+            </h1>
+            <p className="text-gray-600 text-sm mt-1">
+              Datos fiscales, logo y configuración general de la empresa
+            </p>
+          </div>
         </div>
 
         <button

@@ -5,22 +5,27 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { format } from 'date-fns'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../store'
+import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
+import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
 
 export default function HourlySalesReport() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const { currentStore } = useStore()
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [loading, setLoading] = useState(false)
   const [sales, setSales] = useState<any[]>([])
+  const [filters, setFilters] = useState<ReportFilterState>({ branchId: currentStore?.id ?? user?.branchId ?? '', cashRegisterId: '' })
 
-  useEffect(() => { fetchData() }, [selectedDate])
+  useEffect(() => { fetchData() }, [selectedDate, filters])
 
   async function fetchData() {
     setLoading(true)
     try {
-      const branchQ = user?.branchId ? `&branchId=${user.branchId}` : ''
-      const data = await api.get<any[]>(`/api/reports/sales-history?from=${selectedDate}T00:00:00&to=${selectedDate}T23:59:59${branchQ}`)
+      const branchQ = filters.branchId ? `&branchId=${filters.branchId}` : ''
+      const regQ = filters.cashRegisterId ? `&cashRegisterId=${filters.cashRegisterId}` : ''
+      const data = await api.get<any[]>(`/api/reports/sales-history?from=${selectedDate}T00:00:00&to=${selectedDate}T23:59:59${branchQ}${regQ}`)
       setSales(data ?? [])
     } catch { setSales([]) } finally { setLoading(false) }
   }
@@ -58,9 +63,10 @@ export default function HourlySalesReport() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex items-center gap-3">
+      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-center gap-3">
         <Calendar size={16} className="text-gray-400" />
         <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="input" />
+        <ReportFilters value={filters} onChange={setFilters} />
         {loading && <span className="text-sm text-gray-400">Cargando...</span>}
       </div>
 

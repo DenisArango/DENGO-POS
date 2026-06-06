@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -7,6 +8,14 @@ import {
   FileText, Download, ArrowRight, Warehouse,
   CreditCard, UserCheck, History, ArrowUpDown, Sparkles
 } from 'lucide-react'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts'
+import { format, subDays } from 'date-fns'
+import { es } from 'date-fns/locale'
+import { api } from '../lib/api'
+import { useAuthStore } from '../store'
+import { useStore } from '../contexts/StoreContext'
 
 interface ReportCard {
   id: string
@@ -20,7 +29,6 @@ interface ReportCard {
 }
 
 const reportCards: ReportCard[] = [
-  // Consultas con IA
   {
     id: 'custom-reports',
     title: 'Consultas con IA',
@@ -31,7 +39,6 @@ const reportCards: ReportCard[] = [
     category: 'ai',
     badge: 'NUEVO',
   },
-  // Reportes de Ventas
   {
     id: 'daily-sales',
     title: 'Ventas del Día',
@@ -77,8 +84,6 @@ const reportCards: ReportCard[] = [
     color: 'bg-pink-500',
     category: 'sales'
   },
-
-  // Reportes de Inventario
   {
     id: 'inventory-status',
     title: 'Estado del Inventario',
@@ -115,8 +120,6 @@ const reportCards: ReportCard[] = [
     color: 'bg-teal-500',
     category: 'inventory'
   },
-
-  // Reportes Financieros
   {
     id: 'cash-flow',
     title: 'Flujo de Caja',
@@ -144,8 +147,6 @@ const reportCards: ReportCard[] = [
     color: 'bg-rose-500',
     category: 'financial'
   },
-
-  // Reportes de Auditoría
   {
     id: 'user-activity',
     title: 'Actividad de Usuarios',
@@ -167,10 +168,58 @@ const categories = [
 
 export default function Reports() {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
+  const { currentStore } = useStore()
+  const branchId = currentStore?.id ?? user?.branchId ?? ''
 
-  const handleReportClick = (path: string) => {
-    navigate(path)
+  const [quickStats, setQuickStats] = useState({
+    dailySales: 0, dailyTransactions: 0, lowStockCount: 0, avgTicket: 0
+  })
+  const [weeklySales, setWeeklySales] = useState<{ label: string; total: number }[]>([])
+  const [topProducts, setTopProducts] = useState<any[]>([])
+  const [loadingCharts, setLoadingCharts] = useState(true)
+
+  useEffect(() => { fetchQuickData() }, [branchId])
+
+  async function fetchQuickData() {
+    setLoadingCharts(true)
+    try {
+      const bq = branchId ? `&branchId=${branchId}` : ''
+      const today = format(new Date(), 'yyyy-MM-dd')
+      const weekAgo = format(subDays(new Date(), 6), 'yyyy-MM-dd')
+
+      const [dashRes, weeklyRes, topRes] = await Promise.allSettled([
+        api.get<any>(`/api/reports/dashboard${branchId ? `?branchId=${branchId}` : ''}`),
+        api.get<any[]>(`/api/reports/daily-sales?from=${weekAgo}T00:00:00&to=${today}T23:59:59${bq}`),
+        api.get<any[]>(`/api/reports/top-products?from=${today}T00:00:00&to=${today}T23:59:59${bq}&limit=5`),
+      ])
+
+      if (dashRes.status === 'fulfilled' && dashRes.value) {
+        const s = dashRes.value.stats ?? {}
+        const sales = Number(s.dailySales ?? 0)
+        const txn = Number(s.dailyTransactions ?? 0)
+        setQuickStats({
+          dailySales: sales,
+          dailyTransactions: txn,
+          lowStockCount: s.lowStockCount ?? 0,
+          avgTicket: txn > 0 ? sales / txn : 0,
+        })
+      }
+
+      if (weeklyRes.status === 'fulfilled') {
+        setWeeklySales((weeklyRes.value ?? []).map((d: any) => ({
+          label: format(new Date(d.date + 'T12:00:00'), 'EEE d', { locale: es }),
+          total: Math.round(Number(d.total) * 100) / 100,
+        })))
+      }
+
+      if (topRes.status === 'fulfilled') {
+        setTopProducts((topRes.value ?? []).slice(0, 5))
+      }
+    } catch { /* silent */ } finally { setLoadingCharts(false) }
   }
+
+  const topMax = topProducts[0]?.revenue ?? 1
 
   return (
     <div className="space-y-6">
@@ -180,68 +229,125 @@ export default function Reports() {
           <FileBarChart size={28} />
           Reportes y Análisis
         </h1>
-        <button className="btn-outline btn-md flex items-center gap-2">
-          <Download size={18} />
-          Exportar Personalizado
-        </button>
       </div>
 
-      {/* Estadísticas rápidas */}
+      {/* Estadísticas rápidas — datos reales */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-lg shadow-sm p-4"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Ventas Hoy</span>
-            <DollarSign className="text-green-600" size={20} />
-          </div>
-          <p className="text-2xl font-bold text-gray-800">$2,845.00</p>
-          <p className="text-xs text-green-600 mt-1">+12% vs ayer</p>
-        </motion.div>
+        {[
+          {
+            label: 'Ventas Hoy',
+            value: `Q${quickStats.dailySales.toLocaleString('es-GT', { minimumFractionDigits: 2 })}`,
+            icon: DollarSign,
+            color: 'text-green-600',
+            bg: 'bg-green-100',
+            sub: 'Total del día',
+          },
+          {
+            label: 'Transacciones',
+            value: String(quickStats.dailyTransactions),
+            icon: ShoppingCart,
+            color: 'text-blue-600',
+            bg: 'bg-blue-100',
+            sub: `Ticket prom: Q${quickStats.avgTicket.toFixed(2)}`,
+          },
+          {
+            label: 'Ticket Promedio',
+            value: `Q${quickStats.avgTicket.toFixed(2)}`,
+            icon: TrendingUp,
+            color: 'text-purple-600',
+            bg: 'bg-purple-100',
+            sub: 'Por transacción',
+          },
+          {
+            label: 'Stock Bajo',
+            value: String(quickStats.lowStockCount),
+            icon: AlertTriangle,
+            color: 'text-yellow-600',
+            bg: 'bg-yellow-100',
+            sub: quickStats.lowStockCount > 0 ? 'Requieren atención' : 'Todo en orden',
+          },
+        ].map((s, i) => (
+          <motion.div
+            key={s.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.07 }}
+            className="bg-white rounded-lg shadow-sm p-4"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-gray-500 text-sm">{s.label}</span>
+              <div className={`p-1.5 rounded-lg ${s.bg}`}>
+                <s.icon className={s.color} size={16} />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-gray-800">{loadingCharts ? '—' : s.value}</p>
+            <p className={`text-xs mt-1 ${s.color}`}>{s.sub}</p>
+          </motion.div>
+        ))}
+      </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-lg shadow-sm p-4"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Transacciones</span>
-            <ShoppingCart className="text-blue-600" size={20} />
-          </div>
-          <p className="text-2xl font-bold text-gray-800">142</p>
-          <p className="text-xs text-blue-600 mt-1">Promedio: $20.04</p>
-        </motion.div>
+      {/* Gráficos rápidos */}
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <h3 className="font-semibold text-gray-800 mb-5 flex items-center gap-2">
+          <LineChart size={20} />
+          Gráficos Rápidos
+        </h3>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white rounded-lg shadow-sm p-4"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Productos Vendidos</span>
-            <Package className="text-purple-600" size={20} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Ventas de la semana */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-700 mb-3">Ventas de la Semana (últimos 7 días)</h4>
+            {loadingCharts ? (
+              <div className="h-40 flex items-center justify-center text-gray-400 text-sm">Cargando...</div>
+            ) : weeklySales.length === 0 ? (
+              <div className="h-40 flex items-center justify-center text-gray-400 text-sm">Sin datos</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart data={weeklySales} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `Q${v}`} width={56} />
+                  <Tooltip formatter={(v: any) => [`Q${Number(v).toFixed(2)}`, 'Ventas']} />
+                  <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
-          <p className="text-2xl font-bold text-gray-800">389</p>
-          <p className="text-xs text-purple-600 mt-1">Top: Coca Cola 600ml</p>
-        </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white rounded-lg shadow-sm p-4"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Alertas</span>
-            <AlertTriangle className="text-yellow-600" size={20} />
+          {/* Top 5 productos hoy */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-700 mb-3">Top 5 Productos Hoy</h4>
+            {loadingCharts ? (
+              <div className="h-40 flex items-center justify-center text-gray-400 text-sm">Cargando...</div>
+            ) : topProducts.length === 0 ? (
+              <div className="h-40 flex items-center justify-center text-gray-400 text-sm">Sin ventas hoy</div>
+            ) : (
+              <div className="space-y-2.5">
+                {topProducts.map((p, i) => {
+                  const pct = Math.round((Number(p.revenue) / topMax) * 100)
+                  return (
+                    <div key={p.productId ?? i}>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-xs text-gray-700 truncate flex-1 mr-2">
+                          <span className="text-gray-400 mr-1">{i + 1}.</span>{p.name}
+                        </span>
+                        <span className="text-xs font-medium text-gray-800 flex-shrink-0">
+                          Q{Number(p.revenue).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-1.5">
+                        <div
+                          className="h-1.5 rounded-full bg-primary-500"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
-          <p className="text-2xl font-bold text-gray-800">7</p>
-          <p className="text-xs text-yellow-600 mt-1">5 productos stock bajo</p>
-        </motion.div>
+        </div>
       </div>
 
       {/* Categorías de reportes */}
@@ -251,7 +357,7 @@ export default function Reports() {
             <category.icon size={20} />
             {category.id === 'ai' ? 'Inteligencia Artificial' : `Reportes de ${category.name}`}
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {reportCards
               .filter(report => report.category === category.id)
@@ -260,13 +366,16 @@ export default function Reports() {
                   key={report.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.1 }}
-                  onClick={() => handleReportClick(report.path)}
+                  transition={{ delay: index * 0.07 }}
+                  onClick={() => navigate(report.path)}
                   className={`bg-white rounded-lg shadow-sm p-6 hover:shadow-lg transition-all cursor-pointer group ${report.category === 'ai' ? 'ring-2 ring-primary-200' : ''}`}
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className={`p-3 rounded-lg ${report.color} ${report.category === 'ai' ? '' : 'bg-opacity-10'}`}>
-                      <report.icon className={report.category === 'ai' ? 'text-white' : report.color.replace('bg-', 'text-').split(' ')[0]} size={24} />
+                      <report.icon
+                        className={report.category === 'ai' ? 'text-white' : report.color.replace('bg-', 'text-').split(' ')[0]}
+                        size={24}
+                      />
                     </div>
                     <div className="flex items-center gap-2">
                       {report.badge && (
@@ -284,32 +393,6 @@ export default function Reports() {
           </div>
         </div>
       ))}
-
-      {/* Accesos rápidos */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <LineChart size={20} />
-          Gráficos Rápidos
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Mini gráfico de ventas de la semana */}
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Ventas de la Semana</h4>
-            <div className="h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-              <span className="text-gray-500">Gráfico de líneas aquí</span>
-            </div>
-          </div>
-          
-          {/* Mini gráfico de productos más vendidos */}
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Top 5 Productos Hoy</h4>
-            <div className="h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-              <span className="text-gray-500">Gráfico de barras aquí</span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

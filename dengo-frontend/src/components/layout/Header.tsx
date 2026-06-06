@@ -1,5 +1,6 @@
-import { Search, Building2 } from 'lucide-react'
+import { Search, Building2, Menu } from 'lucide-react'
 import { useAuthStore } from '../../store'
+import { useAppStore } from '../../store'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import StoreSelector from './StoreSelector'
@@ -8,6 +9,7 @@ import { useStore } from '../../contexts/StoreContext'
 
 export default function Header() {
   const user = useAuthStore((state) => state.user)
+  const { toggleSidebar } = useAppStore()
   const { currentStore, availableStores, switchStore, canSwitchStore, isLoading } = useStore()
 
   const storeOptions = availableStores.map(s => ({
@@ -46,9 +48,16 @@ export default function Header() {
   }
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-between">
+    <header className="h-16 bg-white border-b border-gray-200 px-4 md:px-6 flex items-center justify-between">
       {/* Left */}
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-2 md:space-x-4">
+        {/* Mobile hamburger — only visible when sidebar is hidden */}
+        <button
+          onClick={toggleSidebar}
+          className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
+        >
+          <Menu size={20} />
+        </button>
         {renderStoreSelector()}
         <div className="text-sm text-gray-500 border-l pl-4 hidden md:block">
           {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}

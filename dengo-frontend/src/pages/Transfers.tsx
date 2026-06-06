@@ -360,7 +360,7 @@ export default function StoreTransfers() {
   // ── Render: CREATE VIEW ───────────────────────────────────────────────────
   if (view === 'create') {
     return (
-      <div className="flex flex-col gap-3 h-[calc(100vh-7rem)]">
+      <div className="flex flex-col gap-3 md:h-[calc(100vh-7rem)]">
 
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center gap-3">
@@ -381,10 +381,10 @@ export default function StoreTransfers() {
         </div>
 
         {/* Split layout */}
-        <div className="flex gap-3 flex-1 min-h-0">
+        <div className="flex flex-col md:flex-row gap-3 flex-1 overflow-auto md:overflow-hidden md:min-h-0">
 
           {/* LEFT: Search + items */}
-          <div className="flex-1 bg-white rounded-lg shadow-sm flex flex-col min-h-0">
+          <div className="flex-1 bg-white rounded-lg shadow-sm flex flex-col min-h-[280px] md:min-h-0">
 
             {/* Search bar */}
             <div className="p-3 border-b relative">
@@ -493,7 +493,7 @@ export default function StoreTransfers() {
           </div>
 
           {/* RIGHT: Form */}
-          <div className="w-72 flex flex-col gap-3">
+          <div className="w-full md:w-72 flex flex-col gap-3">
 
             {/* Branch selection */}
             <div className="bg-white rounded-lg shadow-sm p-4 space-y-3">

@@ -13,18 +13,19 @@ const include = {
   },
 }
 
-// Aggregates real sales for a register's time window
-// Uses findMany + JS aggregation to avoid Prisma groupBy() issues with SQL Server
-async function computeSales(branchId: string, openedAt: Date, closedAt?: Date | null) {
+// Aggregates real sales for a specific register or branch time window
+async function computeSales(branchId: string, openedAt: Date, closedAt?: Date | null, cashRegisterId?: string) {
   const sales = await prisma.sale.findMany({
     where: {
       branchId,
+      isVoided: false,
+      ...(cashRegisterId ? { cashRegisterId } : {}),
       createdAt: {
         gte: openedAt,
         ...(closedAt ? { lte: closedAt } : {}),
       },
     },
-    select: { total: true, paymentMethod: true },
+    select: { total: true, paymentMethod: true, cashAmount: true, cardAmount: true, transferAmount: true },
   })
 
   const result = { total: 0, count: sales.length, cash: 0, card: 0, transfer: 0, credit: 0 }
@@ -32,45 +33,76 @@ async function computeSales(branchId: string, openedAt: Date, closedAt?: Date | 
     const amt = Number(s.total ?? 0)
     result.total += amt
     const m = (s.paymentMethod ?? '').toUpperCase()
-    if (m === 'CASH')     result.cash     += amt
-    else if (m === 'CARD')      result.card     += amt
-    else if (m === 'TRANSFER')  result.transfer += amt
-    else if (m === 'CREDIT')    result.credit   += amt
+    if (m === 'CASH')          result.cash     += amt
+    else if (m === 'CARD')     result.card     += amt
+    else if (m === 'TRANSFER') result.transfer += amt
+    else if (m === 'CREDIT')   result.credit   += amt
+    else if (m === 'MIXED') {
+      result.cash     += Number(s.cashAmount ?? 0)
+      result.card     += Number(s.cardAmount ?? 0)
+      result.transfer += Number(s.transferAmount ?? 0)
+    }
   }
   return result
 }
 
 async function withSales(reg: any) {
   if (!reg) return null
-  const sales = await computeSales(reg.branchId, reg.openedAt, reg.closedAt)
+  const sales = await computeSales(reg.branchId, reg.openedAt, reg.closedAt, reg.id)
   return { ...reg, sales }
 }
 
 export default async function cashRegisterRoutes(fastify: FastifyInstance) {
-  // GET /  — list registers for a branch (no sales aggregation to avoid connection exhaustion)
+  // GET /definitions  — distinct register names/numbers for a branch (for persistent selector)
+  fastify.get('/definitions', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const q = request.query as { branchId?: string }
+    const branchId = request.user.role !== 'ADMIN'
+      ? request.user.branchId
+      : (q.branchId ?? request.user.branchId)
+
+    // Get unique name+number combinations ever used in this branch
+    const rows = await prisma.cashRegister.findMany({
+      where: branchId ? { branchId } : {},
+      select: { name: true, registerNumber: true, branchId: true },
+      distinct: ['name', 'registerNumber', 'branchId'],
+      orderBy: [{ registerNumber: 'asc' }],
+    })
+    return reply.send(rows)
+  })
+
+  // GET /  — list registers for a branch
   fastify.get('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const q = request.query as { branchId?: string; status?: string }
-    const branchId = q.branchId ?? request.user.branchId
+    const branchId = request.user.role !== 'ADMIN'
+      ? request.user.branchId
+      : (q.branchId ?? request.user.branchId)
+
     const list = await prisma.cashRegister.findMany({
       where: {
         ...(branchId ? { branchId } : {}),
         ...(q.status ? { status: q.status as any } : {}),
       },
       include,
-      orderBy: { openedAt: 'desc' },
+      orderBy: [{ status: 'asc' }, { openedAt: 'desc' }],
     })
     return reply.send(list)
   })
 
-  // GET /current — open register for the selected branch
+  // GET /current — open registers for the selected branch
   fastify.get('/current', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const q = request.query as { branchId?: string }
-    const branchId = q.branchId ?? request.user.branchId
-    const reg = await prisma.cashRegister.findFirst({
+    const branchId = request.user.role !== 'ADMIN'
+      ? request.user.branchId
+      : (q.branchId ?? request.user.branchId)
+
+    const registers = await prisma.cashRegister.findMany({
       where: { branchId, status: 'OPEN' },
       include,
+      orderBy: { registerNumber: 'asc' },
     })
-    return reply.send(await withSales(reg))
+    // Return all open registers enriched with sales
+    const enriched = await Promise.all(registers.map(withSales))
+    return reply.send(enriched)
   })
 
   // GET /:id
@@ -86,23 +118,34 @@ export default async function cashRegisterRoutes(fastify: FastifyInstance) {
     const body = z.object({
       branchId: z.string(),
       initialAmount: z.number().min(0),
+      name: z.string().min(1).default('Caja'),
+      registerNumber: z.string().min(1).default('1'),
     }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
 
+    // Check if a register with the same number is already open in this branch
     const existing = await prisma.cashRegister.findFirst({
-      where: { branchId: body.data.branchId, status: 'OPEN' },
+      where: {
+        branchId: body.data.branchId,
+        registerNumber: body.data.registerNumber,
+        status: 'OPEN',
+      },
     })
-    if (existing) return reply.status(409).send({ error: 'Ya hay una caja abierta en esta sucursal' })
+    if (existing) {
+      return reply.status(409).send({ error: `La caja ${body.data.registerNumber} ya está abierta en esta sucursal` })
+    }
 
     const reg = await prisma.cashRegister.create({
       data: {
         branchId: body.data.branchId,
         openedById: request.user.id,
         initialAmount: body.data.initialAmount,
+        name: body.data.name,
+        registerNumber: body.data.registerNumber,
       },
       include,
     })
-    await log({ userId: request.user.id, action: 'OPEN', entity: 'CashRegister', entityId: reg.id })
+    await log({ userId: request.user.id, action: 'OPEN', entity: 'CashRegister', entityId: reg.id, newValues: { name: body.data.name, registerNumber: body.data.registerNumber } })
     return reply.status(201).send(await withSales(reg))
   })
 
@@ -118,7 +161,7 @@ export default async function cashRegisterRoutes(fastify: FastifyInstance) {
     const movementsBalance = reg.movements.reduce(
       (acc, m) => acc + (m.type === 'INCOME' ? Number(m.amount) : -Number(m.amount)), 0
     )
-    const sales = await computeSales(reg.branchId, reg.openedAt, null)
+    const sales = await computeSales(reg.branchId, reg.openedAt, null, id)
     const expectedAmount = Number(reg.initialAmount) + sales.cash + movementsBalance
 
     const updated = await prisma.cashRegister.update({
@@ -134,7 +177,6 @@ export default async function cashRegisterRoutes(fastify: FastifyInstance) {
       include,
     })
     await log({ userId: request.user.id, action: 'CLOSE', entity: 'CashRegister', entityId: id })
-    // Return without recomputing sales — they're already reflected in expectedAmount
     return reply.send(updated)
   })
 

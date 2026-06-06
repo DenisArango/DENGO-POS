@@ -41,26 +41,29 @@ export default function Sidebar() {
   const { isSidebarCollapsed, toggleSidebar } = useAppStore()
   const { user, logout } = useAuthStore()
 
-  const filteredMenuItems = menuItems.filter(item => 
+  const filteredMenuItems = menuItems.filter(item =>
     user && item.roles.includes(user.role)
   )
 
   return (
     <aside className={`fixed left-0 top-0 h-full bg-white border-r border-gray-200 transition-all duration-300 z-40 ${
-      isSidebarCollapsed ? 'w-16' : 'w-64'
+      isSidebarCollapsed
+        ? 'w-64 lg:w-16 -translate-x-full lg:translate-x-0'
+        : 'w-64 translate-x-0'
     }`}>
       {/* Logo y Toggle */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
-        <motion.div
-          animate={{ opacity: isSidebarCollapsed ? 0 : 1 }}
-          className="flex items-center"
-        >
-          <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-lg"></div>
-          <span className="ml-3 font-bold text-lg text-gray-800">POS System</span>
-        </motion.div>
+      <div className={`h-16 flex items-center border-b border-gray-200 transition-all duration-300 ${
+        isSidebarCollapsed ? 'justify-center' : 'justify-between px-4'
+      }`}>
+        {!isSidebarCollapsed && (
+          <div className="flex items-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-lg flex-shrink-0" />
+            <span className="ml-3 font-bold text-lg text-gray-800 whitespace-nowrap">DENGO POS</span>
+          </div>
+        )}
         <button
           onClick={toggleSidebar}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
         >
           {isSidebarCollapsed ? <Menu size={20} /> : <X size={20} />}
         </button>
@@ -72,6 +75,7 @@ export default function Sidebar() {
           <NavLink
             key={item.path}
             to={item.path}
+            onClick={() => { if (!isSidebarCollapsed) { /* close on mobile when link clicked */ } }}
             className={({ isActive }) =>
               `flex items-center px-4 py-3 mx-2 mb-1 rounded-lg transition-all ${
                 isActive
@@ -82,10 +86,11 @@ export default function Sidebar() {
           >
             <item.icon size={20} className="flex-shrink-0" />
             <motion.span
-              animate={{ 
+              animate={{
                 opacity: isSidebarCollapsed ? 0 : 1,
-                width: isSidebarCollapsed ? 0 : 'auto'
+                width: isSidebarCollapsed ? 0 : 'auto',
               }}
+              transition={{ duration: 0.2 }}
               className="ml-3 whitespace-nowrap overflow-hidden"
             >
               {item.label}

@@ -35,6 +35,12 @@ model Branch {
   timezone       String   @default("America/Guatemala") @map("TIMEZONE") @db.NVarChar(60)
   taxRate        Decimal  @default(0.12) @map("TAX_RATE") @db.Decimal(5, 4)
   printerEnabled Boolean  @default(true) @map("PRINTER_ENABLED")
+  // Company / branding per branch
+  logo           String?  @map("LOGO") @db.NVarChar(Max)
+  companyName    String?  @map("COMPANY_NAME") @db.NVarChar(150)
+  companyTaxId   String?  @map("COMPANY_TAX_ID") @db.NVarChar(30)
+  companyTagline String?  @map("COMPANY_TAGLINE") @db.NVarChar(200)
+  companyWebsite String?  @map("COMPANY_WEBSITE") @db.NVarChar(150)
   createdAt      DateTime @default(now()) @map("CREATED_AT")
   updatedAt      DateTime @updatedAt @map("UPDATED_AT")
 
@@ -78,6 +84,7 @@ model User {
   auditLogs           AuditLog[]
   loginHistory        LoginHistory[]
   priceHistory        PriceHistory[]
+  creditPayments      CreditPayment[]
 
   @@map("USERS")
 }
@@ -108,6 +115,17 @@ model ProductUnit {
   @@map("PRODUCT_UNITS")
 }
 
+model ProductBarcode {
+  id          String  @id @default(cuid()) @map("ID") @db.NVarChar(36)
+  productId   String  @map("PRODUCT_ID") @db.NVarChar(36)
+  barcode     String  @unique @map("BARCODE") @db.NVarChar(50)
+  description String? @map("DESCRIPTION") @db.NVarChar(100)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("PRODUCT_BARCODES")
+}
+
 model Product {
   id          String   @id @default(cuid()) @map("ID") @db.NVarChar(36)
   barcode     String?  @unique @map("BARCODE") @db.NVarChar(50)
@@ -130,6 +148,7 @@ model Product {
   baseUnit       ProductUnit         @relation(fields: [baseUnitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   variations     ProductVariation[]
   attributes     ProductAttribute[]
+  altBarcodes    ProductBarcode[]
   inventory      Inventory[]
   stockMovements StockMovement[]
   saleItems      SaleItem[]
@@ -250,6 +269,8 @@ model Supplier {
 model CashRegister {
   id             String   @id @default(cuid()) @map("ID") @db.NVarChar(36)
   branchId       String   @map("BRANCH_ID") @db.NVarChar(36)
+  name           String   @default("Caja") @map("NAME") @db.NVarChar(60)
+  registerNumber String   @default("1") @map("REGISTER_NUMBER") @db.NVarChar(20)
   openedById     String   @map("OPENED_BY_ID") @db.NVarChar(36)
   closedById     String?  @map("CLOSED_BY_ID") @db.NVarChar(36)
   openedAt       DateTime @default(now()) @map("OPENED_AT")
@@ -302,26 +323,50 @@ model Sale {
   tax            Decimal   @default(0) @map("TAX") @db.Decimal(18, 2)
   discount       Decimal   @default(0) @map("DISCOUNT") @db.Decimal(18, 2)
   total          Decimal   @map("TOTAL") @db.Decimal(18, 2)
-  paymentMethod  String    @map("PAYMENT_METHOD") @db.NVarChar(20)  // CASH | CARD | TRANSFER | MIXED | CREDIT
-  saleType       String    @default("CASH") @map("SALE_TYPE") @db.NVarChar(10)  // CASH | CREDIT
-  dueDate        DateTime? @map("DUE_DATE")
-  isPaid         Boolean   @default(true) @map("IS_PAID")
-  paidAmount     Decimal?  @map("PAID_AMOUNT") @db.Decimal(18, 2)
-  isVoided       Boolean   @default(false) @map("IS_VOIDED")
-  voidedById     String?   @map("VOIDED_BY_ID") @db.NVarChar(36)
-  voidedAt       DateTime? @map("VOIDED_AT")
-  notes          String?   @map("NOTES") @db.NVarChar(Max)
-  createdAt      DateTime  @default(now()) @map("CREATED_AT")
+  paymentMethod          String    @map("PAYMENT_METHOD") @db.NVarChar(20)  // CASH | CARD | TRANSFER | MIXED | CREDIT
+  saleType               String    @default("CASH") @map("SALE_TYPE") @db.NVarChar(10)  // CASH | CREDIT
+  dueDate                DateTime? @map("DUE_DATE")
+  isPaid                 Boolean   @default(true) @map("IS_PAID")
+  paidAmount             Decimal?  @map("PAID_AMOUNT") @db.Decimal(18, 2)
+  // Payment breakdown for MIXED or audit purposes
+  cashAmount             Decimal?  @map("CASH_AMOUNT") @db.Decimal(18, 2)
+  cardAmount             Decimal?  @map("CARD_AMOUNT") @db.Decimal(18, 2)
+  transferAmount         Decimal?  @map("TRANSFER_AMOUNT") @db.Decimal(18, 2)
+  transferDocumentNumber String?   @map("TRANSFER_DOCUMENT_NUMBER") @db.NVarChar(100)
+  isVoided               Boolean   @default(false) @map("IS_VOIDED")
+  voidedById             String?   @map("VOIDED_BY_ID") @db.NVarChar(36)
+  voidedAt               DateTime? @map("VOIDED_AT")
+  voidReason             String?   @map("VOID_REASON") @db.NVarChar(500)
+  notes                  String?   @map("NOTES") @db.NVarChar(Max)
+  createdAt              DateTime  @default(now()) @map("CREATED_AT")
 
-  branch       Branch        @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  cashier      User          @relation("CashierSales", fields: [cashierId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  customer     Customer?     @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  cashRegister CashRegister? @relation(fields: [cashRegisterId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  voidedBy     User?         @relation("VoidedSales", fields: [voidedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  items        SaleItem[]
-  quotation    Quotation?
+  branch          Branch          @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cashier         User            @relation("CashierSales", fields: [cashierId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customer        Customer?       @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cashRegister    CashRegister?   @relation(fields: [cashRegisterId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  voidedBy        User?           @relation("VoidedSales", fields: [voidedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  items           SaleItem[]
+  creditPayments  CreditPayment[]
+  quotation       Quotation?
 
   @@map("SALES")
+}
+
+model CreditPayment {
+  id                     String   @id @default(cuid()) @map("ID") @db.NVarChar(36)
+  saleId                 String   @map("SALE_ID") @db.NVarChar(36)
+  amount                 Decimal  @map("AMOUNT") @db.Decimal(18, 2)
+  paymentMethod          String   @map("PAYMENT_METHOD") @db.NVarChar(20)  // CASH | TRANSFER
+  transferDocumentNumber String?  @map("TRANSFER_DOCUMENT_NUMBER") @db.NVarChar(100)
+  transferBank           String?  @map("TRANSFER_BANK") @db.NVarChar(100)
+  notes                  String?  @map("NOTES") @db.NVarChar(500)
+  paidById               String   @map("PAID_BY_ID") @db.NVarChar(36)
+  createdAt              DateTime @default(now()) @map("CREATED_AT")
+
+  sale    Sale @relation(fields: [saleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  paidBy  User @relation(fields: [paidById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("CREDIT_PAYMENTS")
 }
 
 model SaleItem {

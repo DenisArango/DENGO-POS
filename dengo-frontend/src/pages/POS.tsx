@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Trash2, Plus, Minus, X, DollarSign, CreditCard,
   UserPlus, User, Barcode, ShoppingCart, Printer, Tag,
-  Calendar, AlertCircle, Receipt
+  Calendar, AlertCircle, Receipt, ArrowLeftRight, Edit2, History, ExternalLink
 } from 'lucide-react'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
 import { useCartStore } from '../store'
 import { useAuthStore } from '../store'
 import { api } from '../lib/api'
@@ -53,7 +56,7 @@ interface CustomerRecord {
   creditAvailable?: number
 }
 
-type PaymentMethodType = 'CASH' | 'CARD' | 'TRANSFER' | 'CREDIT'
+type PaymentMethodType = 'CASH' | 'CARD' | 'TRANSFER' | 'MIXED' | 'CREDIT'
 type SaleTypeValue = 'CASH' | 'CREDIT'
 
 interface CartItem {
@@ -127,9 +130,42 @@ function getVariations(product: ProductRecord): ProductVariation[] {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function POS() {
+  const navigate = useNavigate()
   const { user } = useAuthStore()
   const { currentStore } = useStore()
   const BRANCH_ID = currentStore?.id ?? user?.branchId ?? ''
+
+  // Active cash register (persisted in localStorage per branch)
+  const [openRegisters, setOpenRegisters] = useState<{ id: string; name: string; registerNumber: string }[]>([])
+  const [selectedRegisterId, setSelectedRegisterId] = useState<string>(() => {
+    return localStorage.getItem(`pos-register-${BRANCH_ID}`) ?? ''
+  })
+
+  useEffect(() => {
+    if (!BRANCH_ID) return
+    api.get<any[]>(`/api/cash-registers/current?branchId=${BRANCH_ID}`)
+      .then(d => {
+        const list = (Array.isArray(d) ? d : (d ? [d] : [])).filter(Boolean)
+        setOpenRegisters(list.map(r => ({ id: r.id, name: r.name ?? 'Caja', registerNumber: r.registerNumber ?? '?' })))
+        // Auto-select if only one open or restore saved
+        const saved = localStorage.getItem(`pos-register-${BRANCH_ID}`)
+        if (list.length === 1 && !saved) {
+          setSelectedRegisterId(list[0].id)
+          localStorage.setItem(`pos-register-${BRANCH_ID}`, list[0].id)
+        } else if (saved && list.some((r: any) => r.id === saved)) {
+          setSelectedRegisterId(saved)
+        } else if (list.length > 0 && !list.some((r: any) => r.id === saved)) {
+          setSelectedRegisterId(list[0].id)
+          localStorage.setItem(`pos-register-${BRANCH_ID}`, list[0].id)
+        }
+      })
+      .catch(() => {})
+  }, [BRANCH_ID])
+
+  const handleRegisterChange = (id: string) => {
+    setSelectedRegisterId(id)
+    localStorage.setItem(`pos-register-${BRANCH_ID}`, id)
+  }
 
   // Search
   const [searchTerm, setSearchTerm] = useState('')
@@ -140,8 +176,12 @@ export default function POS() {
   // Customers
   const [customers, setCustomers] = useState<CustomerRecord[]>([])
   const [customerSearch, setCustomerSearch] = useState('')
-  const [showCustomerModal, setShowCustomerModal] = useState(false)
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
+  const [showCustomerModal, setShowCustomerModal] = useState(false) // keep for backwards compat
   const [loadingCustomers, setLoadingCustomers] = useState(false)
+  const [showCustomerHistory, setShowCustomerHistory] = useState(false)
+  const [customerSales, setCustomerSales] = useState<any[]>([])
+  const [loadingCustomerSales, setLoadingCustomerSales] = useState(false)
 
   // Cart
   const [cartItems, setCartItems] = useState<CartItem[]>([])
@@ -149,14 +189,23 @@ export default function POS() {
   const [saleType, setSaleType] = useState<SaleTypeValue>('CASH')
   const [itemDiscounts, setItemDiscounts] = useState<Record<string, number>>({})
 
-  // Variation modal
+  // Variation modal — used both for initial add and for changing variation of cart item
   const [showVariationModal, setShowVariationModal] = useState(false)
   const [selectedProductForVariation, setSelectedProductForVariation] = useState<ProductRecord | null>(null)
   const [variationQuantities, setVariationQuantities] = useState<Record<string, number>>({})
+  const [changingVariationItem, setChangingVariationItem] = useState<CartItem | null>(null) // non-null = changing existing item
 
   // Payment
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('CASH')
   const [cashReceived, setCashReceived] = useState('')
+  const [transferAmount, setTransferAmount] = useState('')
+  const [transferDocumentNumber, setTransferDocumentNumber] = useState('')
+  const [mixedCashAmount, setMixedCashAmount] = useState('')
+  const [mixedTransferAmount, setMixedTransferAmount] = useState('')
+  const [mixedTransferDoc, setMixedTransferDoc] = useState('')
+
+  // Quantity string display — allows free-text editing (cleared on commit/blur)
+  const [itemQtyStrings, setItemQtyStrings] = useState<Record<string, string>>({})
 
   // Receipt
   const [showReceiptModal, setShowReceiptModal] = useState(false)
@@ -236,8 +285,10 @@ export default function POS() {
 
   const canComplete = cartItems.length > 0 && !saving && (
     saleType === 'CREDIT' ||
-    paymentMethod !== 'CASH' ||
-    (cashReceived !== '' && parseFloat(cashReceived) >= total)
+    paymentMethod === 'CARD' ||
+    paymentMethod === 'TRANSFER' ||
+    (paymentMethod === 'CASH' && cashReceived !== '' && parseFloat(cashReceived) >= total) ||
+    (paymentMethod === 'MIXED' && parseFloat(mixedCashAmount || '0') + parseFloat(mixedTransferAmount || '0') >= total)
   )
 
   const change = cashReceived && parseFloat(cashReceived) >= total
@@ -280,16 +331,14 @@ export default function POS() {
   function removeItem(productId: string, variationId?: string) {
     const key = getItemKey(productId, variationId)
     setCartItems(prev => prev.filter(i => getItemKey(i.product.id, i.variation?.id) !== key))
-    setItemDiscounts(prev => {
-      const next = { ...prev }
-      delete next[key]
-      return next
-    })
+    setItemDiscounts(prev => { const next = { ...prev }; delete next[key]; return next })
+    setItemQtyStrings(prev => { const next = { ...prev }; delete next[key]; return next })
   }
 
   function clearCart() {
     setCartItems([])
     setItemDiscounts({})
+    setItemQtyStrings({})
   }
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -297,16 +346,21 @@ export default function POS() {
     setSearchTerm('')
     setShowSearchResults(false)
     const variations = getVariations(product)
-    if (variations.length > 1) {
-      setSelectedProductForVariation(product)
-      const initialQtys: Record<string, number> = {}
-      variations.forEach(v => { initialQtys[v.id] = 1 })
-      setVariationQuantities(initialQtys)
-      setShowVariationModal(true)
-    } else {
-      addToCart(product, variations[0], 1)
-      toast.success(`${product.name} agregado`)
-    }
+    // Always auto-add with the default variation; user can change from the cart line
+    const defaultVar = variations.find(v => v.isDefault) ?? variations[0]
+    addToCart(product, defaultVar, 1)
+    toast.success(`${product.name} agregado`)
+  }
+
+  const handleChangeVariation = (item: CartItem) => {
+    const variations = getVariations(item.product)
+    if (variations.length <= 1) return
+    setChangingVariationItem(item)
+    setSelectedProductForVariation(item.product)
+    const initialQtys: Record<string, number> = {}
+    variations.forEach(v => { initialQtys[v.id] = v.id === item.variation?.id ? item.quantity : 1 })
+    setVariationQuantities(initialQtys)
+    setShowVariationModal(true)
   }
 
   const handleBarcodeScan = async (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -359,28 +413,56 @@ export default function POS() {
   const handleSelectCustomer = (customer: CustomerRecord) => {
     setSelectedCustomer(customer)
     setShowCustomerModal(false)
+    setShowCustomerDropdown(false)
     setCustomerSearch('')
     if (!customer.creditAvailable || customer.creditAvailable <= 0) {
       setSaleType('CASH')
     }
   }
 
+  const openCustomerHistory = async (customer: CustomerRecord) => {
+    setShowCustomerHistory(true)
+    setLoadingCustomerSales(true)
+    try {
+      const data = await api.get<any[]>(`/api/sales?customerId=${customer.id}`)
+      setCustomerSales(data ?? [])
+    } catch { setCustomerSales([]) } finally { setLoadingCustomerSales(false) }
+  }
+
   const handleAddVariationToCart = (variation: ProductVariation, qty: number) => {
-    if (selectedProductForVariation) {
+    if (!selectedProductForVariation) return
+    if (changingVariationItem) {
+      // Replace existing item's variation
+      const oldKey = getItemKey(changingVariationItem.product.id, changingVariationItem.variation?.id)
+      const oldDiscount = itemDiscounts[oldKey] ?? 0
+      setCartItems(prev => prev.map(i =>
+        getItemKey(i.product.id, i.variation?.id) === oldKey
+          ? { ...i, variation, quantity: qty }
+          : i
+      ))
+      setItemDiscounts(prev => {
+        const next = { ...prev }
+        delete next[oldKey]
+        return { ...next, [getItemKey(changingVariationItem.product.id, variation.id)]: oldDiscount }
+      })
+      toast.success(`Variación cambiada a ${variation.name}`)
+    } else {
       addToCart(selectedProductForVariation, variation, qty)
       toast.success(`${selectedProductForVariation.name} (${variation.name}) agregado`)
-      setShowVariationModal(false)
-      setSelectedProductForVariation(null)
-      setVariationQuantities({})
     }
+    setShowVariationModal(false)
+    setSelectedProductForVariation(null)
+    setChangingVariationItem(null)
+    setVariationQuantities({})
   }
 
   const completeSaleRequest = async () => {
     setSaving(true)
     try {
-      const payload = {
+      const payload: any = {
         branchId: BRANCH_ID,
         customerId: selectedCustomer?.id,
+        cashRegisterId: selectedRegisterId || undefined,
         saleType,
         paymentMethod,
         items: cartItems.map(item => {
@@ -401,6 +483,20 @@ export default function POS() {
         tax: 0,
         discount: 0,
         total,
+      }
+
+      // Add payment breakdown
+      if (paymentMethod === 'CASH') {
+        payload.cashAmount = total
+      } else if (paymentMethod === 'TRANSFER') {
+        payload.transferAmount = total
+        if (transferDocumentNumber) payload.transferDocumentNumber = transferDocumentNumber
+      } else if (paymentMethod === 'MIXED') {
+        const ca = parseFloat(mixedCashAmount || '0')
+        const ta = parseFloat(mixedTransferAmount || '0')
+        payload.cashAmount = ca
+        payload.transferAmount = ta
+        if (mixedTransferDoc) payload.transferDocumentNumber = mixedTransferDoc
       }
 
       const created = await api.post<any>('/api/sales', payload)
@@ -438,6 +534,11 @@ export default function POS() {
       setShowReceiptModal(true)
       clearCart()
       setCashReceived('')
+      setTransferAmount('')
+      setTransferDocumentNumber('')
+      setMixedCashAmount('')
+      setMixedTransferAmount('')
+      setMixedTransferDoc('')
       toast.success('¡Venta completada!')
     } catch (err: any) {
       toast.error(err?.message ?? 'Error al procesar la venta')
@@ -451,6 +552,10 @@ export default function POS() {
     if (saleType === 'CREDIT' && !selectedCustomer) { toast.error('Selecciona un cliente para venta a crédito'); return }
     if (paymentMethod === 'CASH' && saleType !== 'CREDIT') {
       if (!cashReceived || parseFloat(cashReceived) < total) { toast.error('Ingresa el efectivo recibido'); return }
+    }
+    if (paymentMethod === 'MIXED' && saleType !== 'CREDIT') {
+      const sum = parseFloat(mixedCashAmount || '0') + parseFloat(mixedTransferAmount || '0')
+      if (sum < total - 0.01) { toast.error('El monto mixto no cubre el total'); return }
     }
 
     // Check inventory availability
@@ -484,12 +589,37 @@ export default function POS() {
     CASH: 'Efectivo',
     CARD: 'Tarjeta',
     TRANSFER: 'Transferencia',
+    MIXED: 'Mixto',
     CREDIT: 'Crédito',
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-3 h-[calc(100vh-7rem)]">
+    <div className="flex flex-col gap-3 md:h-[calc(100vh-7rem)]">
+
+      {/* ── Register selector ── */}
+      {openRegisters.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm px-4 py-2 flex items-center gap-3">
+          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">Caja activa:</span>
+          {openRegisters.length === 1 ? (
+            <span className="text-sm font-medium text-primary-700">{openRegisters[0].name} #{openRegisters[0].registerNumber}</span>
+          ) : (
+            <select
+              value={selectedRegisterId}
+              onChange={e => handleRegisterChange(e.target.value)}
+              className="input text-sm py-1 flex-1 max-w-xs"
+            >
+              <option value="">Sin caja seleccionada</option>
+              {openRegisters.map(r => (
+                <option key={r.id} value={r.id}>{r.name} #{r.registerNumber}</option>
+              ))}
+            </select>
+          )}
+          {!selectedRegisterId && openRegisters.length > 0 && (
+            <span className="text-xs text-orange-500">Selecciona una caja para registrar las ventas</span>
+          )}
+        </div>
+      )}
 
       {/* ── Search bar ── */}
       <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center gap-3 relative">
@@ -555,12 +685,12 @@ export default function POS() {
       </div>
 
       {/* ── Main split layout ── */}
-      <div className="flex gap-3 flex-1 overflow-hidden min-h-0">
+      <div className="flex flex-col md:flex-row gap-3 flex-1 overflow-auto md:overflow-hidden md:min-h-0">
 
         {/* Left: Cart items table */}
-        <div className="flex-1 bg-white rounded-lg shadow-sm flex flex-col overflow-hidden">
+        <div className="flex-1 bg-white rounded-lg shadow-sm flex flex-col overflow-hidden min-h-[280px] md:min-h-0">
           {/* Table header */}
-          <div className="grid gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide select-none"
+          <div className="grid gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide select-none min-w-[540px]"
             style={{ gridTemplateColumns: '24px 1fr 90px 140px 110px 90px 28px' }}>
             <span>#</span>
             <span>Artículo</span>
@@ -572,7 +702,7 @@ export default function POS() {
           </div>
 
           {/* Items */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto overflow-x-auto">
             {cartItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-300">
                 <ShoppingCart size={52} />
@@ -591,33 +721,61 @@ export default function POS() {
                       initial={{ opacity: 0, y: -6 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                      className="grid gap-2 px-4 py-2.5 items-center border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                      className="grid gap-2 px-4 py-2.5 items-center border-b border-gray-50 hover:bg-gray-50 transition-colors min-w-[540px]"
                       style={{ gridTemplateColumns: '24px 1fr 90px 140px 110px 90px 28px' }}
                     >
                       <span className="text-xs text-gray-400">{idx + 1}</span>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-800 truncate">{item.product.name}</p>
-                        {item.variation && (
-                          <p className="text-xs text-gray-400">{item.variation.name}</p>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {item.variation && (
+                            <p className="text-xs text-gray-400">{item.variation.name}</p>
+                          )}
+                          {getVariations(item.product).length > 1 && (
+                            <button
+                              onClick={() => handleChangeVariation(item)}
+                              title="Cambiar variación"
+                              className="text-primary-400 hover:text-primary-600 transition-colors">
+                              <ArrowLeftRight size={11} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <p className="text-right text-sm text-gray-600">Q{Number(price).toFixed(2)}</p>
                       {/* Quantity control */}
                       <div className="flex items-center justify-center gap-1">
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.variation?.id, Math.max(1, item.quantity - 1))}
+                          onClick={() => {
+                            const newQty = Math.max(0.001, item.quantity - 1)
+                            updateQuantity(item.product.id, item.variation?.id, newQty)
+                            setItemQtyStrings(prev => { const n = { ...prev }; delete n[key]; return n })
+                          }}
                           className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded transition-colors">
                           <Minus size={13} />
                         </button>
                         <input
-                          type="number"
-                          value={item.quantity}
-                          onChange={e => updateQuantity(item.product.id, item.variation?.id, Math.max(1, parseInt(e.target.value) || 1))}
+                          type="text"
+                          inputMode="decimal"
+                          value={itemQtyStrings[key] ?? String(item.quantity)}
+                          onChange={e => setItemQtyStrings(prev => ({ ...prev, [key]: e.target.value }))}
+                          onBlur={() => {
+                            const str = itemQtyStrings[key]
+                            if (str !== undefined) {
+                              const n = parseFloat(str)
+                              if (!isNaN(n) && n > 0) updateQuantity(item.product.id, item.variation?.id, n)
+                              setItemQtyStrings(prev => { const next = { ...prev }; delete next[key]; return next })
+                            }
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                          }}
                           className="w-14 text-center text-sm border border-gray-200 rounded py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                          min="1"
                         />
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.variation?.id, item.quantity + 1)}
+                          onClick={() => {
+                            updateQuantity(item.product.id, item.variation?.id, item.quantity + 1)
+                            setItemQtyStrings(prev => { const n = { ...prev }; delete n[key]; return n })
+                          }}
                           className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded transition-colors">
                           <Plus size={13} />
                         </button>
@@ -662,32 +820,59 @@ export default function POS() {
         </div>
 
         {/* Right: Checkout panel */}
-        <div className="w-72 flex flex-col gap-3 overflow-y-auto">
+        <div className="w-full md:w-72 flex flex-col gap-3 overflow-y-auto">
 
           {/* Customer */}
           <div className="bg-white rounded-lg shadow-sm p-4">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Cliente</p>
             {selectedCustomer ? (
-              <div className="flex items-center justify-between bg-primary-50 border border-primary-200 rounded-lg px-3 py-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{getCustomerName(selectedCustomer)}</p>
-                  <p className="text-xs text-gray-500">NIT: {getCustomerNit(selectedCustomer)}</p>
-                  {(selectedCustomer.creditLimit ?? 0) > 0 && (
-                    <p className="text-xs text-green-600">Crédito: Q{(selectedCustomer.creditAvailable ?? 0).toFixed(2)}</p>
-                  )}
+              <div className="bg-primary-50 border border-primary-200 rounded-lg px-3 py-2">
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-800 truncate">{getCustomerName(selectedCustomer)}</p>
+                    <p className="text-xs text-gray-500">NIT: {getCustomerNit(selectedCustomer)}</p>
+                    {(selectedCustomer.creditLimit ?? 0) > 0 && (
+                      <p className="text-xs text-green-600">Crédito: Q{(selectedCustomer.creditAvailable ?? 0).toFixed(2)}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-1 ml-2 flex-shrink-0">
+                    <button onClick={() => openCustomerHistory(selectedCustomer)} title="Ver historial" className="p-1 text-gray-400 hover:text-blue-600 transition-colors">
+                      <History size={13} />
+                    </button>
+                    <button onClick={() => { setSelectedCustomer(null); setSaleType('CASH') }} title="Quitar cliente" className="p-1 text-gray-400 hover:text-red-500 transition-colors">
+                      <X size={13} />
+                    </button>
+                  </div>
                 </div>
-                <button onClick={() => { setSelectedCustomer(null); setSaleType('CASH') }} className="ml-2 text-gray-400 hover:text-gray-600 flex-shrink-0">
-                  <X size={15} />
-                </button>
               </div>
             ) : (
-              <button
-                onClick={() => setShowCustomerModal(true)}
-                className="w-full flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-500 hover:border-primary-400 hover:text-primary-600 transition-colors"
-              >
-                <UserPlus size={16} />
-                <span>Consumidor Final / Seleccionar</span>
-              </button>
+              <div className="relative">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={customerSearch}
+                  onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDropdown(true) }}
+                  onFocus={() => setShowCustomerDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 150)}
+                  placeholder="Buscar cliente por nombre o NIT..."
+                  className="input w-full pl-8 text-sm py-2"
+                />
+                {showCustomerDropdown && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-52 overflow-y-auto">
+                    {filteredCustomers.length === 0 ? (
+                      <p className="px-3 py-2 text-xs text-gray-400">{customerSearch ? 'Sin resultados' : 'Escribe para buscar...'}</p>
+                    ) : (
+                      filteredCustomers.slice(0, 8).map(customer => (
+                        <button key={customer.id} onMouseDown={() => handleSelectCustomer(customer)}
+                          className="w-full text-left px-3 py-2 hover:bg-primary-50 transition-colors border-b border-gray-50 last:border-0">
+                          <p className="text-sm font-medium text-gray-800">{getCustomerName(customer)}</p>
+                          <p className="text-xs text-gray-400">NIT: {getCustomerNit(customer)}{(customer.creditLimit ?? 0) > 0 ? ` · Créd: Q${(customer.creditAvailable ?? 0).toFixed(2)}` : ''}</p>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -719,11 +904,12 @@ export default function POS() {
             {saleType === 'CASH' && (
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Método de pago</p>
-                <div className="grid grid-cols-3 gap-1">
+                <div className="grid grid-cols-2 gap-1">
                   {([
                     { m: 'CASH' as PaymentMethodType, label: 'Efectivo', Icon: DollarSign },
                     { m: 'CARD' as PaymentMethodType, label: 'Tarjeta', Icon: CreditCard },
                     { m: 'TRANSFER' as PaymentMethodType, label: 'Transfer.', Icon: Receipt },
+                    { m: 'MIXED' as PaymentMethodType, label: 'Mixto', Icon: ArrowLeftRight },
                   ] as const).map(({ m, label, Icon }) => (
                     <button
                       key={m}
@@ -774,6 +960,46 @@ export default function POS() {
                   <span className="font-bold text-green-600">Q{change.toFixed(2)}</span>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Transfer document number */}
+          {saleType === 'CASH' && paymentMethod === 'TRANSFER' && (
+            <div className="bg-white rounded-lg shadow-sm p-4 space-y-2">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Referencia transferencia</p>
+              <input
+                type="text"
+                value={transferDocumentNumber}
+                onChange={e => setTransferDocumentNumber(e.target.value)}
+                placeholder="No. de documento / referencia"
+                className="input w-full text-sm"
+              />
+            </div>
+          )}
+
+          {/* Mixed payment amounts */}
+          {saleType === 'CASH' && paymentMethod === 'MIXED' && (
+            <div className="bg-white rounded-lg shadow-sm p-4 space-y-2">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Pago mixto</p>
+              <div className="flex items-center gap-2">
+                <DollarSign size={14} className="text-gray-400" />
+                <input type="number" value={mixedCashAmount} onChange={e => setMixedCashAmount(e.target.value)} placeholder="Efectivo" className="input flex-1 text-sm" min="0" step="0.01" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Receipt size={14} className="text-gray-400" />
+                <input type="number" value={mixedTransferAmount} onChange={e => setMixedTransferAmount(e.target.value)} placeholder="Transferencia" className="input flex-1 text-sm" min="0" step="0.01" />
+              </div>
+              <input type="text" value={mixedTransferDoc} onChange={e => setMixedTransferDoc(e.target.value)} placeholder="Referencia transferencia" className="input w-full text-sm" />
+              {(() => {
+                const sum = parseFloat(mixedCashAmount || '0') + parseFloat(mixedTransferAmount || '0')
+                const rem = sum - total
+                return sum > 0 ? (
+                  <div className={`flex justify-between text-xs font-medium ${rem >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                    <span>{rem >= 0 ? 'Cambio:' : 'Faltante:'}</span>
+                    <span>Q{Math.abs(rem).toFixed(2)}</span>
+                  </div>
+                ) : null
+              })()}
             </div>
           )}
 
@@ -940,6 +1166,57 @@ export default function POS() {
         )}
       </AnimatePresence>
 
+      {/* ── Customer history modal ── */}
+      {showCustomerHistory && selectedCustomer && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCustomerHistory(false)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0">
+              <div>
+                <h3 className="font-semibold text-gray-800">{getCustomerName(selectedCustomer)}</h3>
+                <p className="text-xs text-gray-400">NIT: {getCustomerNit(selectedCustomer)}</p>
+              </div>
+              <button onClick={() => setShowCustomerHistory(false)} className="p-1 hover:bg-gray-100 rounded"><X size={18} /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {loadingCustomerSales ? (
+                <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" /></div>
+              ) : customerSales.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-8">Sin compras registradas</p>
+              ) : (
+                <div className="space-y-2">
+                  {customerSales.map((sale: any) => {
+                    const PM: Record<string, string> = { CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia', CREDIT: 'Crédito', MIXED: 'Mixto' }
+                    const label = sale.saleType === 'CREDIT' ? 'Crédito' : (PM[sale.paymentMethod] ?? sale.paymentMethod)
+                    return (
+                      <div
+                        key={sale.id}
+                        onClick={() => { setShowCustomerHistory(false); navigate(`/reports/sales/${sale.id}`) }}
+                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${sale.isVoided ? 'opacity-50 border-red-200 bg-red-50 hover:bg-red-100' : 'border-gray-100 bg-gray-50 hover:bg-primary-50 hover:border-primary-200'}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-mono text-xs text-gray-600">{sale.invoiceNumber}</p>
+                            <p className="text-xs text-gray-400">{format(new Date(sale.createdAt), 'dd/MM/yyyy HH:mm', { locale: es })}</p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className="text-right">
+                              <p className="font-bold text-gray-800">Q{Number(sale.total).toFixed(2)}</p>
+                              <p className="text-xs text-gray-400">{label}</p>
+                            </div>
+                            <ExternalLink size={14} className="text-primary-400" />
+                          </div>
+                        </div>
+                        {sale.isVoided && <p className="text-xs text-red-500 mt-1">ANULADA</p>}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Stock Warning Modal ── */}
       <AnimatePresence>
         {showStockWarning && (
@@ -1006,6 +1283,10 @@ export default function POS() {
                 <div className="text-center mb-4 pb-4 border-b-2 border-gray-200">
                   <h2 className="text-2xl font-bold text-gray-800">DENGO POS</h2>
                   <p className="text-sm text-gray-500">{completedSale.branchName}</p>
+                  {selectedRegisterId && openRegisters.length > 0 && (() => {
+                    const reg = openRegisters.find(r => r.id === selectedRegisterId)
+                    return reg ? <p className="text-xs text-gray-400">{reg.name} #{reg.registerNumber}</p> : null
+                  })()}
                 </div>
                 <div className="mb-4 grid grid-cols-2 gap-2 text-sm">
                   <div>

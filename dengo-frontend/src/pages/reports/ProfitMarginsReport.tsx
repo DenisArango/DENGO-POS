@@ -5,24 +5,29 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { format, subDays } from 'date-fns'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../store'
+import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
+import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
 
 export default function ProfitMarginsReport() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const { currentStore } = useStore()
   const [from, setFrom] = useState(format(subDays(new Date(), 29), 'yyyy-MM-dd'))
   const [to, setTo] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [loading, setLoading] = useState(false)
   const [products, setProducts] = useState<any[]>([])
   const [minMargin, setMinMargin] = useState('')
+  const [filters, setFilters] = useState<ReportFilterState>({ branchId: currentStore?.id ?? user?.branchId ?? '', cashRegisterId: '' })
 
-  useEffect(() => { fetchData() }, [from, to])
+  useEffect(() => { fetchData() }, [from, to, filters])
 
   async function fetchData() {
     setLoading(true)
     try {
-      const branchQ = user?.branchId ? `&branchId=${user.branchId}` : ''
-      const data = await api.get<any[]>(`/api/reports/sales-by-product?from=${from}T00:00:00&to=${to}T23:59:59${branchQ}&limit=100`)
+      const branchQ = filters.branchId ? `&branchId=${filters.branchId}` : ''
+      const regQ = filters.cashRegisterId ? `&cashRegisterId=${filters.cashRegisterId}` : ''
+      const data = await api.get<any[]>(`/api/reports/sales-by-product?from=${from}T00:00:00&to=${to}T23:59:59${branchQ}${regQ}&limit=100`)
       setProducts(data ?? [])
     } catch { setProducts([]) } finally { setLoading(false) }
   }
@@ -69,6 +74,7 @@ export default function ProfitMarginsReport() {
           <Percent size={14} className="text-gray-400" />
           <input type="number" value={minMargin} onChange={e => setMinMargin(e.target.value)} placeholder="Margen mín. %" className="input w-32" min="0" max="100" />
         </div>
+        <ReportFilters value={filters} onChange={setFilters} />
         {loading && <span className="text-sm text-gray-400">Cargando...</span>}
       </div>
 

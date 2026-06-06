@@ -5,22 +5,26 @@ import { format, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../store'
+import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
+import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
 
 export default function InventoryAdjustmentsReport() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const { currentStore } = useStore()
   const [from, setFrom] = useState(format(subDays(new Date(), 29), 'yyyy-MM-dd'))
   const [to, setTo] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [loading, setLoading] = useState(false)
   const [movements, setMovements] = useState<any[]>([])
+  const [filters, setFilters] = useState<ReportFilterState>({ branchId: currentStore?.id ?? user?.branchId ?? '', cashRegisterId: '' })
 
-  useEffect(() => { fetchData() }, [from, to])
+  useEffect(() => { fetchData() }, [from, to, filters])
 
   async function fetchData() {
     setLoading(true)
     try {
-      const branchQ = user?.branchId ? `&branchId=${user.branchId}` : ''
+      const branchQ = filters.branchId ? `&branchId=${filters.branchId}` : ''
       const data = await api.get<any[]>(`/api/reports/stock-movements?type=ADJUSTMENT&from=${from}T00:00:00&to=${to}T23:59:59${branchQ}`)
       setMovements(data ?? [])
     } catch { setMovements([]) } finally { setLoading(false) }
@@ -45,6 +49,7 @@ export default function InventoryAdjustmentsReport() {
         <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input" />
         <span className="text-gray-400">–</span>
         <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input" />
+        <ReportFilters value={filters} onChange={setFilters} showRegister={false} />
         {loading && <span className="text-sm text-gray-400">Cargando...</span>}
       </div>
 

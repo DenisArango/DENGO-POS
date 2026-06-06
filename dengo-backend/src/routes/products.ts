@@ -31,6 +31,7 @@ const include = {
   category: true,
   baseUnit: true,
   variations: { orderBy: { isDefault: 'desc' as const } },
+  altBarcodes: true,
 }
 
 export default async function productRoutes(fastify: FastifyInstance) {
@@ -46,6 +47,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
             { name: { contains: q.search } },
             { barcode: { contains: q.search } },
             { sku: { contains: q.search } },
+            { altBarcodes: { some: { barcode: { contains: q.search } } } },
           ],
         } : {}),
       },
@@ -58,7 +60,8 @@ export default async function productRoutes(fastify: FastifyInstance) {
   // GET /api/products/barcode/:code
   fastify.get('/barcode/:code', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { code } = request.params as { code: string }
-    // Try product barcode first
+
+    // Try product main barcode
     let product = await prisma.product.findFirst({
       where: { barcode: code, isActive: true },
       include,
@@ -71,6 +74,16 @@ export default async function productRoutes(fastify: FastifyInstance) {
       include: { product: { include } },
     })
     if (variation) return reply.send({ product: variation.product, variation })
+
+    // Try alternate barcodes
+    const altBarcode = await prisma.productBarcode.findFirst({
+      where: { barcode: code },
+      include: { product: { include } },
+    })
+    if (altBarcode) {
+      const p = altBarcode.product
+      return reply.send({ product: p, variation: p.variations.find(v => v.isDefault) ?? p.variations[0] })
+    }
 
     return reply.status(404).send({ error: 'Producto no encontrado' })
   })
@@ -129,7 +142,6 @@ export default async function productRoutes(fastify: FastifyInstance) {
         include,
       })
 
-      // Log price changes if any
       if (old && productData.basePrice !== undefined && Number(old.basePrice) !== productData.basePrice) {
         await prisma.priceHistory.create({
           data: { productId: id, field: 'BasePrice', oldValue: old.basePrice, newValue: productData.basePrice, changedById: request.user.id },
@@ -159,6 +171,40 @@ export default async function productRoutes(fastify: FastifyInstance) {
       return reply.send({ message: 'Producto desactivado' })
     } catch {
       return reply.status(404).send({ error: 'Producto no encontrado' })
+    }
+  })
+
+  // ── Alternate barcodes ────────────────────────────────────────────────────
+
+  // GET /api/products/:id/barcodes
+  fastify.get('/:id/barcodes', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const barcodes = await prisma.productBarcode.findMany({ where: { productId: id }, orderBy: { barcode: 'asc' } })
+    return reply.send(barcodes)
+  })
+
+  // POST /api/products/:id/barcodes
+  fastify.post('/:id/barcodes', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const body = z.object({ barcode: z.string().min(1), description: z.string().optional() }).safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+    try {
+      const rec = await prisma.productBarcode.create({ data: { productId: id, ...body.data } })
+      return reply.status(201).send(rec)
+    } catch (err: any) {
+      if (err.code === 'P2002') return reply.status(409).send({ error: 'Ese código de barras ya está registrado' })
+      throw err
+    }
+  })
+
+  // DELETE /api/products/:id/barcodes/:barcodeId
+  fastify.delete('/:id/barcodes/:barcodeId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const { barcodeId } = request.params as { id: string; barcodeId: string }
+    try {
+      await prisma.productBarcode.delete({ where: { id: barcodeId } })
+      return reply.send({ message: 'Código eliminado' })
+    } catch {
+      return reply.status(404).send({ error: 'Código no encontrado' })
     }
   })
 }

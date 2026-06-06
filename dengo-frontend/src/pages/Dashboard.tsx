@@ -70,11 +70,18 @@ interface DashboardData {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const METHOD_COLORS: Record<string, string> = {
-  EFECTIVO: 'bg-green-100 text-green-700',
-  TARJETA: 'bg-blue-100 text-blue-700',
-  TRANSFERENCIA: 'bg-purple-100 text-purple-700',
-  CREDITO: 'bg-orange-100 text-orange-700',
+// API values → Spanish label
+const PM_LABEL_MAP: Record<string, string> = {
+  CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia',
+  CREDIT: 'Crédito', MIXED: 'Mixto',
+}
+// API values → badge color
+const PM_COLOR_MAP: Record<string, string> = {
+  CASH: 'bg-green-100 text-green-700',
+  CARD: 'bg-blue-100 text-blue-700',
+  TRANSFER: 'bg-purple-100 text-purple-700',
+  CREDIT: 'bg-orange-100 text-orange-700',
+  MIXED: 'bg-gray-100 text-gray-700',
 }
 
 const quickAccessLinks = [
@@ -115,14 +122,13 @@ function getAlertBadge(status: string) {
   }
 }
 
-function normaliseMethodColor(method: string): string {
-  const key = (method ?? '').toUpperCase()
-  return METHOD_COLORS[key] ?? 'bg-gray-100 text-gray-700'
-}
-
 function normaliseTransactions(raw: any[]): RecentTransaction[] {
   return (raw ?? []).map((tx: any) => {
-    const method = (tx.paymentMethod ?? tx.method ?? 'EFECTIVO').toUpperCase()
+    // If saleType is CREDIT, show Crédito regardless of paymentMethod
+    const rawKey = ((tx.paymentMethod ?? tx.method ?? 'CASH') as string).toUpperCase()
+    const isCredit = ((tx.saleType ?? '') as string).toUpperCase() === 'CREDIT'
+    const effectiveKey = isCredit ? 'CREDIT' : rawKey
+
     const itemsLabel = Array.isArray(tx.items)
       ? tx.items.map((i: any) => i.productName ?? i.name ?? '').filter(Boolean).join(', ')
       : (tx.products ?? '')
@@ -133,9 +139,7 @@ function normaliseTransactions(raw: any[]): RecentTransaction[] {
       tx.customer ??
       'Cliente general'
     const amountLabel =
-      tx.total != null
-        ? `Q${Number(tx.total).toFixed(2)}`
-        : tx.amount ?? 'Q0.00'
+      tx.total != null ? `Q${Number(tx.total).toFixed(2)}` : tx.amount ?? 'Q0.00'
     const timeLabel =
       tx.createdAt
         ? new Date(tx.createdAt).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })
@@ -146,8 +150,8 @@ function normaliseTransactions(raw: any[]): RecentTransaction[] {
       products: itemsLabel,
       amount: amountLabel,
       time: timeLabel,
-      method,
-      methodColor: normaliseMethodColor(method),
+      method: PM_LABEL_MAP[effectiveKey] ?? effectiveKey,
+      methodColor: PM_COLOR_MAP[effectiveKey] ?? 'bg-gray-100 text-gray-700',
     }
   })
 }
@@ -244,7 +248,14 @@ export default function Dashboard() {
       })
 
       setHourlySales(normaliseHourly(data.hourlySales ?? []))
-      setCategorySales(normaliseCategory(data.categorySales ?? []))
+
+      // Backend now sends topCategoriesToday — actual today's revenue by category
+      const cats = (data.topCategoriesToday ?? []).map((c: any) => ({
+        category: c.name,
+        amount: c.amount,
+      }))
+      setCategorySales(normaliseCategory(cats))
+
       setRecentTransactions(normaliseTransactions(data.recentTransactions ?? []))
       setInventoryAlerts(normaliseAlerts(data.inventoryAlerts ?? []))
     } catch {
@@ -265,7 +276,7 @@ export default function Dashboard() {
 
   return (
     <motion.div
-      className="p-6 space-y-6 min-h-full bg-gray-50"
+      className="space-y-6 min-h-full"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
@@ -382,25 +393,27 @@ export default function Dashboard() {
               </div>
               {hourlySales.length > 0 ? (
                 <>
-                  <div className="flex items-end gap-1.5 h-40">
-                    {hourlySales.map((entry) => {
-                      const heightPct = Math.round((entry.amount / entry.max) * 100)
-                      const isTopHour = entry.amount >= entry.max * 0.85
-                      return (
-                        <div key={entry.hour} className="flex flex-col items-center flex-1 gap-1">
-                          <div className="w-full flex items-end justify-center" style={{ height: '140px' }}>
-                            <div
-                              className={`w-full rounded-t-sm transition-all duration-500 ${
-                                isTopHour ? 'bg-primary-500' : 'bg-primary-200'
-                              }`}
-                              style={{ height: `${heightPct}%` }}
-                              title={`Q${entry.amount}`}
-                            />
+                  <div className="overflow-x-auto -mx-2 px-2">
+                    <div className="flex items-end gap-1 h-40 min-w-[480px]">
+                      {hourlySales.map((entry) => {
+                        const heightPct = Math.round((entry.amount / entry.max) * 100)
+                        const isTopHour = entry.amount >= entry.max * 0.85
+                        return (
+                          <div key={entry.hour} className="flex flex-col items-center flex-1 gap-1">
+                            <div className="w-full flex items-end justify-center" style={{ height: '140px' }}>
+                              <div
+                                className={`w-full rounded-t-sm transition-all duration-500 ${
+                                  isTopHour ? 'bg-primary-500' : 'bg-primary-200'
+                                }`}
+                                style={{ height: `${heightPct}%` }}
+                                title={`Q${entry.amount}`}
+                              />
+                            </div>
+                            <span className="text-[9px] text-gray-400 leading-none">{entry.hour.slice(0, 2)}</span>
                           </div>
-                          <span className="text-[10px] text-gray-400 leading-none">{entry.hour}</span>
-                        </div>
-                      )
-                    })}
+                        )
+                      })}
+                    </div>
                   </div>
                   <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
                     <span className="flex items-center gap-1">
@@ -421,7 +434,7 @@ export default function Dashboard() {
             {/* Ventas por Categoría */}
             <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
               <div className="flex items-center justify-between mb-5">
-                <h2 className="text-base font-semibold text-gray-800">Ventas por Categoría</h2>
+                <h2 className="text-base font-semibold text-gray-800">Top Categorías Hoy</h2>
                 <span className="text-xs text-gray-400">Hoy</span>
               </div>
               {categorySales.length > 0 ? (

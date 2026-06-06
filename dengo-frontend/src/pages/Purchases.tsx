@@ -32,6 +32,7 @@ interface IntakeGroup {
   date: string
   user: string
   branch: string
+  supplier: string
   itemCount: number
   totalUnits: number
   items: StockMovement[]
@@ -80,9 +81,11 @@ export default function Purchases() {
   // Create form state
   const [intakeItems, setIntakeItems] = useState<IntakeItem[]>([])
   const [selectedBranchId, setSelectedBranchId] = useState(user?.branchId ?? '')
+  const [selectedSupplierId, setSelectedSupplierId] = useState('')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string; code: string }[]>([])
 
   // Product search
   const [posSearch, setPosSearch] = useState('')
@@ -111,6 +114,9 @@ export default function Purchases() {
     fetchMovements()
     api.get<{ id: string; name: string }[]>('/api/branches')
       .then(setBranches)
+      .catch(() => {})
+    api.get<{ id: string; name: string; code: string }[]>('/api/suppliers')
+      .then(d => setSuppliers(d ?? []))
       .catch(() => {})
   }, [])
 
@@ -190,6 +196,7 @@ export default function Purchases() {
   const resetForm = () => {
     setIntakeItems([])
     setNotes('')
+    setSelectedSupplierId('')
     setPosSearch('')
     setPosResults([])
     setShowResults(false)
@@ -205,11 +212,16 @@ export default function Purchases() {
     for (const m of movements) {
       const key = m.referenceId ?? m.id
       if (!map.has(key)) {
+        // Extract supplier from reason "Proveedor: X | notes"
+        const reasonParts = (m.reason ?? '').split(' | ')
+        const supplierPart = reasonParts.find(p => p.startsWith('Proveedor:'))
+        const supplierName = supplierPart ? supplierPart.replace('Proveedor: ', '') : ''
         map.set(key, {
           referenceId: key,
           date: m.createdAt,
           user: m.performedBy?.name ?? '–',
           branch: m.branch?.name ?? '–',
+          supplier: supplierName,
           itemCount: 0,
           totalUnits: 0,
           items: [],
@@ -231,6 +243,7 @@ export default function Purchases() {
     try {
       await api.post('/api/inventory/intake', {
         branchId: selectedBranchId,
+        supplierId: selectedSupplierId || undefined,
         notes: notes || undefined,
         items: intakeItems.map(i => ({
           productId: i.productId,
@@ -253,7 +266,7 @@ export default function Purchases() {
   // ── CREATE VIEW ────────────────────────────────────────────────────────────
   if (view === 'create') {
     return (
-      <div className="flex flex-col gap-3 h-[calc(100vh-7rem)]">
+      <div className="flex flex-col gap-3 md:h-[calc(100vh-7rem)]">
 
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center gap-3">
@@ -274,10 +287,10 @@ export default function Purchases() {
         </div>
 
         {/* Split layout */}
-        <div className="flex gap-3 flex-1 min-h-0">
+        <div className="flex flex-col md:flex-row gap-3 flex-1 overflow-auto md:overflow-hidden md:min-h-0">
 
           {/* LEFT: search + item list */}
-          <div className="flex-1 bg-white rounded-lg shadow-sm flex flex-col min-h-0">
+          <div className="flex-1 bg-white rounded-lg shadow-sm flex flex-col min-h-[280px] md:min-h-0">
 
             {/* Search bar */}
             <div className="p-3 border-b relative">
@@ -416,7 +429,7 @@ export default function Purchases() {
           </div>
 
           {/* RIGHT: options + confirm */}
-          <div className="w-72 flex flex-col gap-3">
+          <div className="w-full md:w-72 flex flex-col gap-3">
 
             {/* Branch */}
             <div className="bg-white rounded-lg shadow-sm p-4">
@@ -436,6 +449,24 @@ export default function Purchases() {
               </div>
             </div>
 
+            {/* Supplier */}
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Proveedor</h3>
+              <div className="relative">
+                <select
+                  value={selectedSupplierId}
+                  onChange={e => setSelectedSupplierId(e.target.value)}
+                  className="input w-full appearance-none pr-8"
+                >
+                  <option value="">Sin proveedor especificado</option>
+                  {suppliers.map(s => (
+                    <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
             {/* Notes */}
             <div className="bg-white rounded-lg shadow-sm p-4">
               <h3 className="text-sm font-semibold text-gray-700 mb-2">Notas (opcional)</h3>
@@ -443,7 +474,7 @@ export default function Purchases() {
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
                 rows={3}
-                placeholder="Referencia, proveedor, observaciones..."
+                placeholder="Referencia, número de factura, observaciones..."
                 className="input w-full resize-none text-sm"
               />
             </div>
@@ -615,6 +646,7 @@ export default function Purchases() {
                         {format(new Date(group.date), "d 'de' MMMM, HH:mm", { locale: es })}
                         {' · '}{group.user}
                         {' · '}{group.branch}
+                        {group.supplier && <span className="text-blue-500"> · {group.supplier}</span>}
                       </p>
                     </div>
                   </div>

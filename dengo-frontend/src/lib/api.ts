@@ -49,5 +49,5 @@ export const api = {
   post:   <T = unknown>(path: string, body: unknown)   => apiFetch<T>('POST',   path, body),
   put:    <T = unknown>(path: string, body: unknown)   => apiFetch<T>('PUT',    path, body),
   patch:  <T = unknown>(path: string, body: unknown)   => apiFetch<T>('PATCH',  path, body),
-  delete: <T = unknown>(path: string)                  => apiFetch<T>('DELETE', path),
+  delete: <T = unknown>(path: string, body?: unknown)   => apiFetch<T>('DELETE', path, body),
 }

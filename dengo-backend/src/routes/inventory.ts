@@ -95,6 +95,7 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
   fastify.post('/intake', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const body = z.object({
       branchId: z.string(),
+      supplierId: z.string().optional(),
       items: z.array(z.object({
         productId: z.string(),
         productName: z.string(),
@@ -105,13 +106,24 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
     }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
 
+    // Resolve supplier name for the reason field
+    let supplierName = ''
+    if (body.data.supplierId) {
+      const sup = await prisma.supplier.findUnique({ where: { id: body.data.supplierId }, select: { name: true } })
+      supplierName = sup?.name ?? ''
+    }
+
     const referenceId = `INTAKE-${Date.now()}`
     for (const item of body.data.items) {
+      const reason = [
+        supplierName ? `Proveedor: ${supplierName}` : '',
+        body.data.notes ?? `Ingreso — ${item.productName}`,
+      ].filter(Boolean).join(' | ')
       await updateStock(item.productId, body.data.branchId, item.quantity, {
         type: 'IN',
         performedById: request.user.id,
         referenceId,
-        reason: body.data.notes || `Ingreso de compra — ${item.productName}`,
+        reason,
       })
     }
 

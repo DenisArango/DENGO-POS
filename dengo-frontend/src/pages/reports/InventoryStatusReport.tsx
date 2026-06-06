@@ -4,7 +4,9 @@ import { ArrowLeft, Package, AlertTriangle, CheckCircle, XCircle } from 'lucide-
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../store'
+import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
+import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
 
 const STATUS_CONFIG = {
   normal:    { label: 'Normal',     color: '#10B981', bg: 'bg-green-100 text-green-700' },
@@ -25,17 +27,19 @@ function getStatus(quantity: number, minStock: number, maxStock: number): keyof 
 export default function InventoryStatusReport() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const { currentStore } = useStore()
   const [loading, setLoading] = useState(false)
   const [inventory, setInventory] = useState<any[]>([])
   const [filterStatus, setFilterStatus] = useState('')
   const [search, setSearch] = useState('')
+  const [filters, setFilters] = useState<ReportFilterState>({ branchId: currentStore?.id ?? user?.branchId ?? '', cashRegisterId: '' })
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [filters])
 
   async function fetchData() {
     setLoading(true)
     try {
-      const branchQ = user?.branchId ? `?branchId=${user.branchId}` : ''
+      const branchQ = filters.branchId ? `?branchId=${filters.branchId}` : ''
       const data = await api.get<any[]>(`/api/reports/inventory-status${branchQ}`)
       setInventory(data ?? [])
     } catch { setInventory([]) } finally { setLoading(false) }
@@ -121,6 +125,7 @@ export default function InventoryStatusReport() {
               <option value="">Todos los estados</option>
               {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
+            <ReportFilters value={filters} onChange={setFilters} showRegister={false} />
             {loading && <span className="text-sm text-gray-400">Cargando...</span>}
           </div>
           <div className="overflow-y-auto flex-1 max-h-96">

@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Package, X, Save, Upload, Tag, DollarSign, 
+import {
+  Package, X, Save, Upload, Tag, DollarSign,
   Barcode, Ruler, Plus, Trash2, CheckCircle
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { api } from '../../lib/api'
 
 interface ProductModalProps {
   isOpen: boolean
   onClose: () => void
   onSave: (product: any) => void
+  onCategoryCreated?: (cat: { id: string; name: string }) => void
   editingProduct?: any
   mode?: 'create' | 'edit' | 'duplicate'
   categories?: { id: string; name: string; color?: string }[]
@@ -47,6 +49,7 @@ export default function ProductModal({
   isOpen,
   onClose,
   onSave,
+  onCategoryCreated,
   editingProduct,
   mode = 'create',
   categories = [],
@@ -66,6 +69,38 @@ export default function ProductModal({
     variations: []
   })
   const [productImage, setProductImage] = useState<string | null>(null)
+  // Category autocomplete — catInputValue is always what's shown in the text input
+  const [catInputValue, setCatInputValue] = useState('')
+  const [catSearch, setCatSearch] = useState('')
+  const [showCatDropdown, setShowCatDropdown] = useState(false)
+  const [creatingCat, setCreatingCat] = useState(false)
+  const catRef = useRef<HTMLDivElement>(null)
+  // Alternate barcodes (only relevant for existing products in edit mode)
+  const [altBarcodes, setAltBarcodes] = useState<{ id: string; barcode: string; description?: string }[]>([])
+  const [newBarcode, setNewBarcode] = useState('')
+  const [newBarcodeDesc, setNewBarcodeDesc] = useState('')
+  const [loadingBarcodes, setLoadingBarcodes] = useState(false)
+
+  useEffect(() => {
+    if (editingProduct?.id && mode === 'edit') {
+      setLoadingBarcodes(true)
+      api.get<any[]>(`/api/products/${editingProduct.id}/barcodes`)
+        .then(data => setAltBarcodes(data ?? []))
+        .catch(() => setAltBarcodes([]))
+        .finally(() => setLoadingBarcodes(false))
+    } else {
+      setAltBarcodes([])
+    }
+  }, [editingProduct?.id, mode])
+
+  useEffect(() => {
+    // Sync category input value when editing product changes
+    if (editingProduct && (mode === 'edit' || mode === 'duplicate')) {
+      setCatInputValue(editingProduct.category ?? '')
+    } else if (!editingProduct) {
+      setCatInputValue('')
+    }
+  }, [editingProduct, mode])
 
   useEffect(() => {
     if (editingProduct && (mode === 'edit' || mode === 'duplicate')) {
@@ -121,6 +156,65 @@ export default function ProductModal({
     }
   }
 
+  const handleAddAltBarcode = async () => {
+    if (!newBarcode.trim()) return
+    if (!editingProduct?.id) {
+      toast.error('Guarda el producto primero para agregar códigos alternos')
+      return
+    }
+    try {
+      const rec = await api.post<any>(`/api/products/${editingProduct.id}/barcodes`, {
+        barcode: newBarcode.trim(),
+        description: newBarcodeDesc.trim() || undefined,
+      })
+      setAltBarcodes(prev => [...prev, rec])
+      setNewBarcode('')
+      setNewBarcodeDesc('')
+      toast.success('Código de barras agregado')
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Error al agregar código')
+    }
+  }
+
+  const handleRemoveAltBarcode = async (barcodeId: string) => {
+    if (!editingProduct?.id) return
+    try {
+      await api.delete(`/api/products/${editingProduct.id}/barcodes/${barcodeId}`)
+      setAltBarcodes(prev => prev.filter(b => b.id !== barcodeId))
+      toast.success('Código eliminado')
+    } catch {
+      toast.error('Error al eliminar código')
+    }
+  }
+
+  const filteredCategories = categories.filter(c =>
+    !catInputValue || c.name.toLowerCase().includes(catInputValue.toLowerCase())
+  )
+
+  const handleSelectCategory = (name: string) => {
+    handleCategoryChange(name)
+    setCatInputValue(name)
+    setCatSearch('')
+    setShowCatDropdown(false)
+  }
+
+  const handleCreateCategory = async () => {
+    const name = catInputValue.trim()
+    if (!name) return
+    setCreatingCat(true)
+    try {
+      const cat = await api.post<any>('/api/categories', { name })
+      handleCategoryChange(name)
+      setCatInputValue(name)
+      setCatSearch('')
+      setShowCatDropdown(false)
+      onCategoryCreated?.(cat)
+      toast.success(`Categoría "${name}" creada`)
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Error al crear categoría')
+    } finally { setCreatingCat(false) }
+  }
+
   const handleAddVariation = () => {
     setFormData(prev => ({
       ...prev,
@@ -174,6 +268,8 @@ export default function ProductModal({
       variations: []
     })
     setProductImage(null)
+    setCatInputValue('')
+    setCatSearch('')
     onClose()
   }
 
@@ -202,11 +298,11 @@ export default function ProductModal({
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] flex flex-col"
+            className="bg-white rounded-lg max-w-4xl w-full max-h-[92vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b flex-shrink-0">
               <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                 <Package size={24} />
                 {getModalTitle()}
@@ -220,7 +316,7 @@ export default function ProductModal({
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto pr-1">
+            <div className="flex-1 overflow-y-auto px-6 py-4">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left column - Basic info */}
                 <div className="lg:col-span-2 space-y-6">
@@ -256,18 +352,37 @@ export default function ProductModal({
                         />
                       </div>
 
-                      <div>
+                      <div className="relative" ref={catRef}>
                         <label className="label">Categoría *</label>
-                        <select
-                          value={formData.category}
-                          onChange={(e) => handleCategoryChange(e.target.value)}
-                          className="input"
-                        >
-                          <option value="">Seleccionar categoría</option>
-                          {categories.map((cat: { id: string; name: string }) => (
-                            <option key={cat.id} value={cat.name}>{cat.name}</option>
-                          ))}
-                        </select>
+                        <input
+                          type="text"
+                          value={catInputValue}
+                          onChange={e => { setCatInputValue(e.target.value); setShowCatDropdown(true) }}
+                          onFocus={() => setShowCatDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowCatDropdown(false), 150)}
+                          className="input w-full"
+                          placeholder="Buscar o crear categoría..."
+                          autoComplete="off"
+                        />
+                        {showCatDropdown && (
+                          <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            {filteredCategories.map(cat => (
+                              <button key={cat.id} type="button" onMouseDown={() => handleSelectCategory(cat.name)}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                {cat.name}
+                              </button>
+                            ))}
+                            {catSearch.trim() && !filteredCategories.find(c => c.name.toLowerCase() === catSearch.toLowerCase()) && (
+                              <button type="button" onMouseDown={handleCreateCategory} disabled={creatingCat}
+                                className="w-full text-left px-3 py-2 text-sm text-primary-600 hover:bg-primary-50 font-medium border-t border-gray-100 flex items-center gap-2 disabled:opacity-50">
+                                <Plus size={14} /> {creatingCat ? 'Creando...' : `Crear "${catSearch.trim()}"`}
+                              </button>
+                            )}
+                            {filteredCategories.length === 0 && !catSearch.trim() && (
+                              <p className="px-3 py-2 text-xs text-gray-400">Escribe para buscar o crear...</p>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       <div>
@@ -592,10 +707,56 @@ export default function ProductModal({
                   ))}
                 </div>
               </div>
+
+              {/* Alternate barcodes (edit mode only) */}
+              {mode === 'edit' && editingProduct?.id && (
+                <div className="mt-6 pt-6 border-t">
+                  <h3 className="font-medium text-gray-700 flex items-center gap-2 mb-3">
+                    <Barcode size={18} />
+                    Códigos de Barras Alternos
+                  </h3>
+                  {loadingBarcodes ? (
+                    <p className="text-sm text-gray-400">Cargando...</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {altBarcodes.map(b => (
+                        <div key={b.id} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg">
+                          <Barcode size={14} className="text-gray-400" />
+                          <span className="font-mono text-sm flex-1">{b.barcode}</span>
+                          {b.description && <span className="text-xs text-gray-400">{b.description}</span>}
+                          <button onClick={() => handleRemoveAltBarcode(b.id)} className="text-red-400 hover:text-red-600 ml-2">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      <div className="flex gap-2 mt-2">
+                        <input
+                          type="text"
+                          value={newBarcode}
+                          onChange={e => setNewBarcode(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleAddAltBarcode()}
+                          placeholder="Código de barras"
+                          className="input flex-1 text-sm"
+                        />
+                        <input
+                          type="text"
+                          value={newBarcodeDesc}
+                          onChange={e => setNewBarcodeDesc(e.target.value)}
+                          placeholder="Descripción (opcional)"
+                          className="input flex-1 text-sm"
+                        />
+                        <button onClick={handleAddAltBarcode} className="btn-primary btn-sm flex items-center gap-1">
+                          <Plus size={14} /> Agregar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Footer */}
-            <div className="mt-6 pt-6 border-t flex justify-end gap-3">
+            <div className="px-6 py-4 border-t flex justify-end gap-3 flex-shrink-0">
               <button
                 onClick={handleClose}
                 className="btn-outline btn-md"

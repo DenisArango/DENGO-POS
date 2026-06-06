@@ -5,24 +5,29 @@ import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { format, subDays } from 'date-fns'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../store'
+import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
+import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
 
 export default function SalesByPeriodReport() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const { currentStore } = useStore()
   const [from, setFrom] = useState(format(subDays(new Date(), 29), 'yyyy-MM-dd'))
   const [to, setTo] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [loading, setLoading] = useState(false)
-  const [data, setData] = useState<{ date: string; count: number; total: number }[]>([])
+  const [data, setData] = useState<{ date: string; count: number; total: number; cash: number; card: number; transfer: number; credit: number }[]>([])
+  const [filters, setFilters] = useState<ReportFilterState>({ branchId: currentStore?.id ?? user?.branchId ?? '', cashRegisterId: '' })
 
-  useEffect(() => { fetchData() }, [from, to])
+  useEffect(() => { fetchData() }, [from, to, filters])
 
   async function fetchData() {
     setLoading(true)
     try {
-      const branchQ = user?.branchId ? `&branchId=${user.branchId}` : ''
-      const result = await api.get<any[]>(`/api/reports/daily-sales?from=${from}T00:00:00&to=${to}T23:59:59${branchQ}`)
-      setData((result ?? []).map(d => ({ date: d.date, total: Number(d.total), count: Number(d.count) })))
+      const branchQ = filters.branchId ? `&branchId=${filters.branchId}` : ''
+      const regQ = filters.cashRegisterId ? `&cashRegisterId=${filters.cashRegisterId}` : ''
+      const result = await api.get<any[]>(`/api/reports/daily-sales?from=${from}T00:00:00&to=${to}T23:59:59${branchQ}${regQ}`)
+      setData((result ?? []).map(d => ({ date: d.date, total: Number(d.total), count: Number(d.count), cash: Number(d.cash ?? 0), card: Number(d.card ?? 0), transfer: Number(d.transfer ?? 0), credit: Number(d.credit ?? 0) })))
     } catch { setData([]) } finally { setLoading(false) }
   }
 
@@ -48,6 +53,7 @@ export default function SalesByPeriodReport() {
         <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input" />
         <label className="text-sm text-gray-600">Hasta</label>
         <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input" />
+        <ReportFilters value={filters} onChange={setFilters} />
         {loading && <span className="text-sm text-gray-400">Cargando...</span>}
       </div>
 

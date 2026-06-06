@@ -17,6 +17,12 @@ const branchSchema = z.object({
   currency: z.string().default('GTQ'),
   taxRate: z.number().default(0.12),
   printerEnabled: z.boolean().default(true),
+  // Company branding
+  logo: z.string().optional(),
+  companyName: z.string().optional(),
+  companyTaxId: z.string().optional(),
+  companyTagline: z.string().optional(),
+  companyWebsite: z.string().optional(),
 })
 
 function requireAdmin(fastify: FastifyInstance) {

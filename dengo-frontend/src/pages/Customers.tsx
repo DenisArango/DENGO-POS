@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Plus, Search, Edit2, Trash2, Eye, AlertCircle,
   User, Mail, Phone, MapPin, CreditCard, CheckCircle,
-  XCircle, DollarSign, TrendingUp, Clock
+  XCircle, DollarSign, TrendingUp, Clock, ShoppingBag, ExternalLink
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -27,6 +28,7 @@ interface Customer {
 }
 
 export default function Customers() {
+  const navigate = useNavigate()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -36,6 +38,9 @@ export default function Customers() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [detailTab, setDetailTab] = useState<'info' | 'history'>('info')
+  const [customerSales, setCustomerSales] = useState<any[]>([])
+  const [loadingSales, setLoadingSales] = useState(false)
 
   const [formData, setFormData] = useState({
     nit: '',
@@ -46,6 +51,24 @@ export default function Customers() {
     creditLimit: 0,
     isActive: true,
   })
+
+  const openDetails = (customer: Customer) => {
+    setSelectedCustomer(customer)
+    setDetailTab('info')
+    setShowDetailsModal(true)
+  }
+
+  const openHistoryTab = () => {
+    if (!selectedCustomer) return
+    setDetailTab('history')
+    if (customerSales.length === 0 || customerSales[0]?.customerId !== selectedCustomer.id) {
+      setLoadingSales(true)
+      api.get<any[]>(`/api/sales?customerId=${selectedCustomer.id}&includeVoided=true`)
+        .then(d => setCustomerSales(d ?? []))
+        .catch(() => setCustomerSales([]))
+        .finally(() => setLoadingSales(false))
+    }
+  }
 
   const fetchCustomers = () => {
     setLoading(true)
@@ -215,7 +238,7 @@ export default function Customers() {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
@@ -288,7 +311,7 @@ export default function Customers() {
                   </td>
                   <td className="p-4">
                     <div className="flex gap-1">
-                      <button onClick={() => { setSelectedCustomer(customer); setShowDetailsModal(true) }}
+                      <button onClick={() => openDetails(customer)}
                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Ver">
                         <Eye size={16} />
                       </button>
@@ -381,13 +404,27 @@ export default function Customers() {
       {showDetailsModal && selectedCustomer && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="p-6 border-b flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-800">Detalle del Cliente</h2>
+            className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b flex items-center justify-between flex-shrink-0">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">Detalle del Cliente</h2>
+                <p className="text-sm text-gray-500">{selectedCustomer.name}</p>
+              </div>
               <button onClick={() => setShowDetailsModal(false)} className="p-1 hover:bg-gray-100 rounded">
                 <AlertCircle size={18} />
               </button>
             </div>
+            {/* Tabs */}
+            <div className="flex border-b px-6 flex-shrink-0">
+              <button onClick={() => setDetailTab('info')} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${detailTab === 'info' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                <span className="flex items-center gap-1"><User size={14} /> Información</span>
+              </button>
+              <button onClick={openHistoryTab} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${detailTab === 'history' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                <span className="flex items-center gap-1"><ShoppingBag size={14} /> Historial de Compras</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+            {detailTab === 'info' && (
             <div className="p-6 space-y-5">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center text-2xl font-bold text-primary-600">
@@ -470,7 +507,46 @@ export default function Customers() {
                 </div>
               )}
             </div>
-            <div className="p-6 border-t flex gap-3 justify-end">
+            )}
+            {detailTab === 'history' && (
+              <div className="p-4">
+                {loadingSales ? (
+                  <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" /></div>
+                ) : customerSales.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-8">Sin compras registradas</p>
+                ) : (
+                  <div className="space-y-2">
+                    {customerSales.map(sale => {
+                      const PM_LABEL: Record<string, string> = { CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia', CREDIT: 'Crédito', MIXED: 'Mixto' }
+                      return (
+                        <div
+                          key={sale.id}
+                          onClick={() => { setShowDetailsModal(false); navigate(`/reports/sales/${sale.id}`) }}
+                          className={`p-3 rounded-lg border cursor-pointer transition-colors ${sale.isVoided ? 'opacity-50 border-red-200 bg-red-50 hover:bg-red-100' : 'border-gray-100 bg-gray-50 hover:bg-primary-50 hover:border-primary-200'}`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-mono text-xs text-gray-600">{sale.invoiceNumber}</p>
+                              <p className="text-xs text-gray-400">{format(new Date(sale.createdAt), 'dd/MM/yyyy HH:mm', { locale: es })}</p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <div className="text-right">
+                                <p className="font-bold text-gray-800">Q{Number(sale.total).toFixed(2)}</p>
+                                <p className="text-xs text-gray-400">{PM_LABEL[sale.paymentMethod] ?? sale.paymentMethod}</p>
+                              </div>
+                              <ExternalLink size={14} className="text-primary-400 flex-shrink-0" />
+                            </div>
+                          </div>
+                          {sale.isVoided && <p className="text-xs text-red-500 mt-1">ANULADA</p>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+            </div>
+            <div className="p-6 border-t flex gap-3 justify-end flex-shrink-0">
               <button onClick={() => setShowDetailsModal(false)} className="btn-secondary btn-md">Cerrar</button>
               <button onClick={() => { setShowDetailsModal(false); openEdit(selectedCustomer) }}
                 className="btn-primary btn-md">Editar</button>

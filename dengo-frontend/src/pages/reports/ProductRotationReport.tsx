@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Package, TrendingUp, TrendingDown, AlertTriangle, Clock } from 'lucide-react'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../store'
+import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
+import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
 
 const STATUS_CONFIG = {
   high:     { label: 'Alta rotación',  bg: 'bg-green-100 text-green-700',  icon: TrendingUp },
@@ -15,17 +17,19 @@ const STATUS_CONFIG = {
 export default function ProductRotationReport() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const { currentStore } = useStore()
   const [loading, setLoading] = useState(false)
   const [products, setProducts] = useState<any[]>([])
   const [filterStatus, setFilterStatus] = useState('')
   const [search, setSearch] = useState('')
+  const [filters, setFilters] = useState<ReportFilterState>({ branchId: currentStore?.id ?? user?.branchId ?? '', cashRegisterId: '' })
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [filters])
 
   async function fetchData() {
     setLoading(true)
     try {
-      const branchQ = user?.branchId ? `?branchId=${user.branchId}` : ''
+      const branchQ = filters.branchId ? `?branchId=${filters.branchId}` : ''
       const data = await api.get<any[]>(`/api/reports/product-rotation${branchQ}`)
       setProducts(data ?? [])
     } catch { setProducts([]) } finally { setLoading(false) }
@@ -67,6 +71,7 @@ export default function ProductRotationReport() {
           <option value="">Todos</option>
           {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
+        <ReportFilters value={filters} onChange={setFilters} showRegister={false} />
         {loading && <span className="text-sm text-gray-400 self-center">Cargando...</span>}
       </div>
 

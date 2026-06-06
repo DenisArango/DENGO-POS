@@ -1,115 +1,103 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Store as StoreIcon, Plus, Edit, Trash2, X, MapPin, Phone, Clock, Save, Building2 } from 'lucide-react'
+import { ArrowLeft, Store as StoreIcon, Plus, Edit, Trash2, X, MapPin, Phone, Clock, Save, Building2, Upload, Image } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
-import type { Store } from '../../types'
+import { api } from '../../lib/api'
 
-const mockStores: Store[] = [
-  {
-    id: '1',
-    name: 'Tienda Central',
-    code: 'TC001',
-    type: 'main',
-    address: 'Av. Principal 123, Zona 10',
-    city: 'Ciudad de Guatemala',
-    phone: '+502 2345-6789',
-    email: 'central@dengo.com',
-    manager: 'Juan Pérez',
-    status: 'active',
-    openTime: '08:00',
-    closeTime: '20:00',
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: '2',
-    name: 'Sucursal Norte',
-    code: 'SN001',
-    type: 'branch',
-    address: 'Calle Norte 456, Zona 17',
-    city: 'Ciudad de Guatemala',
-    phone: '+502 2345-6790',
-    email: 'norte@dengo.com',
-    manager: 'María García',
-    status: 'active',
-    openTime: '09:00',
-    closeTime: '19:00',
-    createdAt: '2024-01-15T00:00:00Z',
-    updatedAt: '2024-01-15T00:00:00Z'
-  }
-]
+interface BranchData {
+  id?: string
+  name: string
+  code: string
+  type: string
+  address: string
+  city: string
+  phone: string
+  email: string
+  manager: string
+  status: string
+  openTime: string
+  closeTime: string
+  logo?: string
+  companyName?: string
+  companyTaxId?: string
+  companyTagline?: string
+  companyWebsite?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+const EMPTY_FORM: BranchData = {
+  name: '', code: '', type: 'branch', address: '', city: '', phone: '',
+  email: '', manager: '', status: 'active', openTime: '08:00', closeTime: '20:00',
+  logo: '', companyName: '', companyTaxId: '', companyTagline: '', companyWebsite: '',
+}
 
 export default function Stores() {
   const navigate = useNavigate()
-  const [stores, setStores] = useState<Store[]>(mockStores)
+  const [stores, setStores] = useState<BranchData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [showModal, setShowModal] = useState(false)
-  const [editingStore, setEditingStore] = useState<Store | null>(null)
-  const [formData, setFormData] = useState<Partial<Store>>({
-    name: '',
-    code: '',
-    type: 'branch',
-    address: '',
-    city: '',
-    phone: '',
-    email: '',
-    manager: '',
-    status: 'active',
-    openTime: '08:00',
-    closeTime: '20:00'
-  })
+  const [editingStore, setEditingStore] = useState<BranchData | null>(null)
+  const [formData, setFormData] = useState<BranchData>({ ...EMPTY_FORM })
 
-  const handleOpenModal = (store?: Store) => {
+  useEffect(() => {
+    api.get<BranchData[]>('/api/branches')
+      .then(d => setStores(d ?? []))
+      .catch(e => toast.error(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) { toast.error('Logo no debe superar 2MB'); return }
+    const reader = new FileReader()
+    reader.onloadend = () => setFormData(prev => ({ ...prev, logo: reader.result as string }))
+    reader.readAsDataURL(file)
+  }
+
+  const handleOpenModal = (store?: BranchData) => {
     if (store) {
       setEditingStore(store)
-      setFormData(store)
+      setFormData({ ...EMPTY_FORM, ...store })
     } else {
       setEditingStore(null)
-      setFormData({
-        name: '',
-        code: '',
-        type: 'branch',
-        address: '',
-        city: '',
-        phone: '',
-        email: '',
-        manager: '',
-        status: 'active',
-        openTime: '08:00',
-        closeTime: '20:00'
-      })
+      setFormData({ ...EMPTY_FORM })
     }
     setShowModal(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name || !formData.code || !formData.address) {
       toast.error('Por favor completa los campos requeridos')
       return
     }
-
-    if (editingStore) {
-      setStores(stores.map(s => s.id === editingStore.id ? { ...editingStore, ...formData, updatedAt: new Date().toISOString() } : s))
-      toast.success('Tienda actualizada exitosamente')
-    } else {
-      const newStore: Store = {
-        ...formData as Store,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+    setSaving(true)
+    try {
+      if (editingStore?.id) {
+        const updated = await api.put<BranchData>(`/api/branches/${editingStore.id}`, formData)
+        setStores(stores.map(s => s.id === editingStore.id ? { ...s, ...updated } : s))
+        toast.success('Sucursal actualizada')
+      } else {
+        const created = await api.post<BranchData>('/api/branches', formData)
+        setStores([...stores, created])
+        toast.success('Sucursal creada')
       }
-      setStores([...stores, newStore])
-      toast.success('Tienda creada exitosamente')
-    }
-
-    setShowModal(false)
+      setShowModal(false)
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Error al guardar')
+    } finally { setSaving(false) }
   }
 
-  const handleDelete = (id: string) => {
-    if (confirm('¿Estás seguro de eliminar esta tienda?')) {
+  const handleDelete = async (id: string) => {
+    if (!confirm('¿Estás seguro de desactivar esta sucursal?')) return
+    try {
+      await api.delete(`/api/branches/${id}`)
       setStores(stores.filter(s => s.id !== id))
-      toast.success('Tienda eliminada exitosamente')
-    }
+      toast.success('Sucursal desactivada')
+    } catch (e: any) { toast.error(e?.message ?? 'Error') }
   }
 
   const getStatusBadge = (status: string) => {
@@ -161,6 +149,8 @@ export default function Stores() {
         </button>
       </div>
 
+      {loading && <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" /></div>}
+
       {/* Lista de tiendas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {stores.map((store, index) => (
@@ -173,16 +163,17 @@ export default function Stores() {
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className={`p-3 rounded-lg ${
-                  store.type === 'main' ? 'bg-primary-100' : 'bg-gray-100'
-                }`}>
-                  <Building2 className={
-                    store.type === 'main' ? 'text-primary-600' : 'text-gray-600'
-                  } size={24} />
-                </div>
+                {store.logo ? (
+                  <img src={store.logo} alt="Logo" className="h-12 w-12 object-contain border border-gray-100 rounded-lg" />
+                ) : (
+                  <div className={`p-3 rounded-lg ${store.type === 'main' ? 'bg-primary-100' : 'bg-gray-100'}`}>
+                    <Building2 className={store.type === 'main' ? 'text-primary-600' : 'text-gray-600'} size={24} />
+                  </div>
+                )}
                 <div>
-                  <h3 className="font-semibold text-gray-800">{store.name}</h3>
-                  <p className="text-sm text-gray-500">{store.code}</p>
+                  <h3 className="font-semibold text-gray-800">{store.companyName ?? store.name}</h3>
+                  <p className="text-sm text-gray-500">{store.name} · {store.code}</p>
+                  {store.companyTaxId && <p className="text-xs text-gray-400">NIT: {store.companyTaxId}</p>}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -388,18 +379,68 @@ export default function Stores() {
                 </div>
               </div>
 
+              {/* Company branding */}
+              <div className="border-t pt-5 mt-5">
+                <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                  <Building2 size={16} /> Información de Empresa / Recibo
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Nombre en recibo (opcional)</label>
+                    <input type="text" value={formData.companyName ?? ''} onChange={e => setFormData({ ...formData, companyName: e.target.value })} className="input w-full" placeholder="Ej: DENGO Distribuciones" />
+                  </div>
+                  <div>
+                    <label className="label">NIT / RTN empresa</label>
+                    <input type="text" value={formData.companyTaxId ?? ''} onChange={e => setFormData({ ...formData, companyTaxId: e.target.value })} className="input w-full" placeholder="1234567-8" />
+                  </div>
+                  <div>
+                    <label className="label">Slogan / Tagline</label>
+                    <input type="text" value={formData.companyTagline ?? ''} onChange={e => setFormData({ ...formData, companyTagline: e.target.value })} className="input w-full" placeholder="Ej: La mejor calidad" />
+                  </div>
+                  <div>
+                    <label className="label">Sitio web</label>
+                    <input type="text" value={formData.companyWebsite ?? ''} onChange={e => setFormData({ ...formData, companyWebsite: e.target.value })} className="input w-full" placeholder="www.empresa.com" />
+                  </div>
+                </div>
+                {/* Logo */}
+                <div className="mt-4">
+                  <label className="label">Logo de sucursal</label>
+                  <div className="flex items-center gap-4">
+                    {formData.logo ? (
+                      <div className="relative">
+                        <img src={formData.logo} alt="Logo" className="h-16 w-16 object-contain border border-gray-200 rounded-lg" />
+                        <button onClick={() => setFormData({ ...formData, logo: '' })} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5">
+                          <X size={10} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="h-16 w-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                        <Image size={20} className="text-gray-300" />
+                      </div>
+                    )}
+                    <label className="btn-outline btn-sm cursor-pointer flex items-center gap-1">
+                      <Upload size={14} /> Subir logo
+                      <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                    </label>
+                    <span className="text-xs text-gray-400">Máx. 2MB. PNG/JPG recomendado.</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={() => setShowModal(false)}
                   className="flex-1 btn-outline btn-md"
+                  disabled={saving}
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleSave}
+                  disabled={saving}
                   className="flex-1 btn-primary btn-md flex items-center justify-center gap-2"
                 >
-                  <Save size={18} />
+                  {saving ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> : <Save size={18} />}
                   {editingStore ? 'Actualizar' : 'Crear'}
                 </button>
               </div>

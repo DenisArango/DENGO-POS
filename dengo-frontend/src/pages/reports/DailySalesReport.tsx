@@ -6,7 +6,9 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../store'
+import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
+import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
 
 const PAYMENT_COLORS: Record<string, string> = { CASH: '#10B981', CARD: '#3B82F6', TRANSFER: '#8B5CF6', CREDIT: '#F59E0B', MIXED: '#6B7280' }
 const PAYMENT_LABELS: Record<string, string> = { CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia', CREDIT: 'Crédito', MIXED: 'Mixto' }
@@ -14,17 +16,20 @@ const PAYMENT_LABELS: Record<string, string> = { CASH: 'Efectivo', CARD: 'Tarjet
 export default function DailySalesReport() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const { currentStore } = useStore()
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [loading, setLoading] = useState(false)
   const [sales, setSales] = useState<any[]>([])
+  const [filters, setFilters] = useState<ReportFilterState>({ branchId: currentStore?.id ?? user?.branchId ?? '', cashRegisterId: '' })
 
-  useEffect(() => { fetchSales() }, [selectedDate])
+  useEffect(() => { fetchSales() }, [selectedDate, filters])
 
   async function fetchSales() {
     setLoading(true)
     try {
-      const branchQ = user?.branchId ? `&branchId=${user.branchId}` : ''
-      const data = await api.get<any[]>(`/api/reports/sales-history?from=${selectedDate}T00:00:00&to=${selectedDate}T23:59:59${branchQ}`)
+      const branchQ = filters.branchId ? `&branchId=${filters.branchId}` : ''
+      const regQ = filters.cashRegisterId ? `&cashRegisterId=${filters.cashRegisterId}` : ''
+      const data = await api.get<any[]>(`/api/reports/sales-history?from=${selectedDate}T00:00:00&to=${selectedDate}T23:59:59${branchQ}${regQ}`)
       setSales(data ?? [])
     } catch { setSales([]) } finally { setLoading(false) }
   }
@@ -79,9 +84,10 @@ export default function DailySalesReport() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex items-center gap-3">
+      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-center gap-3">
         <Calendar className="text-gray-400" size={18} />
         <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="input" />
+        <ReportFilters value={filters} onChange={setFilters} />
         {loading && <span className="text-sm text-gray-400">Cargando...</span>}
       </div>
 

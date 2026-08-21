@@ -23,6 +23,17 @@ const Quotations = lazy(() => import('./pages/Quotations'))
 const SalesHistoryReport = lazy(() => import('./pages/reports/SalesHistoryReport'))
 const SaleDetail = lazy(() => import('./pages/reports/SaleDetail'))
 
+// Portal escolar (Variedades Dayana)
+const PortalOrders = lazy(() => import('./pages/portal/PortalOrders'))
+const PortalTeachers = lazy(() => import('./pages/portal/PortalTeachers'))
+const PortalSchools = lazy(() => import('./pages/portal/PortalSchools'))
+const PortalPrograms = lazy(() => import('./pages/portal/PortalPrograms'))
+const PortalProgramOptions = lazy(() => import('./pages/portal/PortalProgramOptions'))
+const PortalConsolidated = lazy(() => import('./pages/portal/PortalConsolidated'))
+const PortalMessages = lazy(() => import('./pages/portal/PortalMessages'))
+const PortalLandingConfig = lazy(() => import('./pages/portal/PortalLandingConfig'))
+const Messages = lazy(() => import('./pages/Messages'))
+
 // Páginas de configuración
 const UsersManagement = lazy(() => import('./pages/Users'))
 const RolesPermissions = lazy(() => import('./pages/RolesPermissions'))
@@ -76,6 +87,17 @@ export default function Router() {
           <Route path="/customers" element={<Customers />} />
           <Route path="/quotations" element={<Quotations />} />
           <Route path="/settings" element={<Settings />} />
+
+          {/* Portal escolar */}
+          <Route path="/portal/orders" element={<PortalOrders />} />
+          <Route path="/portal/teachers" element={<PortalTeachers />} />
+          <Route path="/portal/schools" element={<PortalSchools />} />
+          <Route path="/portal/programs" element={<PortalPrograms />} />
+          <Route path="/portal/program-options" element={<PortalProgramOptions />} />
+          <Route path="/portal/consolidated" element={<PortalConsolidated />} />
+          <Route path="/portal/messages" element={<PortalMessages />} />
+          <Route path="/portal/config" element={<PortalLandingConfig />} />
+          <Route path="/messages" element={<Messages />} />
 
           {/* Rutas de reportes */}
           <Route path="/reports/daily-sales" element={<DailySalesReport />} />

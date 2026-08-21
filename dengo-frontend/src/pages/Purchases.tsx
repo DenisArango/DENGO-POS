@@ -165,7 +165,7 @@ export default function Purchases() {
       if (existing) {
         return prev.map(i => i.productId === productId ? { ...i, quantity: i.quantity + 1 } : i)
       }
-      return [...prev, { id: crypto.randomUUID(), productId, productName: name, quantity: 1, unitCost: cost }]
+      return [...prev, { id: Math.random().toString(36).slice(2), productId, productName: name, quantity: 1, unitCost: cost }]
     })
     setShowVariationModal(false)
     setSelectedForVariation(null)

@@ -85,6 +85,11 @@ model User {
   loginHistory        LoginHistory[]
   priceHistory        PriceHistory[]
   creditPayments      CreditPayment[]
+  teacher              Teacher?
+  approvedPortalOrders    PortalOrder[]             @relation("ApprovedPortalOrders")
+  purchaseTrackingUpdates PortalPurchaseTracking[]  @relation("UpdatedByUser")
+  sentMessages            InternalMessage[]         @relation("SentMessages")
+  receivedMessages        InternalMessage[]         @relation("ReceivedMessages")
 
   @@map("USERS")
 }
@@ -156,6 +161,9 @@ model Product {
   transferItems  TransferItem[]
   quotationItems QuotationItem[]
   priceHistory   PriceHistory[]
+  portalOrderItems    PortalOrderItem[]
+  programOptionItems  ProgramOptionItem[]
+  purchaseTracking    PortalPurchaseTracking[]
 
   @@map("PRODUCTS")
 }
@@ -551,4 +559,241 @@ model PriceHistory {
   changedBy User    @relation(fields: [changedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("PRICE_HISTORY")
+}
+
+// ── Teacher Portal (Variedades Dayana) ───────────────────────────────────────
+// NOTE: After editing this schema run from dengo-backend/:
+//   npx prisma generate && npx prisma db push
+
+model PortalConfig {
+  id           String   @id @default(cuid()) @map("ID") @db.NVarChar(36)
+  businessName String   @map("BUSINESS_NAME") @db.NVarChar(150)
+  tagline      String?  @map("TAGLINE") @db.NVarChar(200)
+  aboutText    String?  @map("ABOUT_TEXT") @db.NVarChar(Max)
+  logoUrl      String?  @map("LOGO_URL") @db.NVarChar(500)
+  heroImageUrl String?  @map("HERO_IMAGE_URL") @db.NVarChar(500)
+  primaryColor String   @default("#F97316") @map("PRIMARY_COLOR") @db.NVarChar(20)
+  address      String?  @map("ADDRESS") @db.NVarChar(300)
+  city         String?  @map("CITY") @db.NVarChar(100)
+  phone        String?  @map("PHONE") @db.NVarChar(30)
+  whatsapp     String?  @map("WHATSAPP") @db.NVarChar(30)
+  email        String?  @map("EMAIL") @db.NVarChar(150)
+  facebook     String?  @map("FACEBOOK") @db.NVarChar(200)
+  instagram    String?  @map("INSTAGRAM") @db.NVarChar(200)
+  isActive     Boolean  @default(true) @map("IS_ACTIVE")
+  createdAt    DateTime @default(now()) @map("CREATED_AT")
+  updatedAt    DateTime @updatedAt @map("UPDATED_AT")
+
+  @@map("PORTAL_CONFIG")
+}
+
+model School {
+  id           String   @id @default(cuid()) @map("ID") @db.NVarChar(36)
+  name         String   @map("NAME") @db.NVarChar(200)
+  code         String?  @map("CODE") @db.NVarChar(30)
+  address      String?  @map("ADDRESS") @db.NVarChar(300)
+  municipio    String?  @map("MUNICIPIO") @db.NVarChar(100)
+  departamento String?  @map("DEPARTAMENTO") @db.NVarChar(100)
+  opfContact   String?  @map("OPF_CONTACT") @db.NVarChar(150)
+  opfPhone     String?  @map("OPF_PHONE") @db.NVarChar(30)
+  isActive     Boolean  @default(true) @map("IS_ACTIVE")
+  createdAt    DateTime @default(now()) @map("CREATED_AT")
+  updatedAt    DateTime @updatedAt @map("UPDATED_AT")
+
+  teachers TeacherSchool[]
+  orders   PortalOrder[]
+
+  @@map("SCHOOLS")
+}
+
+model Teacher {
+  id        String   @id @default(cuid()) @map("ID") @db.NVarChar(36)
+  userId    String   @unique @map("USER_ID") @db.NVarChar(36)
+  phone     String?  @map("PHONE") @db.NVarChar(30)
+  isActive  Boolean  @default(true) @map("IS_ACTIVE")
+  createdAt DateTime @default(now()) @map("CREATED_AT")
+  updatedAt DateTime @updatedAt @map("UPDATED_AT")
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  schools TeacherSchool[]
+  orders  PortalOrder[]
+  messages PortalMessage[]
+
+  @@map("TEACHERS")
+}
+
+model TeacherSchool {
+  id        String  @id @default(cuid()) @map("ID") @db.NVarChar(36)
+  teacherId String  @map("TEACHER_ID") @db.NVarChar(36)
+  schoolId  String  @map("SCHOOL_ID") @db.NVarChar(36)
+  grade            String? @map("GRADE") @db.NVarChar(100)
+  section          String? @map("SECTION") @db.NVarChar(10)
+  educationalLevel String? @map("EDUCATIONAL_LEVEL") @db.NVarChar(20)
+  isActive         Boolean @default(true) @map("IS_ACTIVE")
+
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([teacherId, schoolId, grade])
+  @@map("TEACHER_SCHOOLS")
+}
+
+model ProgramConfig {
+  id                  String   @id @default(cuid()) @map("ID") @db.NVarChar(36)
+  type                String   @map("TYPE") @db.NVarChar(30)
+  name                String   @map("NAME") @db.NVarChar(150)
+  description         String?  @map("DESCRIPTION") @db.NVarChar(500)
+  maxAmountPerTeacher Decimal? @map("MAX_AMOUNT_PER_TEACHER") @db.Decimal(18, 2)
+  limitPerStudent     Decimal? @map("LIMIT_PER_STUDENT") @db.Decimal(18, 2)
+  allowedCategoryIds  String?  @map("ALLOWED_CATEGORY_IDS") @db.NVarChar(Max)
+  isActive            Boolean  @default(true) @map("IS_ACTIVE")
+  createdAt           DateTime @default(now()) @map("CREATED_AT")
+  updatedAt           DateTime @updatedAt @map("UPDATED_AT")
+
+  @@map("PROGRAM_CONFIGS")
+}
+
+model PortalOrder {
+  id           String    @id @default(cuid()) @map("ID") @db.NVarChar(36)
+  orderNumber  String    @unique @map("ORDER_NUMBER") @db.NVarChar(30)
+  teacherId    String    @map("TEACHER_ID") @db.NVarChar(36)
+  schoolId     String    @map("SCHOOL_ID") @db.NVarChar(36)
+  grade             String?   @map("GRADE") @db.NVarChar(100)
+  educationalLevel  String?   @map("EDUCATIONAL_LEVEL") @db.NVarChar(20)
+  studentCount      Int?      @map("STUDENT_COUNT")
+  orderGradeSummary String?   @map("ORDER_GRADE_SUMMARY") @db.NVarChar(300)
+  programType       String    @map("PROGRAM_TYPE") @db.NVarChar(30)
+  status       String    @default("PENDING") @map("STATUS") @db.NVarChar(20)
+  notes        String?   @map("NOTES") @db.NVarChar(Max)
+  totalAmount  Decimal   @default(0) @map("TOTAL_AMOUNT") @db.Decimal(18, 2)
+  adminNotes    String?   @map("ADMIN_NOTES") @db.NVarChar(Max)
+  approvedById  String?   @map("APPROVED_BY_ID") @db.NVarChar(36)
+  approvedAt    DateTime? @map("APPROVED_AT")
+  deliveryDate  DateTime? @map("DELIVERY_DATE")
+  deliveryTime  String?   @map("DELIVERY_TIME") @db.NVarChar(10)
+  deliveryNotes String?   @map("DELIVERY_NOTES") @db.NVarChar(500)
+  createdAt     DateTime  @default(now()) @map("CREATED_AT")
+  updatedAt     DateTime  @updatedAt @map("UPDATED_AT")
+
+  teacher    Teacher             @relation(fields: [teacherId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  school     School              @relation(fields: [schoolId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvedBy User?               @relation("ApprovedPortalOrders", fields: [approvedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  items      PortalOrderItem[]
+  grades     PortalOrderGrade[]
+  messages   PortalMessage[]
+
+  @@map("PORTAL_ORDERS")
+}
+
+model PortalOrderItem {
+  id            String  @id @default(cuid()) @map("ID") @db.NVarChar(36)
+  portalOrderId String  @map("PORTAL_ORDER_ID") @db.NVarChar(36)
+  productId     String  @map("PRODUCT_ID") @db.NVarChar(36)
+  productName   String  @map("PRODUCT_NAME") @db.NVarChar(200)
+  quantity      Decimal @map("QUANTITY") @db.Decimal(18, 4)
+  unitPrice     Decimal @map("UNIT_PRICE") @db.Decimal(18, 2)
+  total         Decimal @map("TOTAL") @db.Decimal(18, 2)
+  notes         String? @map("NOTES") @db.NVarChar(500)
+
+  portalOrder PortalOrder @relation(fields: [portalOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product     Product     @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("PORTAL_ORDER_ITEMS")
+}
+
+model ProgramOption {
+  id          String   @id @default(cuid()) @map("ID") @db.NVarChar(36)
+  programType String   @map("PROGRAM_TYPE") @db.NVarChar(30)
+  name        String   @map("NAME") @db.NVarChar(150)
+  description String?  @map("DESCRIPTION") @db.NVarChar(500)
+  isActive    Boolean  @default(true) @map("IS_ACTIVE")
+  sortOrder   Int      @default(0) @map("SORT_ORDER")
+  createdAt   DateTime @default(now()) @map("CREATED_AT")
+  updatedAt   DateTime @updatedAt @map("UPDATED_AT")
+
+  items  ProgramOptionItem[]
+  levels ProgramOptionLevel[]
+
+  @@map("PROGRAM_OPTIONS")
+}
+
+model ProgramOptionItem {
+  id              String  @id @default(cuid()) @map("ID") @db.NVarChar(36)
+  programOptionId String  @map("PROGRAM_OPTION_ID") @db.NVarChar(36)
+  productId       String  @map("PRODUCT_ID") @db.NVarChar(36)
+  productName     String  @map("PRODUCT_NAME") @db.NVarChar(200)
+  quantity        Decimal @map("QUANTITY") @db.Decimal(18, 4)
+
+  programOption ProgramOption @relation(fields: [programOptionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product       Product       @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("PROGRAM_OPTION_ITEMS")
+}
+
+model ProgramOptionLevel {
+  programOptionId String @map("PROGRAM_OPTION_ID") @db.NVarChar(36)
+  level           String @map("LEVEL") @db.NVarChar(20)
+
+  programOption ProgramOption @relation(fields: [programOptionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([programOptionId, level])
+  @@map("PROGRAM_OPTION_LEVELS")
+}
+
+model PortalOrderGrade {
+  id            String @id @default(cuid()) @map("ID") @db.NVarChar(36)
+  portalOrderId String @map("PORTAL_ORDER_ID") @db.NVarChar(36)
+  gradeName     String @map("GRADE_NAME") @db.NVarChar(100)
+  studentCount  Int    @map("STUDENT_COUNT")
+
+  portalOrder PortalOrder @relation(fields: [portalOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("PORTAL_ORDER_GRADES")
+}
+
+model PortalPurchaseTracking {
+  id           String   @id @default(cuid()) @map("ID") @db.NVarChar(36)
+  productId    String   @map("PRODUCT_ID") @db.NVarChar(36)
+  programType  String   @map("PROGRAM_TYPE") @db.NVarChar(30)
+  fiscalYear   Int      @map("FISCAL_YEAR")
+  purchasedQty Decimal  @default(0) @map("PURCHASED_QTY") @db.Decimal(18, 4)
+  notes        String?  @map("NOTES") @db.NVarChar(500)
+  updatedAt    DateTime @default(now()) @updatedAt @map("UPDATED_AT")
+  updatedById  String?  @map("UPDATED_BY_ID") @db.NVarChar(36)
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedBy User?   @relation("UpdatedByUser", fields: [updatedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([productId, programType, fiscalYear])
+  @@map("PORTAL_PURCHASE_TRACKING")
+}
+
+model PortalMessage {
+  id            String   @id @default(cuid()) @map("ID") @db.NVarChar(36)
+  portalOrderId String?  @map("PORTAL_ORDER_ID") @db.NVarChar(36)
+  teacherId     String   @map("TEACHER_ID") @db.NVarChar(36)
+  senderRole    String   @map("SENDER_ROLE") @db.NVarChar(10)
+  body          String   @map("BODY") @db.NVarChar(Max)
+  isRead        Boolean  @default(false) @map("IS_READ")
+  createdAt     DateTime @default(now()) @map("CREATED_AT")
+
+  portalOrder PortalOrder? @relation(fields: [portalOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  teacher     Teacher      @relation(fields: [teacherId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("PORTAL_MESSAGES")
+}
+
+model InternalMessage {
+  id         String    @id @default(cuid()) @map("ID") @db.NVarChar(36)
+  fromUserId String    @map("FROM_USER_ID") @db.NVarChar(36)
+  toUserId   String    @map("TO_USER_ID") @db.NVarChar(36)
+  body       String    @map("BODY") @db.NVarChar(Max)
+  isRead     Boolean   @default(false) @map("IS_READ")
+  readAt     DateTime? @map("READ_AT")
+  createdAt  DateTime  @default(now()) @map("CREATED_AT")
+
+  fromUser User @relation("SentMessages", fields: [fromUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  toUser   User @relation("ReceivedMessages", fields: [toUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("INTERNAL_MESSAGES")
 }

@@ -16,10 +16,20 @@ import {
   LayoutDashboard,
   PackageCheck,
   UserCircle,
-  ClipboardList
+  ClipboardList,
+  Inbox,
+  GraduationCap,
+  School,
+  BookOpen,
+  Globe,
+  Layers,
+  BarChart2,
+  MessageSquare,
 } from 'lucide-react'
 import { useAppStore, useAuthStore } from '../../store'
-import type { UserRole } from '../../types'
+import { usePendingPortalOrders } from '../../hooks/usePendingPortalOrders'
+import { useUnreadMessages } from '../../hooks/useUnreadMessages'
+import { useUnreadPortalMessages } from '../../hooks/useUnreadPortalMessages'
 
 const menuItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['ADMIN', 'OPERATOR', 'AUDITOR', 'INVENTORY_CONTROL'] },
@@ -33,15 +43,33 @@ const menuItems = [
   { path: '/transfers', icon: ArrowLeftRight, label: 'Traslados', roles: ['ADMIN', 'INVENTORY_CONTROL'] },
   { path: '/customers', icon: UserCircle, label: 'Clientes', roles: ['ADMIN', 'OPERATOR'] },
   { path: '/quotations', icon: ClipboardList, label: 'Cotizaciones', roles: ['ADMIN', 'OPERATOR'] },
+  { path: '/messages', icon: MessageSquare, label: 'Mensajes', roles: ['ADMIN', 'OPERATOR', 'AUDITOR', 'INVENTORY_CONTROL'], badge: 'unreadMessages' },
   { path: '/settings/users', icon: Users, label: 'Usuarios', roles: ['ADMIN'] },
   { path: '/settings', icon: Settings, label: 'Configuración', roles: ['ADMIN'] },
+]
+
+const portalItems = [
+  { path: '/portal/orders', icon: Inbox, label: 'Pedidos Portal', roles: ['ADMIN'], badge: 'pendingPortalOrders' },
+  { path: '/portal/messages', icon: MessageSquare, label: 'Mensajes Maestros', roles: ['ADMIN'], badge: 'unreadPortalMessages' },
+  { path: '/portal/teachers', icon: GraduationCap, label: 'Maestros', roles: ['ADMIN'] },
+  { path: '/portal/schools', icon: School, label: 'Escuelas', roles: ['ADMIN'] },
+  { path: '/portal/programs', icon: BookOpen, label: 'Programas', roles: ['ADMIN'] },
+  { path: '/portal/program-options', icon: Layers, label: 'Paquetes', roles: ['ADMIN'] },
+  { path: '/portal/consolidated', icon: BarChart2, label: 'Consolidado', roles: ['ADMIN'] },
+  { path: '/portal/config', icon: Globe, label: 'Config. Portal', roles: ['ADMIN'] },
 ]
 
 export default function Sidebar() {
   const { isSidebarCollapsed, toggleSidebar } = useAppStore()
   const { user, logout } = useAuthStore()
+  const pendingPortalOrders = usePendingPortalOrders()
+  const unreadMessages = useUnreadMessages()
+  const unreadPortalMessages = useUnreadPortalMessages()
 
   const filteredMenuItems = menuItems.filter(item =>
+    user && item.roles.includes(user.role)
+  )
+  const filteredPortalItems = portalItems.filter(item =>
     user && item.roles.includes(user.role)
   )
 
@@ -70,33 +98,101 @@ export default function Sidebar() {
       </div>
 
       {/* Menu Items */}
-      <nav className="mt-6">
-        {filteredMenuItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            onClick={() => { if (!isSidebarCollapsed) { /* close on mobile when link clicked */ } }}
-            className={({ isActive }) =>
-              `flex items-center px-4 py-3 mx-2 mb-1 rounded-lg transition-all ${
-                isActive
-                  ? 'bg-primary-50 text-primary-600 border-l-4 border-primary-600'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`
-            }
-          >
-            <item.icon size={20} className="flex-shrink-0" />
-            <motion.span
-              animate={{
-                opacity: isSidebarCollapsed ? 0 : 1,
-                width: isSidebarCollapsed ? 0 : 'auto',
-              }}
-              transition={{ duration: 0.2 }}
-              className="ml-3 whitespace-nowrap overflow-hidden"
+      <nav className="mt-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 9rem)' }}>
+        {filteredMenuItems.map((item) => {
+          const mBadgeCount = (item as any).badge === 'unreadMessages' ? unreadMessages : 0
+          const mShowBadge = mBadgeCount > 0
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                `relative flex items-center px-4 py-3 mx-2 mb-1 rounded-lg transition-all ${
+                  isActive
+                    ? 'bg-primary-50 text-primary-600 border-l-4 border-primary-600'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`
+              }
             >
-              {item.label}
-            </motion.span>
-          </NavLink>
-        ))}
+              <span className="relative flex-shrink-0">
+                <item.icon size={20} />
+                {mShowBadge && isSidebarCollapsed && (
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {mBadgeCount > 9 ? '9+' : mBadgeCount}
+                  </span>
+                )}
+              </span>
+              <motion.span
+                animate={{
+                  opacity: isSidebarCollapsed ? 0 : 1,
+                  width: isSidebarCollapsed ? 0 : 'auto',
+                }}
+                transition={{ duration: 0.2 }}
+                className="ml-3 whitespace-nowrap overflow-hidden flex-1"
+              >
+                {item.label}
+              </motion.span>
+              {mShowBadge && !isSidebarCollapsed && (
+                <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {mBadgeCount}
+                </span>
+              )}
+            </NavLink>
+          )
+        })}
+
+        {filteredPortalItems.length > 0 && (
+          <>
+            {!isSidebarCollapsed ? (
+              <p className="px-4 mt-5 mb-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                Portal Escolar
+              </p>
+            ) : (
+              <div className="mx-3 my-3 border-t border-gray-200" />
+            )}
+            {filteredPortalItems.map((item) => {
+              const badgeCount = item.badge === 'pendingPortalOrders' ? pendingPortalOrders : item.badge === 'unreadMessages' ? unreadMessages : item.badge === 'unreadPortalMessages' ? unreadPortalMessages : 0
+            const showBadge = badgeCount > 0
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `relative flex items-center px-4 py-3 mx-2 mb-1 rounded-lg transition-all ${
+                      isActive
+                        ? 'bg-primary-50 text-primary-600 border-l-4 border-primary-600'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`
+                  }
+                >
+                  <span className="relative flex-shrink-0">
+                    <item.icon size={20} />
+                    {showBadge && isSidebarCollapsed && (
+                      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                        {badgeCount > 9 ? '9+' : badgeCount}
+                      </span>
+                    )}
+                  </span>
+                  <motion.span
+                    animate={{
+                      opacity: isSidebarCollapsed ? 0 : 1,
+                      width: isSidebarCollapsed ? 0 : 'auto',
+                    }}
+                    transition={{ duration: 0.2 }}
+                    className="ml-3 whitespace-nowrap overflow-hidden flex-1"
+                  >
+                    {item.label}
+                  </motion.span>
+                  {showBadge && !isSidebarCollapsed && (
+                    <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                      {badgeCount}
+                    </span>
+                  )}
+                </NavLink>
+              )
+            })}
+          </>
+        )}
       </nav>
 
       {/* User Info & Logout */}

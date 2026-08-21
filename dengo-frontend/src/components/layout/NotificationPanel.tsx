@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bell, AlertTriangle, ArrowUpDown, FileText, X, Package, CheckCircle } from 'lucide-react'
+import { Bell, AlertTriangle, ArrowUpDown, FileText, X, Package, CheckCircle, GraduationCap } from 'lucide-react'
 import { api } from '../../lib/api'
 import { useNavigate } from 'react-router-dom'
 
@@ -44,11 +44,12 @@ export default function NotificationPanel({ branchId }: NotificationPanelProps) 
       const fromQ  = branchId ? `?fromBranchId=${branchId}&status=PENDING`    : '?status=PENDING'
       const toQ    = branchId ? `?toBranchId=${branchId}&status=IN_TRANSIT`   : '?status=IN_TRANSIT'
 
-      const [inventory, pendingOut, incomingIn, quotations] = await Promise.allSettled([
+      const [inventory, pendingOut, incomingIn, quotations, portalOrders] = await Promise.allSettled([
         api.get<any[]>(`/api/inventory${branchQ}`),
         api.get<any[]>(`/api/transfers${fromQ}`),
         api.get<any[]>(`/api/transfers${toQ}`),
         api.get<any[]>('/api/quotations?status=ACCEPTED'),
+        api.get<{ data: any[]; total: number }>('/api/portal-admin/orders?status=PENDING&limit=200'),
       ])
 
       // ── Stock crítico / bajo ────────────────────────────────────────────────
@@ -134,6 +135,24 @@ export default function NotificationPanel({ branchId }: NotificationPanelProps) 
             title: `${accepted.length} cotización${accepted.length > 1 ? 'es' : ''} aceptada${accepted.length > 1 ? 's' : ''}`,
             description: 'Listas para convertir en venta.',
             path: '/quotations',
+          })
+        }
+      }
+
+      // ── Pedidos del portal pendientes de revisión ────────────────────────────
+      if (portalOrders.status === 'fulfilled') {
+        const pending = portalOrders.value?.data ?? []
+        if (pending.length > 0) {
+          const names = pending.slice(0, 2)
+            .map((o: any) => o.teacher?.user?.name ?? o.orderNumber ?? '?')
+            .join(', ')
+          items.push({
+            id: 'portal-orders',
+            type: 'warning',
+            icon: <GraduationCap size={16} className="text-amber-600" />,
+            title: `${pending.length} pedido${pending.length > 1 ? 's' : ''} del portal pendiente${pending.length > 1 ? 's' : ''}`,
+            description: `De: ${names}${pending.length > 2 ? ` y ${pending.length - 2} más` : ''}`,
+            path: '/portal/orders',
           })
         }
       }

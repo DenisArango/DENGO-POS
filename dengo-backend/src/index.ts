@@ -24,6 +24,9 @@ import reportRoutes from './routes/reports.js'
 import auditRoutes from './routes/audit.js'
 import unitRoutes from './routes/units.js'
 import aiRoutes from './routes/ai.js'
+import portalRoutes from './routes/portal.js'
+import portalAdminRoutes from './routes/portal-admin.js'
+import messagesRoutes from './routes/messages.js'
 
 const fastify = Fastify({
   logger: {
@@ -78,6 +81,13 @@ async function bootstrap() {
   await fastify.register(auditRoutes,        { prefix: '/api/audit' })
   await fastify.register(unitRoutes,         { prefix: '/api/units' })
   await fastify.register(aiRoutes,           { prefix: '/api/ai' })
+  // Teacher portal (Variedades Dayana). The portal frontend runs on port 5174.
+  // Add http://localhost:5174 to CORS_ORIGIN in dengo-backend/.env (comma-separated)
+  // so the portal can call these endpoints. No code change needed — config.ts
+  // already splits CORS_ORIGIN on commas.
+  await fastify.register(portalRoutes,       { prefix: '/api/portal' })
+  await fastify.register(portalAdminRoutes,  { prefix: '/api/portal-admin' })
+  await fastify.register(messagesRoutes,     { prefix: '/api/messages' })
 
   // Global error handler
   fastify.setErrorHandler((error, _request, reply) => {

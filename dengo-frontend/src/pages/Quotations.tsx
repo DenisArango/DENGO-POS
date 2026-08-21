@@ -194,7 +194,7 @@ export default function Quotations() {
         )
       }
       return [...prev, {
-        id: crypto.randomUUID(),
+        id: Math.random().toString(36).slice(2),
         productId: product.id,
         productName: name,
         quantity: 1,

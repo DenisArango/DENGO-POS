@@ -225,7 +225,7 @@ export default function CustomReports() {
   const handleSaveReport = () => {
     if (!saveName.trim() || !saveModalMsg) return
     const newReport: SavedReport = {
-      id: crypto.randomUUID(),
+      id: Math.random().toString(36).slice(2),
       name: saveName.trim(),
       question: messages[messages.findIndex(m => m === saveModalMsg) - 1]?.content ?? '',
       config: saveModalMsg.config!,

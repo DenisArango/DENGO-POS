@@ -309,8 +309,22 @@ async function main() {
       if (!name) { skipped++; continue }
       if (str(row['Es un servicio']).toLowerCase() === 'y') { skipped++; continue }
 
-      const sku = str(row['Número de artículo']) || undefined
-      let barcode = str(row['Nombre de visualización del código de barras']) || str(row['Identificador del producto']) || undefined
+      // Product.sku/barcode are VARCHAR(150) — Loyverse concatenates a
+      // variant product's several barcodes into one pipe-separated value
+      // here (seen up to 111 chars for real), so 150 gives real headroom;
+      // this is still a defensive ceiling (with a warning) against a truly
+      // pathological outlier, not something real data is expected to hit.
+      // Truncating here, before anything else touches these values, keeps
+      // the matching maps, skuToProductId, and what's actually written to
+      // the DB all in agreement — truncating only at insert time would leave
+      // a later run's full-length lookup key out of sync with what's stored.
+      const rawSku = str(row['Número de artículo'])
+      const sku = rawSku.slice(0, 150) || undefined
+      if (rawSku.length > 150) warnings.push(`Producto "${name}" — SKU de ${rawSku.length} caracteres, recortado a 150: "${sku}"`)
+
+      const rawBarcode = str(row['Nombre de visualización del código de barras']) || str(row['Identificador del producto'])
+      let barcode = rawBarcode.slice(0, 150) || undefined
+      if (rawBarcode.length > 150) warnings.push(`Producto "${name}" — código de barras de ${rawBarcode.length} caracteres, recortado a 150: "${barcode}"`)
 
       const matchedId = (barcode && existingByBarcode.get(barcode))
         || (sku && existingBySku.get(sku))
@@ -361,7 +375,7 @@ async function main() {
       const invRows = readSheet(args.inventory)
       let matched = 0, notFound = 0
       for (const row of invRows) {
-        const sku = str(row['Número de artículo'])
+        const sku = str(row['Número de artículo']).slice(0, 150) // must match the truncation applied when products were created
         const productId = sku ? skuToProductId.get(sku) : undefined
         if (!productId) { notFound++; continue }
         const quantity = num(row['Cantidad'])

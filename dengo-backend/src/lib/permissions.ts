@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import { prisma } from './prisma.js'
+import { getBusinessTimeMinutes } from './timezone.js'
 
 /**
  * The full catalog of permission keys the system understands, grouped by
@@ -96,6 +97,49 @@ export async function resolveUserPermissions(user: { role: string; customRoleId?
     return rows.map(r => r.permissionKey)
   }
   return [...(DEFAULT_ROLE_PERMISSIONS[user.role] ?? [])]
+}
+
+function parseHHmm(value: string): number | null {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value)
+  if (!match) return null
+  const hours = Number(match[1]), minutes = Number(match[2])
+  if (hours > 23 || minutes > 59) return null
+  return hours * 60 + minutes
+}
+
+/**
+ * Throws with a user-facing Spanish message if `user`'s effective role has a
+ * login schedule and the current time (Guatemala local) falls outside it —
+ * called once from POST /api/auth/login, never against an already-open
+ * session. ADMIN is exempt unconditionally, same "can never be locked out"
+ * rule as hasPermission's bypass — otherwise an admin could configure a
+ * schedule that locks out their own account with no way back in.
+ *
+ * The effective role is resolved the same way login does for everything
+ * else: a custom role (User.customRoleId) if assigned, otherwise the Role
+ * row matching the legacy base role by name (the 4 system roles are always
+ * real Role rows — see ensureSystemRoles below).
+ */
+export async function checkLoginSchedule(user: { role: string; customRoleId?: string | null }): Promise<void> {
+  if (user.role === 'ADMIN') return
+
+  const role = user.customRoleId
+    ? await prisma.role.findUnique({ where: { id: user.customRoleId } })
+    : await prisma.role.findUnique({ where: { name: user.role } })
+  if (!role?.scheduleEnabled || !role.scheduleStart || !role.scheduleEnd) return
+
+  const start = parseHHmm(role.scheduleStart)
+  const end = parseHHmm(role.scheduleEnd)
+  if (start === null || end === null) return // malformed config — fail open rather than lock everyone out
+
+  const now = getBusinessTimeMinutes()
+  const withinWindow = start <= end
+    ? now >= start && now <= end
+    : now >= start || now <= end // window wraps past midnight (e.g. 22:00-06:00)
+
+  if (!withinWindow) {
+    throw new Error(`Fuera de horario permitido — tu rol solo puede iniciar sesión entre ${role.scheduleStart} y ${role.scheduleEnd}`)
+  }
 }
 
 /** True if the request's user may perform `key` — ADMIN always bypasses. */

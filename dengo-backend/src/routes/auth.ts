@@ -3,8 +3,9 @@ import { z } from 'zod'
 import { validateUser, logLogin } from '../services/auth.service.js'
 import { log } from '../services/audit.service.js'
 import { prisma } from '../lib/prisma.js'
-import { resolveUserPermissions } from '../lib/permissions.js'
+import { resolveUserPermissions, checkLoginSchedule } from '../lib/permissions.js'
 import { getLicense } from './license.js'
+import { config } from '../config.js'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -29,6 +30,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
     try {
       const user = await validateUser(email, password)
+      await checkLoginSchedule(user)
       await logLogin({ email, userId: user.id, success: true, ipAddress: ip, ...(ua && { userAgent: ua }) })
       await log({ userId: user.id, action: 'LOGIN', entity: 'User', entityId: user.id, ipAddress: ip })
 
@@ -38,7 +40,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
       const token = fastify.jwt.sign(
         { id: user.id, role: user.role, branchId: user.branchId, branchIds, email: user.email, permissions },
-        { expiresIn: '8h' }
+        { expiresIn: config.jwt.expiresIn }
       )
 
       // ADMIN can switch to any branch; everyone else only sees their home + assigned branches.
@@ -68,10 +70,12 @@ export default async function authRoutes(fastify: FastifyInstance) {
       })
     } catch (err: any) {
       await logLogin({ email, success: false, ipAddress: ip, ...(ua && { userAgent: ua }), ...(err.message && { failReason: err.message }) })
-      // Surface the lockout message specifically (so the user knows to wait, not retype their password);
-      // any other failure stays generic to avoid confirming whether an email is registered.
-      const isLockout = typeof err.message === 'string' && err.message.startsWith('Cuenta bloqueada')
-      return reply.status(401).send({ error: isLockout ? err.message : 'Credenciales incorrectas' })
+      // Surface the lockout/schedule messages specifically (so the user knows why and what to do,
+      // instead of retyping their password); any other failure stays generic to avoid confirming
+      // whether an email is registered.
+      const message = typeof err.message === 'string' ? err.message : ''
+      const isActionable = message.startsWith('Cuenta bloqueada') || message.startsWith('Fuera de horario')
+      return reply.status(401).send({ error: isActionable ? message : 'Credenciales incorrectas' })
     }
   })
 

@@ -33,6 +33,12 @@ export function getBusinessHour(at: Date): number {
   return shifted.getUTCHours()
 }
 
+/** The business's local minutes-since-midnight (0-1439) for a given instant — used to compare against an "HH:mm" role login-schedule window. */
+export function getBusinessTimeMinutes(at: Date = new Date()): number {
+  const shifted = new Date(at.getTime() + BUSINESS_UTC_OFFSET_HOURS * 3_600_000)
+  return shifted.getUTCHours() * 60 + shifted.getUTCMinutes()
+}
+
 /** [startOfMonth, endOfMonth] in UTC instants for the business's local calendar month (`month` is 1-12). Used by sales goals to sum a month's sales the same way `getBusinessDayBounds` sums a day's. */
 export function getBusinessMonthBounds(year: number, month: number): { start: Date; end: Date } {
   const start = new Date(Date.UTC(year, month - 1, 1) - BUSINESS_UTC_OFFSET_HOURS * 3_600_000)

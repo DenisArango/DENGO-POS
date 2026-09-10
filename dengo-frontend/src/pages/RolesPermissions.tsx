@@ -18,6 +18,9 @@ interface Role {
   isSystem: boolean
   userCount: number
   permissions: string[]
+  scheduleEnabled: boolean
+  scheduleStart: string | null
+  scheduleEnd: string | null
 }
 
 type Catalog = Record<string, string[]>
@@ -99,6 +102,9 @@ export default function RolesPermissions() {
   const [expandedModules, setExpandedModules] = useState<string[]>(['sales'])
   const [editMode, setEditMode] = useState(false)
   const [tempPermissions, setTempPermissions] = useState<string[]>([])
+  const [tempScheduleEnabled, setTempScheduleEnabled] = useState(false)
+  const [tempScheduleStart, setTempScheduleStart] = useState('07:00')
+  const [tempScheduleEnd, setTempScheduleEnd] = useState('21:00')
   const [saving, setSaving] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newRoleName, setNewRoleName] = useState('')
@@ -129,14 +135,26 @@ export default function RolesPermissions() {
   const handleEditRole = () => {
     if (selectedRole) {
       setTempPermissions([...selectedRole.permissions])
+      setTempScheduleEnabled(selectedRole.scheduleEnabled)
+      setTempScheduleStart(selectedRole.scheduleStart ?? '07:00')
+      setTempScheduleEnd(selectedRole.scheduleEnd ?? '21:00')
       setEditMode(true)
     }
   }
 
   const handleSaveRole = () => {
     if (!selectedRole) return
+    if (selectedRole.name === 'ADMIN' && tempScheduleEnabled) {
+      toast.error('El rol Administrador no puede tener horario — nunca se le aplica, para evitar quedar bloqueado del sistema')
+      return
+    }
     setSaving(true)
-    api.put(`/api/roles/${selectedRole.id}`, { permissions: tempPermissions })
+    api.put(`/api/roles/${selectedRole.id}`, {
+      permissions: tempPermissions,
+      scheduleEnabled: tempScheduleEnabled,
+      scheduleStart: tempScheduleEnabled ? tempScheduleStart : null,
+      scheduleEnd: tempScheduleEnabled ? tempScheduleEnd : null,
+    })
       .then(() => {
         toast.success('Permisos actualizados')
         setEditMode(false)
@@ -300,6 +318,45 @@ export default function RolesPermissions() {
                     <p className="font-medium">Rol del sistema</p>
                     <p>Este es un rol predefinido. Puedes ajustar sus permisos, pero no se puede renombrar ni eliminar.</p>
                   </div>
+                </div>
+              )}
+
+              {selectedRole.name !== 'ADMIN' && (
+                <div className="mb-4 p-4 border rounded-lg">
+                  <h4 className="font-medium text-gray-800 mb-1">Horario de inicio de sesión</h4>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Restringe a qué horas puede iniciar sesión alguien con este rol. Solo se revisa al entrar — una sesión ya abierta no se cierra sola si se pasa la hora.
+                  </p>
+                  {editMode ? (
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={tempScheduleEnabled}
+                          onChange={e => setTempScheduleEnabled(e.target.checked)}
+                          className="w-4 h-4 text-primary-600 rounded"
+                        />
+                        <span className="text-sm text-gray-700">Restringir horario para este rol</span>
+                      </label>
+                      {tempScheduleEnabled && (
+                        <div className="flex items-center gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Desde</label>
+                            <input type="time" value={tempScheduleStart} onChange={e => setTempScheduleStart(e.target.value)} className="input text-sm" />
+                          </div>
+                          <span className="text-gray-400 mt-4">—</span>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Hasta</label>
+                            <input type="time" value={tempScheduleEnd} onChange={e => setTempScheduleEnd(e.target.value)} className="input text-sm" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : selectedRole.scheduleEnabled && selectedRole.scheduleStart && selectedRole.scheduleEnd ? (
+                    <p className="text-sm text-gray-700">Puede iniciar sesión de <strong>{selectedRole.scheduleStart}</strong> a <strong>{selectedRole.scheduleEnd}</strong></p>
+                  ) : (
+                    <p className="text-sm text-gray-400">Sin restricción — puede iniciar sesión a cualquier hora</p>
+                  )}
                 </div>
               )}
 

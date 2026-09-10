@@ -5,7 +5,8 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { Toaster, toast } from 'sonner'
 import Router from './router'
 import { StoreProvider } from './contexts/StoreContext'
-import { CONNECTIVITY_ERROR_MESSAGE } from './lib/api'
+import { CONNECTIVITY_ERROR_MESSAGE, api } from './lib/api'
+import { useLicenseStore } from './store'
 
 // Dozens of call sites across the app do `.catch(e => toast.error(e.message))`
 // with no knowledge of each other — a moment offline can fail several
@@ -49,8 +50,23 @@ function useDisableNumberInputScroll() {
   }, [])
 }
 
+// GET /api/license is public and cheap — fetched once per app load (not
+// per-login, since a logged-out visitor on the login screen should also
+// never see a licensed-off module flash into view before this resolves).
+// Deliberately fire-and-forget: a failure here just leaves the store's
+// fail-open defaults (everything enabled) in place, same as the backend's
+// own DEFAULT_LICENSE fallback when no LicenseConfig row exists yet.
+function useLicense() {
+  useEffect(() => {
+    api.get<{ posEnabled: boolean; maestrosEnabled: boolean; pageEnabled: boolean }>('/api/license')
+      .then(license => useLicenseStore.getState().setLicense(license))
+      .catch(() => {})
+  }, [])
+}
+
 function App() {
   useDisableNumberInputScroll()
+  useLicense()
   return (
     <StoreProvider>
       <QueryClientProvider client={queryClient}>

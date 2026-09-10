@@ -294,6 +294,27 @@ export const useInventoryStore = create<InventoryState>()(
   )
 )
 
+// Store de licencia (GET /api/license es público, sin auth — ver App.tsx).
+// Los 3 flags son un interruptor del proveedor, no algo que este negocio
+// pueda tocar; el frontend solo los lee para decidir qué mostrar. Defaults en
+// `true` (igual que DEFAULT_LICENSE del backend) para no ocultar nada de
+// golpe mientras el primer fetch todavía no resuelve.
+interface LicenseState {
+  posEnabled: boolean
+  maestrosEnabled: boolean
+  pageEnabled: boolean
+  loaded: boolean
+  setLicense: (license: { posEnabled: boolean; maestrosEnabled: boolean; pageEnabled: boolean }) => void
+}
+
+export const useLicenseStore = create<LicenseState>((set) => ({
+  posEnabled: true,
+  maestrosEnabled: true,
+  pageEnabled: true,
+  loaded: false,
+  setLicense: (license) => set({ ...license, loaded: true }),
+}))
+
 // Store de la aplicación (solo UI state)
 // Para datos de negocio como tienda actual, usar StoreContext
 export const useAppStore = create<AppState>()(

@@ -4,6 +4,7 @@ import MainLayout from './components/layout/MainLayout'
 import AuthLayout from './components/layout/AuthLayout'
 import LoadingScreen from './components/common/LoadingScreen'
 import ProtectedRoute from './components/auth/ProtectedRoute'
+import PortalLicenseGuard from './components/auth/PortalLicenseGuard'
 
 // Lazy loading de páginas
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -87,15 +88,19 @@ export default function Router() {
           <Route path="/quotations" element={<Quotations />} />
           <Route path="/settings" element={<Settings />} />
 
-          {/* Portal escolar */}
-          <Route path="/portal/orders" element={<PortalOrders />} />
-          <Route path="/portal/teachers" element={<PortalTeachers />} />
-          <Route path="/portal/schools" element={<PortalSchools />} />
-          <Route path="/portal/programs" element={<PortalPrograms />} />
-          <Route path="/portal/program-options" element={<PortalProgramOptions />} />
-          <Route path="/portal/consolidated" element={<PortalConsolidated />} />
-          <Route path="/portal/messages" element={<PortalMessages />} />
-          <Route path="/portal/config" element={<PortalLandingConfig />} />
+          {/* Portal escolar — bloqueado por completo si el módulo está
+              desactivado por licencia, no solo oculto en el menú (ver
+              PortalLicenseGuard) */}
+          <Route element={<PortalLicenseGuard />}>
+            <Route path="/portal/orders" element={<PortalOrders />} />
+            <Route path="/portal/teachers" element={<PortalTeachers />} />
+            <Route path="/portal/schools" element={<PortalSchools />} />
+            <Route path="/portal/programs" element={<PortalPrograms />} />
+            <Route path="/portal/program-options" element={<PortalProgramOptions />} />
+            <Route path="/portal/consolidated" element={<PortalConsolidated />} />
+            <Route path="/portal/messages" element={<PortalMessages />} />
+            <Route path="/portal/config" element={<PortalLandingConfig />} />
+          </Route>
           <Route path="/messages" element={<Messages />} />
 
           {/* Rutas de reportes */}

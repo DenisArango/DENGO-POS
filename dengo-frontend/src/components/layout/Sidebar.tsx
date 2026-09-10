@@ -26,7 +26,7 @@ import {
   BarChart2,
   MessageSquare,
 } from 'lucide-react'
-import { useAppStore, useAuthStore } from '../../store'
+import { useAppStore, useAuthStore, useLicenseStore } from '../../store'
 import { usePendingPortalOrders } from '../../hooks/usePendingPortalOrders'
 import { useUnreadMessages } from '../../hooks/useUnreadMessages'
 import { useUnreadPortalMessages } from '../../hooks/useUnreadPortalMessages'
@@ -68,6 +68,7 @@ const portalItems = [
 export default function Sidebar({ offlineRestricted = false, allowedPaths = [] }: { offlineRestricted?: boolean; allowedPaths?: string[] }) {
   const { isSidebarCollapsed, toggleSidebar } = useAppStore()
   const { user, logout } = useAuthStore()
+  const maestrosEnabled = useLicenseStore(s => s.maestrosEnabled)
   const pendingPortalOrders = usePendingPortalOrders()
   const unreadMessages = useUnreadMessages()
   const unreadPortalMessages = useUnreadPortalMessages()
@@ -78,9 +79,13 @@ export default function Sidebar({ offlineRestricted = false, allowedPaths = [] }
       (item as { permissions?: string[] }).permissions?.some(p => userHasPermission(user, p))
     )
   )
-  const filteredPortalItems = portalItems.filter(item =>
-    user && item.roles.includes(user.role)
-  )
+  // Nothing to manage here if this instance's teacher-portal module is
+  // switched off by the vendor (see LicenseConfig) — a teacher can't even log
+  // in to place an order, so the admin config screens behind these links
+  // would have nothing real to do either.
+  const filteredPortalItems = maestrosEnabled
+    ? portalItems.filter(item => user && item.roles.includes(user.role))
+    : []
 
   // While offline, grey out and disable every link that isn't part of the
   // selling workflow (see MainLayout's OFFLINE_ALLOWED_PATHS) instead of

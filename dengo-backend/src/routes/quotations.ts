@@ -2,6 +2,8 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { log } from '../services/audit.service.js'
+import { resolveBranchScope, canAccessBranch } from '../lib/branch-scope.js'
+import { requirePermission } from '../lib/permissions.js'
 
 const itemSchema = z.object({
   productId: z.string(),
@@ -32,10 +34,12 @@ const include = {
 }
 
 export default async function quotationRoutes(fastify: FastifyInstance) {
-  fastify.get('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const q = request.query as { status?: string; customerId?: string }
+  fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('quotations.view')] }, async (request, reply) => {
+    const q = request.query as { status?: string; customerId?: string; branchId?: string }
+    const branchId = resolveBranchScope(request, q.branchId)
     return reply.send(await prisma.quotation.findMany({
       where: {
+        ...(branchId ? { branchId } : {}),
         ...(q.status ? { status: q.status as any } : {}),
         ...(q.customerId ? { customerId: q.customerId } : {}),
       },
@@ -44,16 +48,18 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
     }))
   })
 
-  fastify.get('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/:id', { preHandler: [fastify.authenticate, requirePermission('quotations.view')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const q = await prisma.quotation.findUnique({ where: { id }, include })
     if (!q) return reply.status(404).send({ error: 'Cotización no encontrada' })
+    if (!canAccessBranch(request, q.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
     return reply.send(q)
   })
 
-  fastify.post('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post('/', { preHandler: [fastify.authenticate, requirePermission('quotations.create')] }, async (request, reply) => {
     const body = createSchema.safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+    if (!canAccessBranch(request, body.data.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
 
     const quotationNumber = `COT-${Date.now().toString().slice(-8)}`
     const q = await prisma.quotation.create({
@@ -76,10 +82,11 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
     return reply.status(201).send(q)
   })
 
-  fastify.put('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.put('/:id', { preHandler: [fastify.authenticate, requirePermission('quotations.create')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const q = await prisma.quotation.findUnique({ where: { id } })
     if (!q || q.status !== 'DRAFT') return reply.status(400).send({ error: 'Solo se pueden editar cotizaciones en borrador' })
+    if (!canAccessBranch(request, q.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
 
     const body = createSchema.partial().safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
@@ -97,29 +104,32 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
     return reply.send(updated)
   })
 
-  fastify.put('/:id/send', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.put('/:id/send', { preHandler: [fastify.authenticate, requirePermission('quotations.create')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const q = await prisma.quotation.findUnique({ where: { id } })
     if (!q || q.status !== 'DRAFT') return reply.status(400).send({ error: 'Solo se pueden enviar cotizaciones en borrador' })
+    if (!canAccessBranch(request, q.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
     return reply.send(await prisma.quotation.update({ where: { id }, data: { status: 'SENT' }, include }))
   })
 
-  fastify.put('/:id/accept', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.put('/:id/accept', { preHandler: [fastify.authenticate, requirePermission('quotations.create')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const q = await prisma.quotation.findUnique({ where: { id } })
     if (!q || q.status !== 'SENT') return reply.status(400).send({ error: 'Solo se pueden aceptar cotizaciones enviadas' })
+    if (!canAccessBranch(request, q.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
     return reply.send(await prisma.quotation.update({ where: { id }, data: { status: 'ACCEPTED' }, include }))
   })
 
-  fastify.put('/:id/reject', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.put('/:id/reject', { preHandler: [fastify.authenticate, requirePermission('quotations.create')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const q = await prisma.quotation.findUnique({ where: { id } })
     if (!q || q.status !== 'SENT') return reply.status(400).send({ error: 'Solo se pueden rechazar cotizaciones enviadas' })
+    if (!canAccessBranch(request, q.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
     return reply.send(await prisma.quotation.update({ where: { id }, data: { status: 'REJECTED' }, include }))
   })
 
   // Convert ACCEPTED quotation → Sale
-  fastify.post('/:id/convert', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post('/:id/convert', { preHandler: [fastify.authenticate, requirePermission('quotations.convert')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const body = z.object({
       cashRegisterId: z.string().optional(),
@@ -129,6 +139,7 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
 
     const quot = await prisma.quotation.findUnique({ where: { id }, include: { items: true } })
     if (!quot || quot.status !== 'ACCEPTED') return reply.status(400).send({ error: 'Solo se pueden convertir cotizaciones aceptadas' })
+    if (!canAccessBranch(request, quot.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
 
     const invoiceNumber = `FAC-${Date.now()}`
     const sale = await prisma.sale.create({
@@ -166,10 +177,11 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
     return reply.status(201).send({ sale, message: 'Cotización convertida a venta' })
   })
 
-  fastify.delete('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.delete('/:id', { preHandler: [fastify.authenticate, requirePermission('quotations.create')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const q = await prisma.quotation.findUnique({ where: { id } })
     if (!q || q.status !== 'DRAFT') return reply.status(400).send({ error: 'Solo se pueden eliminar cotizaciones en borrador' })
+    if (!canAccessBranch(request, q.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
     await prisma.quotation.delete({ where: { id } })
     return reply.send({ message: 'Cotización eliminada' })
   })

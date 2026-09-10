@@ -124,7 +124,6 @@ export default function ProductRotationReport() {
 
       <AIRecommendations
         reportData={{ type: 'product_rotation', data: { products: products.slice(0, 20), counts } }}
-        autoGenerate={products.length > 0}
       />
     </div>
   )

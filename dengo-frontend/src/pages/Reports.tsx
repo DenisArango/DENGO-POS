@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   FileBarChart, TrendingUp, DollarSign, Package,
-  Users, ShoppingCart, Calendar, Clock,
-  AlertTriangle, BarChart3, PieChart, LineChart,
-  FileText, Download, ArrowRight, Warehouse,
+  ShoppingCart, Calendar, Clock,
+  AlertTriangle, BarChart3, LineChart,
+  FileText, ArrowRight, Warehouse,
   CreditCard, UserCheck, History, ArrowUpDown, Sparkles
 } from 'lucide-react'
 import {

@@ -8,6 +8,7 @@ import {
 import { toast } from 'sonner'
 import ProductModal from '../components/products/ProductModal'
 import { api } from '../lib/api'
+import { usePermissions } from '../hooks/usePermissions'
 
 interface Category {
   id: string
@@ -46,6 +47,11 @@ interface Product {
 }
 
 export default function Products() {
+  const { hasPermission } = usePermissions()
+  const canCreate = hasPermission('inventory.create')
+  const canEdit = hasPermission('inventory.edit')
+  const canDelete = hasPermission('inventory.delete')
+  const canEditPrice = hasPermission('inventory.editPrice')
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [units, setUnits] = useState<{ id: string; name: string; abbreviation: string; type: string }[]>([])
@@ -196,13 +202,15 @@ export default function Products() {
           <Package size={28} />
           Gestión de Productos
         </h1>
-        <button
-          onClick={handleCreateProduct}
-          className="btn-primary btn-md flex items-center gap-2"
-        >
-          <Plus size={20} />
-          Nuevo Producto
-        </button>
+        {canCreate && (
+          <button
+            onClick={handleCreateProduct}
+            className="btn-primary btn-md flex items-center gap-2"
+          >
+            <Plus size={20} />
+            Nuevo Producto
+          </button>
+        )}
       </div>
 
       {/* Estadísticas */}
@@ -347,20 +355,24 @@ export default function Products() {
                     <p className="text-xs text-gray-500 mt-1">SKU: {product.sku}</p>
                   </div>
                   <div className="flex gap-1">
-                    <button
-                      onClick={() => handleEditProduct(product)}
-                      className="p-1 hover:bg-gray-100 rounded transition-colors"
-                      title="Editar producto"
-                    >
-                      <Edit size={16} className="text-gray-600" />
-                    </button>
-                    <button
-                      onClick={() => handleDuplicateProduct(product)}
-                      className="p-1 hover:bg-gray-100 rounded transition-colors"
-                      title="Duplicar producto"
-                    >
-                      <Copy size={16} className="text-gray-600" />
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => handleEditProduct(product)}
+                        className="p-1 hover:bg-gray-100 rounded transition-colors"
+                        title="Editar producto"
+                      >
+                        <Edit size={16} className="text-gray-600" />
+                      </button>
+                    )}
+                    {canCreate && (
+                      <button
+                        onClick={() => handleDuplicateProduct(product)}
+                        className="p-1 hover:bg-gray-100 rounded transition-colors"
+                        title="Duplicar producto"
+                      >
+                        <Copy size={16} className="text-gray-600" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -431,27 +443,33 @@ export default function Products() {
                     <td className="py-3 px-4 text-center">{product.variations.length}</td>
                     <td className="py-3 px-4">
                       <div className="flex justify-center gap-2">
-                        <button
-                          onClick={() => handleEditProduct(product)}
-                          className="p-1 hover:bg-gray-100 rounded transition-colors"
-                          title="Editar producto"
-                        >
-                          <Edit size={16} className="text-gray-600" />
-                        </button>
-                        <button
-                          onClick={() => handleDuplicateProduct(product)}
-                          className="p-1 hover:bg-gray-100 rounded transition-colors"
-                          title="Duplicar producto"
-                        >
-                          <Copy size={16} className="text-gray-600" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProduct(product)}
-                          className="p-1 hover:bg-gray-100 rounded transition-colors"
-                          title="Eliminar producto"
-                        >
-                          <Trash2 size={16} className="text-red-600" />
-                        </button>
+                        {canEdit && (
+                          <button
+                            onClick={() => handleEditProduct(product)}
+                            className="p-1 hover:bg-gray-100 rounded transition-colors"
+                            title="Editar producto"
+                          >
+                            <Edit size={16} className="text-gray-600" />
+                          </button>
+                        )}
+                        {canCreate && (
+                          <button
+                            onClick={() => handleDuplicateProduct(product)}
+                            className="p-1 hover:bg-gray-100 rounded transition-colors"
+                            title="Duplicar producto"
+                          >
+                            <Copy size={16} className="text-gray-600" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDeleteProduct(product)}
+                            className="p-1 hover:bg-gray-100 rounded transition-colors"
+                            title="Eliminar producto"
+                          >
+                            <Trash2 size={16} className="text-red-600" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -474,6 +492,7 @@ export default function Products() {
         mode={modalMode}
         categories={categories}
         units={units}
+        canEditPrice={canEditPrice}
       />
     </div>
   )

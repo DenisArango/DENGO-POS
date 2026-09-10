@@ -192,7 +192,6 @@ export default function DailySalesReport() {
 
       <AIRecommendations
         reportData={{ type: 'daily_sales', data: { totalSales, transactions, avgTicket, itemsSold, topProducts: topProducts.slice(0, 5), byCategory: byCategory.slice(0, 6), byMethod, date: selectedDate } }}
-        autoGenerate={sales.length > 0}
       />
     </div>
   )

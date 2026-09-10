@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
@@ -18,6 +18,12 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Whether the "página" module is licensed for this client. Starts `false`
+  // (bare form) so an unlicensed client's login never flashes the branded
+  // panel while /config is still loading — it only appears once confirmed.
+  const [branded, setBranded] = useState(false)
+  const [checkingConfig, setCheckingConfig] = useState(true)
+
   const businessName = (() => {
     try {
       const raw = localStorage.getItem('portal-config')
@@ -25,6 +31,13 @@ export default function Login() {
     } catch { /* ignore */ }
     return 'Variedades Dayana'
   })()
+
+  useEffect(() => {
+    api.getConfig()
+      .then(() => setBranded(true))
+      .catch(() => setBranded(false)) // 404 = página no licenciada, o sin configurar
+      .finally(() => setCheckingConfig(false))
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,6 +59,100 @@ export default function Login() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (checkingConfig) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <span className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  const loginForm = (
+    <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Correo electrónico</label>
+        <div className="relative">
+          <Mail size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="maestro@correo.com"
+            className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none transition"
+            autoComplete="email"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Contraseña</label>
+        <div className="relative">
+          <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="••••••••"
+            className="w-full pl-11 pr-11 py-3 rounded-xl border border-gray-200 focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none transition"
+            autoComplete="current-password"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(v => !v)}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3">
+          {error}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold shadow-lg shadow-brand-500/30 hover:bg-brand-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+      >
+        {loading ? (
+          <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <>Ingresar <ArrowRight size={18} /></>
+        )}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => toast.info('Contacta al proveedor para restablecer tu contraseña.')}
+        className="w-full text-center text-sm text-brand-600 hover:text-brand-700 font-medium"
+      >
+        Olvidé mi contraseña
+      </button>
+    </form>
+  )
+
+  // Página no licenciada (o sin configurar): un formulario simple, sin marca,
+  // sin logo ni copy comercial — nada que insinúe una landing paga.
+  if (!branded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 py-12 bg-gray-50">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-gray-200 p-8"
+        >
+          <h2 className="text-xl font-bold text-gray-900">Iniciar sesión</h2>
+          <p className="mt-1.5 text-gray-500 text-sm">Ingresa con las credenciales que te proporcionaron.</p>
+          {loginForm}
+        </motion.div>
+      </div>
+    )
   }
 
   return (
@@ -103,70 +210,7 @@ export default function Login() {
           <h2 className="text-2xl font-extrabold text-gray-900">Inicia sesión</h2>
           <p className="mt-1.5 text-gray-500 text-sm">Accede con las credenciales que te proporcionó el proveedor.</p>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Correo electrónico</label>
-              <div className="relative">
-                <Mail size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="maestro@correo.com"
-                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none transition"
-                  autoComplete="email"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Contraseña</label>
-              <div className="relative">
-                <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-11 pr-11 py-3 rounded-xl border border-gray-200 focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none transition"
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            {error && (
-              <div className="rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold shadow-lg shadow-brand-500/30 hover:bg-brand-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              {loading ? (
-                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>Ingresar <ArrowRight size={18} /></>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => toast.info('Contacta al proveedor para restablecer tu contraseña.')}
-              className="w-full text-center text-sm text-brand-600 hover:text-brand-700 font-medium"
-            >
-              Olvidé mi contraseña
-            </button>
-          </form>
+          {loginForm}
 
           <Link to="/" className="mt-6 flex items-center justify-center gap-1.5 text-sm text-gray-500 hover:text-gray-700">
             <ArrowLeft size={16} /> Volver al inicio

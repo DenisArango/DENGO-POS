@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Calendar, Activity, Shield, LogIn, Package, DollarSign, Settings, Eye, Search, User, UserCheck, AlertTriangle, Clock } from 'lucide-react'
+import { ArrowLeft, Calendar, Activity, Shield, Package, DollarSign, Settings, Eye, Search, User, UserCheck, AlertTriangle, Clock } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { format, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -254,7 +254,6 @@ export default function UserActivityReport() {
 
       <AIRecommendations
         reportData={{ type: 'user_activity', data: { totalActions: logs.length, activeUsers: userSummary.length, failedLogins: failedLogins.length, users: userSummary } }}
-        autoGenerate={logs.length > 0}
       />
     </div>
   )

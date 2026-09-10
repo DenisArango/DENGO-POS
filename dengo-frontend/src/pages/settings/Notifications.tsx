@@ -1,76 +1,72 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Bell, Mail, Smartphone, Package, AlertTriangle, Users, TrendingDown } from 'lucide-react'
+import { ArrowLeft, Bell, Mail, Smartphone, Package, AlertTriangle, Users, TrendingDown, type LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
+import { api } from '../../lib/api'
 
-interface NotificationSetting {
-  id: string
-  title: string
-  description: string
-  icon: React.ComponentType<any>
+interface NotificationPref {
+  event: string
   email: boolean
   push: boolean
   sms: boolean
 }
 
-const defaultNotifications: NotificationSetting[] = [
-  {
-    id: 'low_stock',
+const EVENT_INFO: Record<string, { title: string; description: string; icon: LucideIcon }> = {
+  low_stock: {
     title: 'Stock Bajo',
     description: 'Alerta cuando un producto está por debajo del stock mínimo',
     icon: Package,
-    email: true,
-    push: true,
-    sms: false
   },
-  {
-    id: 'out_of_stock',
+  out_of_stock: {
     title: 'Sin Stock',
     description: 'Alerta cuando un producto se queda sin existencias',
     icon: AlertTriangle,
-    email: true,
-    push: true,
-    sms: true
   },
-  {
-    id: 'new_sale',
+  new_sale: {
     title: 'Nueva Venta',
     description: 'Notificación al realizar una nueva venta',
     icon: TrendingDown,
-    email: false,
-    push: false,
-    sms: false
   },
-  {
-    id: 'new_user',
+  new_user: {
     title: 'Nuevo Usuario',
     description: 'Alerta cuando se registra un nuevo usuario en el sistema',
     icon: Users,
-    email: true,
-    push: false,
-    sms: false
-  }
-]
+  },
+}
 
 export default function Notifications() {
   const navigate = useNavigate()
-  const [notifications, setNotifications] = useState<NotificationSetting[]>(defaultNotifications)
+  const [notifications, setNotifications] = useState<NotificationPref[]>([])
   const [hasChanges, setHasChanges] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
-  const toggleNotification = (id: string, channel: 'email' | 'push' | 'sms') => {
+  useEffect(() => {
+    api.get<NotificationPref[]>('/api/settings/notifications')
+      .then(setNotifications)
+      .catch(e => toast.error(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const toggleNotification = (event: string, channel: 'email' | 'push' | 'sms') => {
     setNotifications(notifs =>
       notifs.map(n =>
-        n.id === id ? { ...n, [channel]: !n[channel] } : n
+        n.event === event ? { ...n, [channel]: !n[channel] } : n
       )
     )
     setHasChanges(true)
   }
 
   const handleSave = () => {
-    console.log('Guardando configuración de notificaciones:', notifications)
-    toast.success('Configuración de notificaciones guardada exitosamente')
-    setHasChanges(false)
+    setSaving(true)
+    api.put('/api/settings/notifications', notifications)
+      .then(() => {
+        toast.success('Configuración de notificaciones guardada exitosamente')
+        setHasChanges(false)
+      })
+      .catch(e => toast.error(e.message))
+      .finally(() => setSaving(false))
   }
 
   return (
@@ -97,15 +93,21 @@ export default function Notifications() {
 
         <button
           onClick={handleSave}
-          disabled={!hasChanges}
+          disabled={!hasChanges || saving}
           className={`btn-primary btn-md ${
-            !hasChanges ? 'opacity-50 cursor-not-allowed' : ''
+            !hasChanges || saving ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >
           Guardar Cambios
         </button>
       </div>
 
+      {loading ? (
+        <div className="flex justify-center py-24">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+        </div>
+      ) : (
+      <>
       {/* Tabla de notificaciones */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -136,9 +138,12 @@ export default function Notifications() {
               </tr>
             </thead>
             <tbody>
-              {notifications.map((notif, index) => (
+              {notifications.map((notif, index) => {
+                const info = EVENT_INFO[notif.event]
+                if (!info) return null
+                return (
                 <motion.tr
-                  key={notif.id}
+                  key={notif.event}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
@@ -147,18 +152,18 @@ export default function Notifications() {
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-gray-100 rounded-lg">
-                        <notif.icon size={20} className="text-gray-600" />
+                        <info.icon size={20} className="text-gray-600" />
                       </div>
                       <div>
-                        <p className="font-medium text-gray-800">{notif.title}</p>
-                        <p className="text-sm text-gray-500">{notif.description}</p>
+                        <p className="font-medium text-gray-800">{info.title}</p>
+                        <p className="text-sm text-gray-500">{info.description}</p>
                       </div>
                     </div>
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex justify-center">
                       <button
-                        onClick={() => toggleNotification(notif.id, 'email')}
+                        onClick={() => toggleNotification(notif.event, 'email')}
                         className={`w-12 h-6 rounded-full relative transition-colors ${
                           notif.email ? 'bg-primary-600' : 'bg-gray-300'
                         }`}
@@ -172,7 +177,7 @@ export default function Notifications() {
                   <td className="py-4 px-4">
                     <div className="flex justify-center">
                       <button
-                        onClick={() => toggleNotification(notif.id, 'push')}
+                        onClick={() => toggleNotification(notif.event, 'push')}
                         className={`w-12 h-6 rounded-full relative transition-colors ${
                           notif.push ? 'bg-primary-600' : 'bg-gray-300'
                         }`}
@@ -186,7 +191,7 @@ export default function Notifications() {
                   <td className="py-4 px-4">
                     <div className="flex justify-center">
                       <button
-                        onClick={() => toggleNotification(notif.id, 'sms')}
+                        onClick={() => toggleNotification(notif.event, 'sms')}
                         className={`w-12 h-6 rounded-full relative transition-colors ${
                           notif.sms ? 'bg-primary-600' : 'bg-gray-300'
                         }`}
@@ -198,7 +203,8 @@ export default function Notifications() {
                     </div>
                   </td>
                 </motion.tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -242,6 +248,15 @@ export default function Notifications() {
           </div>
         </div>
       </div>
+
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <p className="text-sm text-yellow-800">
+          <strong>Nota:</strong> estas preferencias ya se guardan. El envío real por email/SMS aún no está conectado a
+          un proveedor (SMTP, Twilio, etc.) — hoy solo queda registrado qué canales deberían usarse para cada alerta.
+        </p>
+      </div>
+      </>
+      )}
     </div>
   )
 }

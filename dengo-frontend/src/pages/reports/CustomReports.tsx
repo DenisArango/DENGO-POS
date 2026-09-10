@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ArrowLeft, Sparkles, Send, Loader, Save, Trash2,
-  BarChart3, Table, BookOpen, Lightbulb, X
+  ArrowLeft, Sparkles, Send, Loader, Save, Trash2, Download,
+  BarChart3, Table, BookOpen, Lightbulb, AlertCircle, RotateCcw, MessageSquarePlus, User
 } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
@@ -34,12 +34,43 @@ interface SavedReport {
   savedAt: string
 }
 
+type ReportRow = Record<string, unknown>
+
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  question?: string
   config?: ReportConfig
-  data?: any[]
+  data?: ReportRow[]
   loading?: boolean
+  error?: boolean
+  timestamp: number
+}
+
+const MAX_HISTORY_TURNS = 4
+const WELCOME_MESSAGE = '¡Hola! Soy tu asistente de reportes con IA. Puedes pedirme cualquier análisis de tu negocio en lenguaje natural y generaré el reporte al instante. ¿Qué te gustaría analizar hoy?'
+
+function timeLabel(ts: number): string {
+  return new Date(ts).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })
+}
+
+/** Client-side CSV export — no backend round-trip needed, works for any report shape. */
+function downloadCsv(config: ReportConfig, data: ReportRow[]) {
+  const columns = config.columns ?? Object.keys(data[0] ?? {}).slice(0, 6)
+  const escape = (v: unknown) => {
+    const s = v === null || v === undefined ? '' : String(v)
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const header = columns.map(c => escape(formatKey(c))).join(',')
+  const rows = data.map(row => columns.map(c => escape(row[c])).join(','))
+  const csv = '﻿' + [header, ...rows].join('\n') // BOM so Excel opens UTF-8 (tildes, Q) correctly
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${config.title.replace(/[^\w-]+/g, '_')}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 const CHART_COLORS = ['#6366F1','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#F97316']
@@ -65,7 +96,7 @@ function formatKey(key: string): string {
   return map[key] ?? key.replace(/([A-Z])/g, ' $1').trim()
 }
 
-function formatValue(key: string, value: any): string {
+function formatValue(key: string, value: unknown): string {
   if (value === null || value === undefined) return '—'
   if (typeof value === 'number') {
     if (['revenue','cost','profit','totalPurchases','value'].includes(key))
@@ -79,7 +110,7 @@ function formatValue(key: string, value: any): string {
   return String(value)
 }
 
-function ReportVisualizer({ config, data }: { config: ReportConfig; data: any[] }) {
+function ReportVisualizer({ config, data }: { config: ReportConfig; data: ReportRow[] }) {
   if (!data || data.length === 0) {
     return <div className="text-center py-12 text-gray-400 text-sm">Sin datos para mostrar</div>
   }
@@ -121,7 +152,7 @@ function ReportVisualizer({ config, data }: { config: ReportConfig; data: any[] 
           <Pie data={pieData} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
             {pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
           </Pie>
-          <Tooltip formatter={(v: any) => [`Q${Number(v).toFixed(2)}`]} />
+          <Tooltip formatter={(v: number | string) => [`Q${Number(v).toFixed(2)}`]} />
         </PieChart>
       </ResponsiveContainer>
     )
@@ -139,7 +170,7 @@ function ReportVisualizer({ config, data }: { config: ReportConfig; data: any[] 
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis dataKey="name" tick={{ fontSize: 11 }} />
           <YAxis tick={{ fontSize: 11 }} />
-          <Tooltip formatter={(v: any) => [`Q${Number(v).toFixed(2)}`]} />
+          <Tooltip formatter={(v: number | string) => [`Q${Number(v).toFixed(2)}`]} />
           <Line type="monotone" dataKey="value" stroke="#6366F1" strokeWidth={2} dot={false} />
         </LineChart>
       </ResponsiveContainer>
@@ -152,7 +183,7 @@ function ReportVisualizer({ config, data }: { config: ReportConfig; data: any[] 
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
         <XAxis type="number" tick={{ fontSize: 11 }} />
         <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 11 }} />
-        <Tooltip formatter={(v: any) => [`Q${Number(v).toFixed(2)}`]} />
+        <Tooltip formatter={(v: number | string) => [`Q${Number(v).toFixed(2)}`]} />
         <Bar dataKey="value" radius={[0, 4, 4, 0]}>
           {chartData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
         </Bar>
@@ -168,10 +199,7 @@ export default function CustomReports() {
   const branchId = currentStore?.id ?? user?.branchId ?? ''
 
   const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: '¡Hola! Soy tu asistente de reportes con IA. Puedes pedirme cualquier análisis de tu negocio en lenguaje natural y generaré el reporte al instante. ¿Qué te gustaría analizar hoy?',
-    }
+    { role: 'assistant', content: WELCOME_MESSAGE, timestamp: Date.now() }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -193,33 +221,54 @@ export default function CustomReports() {
     if (!question.trim() || loading) return
     setInput('')
 
-    const userMsg: Message = { role: 'user', content: question }
-    const loadingMsg: Message = { role: 'assistant', content: '', loading: true }
+    // Last few exchanges give the AI context for follow-up questions
+    // ("¿y por categoría?", "compáralo con el mes pasado") without resending full report data.
+    const history = messages
+      .filter(m => m.role === 'assistant' && m.question)
+      .slice(-MAX_HISTORY_TURNS)
+      .map(m => ({ question: m.question!, intent: m.config?.intent }))
+
+    const userMsg: Message = { role: 'user', content: question, timestamp: Date.now() }
+    const loadingMsg: Message = { role: 'assistant', content: '', loading: true, timestamp: Date.now() }
     setMessages(prev => [...prev, userMsg, loadingMsg])
     setLoading(true)
 
     try {
-      const result = await api.post<{ config: ReportConfig; data: any[] }>('/api/ai/query-report', {
+      const result = await api.post<{ config: ReportConfig; data: unknown }>('/api/ai/query-report', {
         question,
         branchId,
+        history,
       })
+
+      const rawData = result.data as ReportRow[] | Record<string, ReportRow[]> | null | undefined
+      const rows = Array.isArray(rawData) ? rawData : (rawData?.items ?? rawData?.products ?? rawData?.customers ?? [])
 
       const assistantMsg: Message = {
         role: 'assistant',
         content: result.config.description,
+        question,
         config: result.config,
-        data: Array.isArray(result.data) ? result.data : (result.data?.items ?? result.data?.products ?? result.data?.customers ?? []),
+        data: rows,
+        timestamp: Date.now(),
       }
 
       setMessages(prev => prev.slice(0, -1).concat(assistantMsg))
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'No se pudo generar el reporte.'
       setMessages(prev => prev.slice(0, -1).concat({
         role: 'assistant',
-        content: `Lo siento, no pude generar ese reporte. Error: ${e.message}`,
+        content: message,
+        question,
+        error: true,
+        timestamp: Date.now(),
       }))
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleNewConversation = () => {
+    setMessages([{ role: 'assistant', content: WELCOME_MESSAGE, timestamp: Date.now() }])
   }
 
   const handleSaveReport = () => {
@@ -257,15 +306,25 @@ export default function CustomReports() {
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500">
           <ArrowLeft size={20} />
         </button>
-        <div className="flex items-center gap-2">
-          <div className="p-2 bg-gradient-to-r from-primary-600 to-purple-600 rounded-lg">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="p-2 bg-gradient-to-r from-primary-600 to-purple-600 rounded-lg shrink-0">
             <Sparkles size={18} className="text-white" />
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-800">Consultas Personalizadas con IA</h1>
-            <p className="text-xs text-gray-500">Pregúntale a la IA cualquier análisis de tu negocio</p>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-gray-800 truncate">Consultas Personalizadas con IA</h1>
+            <p className="text-xs text-gray-500 truncate">Pregúntale a la IA cualquier análisis de tu negocio</p>
           </div>
         </div>
+        {messages.length > 1 && (
+          <button
+            onClick={handleNewConversation}
+            className="btn-outline btn-sm flex items-center gap-1.5 shrink-0"
+            title="Empezar una conversación nueva"
+          >
+            <MessageSquarePlus size={15} />
+            <span className="hidden sm:inline">Nueva conversación</span>
+          </button>
+        )}
       </div>
 
       <div className="flex gap-3 flex-1 min-h-0">
@@ -276,42 +335,70 @@ export default function CustomReports() {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div key={i} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {msg.role === 'assistant' && (
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${msg.error ? 'bg-red-100' : 'bg-gradient-to-br from-primary-600 to-purple-600'}`}>
+                    {msg.error ? <AlertCircle size={14} className="text-red-600" /> : <Sparkles size={14} className="text-white" />}
+                  </div>
+                )}
                 <div className={`max-w-[85%] ${msg.role === 'user' ? 'order-1' : 'order-2'}`}>
 
                   {/* Bubble */}
                   <div className={`rounded-2xl px-4 py-3 text-sm ${
                     msg.role === 'user'
                       ? 'bg-primary-600 text-white rounded-br-sm'
-                      : 'bg-gray-100 text-gray-800 rounded-bl-sm'
+                      : msg.error
+                        ? 'bg-red-50 text-red-800 border border-red-200 rounded-bl-sm'
+                        : 'bg-gray-100 text-gray-800 rounded-bl-sm'
                   }`}>
                     {msg.loading ? (
                       <div className="flex items-center gap-2 text-gray-500">
                         <Loader size={14} className="animate-spin" />
-                        Generando reporte…
+                        Analizando tu negocio…
                       </div>
                     ) : msg.content}
+                    {msg.error && msg.question && (
+                      <button
+                        onClick={() => handleQuery(msg.question!)}
+                        className="mt-2 flex items-center gap-1 text-xs font-medium text-red-700 hover:text-red-900"
+                      >
+                        <RotateCcw size={12} /> Reintentar
+                      </button>
+                    )}
                   </div>
+                  <p className={`text-[11px] text-gray-400 mt-1 px-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+                    {timeLabel(msg.timestamp)}
+                  </p>
 
                   {/* Report visualization */}
                   {msg.config && msg.data && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="mt-2 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm"
+                      className="mt-1 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm"
                     >
-                      <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {msg.config.visualization === 'table' ? <Table size={15} className="text-primary-600" /> : <BarChart3 size={15} className="text-primary-600" />}
-                          <span className="font-semibold text-sm text-gray-800">{msg.config.title}</span>
-                          <span className="text-xs text-gray-400">({msg.data.length} registros)</span>
+                      <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {msg.config.visualization === 'table' ? <Table size={15} className="text-primary-600 shrink-0" /> : <BarChart3 size={15} className="text-primary-600 shrink-0" />}
+                          <span className="font-semibold text-sm text-gray-800 truncate">{msg.config.title}</span>
+                          <span className="text-xs text-gray-400 shrink-0">({msg.data.length} registros)</span>
                         </div>
-                        <button
-                          onClick={() => { setSaveModalMsg(msg); setSaveName(msg.config!.title) }}
-                          className="flex items-center gap-1 px-2 py-1 text-xs bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors"
-                        >
-                          <Save size={12} /> Guardar
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => downloadCsv(msg.config!, msg.data!)}
+                            disabled={msg.data.length === 0}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="Exportar a CSV"
+                          >
+                            <Download size={12} /> <span className="hidden sm:inline">CSV</span>
+                          </button>
+                          <button
+                            onClick={() => { setSaveModalMsg(msg); setSaveName(msg.config!.title) }}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors"
+                          >
+                            <Save size={12} /> Guardar
+                          </button>
+                        </div>
                       </div>
                       <div className="p-4">
                         <ReportVisualizer config={msg.config} data={msg.data} />
@@ -319,6 +406,11 @@ export default function CustomReports() {
                     </motion.div>
                   )}
                 </div>
+                {msg.role === 'user' && (
+                  <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center shrink-0 order-2">
+                    <User size={14} className="text-gray-600" />
+                  </div>
+                )}
               </div>
             ))}
             <div ref={chatEndRef} />

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { validateUser, logLogin } from '../services/auth.service.js'
 import { log } from '../services/audit.service.js'
+import { getLicense } from './license.js'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -53,20 +54,29 @@ export default async function portalRoutes(fastify: FastifyInstance) {
   const teacherGuard = { preHandler: [fastify.authenticate, requireTeacher] }
 
   // ── Public: portal config ──────────────────────────────────────────────────
+  // 404 here (no config, or pageEnabled off) is what tells the portal frontend
+  // to fall back to a bare, unbranded login form instead of the custom landing.
   fastify.get('/config', async (_request, reply) => {
+    const license = await getLicense()
+    if (!license.pageEnabled) return reply.status(404).send({ error: 'Configuración no encontrada' })
     const cfg = await prisma.portalConfig.findFirst({ where: { isActive: true }, orderBy: { createdAt: 'asc' } })
     if (!cfg) return reply.status(404).send({ error: 'Configuración no encontrada' })
     return reply.send(cfg)
   })
 
   // ── Public: teacher login ───────────────────────────────────────────────────
-  fastify.post('/auth/login', async (request, reply) => {
+  fastify.post('/auth/login', { config: { rateLimit: { max: 10, timeWindow: 60_000 } } }, async (request, reply) => {
     const body = loginSchema.safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: 'Email y contraseña requeridos' })
 
     const { email, password } = body.data
     const ip = request.ip
     const ua = request.headers['user-agent']
+
+    const license = await getLicense()
+    if (!license.maestrosEnabled) {
+      return reply.status(403).send({ error: 'El portal de maestros no está activo. Contacta a tu proveedor.' })
+    }
 
     let user
     try {
@@ -85,7 +95,7 @@ export default async function portalRoutes(fastify: FastifyInstance) {
     await log({ userId: user.id, action: 'LOGIN', entity: 'User', entityId: user.id, ipAddress: ip })
 
     const token = fastify.jwt.sign(
-      { id: user.id, role: user.role, branchId: user.branchId, email: user.email },
+      { id: user.id, role: user.role, branchId: user.branchId, branchIds: [user.branchId], email: user.email, permissions: [] },
       { expiresIn: '8h' }
     )
 
@@ -219,10 +229,10 @@ export default async function portalRoutes(fastify: FastifyInstance) {
       ...(allowedCategoryIds ? { categoryId: { in: allowedCategoryIds } } : {}),
       ...(q.search ? {
         OR: [
-          { name: { contains: q.search } },
-          { brand: { contains: q.search } },
-          { sku: { contains: q.search } },
-          { barcode: { contains: q.search } },
+          { name: { contains: q.search, mode: 'insensitive' } },
+          { brand: { contains: q.search, mode: 'insensitive' } },
+          { sku: { contains: q.search, mode: 'insensitive' } },
+          { barcode: { contains: q.search, mode: 'insensitive' } },
         ],
       } : {}),
     }

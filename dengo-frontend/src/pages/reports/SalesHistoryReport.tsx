@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ArrowLeft, Search, DollarSign, ShoppingCart, TrendingUp, CreditCard, ExternalLink
+  ArrowLeft, Search, DollarSign, ShoppingCart, TrendingUp, CreditCard, ExternalLink, Receipt
 } from 'lucide-react'
 import { format, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { toast } from 'sonner'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../store'
 import { useStore } from '../../contexts/StoreContext'
+import { usePermissions } from '../../hooks/usePermissions'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
 
@@ -18,6 +20,8 @@ export default function SalesHistoryReport() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const { currentStore } = useStore()
+  const { hasPermission } = usePermissions()
+  const canGenerateInvoice = hasPermission('sales.edit')
 
   const [from, setFrom] = useState(format(subDays(new Date(), 6), 'yyyy-MM-dd'))
   const [to, setTo] = useState(format(new Date(), 'yyyy-MM-dd'))
@@ -31,8 +35,11 @@ export default function SalesHistoryReport() {
     branchId: currentStore?.id ?? user?.branchId ?? '',
     cashRegisterId: '',
   })
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [generating, setGenerating] = useState(false)
 
   useEffect(() => { fetchData() }, [from, to, method, saleTypeFilter, filters, includeVoided])
+  useEffect(() => { setSelected(new Set()) }, [from, to, method, saleTypeFilter, filters, includeVoided, search])
 
   async function fetchData() {
     setLoading(true)
@@ -55,6 +62,45 @@ export default function SalesHistoryReport() {
     return (s.invoiceNumber ?? '').toLowerCase().includes(q)
       || (s.customer?.name ?? '').toLowerCase().includes(q)
   })
+
+  // Only sales that can actually receive a factura are selectable for the
+  // bulk action — not voided, not already invoiced.
+  const invoiceable = filtered.filter(s => !s.isVoided && !s.requiresInvoice)
+  const allInvoiceableSelected = invoiceable.length > 0 && invoiceable.every(s => selected.has(s.id))
+
+  const toggleOne = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  const toggleAll = () => {
+    setSelected(allInvoiceableSelected ? new Set() : new Set(invoiceable.map(s => s.id)))
+  }
+
+  const generateBulkInvoices = async () => {
+    if (selected.size === 0) return
+    setGenerating(true)
+    try {
+      const result = await api.post<{ succeeded: string[]; failed: { saleId: string; error: string }[] }>(
+        '/api/sales/bulk-generate-invoices',
+        { saleIds: Array.from(selected) }
+      )
+      if (result.succeeded.length > 0) toast.success(`${result.succeeded.length} factura${result.succeeded.length === 1 ? '' : 's'} generada${result.succeeded.length === 1 ? '' : 's'}`)
+      if (result.failed.length > 0) {
+        const firstReason = result.failed[0]?.error
+        toast.error(`${result.failed.length} venta${result.failed.length === 1 ? '' : 's'} sin facturar — ${firstReason}${result.failed.length > 1 ? ' (y otras)' : ''}`)
+      }
+      setSelected(new Set())
+      fetchData()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al generar facturas')
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   const active = filtered.filter(s => !s.isVoided)
   const totalSales = active.reduce((s, x) => s + Number(x.total), 0)
@@ -117,6 +163,22 @@ export default function SalesHistoryReport() {
         {loading && <span className="text-sm text-gray-400 self-center">Cargando...</span>}
       </div>
 
+      {/* Bulk invoice generation */}
+      {canGenerateInvoice && selected.size > 0 && (
+        <div className="bg-primary-50 border border-primary-200 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
+          <span className="text-sm text-primary-800 font-medium">
+            {selected.size} venta{selected.size === 1 ? '' : 's'} seleccionada{selected.size === 1 ? '' : 's'} para facturar
+          </span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSelected(new Set())} className="btn-outline btn-sm">Cancelar</button>
+            <button onClick={generateBulkInvoices} disabled={generating} className="btn-primary btn-sm flex items-center gap-1.5 disabled:opacity-50">
+              {generating ? <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" /> : <Receipt size={15} />}
+              Generar facturas
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Summary stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
@@ -153,12 +215,18 @@ export default function SalesHistoryReport() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
+                {canGenerateInvoice && (
+                  <th className="w-10 px-4 py-3">
+                    <input type="checkbox" checked={allInvoiceableSelected} onChange={toggleAll} onClick={e => e.stopPropagation()} disabled={invoiceable.length === 0} />
+                  </th>
+                )}
                 <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Factura</th>
                 <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Fecha</th>
                 <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Cliente</th>
                 <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Cajero</th>
                 <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Caja</th>
                 <th className="text-center px-4 py-3 text-xs text-gray-500 font-medium">Método</th>
+                <th className="text-center px-4 py-3 text-xs text-gray-500 font-medium">Documento</th>
                 <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Total</th>
                 <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Ganancia</th>
                 <th className="w-10" />
@@ -166,13 +234,23 @@ export default function SalesHistoryReport() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.length === 0
-                ? <tr><td colSpan={9} className="text-center py-12 text-gray-400">Sin registros en el período seleccionado</td></tr>
+                ? <tr><td colSpan={10} className="text-center py-12 text-gray-400">Sin registros en el período seleccionado</td></tr>
                 : filtered.map(sale => (
                   <tr
                     key={sale.id}
                     onClick={() => navigate(`/reports/sales/${sale.id}`)}
                     className={`hover:bg-primary-50 cursor-pointer transition-colors ${sale.isVoided ? 'opacity-50 bg-red-50' : ''}`}
                   >
+                    {canGenerateInvoice && (
+                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selected.has(sale.id)}
+                          onChange={() => toggleOne(sale.id)}
+                          disabled={sale.isVoided || sale.requiresInvoice}
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <span className="font-mono text-xs text-gray-700">{sale.invoiceNumber}</span>
                       {sale.isVoided && <span className="ml-1 text-xs text-red-500 font-medium">ANULADA</span>}
@@ -192,6 +270,15 @@ export default function SalesHistoryReport() {
                         {sale.saleType === 'CREDIT' ? 'Crédito' : (PM_LABEL[sale.paymentMethod] ?? sale.paymentMethod)}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-center">
+                      {sale.requiresInvoice ? (
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                          Factura {sale.felStatus === 'CERTIFIED' ? '' : '(pend.)'}
+                        </span>
+                      ) : (
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Recibo</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right font-semibold text-gray-800">Q{Number(sale.total).toFixed(2)}</td>
                     <td className="px-4 py-3 text-right text-xs text-emerald-600 font-medium">
                       {sale.saleProfit !== undefined ? `Q${Number(sale.saleProfit).toFixed(2)}` : '–'}
@@ -209,7 +296,6 @@ export default function SalesHistoryReport() {
 
       <AIRecommendations
         reportData={{ type: 'sales_history', data: { totalRevenue: totalSales, transactions: sales.length, profit: totalProfit } }}
-        autoGenerate={sales.length > 0}
       />
     </div>
   )

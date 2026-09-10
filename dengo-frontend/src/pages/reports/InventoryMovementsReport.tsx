@@ -128,7 +128,6 @@ export default function InventoryMovementsReport() {
 
       <AIRecommendations
         reportData={{ type: 'inventory_movements', data: { total: movements.length, summary } }}
-        autoGenerate={movements.length > 0}
       />
     </div>
   )

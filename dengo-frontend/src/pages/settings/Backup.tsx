@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Database, Download, Upload, Calendar, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Database, Download, Upload, Calendar, CheckCircle, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 
@@ -148,7 +148,7 @@ export default function Backup() {
               </tr>
             </thead>
             <tbody>
-              {backups.map((backup, index) => (
+              {backups.map((backup) => (
                 <tr key={backup.id} className="border-b hover:bg-gray-50">
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">

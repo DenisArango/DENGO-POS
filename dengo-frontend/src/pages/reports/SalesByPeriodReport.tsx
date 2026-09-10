@@ -135,7 +135,6 @@ export default function SalesByPeriodReport() {
 
       <AIRecommendations
         reportData={{ type: 'sales_by_period', data: { totalSales, transactions: totalTx, period: `${from} to ${to}` } }}
-        autoGenerate={data.length > 0}
       />
     </div>
   )

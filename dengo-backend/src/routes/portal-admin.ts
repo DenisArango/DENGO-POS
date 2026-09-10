@@ -1,8 +1,8 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma.js'
 import { log } from '../services/audit.service.js'
+import { hashPassword } from '../services/auth.service.js'
 
 // ── Admin guard ──────────────────────────────────────────────────────────────
 async function requireAdminGuard(request: FastifyRequest, reply: FastifyReply) {
@@ -163,7 +163,7 @@ export default async function portalAdminRoutes(fastify: FastifyInstance) {
       },
     })
 
-    await prisma.portalOrder.update({ where: { id }, data: { status: 'QUOTED' } })
+    await prisma.portalOrder.update({ where: { id }, data: { status: 'QUOTED', quotationId: quotation.id } })
     await log({ userId: (request.user as any).id, action: 'QUOTE', entity: 'PortalOrder', entityId: id, newValues: { quotationId: quotation.id } })
     return reply.status(201).send(quotation)
   })
@@ -199,7 +199,7 @@ export default async function portalAdminRoutes(fastify: FastifyInstance) {
     const existing = await prisma.user.findUnique({ where: { email: body.data.email } })
     if (existing) return reply.status(409).send({ error: 'El email ya está registrado' })
 
-    const passwordHash = await bcrypt.hash(body.data.password, 10)
+    const passwordHash = await hashPassword(body.data.password)
 
     const result = await prisma.$transaction(async tx => {
       const user = await tx.user.create({
@@ -800,8 +800,8 @@ export default async function portalAdminRoutes(fastify: FastifyInstance) {
       businessName: z.string().min(1),
       tagline: z.string().optional().nullable(),
       aboutText: z.string().optional().nullable(),
-      logoUrl: z.string().optional().nullable(),
-      heroImageUrl: z.string().optional().nullable(),
+      logoUrl: z.string().max(3_000_000).optional().nullable(),
+      heroImageUrl: z.string().max(8_000_000).optional().nullable(), // banner image, allowed larger than a logo
       primaryColor: z.string().optional(),
       address: z.string().optional().nullable(),
       city: z.string().optional().nullable(),

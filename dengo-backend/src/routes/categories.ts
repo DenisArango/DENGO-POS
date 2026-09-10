@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
+import { requirePermission } from '../lib/permissions.js'
 
 const schema = z.object({
   name: z.string().min(1),
@@ -13,13 +14,13 @@ export default async function categoryRoutes(fastify: FastifyInstance) {
     return reply.send(await prisma.category.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }))
   })
 
-  fastify.post('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post('/', { preHandler: [fastify.authenticate, requirePermission('inventory.create')] }, async (request, reply) => {
     const body = schema.safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
     return reply.status(201).send(await prisma.category.create({ data: body.data }))
   })
 
-  fastify.put('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.put('/:id', { preHandler: [fastify.authenticate, requirePermission('inventory.edit')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const body = schema.partial().safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
@@ -30,7 +31,7 @@ export default async function categoryRoutes(fastify: FastifyInstance) {
     }
   })
 
-  fastify.delete('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.delete('/:id', { preHandler: [fastify.authenticate, requirePermission('inventory.delete')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     try {
       await prisma.category.update({ where: { id }, data: { isActive: false } })

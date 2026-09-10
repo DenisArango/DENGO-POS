@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Warehouse, Search, Edit2, AlertTriangle, Package,
-  TrendingDown, TrendingUp, FileText, Download,
-  Filter, ChevronDown, Plus, Minus, RotateCcw,
+  Warehouse, Search, Edit2, Package,
+  TrendingDown, TrendingUp, Download,
+  Filter, ChevronDown, Plus, Minus,
   History, CheckCircle, XCircle, AlertCircle,
-  BarChart3, ArrowUpDown, Calendar, User, X
+  BarChart3, ArrowUpDown, X
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -14,6 +14,8 @@ import ProductModal from '../components/products/ProductModal'
 import { api } from '../lib/api'
 import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
+import { usePermissions } from '../hooks/usePermissions'
+import { getAdjustmentReasons, type AdjustmentReason } from '../lib/inventoryReasons'
 
 interface InventoryItem {
   productId: string
@@ -44,6 +46,7 @@ interface InventoryItemWithStatus extends InventoryItem {
   baseUnit: string
   minStock: number
   cost: number
+  basePrice: number
 }
 
 interface StockAdjustment {
@@ -65,17 +68,6 @@ interface StockMovement {
   performedBy?: { id: string; name: string }
 }
 
-const adjustmentReasons = [
-  'Rotura/Daño',
-  'Vencimiento',
-  'Error de conteo',
-  'Pérdida/Robo',
-  'Devolución de cliente',
-  'Ajuste inicial',
-  'Transferencia entre sucursales',
-  'Otro'
-]
-
 function computeStatus(quantity: number, minStock: number): InventoryItemWithStatus['status'] {
   if (quantity === 0) return 'critical'
   if (quantity <= minStock * 0.5) return 'critical'
@@ -96,18 +88,47 @@ function normaliseItem(item: InventoryItem): InventoryItemWithStatus {
     : p.baseUnit ?? 'Pieza'
   const minStock = Number(p.minStock ?? 0)
   const cost = Number(p.cost ?? 0)
+  const basePrice = Number(p.basePrice ?? 0)
   const status = computeStatus(quantity, minStock)
-  return { ...item, quantity, status, displayName, categoryName, sku, barcode, baseUnit, minStock, cost }
+  return { ...item, quantity, status, displayName, categoryName, sku, barcode, baseUnit, minStock, cost, basePrice }
 }
 
-function getMovementTypeLabel(type: string) {
+/** Client-side CSV export — no backend round-trip, includes cost/sale-price columns. */
+function downloadInventoryCsv(items: InventoryItemWithStatus[]) {
+  const columns = ['SKU', 'Código de barras', 'Producto', 'Categoría', 'Stock', 'Stock mínimo', 'Precio base', 'Costo unitario', 'Costo total', 'Valor de venta total']
+  const escape = (v: unknown) => {
+    const s = v === null || v === undefined ? '' : String(v)
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const rows = items.map(item => [
+    item.sku, item.barcode, item.displayName, item.categoryName, item.quantity, item.minStock,
+    item.basePrice.toFixed(2), item.cost.toFixed(2), (item.quantity * item.cost).toFixed(2), (item.quantity * item.basePrice).toFixed(2),
+  ].map(escape).join(','))
+  const csv = '﻿' + [columns.join(','), ...rows].join('\n') // BOM so Excel opens UTF-8 (tildes, Q) correctly
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `inventario_${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function getMovementTypeLabel(type: string, reason?: string) {
+  // The backend never emits 'TRANSFER_IN'/'TRANSFER_OUT' — a transfer's
+  // deduction from the origin branch is logged as 'TRANSFER', and its
+  // receipt at the destination branch is logged as a plain 'IN' (same type
+  // as a purchase intake or a manual increase). The reason text is the only
+  // way to tell those apart for display.
+  if (type === 'IN' && reason?.startsWith('Recepción de transferencia')) {
+    return { label: 'Traslado (entrada)', color: 'text-teal-700 bg-teal-50' }
+  }
   switch (type) {
     case 'IN': return { label: 'Entrada', color: 'text-green-700 bg-green-50' }
     case 'OUT': return { label: 'Salida', color: 'text-red-700 bg-red-50' }
     case 'ADJUSTMENT': return { label: 'Ajuste', color: 'text-blue-700 bg-blue-50' }
     case 'RETURN': return { label: 'Devolución', color: 'text-purple-700 bg-purple-50' }
-    case 'TRANSFER_IN': return { label: 'Transferencia +', color: 'text-teal-700 bg-teal-50' }
-    case 'TRANSFER_OUT': return { label: 'Transferencia -', color: 'text-orange-700 bg-orange-50' }
+    case 'TRANSFER': return { label: 'Traslado (salida)', color: 'text-orange-700 bg-orange-50' }
     default: return { label: type, color: 'text-gray-700 bg-gray-50' }
   }
 }
@@ -116,6 +137,10 @@ export default function Inventory() {
   const { user } = useAuthStore()
   const { currentStore } = useStore()
   const branchId = currentStore?.id ?? user?.branchId ?? ''
+  const { hasPermission } = usePermissions()
+  const canEditProducts = hasPermission('inventory.edit')
+  const canAdjustStock = hasPermission('inventory.adjust')
+  const canEditPrice = hasPermission('inventory.editPrice')
 
   const [inventory, setInventory] = useState<InventoryItemWithStatus[]>([])
   const [loading, setLoading] = useState(false)
@@ -132,11 +157,21 @@ export default function Inventory() {
   const [adjustment, setAdjustment] = useState<StockAdjustment>({
     productId: '', branchId, currentStock: 0, newStock: 0, reason: '', notes: ''
   })
+  // Reasons are direction-specific (Configuración → Motivos de Ajuste) — both
+  // lists loaded once so switching between raising/lowering the number just
+  // swaps which one the dropdown reads from, no re-fetch needed mid-edit.
+  const [reasonsUp, setReasonsUp] = useState<AdjustmentReason[]>([])
+  const [reasonsDown, setReasonsDown] = useState<AdjustmentReason[]>([])
+  useEffect(() => {
+    getAdjustmentReasons('UP').then(setReasonsUp)
+    getAdjustmentReasons('DOWN').then(setReasonsDown)
+  }, [])
+  const adjustmentDirection: 'UP' | 'DOWN' = adjustment.newStock >= adjustment.currentStock ? 'UP' : 'DOWN'
+  const adjustmentReasonOptions = adjustmentDirection === 'UP' ? reasonsUp : reasonsDown
 
   // Edit product modal
   const [showProductModal, setShowProductModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<any>(null)
-  const [savingProduct, setSavingProduct] = useState(false)
   const [productCategories, setProductCategories] = useState<{ id: string; name: string; color?: string }[]>([])
   const [productUnits, setProductUnits] = useState<{ id: string; name: string; abbreviation: string; type: string }[]>([])
 
@@ -183,6 +218,7 @@ export default function Inventory() {
   const stats = {
     totalProducts: inventory.length,
     totalValue: inventory.reduce((acc, item) => acc + (item.quantity * item.cost), 0),
+    totalSaleValue: inventory.reduce((acc, item) => acc + (item.quantity * item.basePrice), 0),
     lowStock: inventory.filter(item => item.status === 'low' || item.status === 'critical').length,
     overstock: inventory.filter(item => item.status === 'overstock').length
   }
@@ -239,7 +275,6 @@ export default function Inventory() {
     const id = editingProduct?.id
     if (!id) return
 
-    setSavingProduct(true)
     api.put(`/api/products/${id}`, {
       name: productData.productName ?? productData.name ?? productData.fullName,
       barcode: productData.barcode,
@@ -267,7 +302,6 @@ export default function Inventory() {
         fetchInventory()
       })
       .catch(e => toast.error(e.message))
-      .finally(() => setSavingProduct(false))
   }
 
   // ── History ───────────────────────────────────────────────────────────────
@@ -321,7 +355,11 @@ export default function Inventory() {
           Control de Inventario
         </h1>
         <div className="flex gap-3">
-          <button className="btn-outline btn-md flex items-center gap-2">
+          <button
+            onClick={() => downloadInventoryCsv(filteredInventory)}
+            disabled={filteredInventory.length === 0}
+            className="btn-outline btn-md flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             <Download size={18} />
             Exportar
           </button>
@@ -337,10 +375,11 @@ export default function Inventory() {
 
       {/* Estadísticas */}
       {!loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {[
             { label: 'Total Productos', value: stats.totalProducts, Icon: Package, color: 'text-primary-600' },
-            { label: 'Valor Total', value: `Q${stats.totalValue.toFixed(2)}`, Icon: BarChart3, color: 'text-green-600' },
+            { label: 'Costo Total', value: `Q${stats.totalValue.toFixed(2)}`, Icon: BarChart3, color: 'text-green-600' },
+            { label: 'Valor de Venta Total', value: `Q${stats.totalSaleValue.toFixed(2)}`, Icon: BarChart3, color: 'text-primary-600' },
             { label: 'Stock Bajo', value: stats.lowStock, Icon: TrendingDown, color: 'text-yellow-600' },
             { label: 'Sobrestock', value: stats.overstock, Icon: TrendingUp, color: 'text-blue-600' },
           ].map(({ label, value, Icon, color }, i) => (
@@ -427,7 +466,9 @@ export default function Inventory() {
                   <th className="text-center py-3 px-4 font-medium text-gray-700">Stock Actual</th>
                   <th className="text-center py-3 px-4 font-medium text-gray-700">Stock Mínimo</th>
                   <th className="text-center py-3 px-4 font-medium text-gray-700">Estado</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-700">Valor</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-700">Precio Base</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-700">Costo Total</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-700">Valor Venta</th>
                   <th className="text-center py-3 px-4 font-medium text-gray-700">Acciones</th>
                 </tr>
               </thead>
@@ -460,19 +501,29 @@ export default function Inventory() {
                         {getStatusLabel(item.status)}
                       </span>
                     </td>
+                    <td className="py-3 px-4 text-right text-gray-600">
+                      Q{item.basePrice.toFixed(2)}
+                    </td>
                     <td className="py-3 px-4 text-right font-medium text-gray-800">
                       Q{(item.quantity * item.cost).toFixed(2)}
                     </td>
+                    <td className="py-3 px-4 text-right font-medium text-primary-700">
+                      Q{(item.quantity * item.basePrice).toFixed(2)}
+                    </td>
                     <td className="py-3 px-4">
                       <div className="flex justify-center gap-2">
-                        <button onClick={() => handleAdjustStock(item)}
-                          className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Ajustar stock">
-                          <ArrowUpDown size={16} className="text-gray-600" />
-                        </button>
-                        <button onClick={() => handleEditProduct(item)}
-                          className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Editar producto">
-                          <Edit2 size={16} className="text-gray-600" />
-                        </button>
+                        {canAdjustStock && (
+                          <button onClick={() => handleAdjustStock(item)}
+                            className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Ajustar stock">
+                            <ArrowUpDown size={16} className="text-gray-600" />
+                          </button>
+                        )}
+                        {canEditProducts && (
+                          <button onClick={() => handleEditProduct(item)}
+                            className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Editar producto">
+                            <Edit2 size={16} className="text-gray-600" />
+                          </button>
+                        )}
                         <button onClick={() => handleViewHistory(item)}
                           className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Ver historial SKU">
                           <History size={16} className="text-gray-600" />
@@ -483,7 +534,7 @@ export default function Inventory() {
                 ))}
                 {filteredInventory.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-gray-500">
+                    <td colSpan={10} className="py-12 text-center text-gray-500">
                       No se encontraron productos en inventario
                     </td>
                   </tr>
@@ -522,7 +573,17 @@ export default function Inventory() {
                   <div>
                     <label className="label">Nuevo Stock</label>
                     <input type="number" value={adjustment.newStock}
-                      onChange={(e) => setAdjustment(prev => ({ ...prev, newStock: parseInt(e.target.value) || 0 }))}
+                      onChange={(e) => {
+                        const newStock = parseInt(e.target.value) || 0
+                        setAdjustment(prev => {
+                          const oldDirection = prev.newStock >= prev.currentStock ? 'UP' : 'DOWN'
+                          const newDirection = newStock >= prev.currentStock ? 'UP' : 'DOWN'
+                          // A reason picked for one direction never applies to the
+                          // other — clear it instead of letting a stale "Rotura/Daño"
+                          // ride along onto what's now an increase.
+                          return { ...prev, newStock, reason: oldDirection === newDirection ? prev.reason : '' }
+                        })
+                      }}
                       className="input text-center text-2xl font-bold" min="0" />
                   </div>
                 </div>
@@ -537,8 +598,13 @@ export default function Inventory() {
                   <select value={adjustment.reason}
                     onChange={(e) => setAdjustment(prev => ({ ...prev, reason: e.target.value }))} className="input">
                     <option value="">Seleccionar razón</option>
-                    {adjustmentReasons.map(r => <option key={r} value={r}>{r}</option>)}
+                    {adjustmentReasonOptions.map(r => <option key={r.id} value={r.label}>{r.label}</option>)}
                   </select>
+                  {adjustmentReasonOptions.length === 0 && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      No hay motivos configurados para {adjustmentDirection === 'UP' ? 'aumentos' : 'disminuciones'} — agrégalos en Configuración → Motivos de Ajuste.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="label">Notas (opcional)</label>
@@ -599,11 +665,8 @@ export default function Inventory() {
                 ) : (
                   <div className="space-y-2">
                     {movements.map(mv => {
-                      const { label, color } = getMovementTypeLabel(mv.type)
+                      const { label, color } = getMovementTypeLabel(mv.type, mv.reason)
                       const qty = Number(mv.quantity ?? 0)
-                      const isPositive = ['IN', 'TRANSFER_IN', 'RETURN', 'ADJUSTMENT'].includes(mv.type)
-                        ? mv.type === 'ADJUSTMENT' ? qty >= 0 : true
-                        : false
                       return (
                         <div key={mv.id} className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50">
                           <span className={`px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0 mt-0.5 ${color}`}>{label}</span>
@@ -640,6 +703,7 @@ export default function Inventory() {
         mode="edit"
         categories={productCategories}
         units={productUnits}
+        canEditPrice={canEditPrice}
       />
     </div>
   )

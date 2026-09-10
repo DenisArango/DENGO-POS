@@ -42,7 +42,7 @@ interface Order {
   deliveryNotes?: string | null
   totalAmount: number
   createdAt: string
-  teacher?: { user?: { name: string; email: string } }
+  teacher?: { id: string; user?: { name: string; email: string } }
   school?: { name: string }
   items?: OrderItem[]
 }

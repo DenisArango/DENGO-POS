@@ -9,21 +9,43 @@ interface UpdateStockOptions {
   referenceId?: string
 }
 
-export async function updateStock(
+// Shared by updateStock (relative delta) and setStock (absolute target) so
+// both compute their final quantity from a `before` read while the row is
+// still locked — setStock used to read `before` via a plain, unlocked
+// findUnique *outside* this transaction, compute its delta from that, then
+// hand the delta to updateStock; under true concurrent edits to the same
+// product+branch, that stale `before` made the final quantity land somewhere
+// other than the absolute value the caller asked for. Funneling both through
+// one locked read closes that gap for setStock while leaving updateStock's
+// own behavior (including the logged `quantity` = the raw requested delta,
+// even when the clamp-at-zero below kicks in) unchanged.
+async function applyStockChange(
   productId: string,
   branchId: string,
-  delta: number,
+  resolveAfter: (before: number) => number,
+  loggedQuantity: (before: number, after: number) => number,
   options: UpdateStockOptions,
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
-    const current = await tx.inventory.findUnique({
-      where: { productId_branchId: { productId, branchId } },
-    })
-    const before = Number(current?.quantity ?? 0)
-    const after = Math.max(0, before + delta)
+    // Raw SELECT ... FOR UPDATE (not a plain Prisma findUnique) takes a row lock
+    // on read, so two concurrent stock changes for the same product+branch
+    // (e.g. two registers selling the last unit at the same instant) serialize
+    // instead of both reading the same "before" quantity and one silently
+    // clobbering the other's decrement (lost-update race). Identifiers are
+    // double-quoted because @map gives these tables/columns UPPERCASE names —
+    // Postgres folds unquoted identifiers to lowercase.
+    const rows = await tx.$queryRaw<{ QUANTITY: unknown }[]>`
+      SELECT "QUANTITY" FROM "INVENTORY"
+      WHERE "PRODUCT_ID" = ${productId} AND "BRANCH_ID" = ${branchId}
+      FOR UPDATE
+    `
+    const current = rows[0]
+    const before = Number(current?.QUANTITY ?? 0)
+    const after = Math.max(0, resolveAfter(before))
 
-    // Use explicit create/update instead of upsert — Prisma's SQL Server upsert
-    // can incorrectly attempt INSERT when a record already exists, violating the unique constraint.
+    // Explicit create/update instead of upsert keeps this in one obvious code
+    // path with the row already locked above, rather than relying on upsert's
+    // own internal race handling.
     if (current) {
       await tx.inventory.update({
         where: { productId_branchId: { productId, branchId } },
@@ -39,11 +61,13 @@ export async function updateStock(
       })
     }
 
+    const quantity = loggedQuantity(before, after)
+
     await tx.stockMovement.create({
       data: {
         productId, branchId,
         type: options.type,
-        quantity: Math.abs(delta),
+        quantity,
         quantityBefore: before,
         quantityAfter: after,
         reason: options.reason ?? null,
@@ -55,10 +79,24 @@ export async function updateStock(
     if (options.type === 'SALE') {
       await tx.product.update({
         where: { id: productId },
-        data: { salesCount: { increment: Math.abs(delta) } },
+        data: { salesCount: { increment: quantity } },
       })
     }
   })
+}
+
+export async function updateStock(
+  productId: string,
+  branchId: string,
+  delta: number,
+  options: UpdateStockOptions,
+): Promise<void> {
+  return applyStockChange(
+    productId, branchId,
+    before => before + delta,
+    () => Math.abs(delta),
+    options,
+  )
 }
 
 export async function setStock(
@@ -67,11 +105,12 @@ export async function setStock(
   quantity: number,
   options: UpdateStockOptions,
 ): Promise<void> {
-  const current = await prisma.inventory.findUnique({
-    where: { productId_branchId: { productId, branchId } },
-  })
-  const before = Number(current?.quantity ?? 0)
-  await updateStock(productId, branchId, quantity - before, options)
+  return applyStockChange(
+    productId, branchId,
+    () => quantity,
+    (before, after) => Math.abs(after - before),
+    options,
+  )
 }
 
 export async function getStock(productId: string, branchId: string): Promise<number> {

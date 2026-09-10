@@ -4,7 +4,6 @@ import MainLayout from './components/layout/MainLayout'
 import AuthLayout from './components/layout/AuthLayout'
 import LoadingScreen from './components/common/LoadingScreen'
 import ProtectedRoute from './components/auth/ProtectedRoute'
-import StoreSelectionLogin from './components/auth/StoreSelectionLogin'
 
 // Lazy loading de páginas
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -37,10 +36,11 @@ const Messages = lazy(() => import('./pages/Messages'))
 // Páginas de configuración
 const UsersManagement = lazy(() => import('./pages/Users'))
 const RolesPermissions = lazy(() => import('./pages/RolesPermissions'))
-const StoresManagement = lazy(() => import('./pages/StoresManagment'))
 const CompanySettings = lazy(() => import('./pages/settings/Company'))
 const StoresSettings = lazy(() => import('./pages/settings/Stores'))
 const PaymentMethodsSettings = lazy(() => import('./pages/settings/PaymentMethods'))
+const SalesGoalsSettings = lazy(() => import('./pages/settings/SalesGoals'))
+const InventoryReasonsSettings = lazy(() => import('./pages/settings/InventoryReasons'))
 const NotificationsSettings = lazy(() => import('./pages/settings/Notifications'))
 const BackupSettings = lazy(() => import('./pages/settings/Backup'))
 const AppearanceSettings = lazy(() => import('./pages/settings/Appearance'))
@@ -69,7 +69,6 @@ export default function Router() {
         {/* Rutas públicas */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
-          <Route path="/select-store" element={<StoreSelectionLogin />} />
         </Route>
 
         {/* Rutas protegidas */}
@@ -121,6 +120,8 @@ export default function Router() {
           <Route path="/settings/company" element={<CompanySettings />} />
           <Route path="/settings/stores" element={<StoresSettings />} />
           <Route path="/settings/payment-methods" element={<PaymentMethodsSettings />} />
+          <Route path="/settings/sales-goals" element={<SalesGoalsSettings />} />
+          <Route path="/settings/inventory-reasons" element={<InventoryReasonsSettings />} />
           <Route path="/settings/notifications" element={<NotificationsSettings />} />
           <Route path="/settings/backup" element={<BackupSettings />} />
           <Route path="/settings/appearance" element={<AppearanceSettings />} />

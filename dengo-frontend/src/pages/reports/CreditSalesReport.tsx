@@ -14,7 +14,6 @@ import { toast } from 'sonner'
 export default function CreditSalesReport() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const isAdmin = user?.role === 'ADMIN'
 
   const [loading, setLoading] = useState(false)
   const [customers, setCustomers] = useState<any[]>([])
@@ -22,9 +21,12 @@ export default function CreditSalesReport() {
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState<'customers' | 'transactions'>('customers')
 
-  // Payment modal
+  // Payment modal — always a single abono against a customer's overall
+  // balance, applied oldest-invoice-first by the backend. paymentCustomerSales
+  // is read-only context (how much is owed, across how many invoices), never
+  // a picker — abonos aren't registered per-document.
   const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [paymentSale, setPaymentSale] = useState<any | null>(null)
+  const [paymentCustomer, setPaymentCustomer] = useState<{ id: string; name: string } | null>(null)
   const [paymentCustomerSales, setPaymentCustomerSales] = useState<any[]>([]) // all unpaid sales for a customer
   const [payAmount, setPayAmount] = useState('')
   const [payMethod, setPayMethod] = useState<'CASH' | 'TRANSFER'>('CASH')
@@ -53,11 +55,12 @@ export default function CreditSalesReport() {
     } catch { setCustomers([]); setCreditSales([]) } finally { setLoading(false) }
   }
 
-  const openPaymentForCustomer = async (customerId: string) => {
+  const openPaymentForCustomer = async (customerId: string, customerName: string) => {
     const sales = creditSales.filter(s => s.customerId === customerId && !s.isPaid && !s.isVoided)
+    setPaymentCustomer({ id: customerId, name: customerName })
     setPaymentCustomerSales(sales)
-    setPaymentSale(sales[0] ?? null)
-    // Load all credit payments for this customer's sales
+    // Load all credit payments for this customer's outstanding sales, for the
+    // history list below the form — informational only.
     const allPayments: any[] = []
     for (const s of sales) {
       try {
@@ -74,47 +77,47 @@ export default function CreditSalesReport() {
     setShowPaymentModal(true)
   }
 
-  const openPaymentForSale = async (sale: any) => {
-    setPaymentCustomerSales([sale])
-    setPaymentSale(sale)
-    try {
-      const ps = await api.get<any[]>(`/api/sales/${sale.id}/payments`)
-      setPaymentHistory((ps ?? []).map(p => ({ ...p, invoiceNumber: sale.invoiceNumber })))
-    } catch { setPaymentHistory([]) }
-    setPayAmount('')
-    setPayMethod('CASH')
-    setPayTransferDoc('')
-    setPayBank('')
-    setPayNotes('')
-    setShowPaymentModal(true)
+  // Opening from a specific transaction row still lands on the same
+  // customer-level abono — there's no per-invoice payment anymore.
+  const openPaymentForSale = (sale: any) => {
+    const customerId = sale.customerId ?? sale.customer?.id
+    if (customerId) openPaymentForCustomer(customerId, sale.customer?.name ?? '')
   }
 
+  const customerTotalRemaining = paymentCustomerSales.reduce(
+    (s, sale) => s + Math.max(0, Number(sale.total) - Number(sale.paidAmount ?? 0)), 0
+  )
+
   const handlePay = async () => {
-    if (!paymentSale) return
+    if (!paymentCustomer) return
     const amount = parseFloat(payAmount)
     if (!amount || amount <= 0) { toast.error('Ingresa un monto válido'); return }
+    if (amount > customerTotalRemaining + 0.001) {
+      toast.error(`El abono excede el saldo pendiente (Q${customerTotalRemaining.toFixed(2)})`)
+      return
+    }
     if (payMethod === 'TRANSFER' && !payTransferDoc.trim()) {
       toast.error('Ingresa el número de documento de transferencia')
       return
     }
     setPaying(true)
     try {
-      const payment = await api.post<any>(`/api/sales/${paymentSale.id}/payments`, {
+      const result = await api.post<{ payments: any[]; salesAffected: number }>(`/api/customers/${paymentCustomer.id}/credit-payment`, {
         amount,
         paymentMethod: payMethod,
         transferDocumentNumber: payMethod === 'TRANSFER' ? payTransferDoc : undefined,
         transferBank: payMethod === 'TRANSFER' ? payBank : undefined,
         notes: payNotes || undefined,
       })
-      toast.success(`Abono de Q${amount.toFixed(2)} registrado`)
-      setPaymentHistory(prev => [...prev, { ...payment, invoiceNumber: paymentSale.invoiceNumber }])
+      toast.success(`Abono de Q${amount.toFixed(2)} registrado — aplicado a ${result.salesAffected} factura${result.salesAffected === 1 ? '' : 's'}`)
+      setPaymentHistory(prev => [...prev, ...result.payments])
       setPayAmount('')
       setPayTransferDoc('')
       setPayBank('')
       setPayNotes('')
       fetchData() // refresh balances
-    } catch (e: any) {
-      toast.error(e?.message ?? 'Error al registrar abono')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al registrar abono')
     } finally { setPaying(false) }
   }
 
@@ -143,12 +146,6 @@ export default function CreditSalesReport() {
   const totalCreditBalance = enriched.reduce((s, c) => s + c.balance, 0)
   const overdueCount = enriched.filter(c => c.status === 'warning').length
   const totalCreditLimit = enriched.reduce((s, c) => s + c.creditLimit, 0)
-
-  // Remaining on selected sale
-  const selectedSalePaid = paymentHistory
-    .filter(p => p.invoiceNumber === paymentSale?.invoiceNumber)
-    .reduce((s, p) => s + Number(p.amount), 0)
-  const selectedSaleRemaining = paymentSale ? Math.max(0, Number(paymentSale.total) - selectedSalePaid) : 0
 
   return (
     <div className="space-y-6">
@@ -231,7 +228,7 @@ export default function CreditSalesReport() {
                           <td className="px-4 py-2.5">
                             {c.balance > 0 && (
                               <button
-                                onClick={() => openPaymentForCustomer(c.id)}
+                                onClick={() => openPaymentForCustomer(c.id, c.name)}
                                 className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
                               >
                                 <Plus size={12} /> Abonar
@@ -310,42 +307,23 @@ export default function CreditSalesReport() {
             <div className="flex items-center justify-between px-5 py-4 border-b">
               <div>
                 <h2 className="font-semibold text-gray-800">Registrar Abono</h2>
-                {paymentSale && (
-                  <p className="text-xs text-gray-400">{paymentSale.invoiceNumber} — {paymentSale.customer?.name}</p>
+                {paymentCustomer && (
+                  <p className="text-xs text-gray-400">{paymentCustomer.name}</p>
                 )}
               </div>
               <button onClick={() => setShowPaymentModal(false)}><X size={18} /></button>
             </div>
             <div className="p-5 space-y-4">
-              {/* Sale selector if multiple */}
-              {paymentCustomerSales.length > 1 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Venta a abonar</label>
-                  <select
-                    value={paymentSale?.id ?? ''}
-                    onChange={e => setPaymentSale(paymentCustomerSales.find(s => s.id === e.target.value) ?? null)}
-                    className="input w-full"
-                  >
-                    {paymentCustomerSales.map(s => (
-                      <option key={s.id} value={s.id}>
-                        {s.invoiceNumber} — Pendiente: Q{Math.max(0, Number(s.total) - Number(s.paidAmount ?? 0)).toFixed(2)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {paymentSale && (
-                <div className="bg-orange-50 rounded-lg p-3 text-sm">
-                  <div className="flex justify-between"><span className="text-gray-500">Total venta</span><span className="font-medium">Q{Number(paymentSale.total).toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Ya pagado</span><span className="text-green-600">Q{(Number(paymentSale.total) - selectedSaleRemaining).toFixed(2)}</span></div>
-                  <div className="flex justify-between font-bold border-t mt-1 pt-1"><span>Pendiente</span><span className="text-orange-600">Q{selectedSaleRemaining.toFixed(2)}</span></div>
-                </div>
-              )}
+              <div className="bg-orange-50 rounded-lg p-3 text-sm">
+                <div className="flex justify-between font-bold"><span>Saldo pendiente</span><span className="text-orange-600">Q{customerTotalRemaining.toFixed(2)}</span></div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {paymentCustomerSales.length} factura{paymentCustomerSales.length === 1 ? '' : 's'} — el abono se aplica primero a la más antigua, luego a la siguiente, hasta agotar el monto.
+                </p>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Monto del abono *</label>
-                <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder={`Máx. Q${selectedSaleRemaining.toFixed(2)}`} className="input w-full" min="0.01" step="0.01" />
+                <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder={`Máx. Q${customerTotalRemaining.toFixed(2)}`} className="input w-full" min="0.01" max={customerTotalRemaining} step="0.01" />
               </div>
 
               <div>
@@ -419,7 +397,6 @@ export default function CreditSalesReport() {
 
       <AIRecommendations
         reportData={{ type: 'credit_sales', data: { totalCredit: totalCreditBalance, outstanding: overdueCount, totalLimit: totalCreditLimit, customers: enriched.length } }}
-        autoGenerate={customers.length > 0}
       />
     </div>
   )

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../store'
-import { useStore } from '../../contexts/StoreContext'
 
 export type ReportFilterState = {
   branchId: string
@@ -16,7 +15,6 @@ interface Props {
 
 export default function ReportFilters({ value, onChange, showRegister = true }: Props) {
   const { user } = useAuthStore()
-  const { currentStore } = useStore()
   const isAdmin = user?.role === 'ADMIN'
   const [branches, setBranches] = useState<any[]>([])
   const [registers, setRegisters] = useState<any[]>([])

@@ -85,8 +85,8 @@ export default function PortalConsolidated() {
       toast.success('Registro actualizado')
       setEditing(null)
       fetchData()
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al actualizar')
     } finally {
       setSaving(false)
     }

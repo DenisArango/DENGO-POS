@@ -3,8 +3,10 @@ import { motion } from 'framer-motion'
 import {
   Settings as SettingsIcon, Users, Shield, Building2,
   CreditCard, Bell, Database, Palette, Globe,
-  Key, ChevronRight, Lock, UserCog, Store
+  ChevronRight, Lock, Store, Target, PackagePlus
 } from 'lucide-react'
+import { useAuthStore } from '../store'
+import { usePermissions } from '../hooks/usePermissions'
 
 interface SettingCard {
   id: string
@@ -14,7 +16,12 @@ interface SettingCard {
   path: string
   color: string
   category: 'general' | 'security' | 'system'
-  requiredRole?: string[]
+  // Most cards map to a real permission key checked server-side by the
+  // screen they lead to. A few (Respaldos, Seguridad) have no backend route
+  // at all yet, so there's no permission key for them — those fall back to
+  // the user's actual ADMIN role instead of a fake simulated one.
+  requiredPermission?: string
+  adminOnly?: boolean
 }
 
 const settingCards: SettingCard[] = [
@@ -26,7 +33,7 @@ const settingCards: SettingCard[] = [
     path: '/settings/users',
     color: 'bg-blue-500',
     category: 'security',
-    requiredRole: ['admin']
+    requiredPermission: 'settings.users'
   },
   {
     id: 'roles',
@@ -36,7 +43,7 @@ const settingCards: SettingCard[] = [
     path: '/settings/roles',
     color: 'bg-purple-500',
     category: 'security',
-    requiredRole: ['admin']
+    requiredPermission: 'settings.roles'
   },
   {
     id: 'stores',
@@ -46,7 +53,7 @@ const settingCards: SettingCard[] = [
     path: '/settings/stores',
     color: 'bg-green-500',
     category: 'general',
-    requiredRole: ['admin']
+    requiredPermission: 'settings.stores'
   },
   {
     id: 'company',
@@ -56,7 +63,27 @@ const settingCards: SettingCard[] = [
     path: '/settings/company',
     color: 'bg-orange-500',
     category: 'general',
-    requiredRole: ['admin']
+    requiredPermission: 'settings.system'
+  },
+  {
+    id: 'sales-goals',
+    title: 'Metas de Venta',
+    description: 'Configurar la meta mensual de ventas por sucursal',
+    icon: Target,
+    path: '/settings/sales-goals',
+    color: 'bg-cyan-500',
+    category: 'general',
+    requiredPermission: 'goals.manage'
+  },
+  {
+    id: 'inventory-reasons',
+    title: 'Motivos de Ajuste',
+    description: 'Motivos que se pueden elegir al subir o bajar inventario manualmente',
+    icon: PackagePlus,
+    path: '/settings/inventory-reasons',
+    color: 'bg-lime-500',
+    category: 'general',
+    requiredPermission: 'inventory.adjust'
   },
   {
     id: 'payment-methods',
@@ -66,7 +93,7 @@ const settingCards: SettingCard[] = [
     path: '/settings/payment-methods',
     color: 'bg-teal-500',
     category: 'general',
-    requiredRole: ['admin', 'manager']
+    requiredPermission: 'settings.system'
   },
   {
     id: 'notifications',
@@ -85,7 +112,7 @@ const settingCards: SettingCard[] = [
     path: '/settings/backup',
     color: 'bg-red-500',
     category: 'system',
-    requiredRole: ['admin']
+    adminOnly: true
   },
   {
     id: 'appearance',
@@ -113,7 +140,7 @@ const settingCards: SettingCard[] = [
     path: '/settings/security',
     color: 'bg-gray-600',
     category: 'security',
-    requiredRole: ['admin']
+    adminOnly: true
   }
 ]
 
@@ -125,17 +152,17 @@ const categories = [
 
 export default function Settings() {
   const navigate = useNavigate()
-  
-  // Simular rol del usuario actual
-  const currentUserRole = 'admin' // Esto vendría del contexto/store de autenticación
+  const { user } = useAuthStore()
+  const { hasPermission } = usePermissions()
 
   const handleCardClick = (path: string) => {
     navigate(path)
   }
 
-  const canAccessSetting = (requiredRoles?: string[]) => {
-    if (!requiredRoles) return true
-    return requiredRoles.includes(currentUserRole)
+  const canAccessSetting = (card: SettingCard) => {
+    if (card.requiredPermission) return hasPermission(card.requiredPermission)
+    if (card.adminOnly) return user?.role === 'ADMIN'
+    return true
   }
 
   return (
@@ -160,7 +187,7 @@ export default function Settings() {
             {settingCards
               .filter(card => card.category === category.id)
               .map((card, index) => {
-                const hasAccess = canAccessSetting(card.requiredRole)
+                const hasAccess = canAccessSetting(card)
                 
                 return (
                   <motion.div

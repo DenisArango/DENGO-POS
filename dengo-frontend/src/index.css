@@ -93,7 +93,9 @@
   }
 
   #receipt-content,
-  #receipt-content * {
+  #receipt-content *,
+  #thermal-receipt-content,
+  #thermal-receipt-content * {
     visibility: visible;
   }
 
@@ -104,8 +106,23 @@
     width: 100%;
   }
 
+  /* #thermal-receipt-content renders at width: 100% (see ThermalReceipt.tsx)
+     so it always fills whatever page width the printer driver actually
+     hands back, instead of a fixed mm figure GDI thermal drivers don't
+     translate 1:1 onto the physical roll. */
+  #thermal-receipt-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
   .print\\:hidden {
     display: none !important;
+  }
+
+  .print\\:block {
+    display: block !important;
   }
 
   /* Forzar colores en impresión */

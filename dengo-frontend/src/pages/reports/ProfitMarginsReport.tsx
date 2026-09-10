@@ -9,6 +9,20 @@ import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
 
+interface ProductMargin {
+  rank: number
+  productId: string
+  name: string
+  category: string
+  sku: string
+  cost: number
+  quantitySold: number
+  revenue: number
+  totalCost: number
+  profit: number
+  marginPercent: number
+}
+
 export default function ProfitMarginsReport() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
@@ -16,7 +30,7 @@ export default function ProfitMarginsReport() {
   const [from, setFrom] = useState(format(subDays(new Date(), 29), 'yyyy-MM-dd'))
   const [to, setTo] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [loading, setLoading] = useState(false)
-  const [products, setProducts] = useState<any[]>([])
+  const [products, setProducts] = useState<ProductMargin[]>([])
   const [minMargin, setMinMargin] = useState('')
   const [filters, setFilters] = useState<ReportFilterState>({ branchId: currentStore?.id ?? user?.branchId ?? '', cashRegisterId: '' })
 
@@ -27,7 +41,7 @@ export default function ProfitMarginsReport() {
     try {
       const branchQ = filters.branchId ? `&branchId=${filters.branchId}` : ''
       const regQ = filters.cashRegisterId ? `&cashRegisterId=${filters.cashRegisterId}` : ''
-      const data = await api.get<any[]>(`/api/reports/sales-by-product?from=${from}T00:00:00&to=${to}T23:59:59${branchQ}${regQ}&limit=100`)
+      const data = await api.get<ProductMargin[]>(`/api/reports/sales-by-product?from=${from}T00:00:00&to=${to}T23:59:59${branchQ}${regQ}&limit=100`)
       setProducts(data ?? [])
     } catch { setProducts([]) } finally { setLoading(false) }
   }
@@ -179,7 +193,6 @@ export default function ProfitMarginsReport() {
 
       <AIRecommendations
         reportData={{ type: 'profit_margins', data: { totalRevenue, avgMargin, products: filtered.slice(0, 10) } }}
-        autoGenerate={products.length > 0}
       />
     </div>
   )

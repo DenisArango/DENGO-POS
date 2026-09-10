@@ -111,7 +111,6 @@ export default function InventoryAdjustmentsReport() {
 
       <AIRecommendations
         reportData={{ type: 'inventory_adjustments', data: { total: totalAdj, positives: positives.length, negatives: negatives.length, adjustments: movements } }}
-        autoGenerate={movements.length > 0}
       />
     </div>
   )

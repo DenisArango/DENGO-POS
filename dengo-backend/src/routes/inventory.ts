@@ -2,13 +2,16 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { updateStock, setStock } from '../services/inventory.service.js'
+import { resolveBranchScope, canAccessBranch } from '../lib/branch-scope.js'
+import { hasPermission, requirePermission } from '../lib/permissions.js'
 
 export default async function inventoryRoutes(fastify: FastifyInstance) {
   // GET /api/inventory?branchId=
-  fastify.get('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
     const q = request.query as { branchId?: string }
+    const branchId = resolveBranchScope(request, q.branchId)
     const inventory = await prisma.inventory.findMany({
-      where: q.branchId ? { branchId: q.branchId } : {},
+      where: branchId ? { branchId } : {},
       include: {
         product: { include: { category: true, baseUnit: true } },
         branch: { select: { id: true, name: true } },
@@ -19,11 +22,12 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/inventory/movements
-  fastify.get('/movements', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/movements', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
     const q = request.query as { branchId?: string; productId?: string; from?: string; to?: string; type?: string }
+    const branchId = resolveBranchScope(request, q.branchId)
     const movements = await prisma.stockMovement.findMany({
       where: {
-        ...(q.branchId ? { branchId: q.branchId } : {}),
+        ...(branchId ? { branchId } : {}),
         ...(q.productId ? { productId: q.productId } : {}),
         ...(q.type ? { type: q.type as any } : {}),
         ...(q.from || q.to ? {
@@ -45,8 +49,9 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/inventory/:productId/:branchId
-  fastify.get('/:productId/:branchId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/:productId/:branchId', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
     const { productId, branchId } = request.params as { productId: string; branchId: string }
+    if (!canAccessBranch(request, branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
     const inv = await prisma.inventory.findUnique({
       where: { productId_branchId: { productId, branchId } },
       include: { product: true, branch: true },
@@ -57,6 +62,8 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
   // PUT /api/inventory/:productId/:branchId  (manual adjustment)
   fastify.put('/:productId/:branchId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { productId, branchId } = request.params as { productId: string; branchId: string }
+    if (!canAccessBranch(request, branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
+    if (!hasPermission(request, 'inventory.adjust')) return reply.status(403).send({ error: 'Acceso denegado' })
     const body = z.object({
       quantity: z.number().min(0),
       reason: z.string().optional(),
@@ -81,6 +88,8 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
       reason: z.string().optional(),
     }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+    if (!canAccessBranch(request, body.data.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
+    if (!hasPermission(request, 'inventory.adjust')) return reply.status(403).send({ error: 'Acceso denegado' })
 
     const delta = body.data.type === 'OUT' ? -body.data.quantity : body.data.quantity
     await updateStock(body.data.productId, body.data.branchId, delta, {
@@ -105,6 +114,8 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
       notes: z.string().optional(),
     }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+    if (!canAccessBranch(request, body.data.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
+    if (!hasPermission(request, 'purchases.receive')) return reply.status(403).send({ error: 'Acceso denegado' })
 
     // Resolve supplier name for the reason field
     let supplierName = ''

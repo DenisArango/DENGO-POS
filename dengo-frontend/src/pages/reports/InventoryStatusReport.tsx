@@ -24,41 +24,76 @@ function getStatus(quantity: number, minStock: number, maxStock: number): keyof 
   return 'normal'
 }
 
+interface InventoryRow {
+  id: string
+  productId: string
+  branchId: string
+  quantity: number
+  hasHistoricalData?: boolean
+  product?: {
+    name?: string
+    minStock?: number
+    maxStock?: number
+    cost?: number
+    category?: { name?: string }
+    baseUnit?: { symbol?: string }
+  }
+}
+
+interface EnrichedRow extends InventoryRow {
+  quantity: number
+  minStock: number
+  maxStock: number
+  cost: number
+  status: keyof typeof STATUS_CONFIG
+}
+
 export default function InventoryStatusReport() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const { currentStore } = useStore()
   const [loading, setLoading] = useState(false)
-  const [inventory, setInventory] = useState<any[]>([])
+  const [inventory, setInventory] = useState<InventoryRow[]>([])
   const [filterStatus, setFilterStatus] = useState('')
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState<ReportFilterState>({ branchId: currentStore?.id ?? user?.branchId ?? '', cashRegisterId: '' })
+  const [asOf, setAsOf] = useState('') // YYYY-MM-DD, empty = live stock
 
-  useEffect(() => { fetchData() }, [filters])
+  useEffect(() => { fetchData() }, [filters, asOf])
 
   async function fetchData() {
     setLoading(true)
     try {
-      const branchQ = filters.branchId ? `?branchId=${filters.branchId}` : ''
-      const data = await api.get<any[]>(`/api/reports/inventory-status${branchQ}`)
+      const params = new URLSearchParams()
+      if (filters.branchId) params.set('branchId', filters.branchId)
+      if (asOf) params.set('asOf', asOf)
+      const data = await api.get<InventoryRow[]>(`/api/reports/inventory-status?${params.toString()}`)
       setInventory(data ?? [])
     } catch { setInventory([]) } finally { setLoading(false) }
   }
 
-  const enriched = inventory.map(inv => ({
-    ...inv,
-    quantity: Number(inv.quantity),
-    minStock: Number(inv.product?.minStock ?? 0),
-    maxStock: Number(inv.product?.maxStock ?? 0),
-    cost: Number(inv.product?.cost ?? 0),
-    status: getStatus(Number(inv.quantity), Number(inv.product?.minStock ?? 0), Number(inv.product?.maxStock ?? 0)),
-  }))
+  // hasHistoricalData is only present when asOf is set — a row missing it
+  // predates this branch's stock tracking, so its quantity (backend reports
+  // it as 0) isn't a real "out of stock", just an unknown. Excluded from the
+  // status classification below so it doesn't skew the summary as a false alert.
+  const withoutData = asOf ? inventory.filter(inv => inv.hasHistoricalData === false) : []
+  const enriched: EnrichedRow[] = inventory
+    .filter(inv => !asOf || inv.hasHistoricalData !== false)
+    .map(inv => ({
+      ...inv,
+      quantity: Number(inv.quantity),
+      minStock: Number(inv.product?.minStock ?? 0),
+      maxStock: Number(inv.product?.maxStock ?? 0),
+      cost: Number(inv.product?.cost ?? 0),
+      status: getStatus(Number(inv.quantity), Number(inv.product?.minStock ?? 0), Number(inv.product?.maxStock ?? 0)),
+    }))
 
   const filtered = enriched.filter(inv => {
     const matchSearch = !search || (inv.product?.name ?? '').toLowerCase().includes(search.toLowerCase())
     const matchStatus = !filterStatus || inv.status === filterStatus
     return matchSearch && matchStatus
   })
+  const filteredNoData = withoutData.filter(inv => !search || (inv.product?.name ?? '').toLowerCase().includes(search.toLowerCase()))
 
   const statusCounts = Object.keys(STATUS_CONFIG).reduce((acc, k) => {
     acc[k] = enriched.filter(i => i.status === k).length
@@ -78,8 +113,25 @@ export default function InventoryStatusReport() {
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft size={20} /></button>
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Estado de Inventario</h1>
-          <p className="text-gray-600 text-sm mt-0.5">Niveles de stock actuales por producto</p>
+          <p className="text-gray-600 text-sm mt-0.5">
+            {asOf ? `Niveles de stock al cierre del ${asOf}` : 'Niveles de stock actuales por producto'}
+          </p>
         </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm p-4 flex flex-wrap items-center gap-3">
+        <label className="text-sm text-gray-600 flex items-center gap-2">
+          Ver inventario al día:
+          <input type="date" value={asOf} onChange={e => setAsOf(e.target.value)} className="input" max={new Date().toISOString().slice(0, 10)} />
+        </label>
+        {asOf && (
+          <button onClick={() => setAsOf('')} className="btn-outline btn-sm">Volver a hoy</button>
+        )}
+        {asOf && (
+          <p className="text-xs text-gray-400">
+            Reconstruido a partir del historial de movimientos de stock — productos sin movimientos antes de esta fecha se muestran aparte, no como agotados.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -140,7 +192,7 @@ export default function InventoryStatusReport() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filtered.length === 0
+                {filtered.length === 0 && filteredNoData.length === 0
                   ? <tr><td colSpan={5} className="text-center py-8 text-gray-400">Sin productos</td></tr>
                   : filtered.map(inv => {
                       const cfg = STATUS_CONFIG[inv.status]
@@ -157,6 +209,16 @@ export default function InventoryStatusReport() {
                       )
                     })
                 }
+                {filteredNoData.map(inv => (
+                  <tr key={inv.id} className="opacity-60">
+                    <td className="px-4 py-2.5 font-medium text-gray-800">{inv.product?.name}</td>
+                    <td className="px-4 py-2.5 text-gray-500 text-xs">{inv.product?.category?.name ?? '–'}</td>
+                    <td className="px-4 py-2.5 text-right text-gray-400 italic" colSpan={2}>Sin datos antes de esta fecha</td>
+                    <td className="px-4 py-2.5 text-center">
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Sin datos</span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -165,7 +227,6 @@ export default function InventoryStatusReport() {
 
       <AIRecommendations
         reportData={{ type: 'inventory_status', data: { lowStock: statusCounts['low'] ?? 0, overstock: statusCounts['overstock'] ?? 0, totalProducts: enriched.length, totalValue } }}
-        autoGenerate={inventory.length > 0}
       />
     </div>
   )

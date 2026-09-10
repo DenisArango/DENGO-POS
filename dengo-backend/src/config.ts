@@ -36,7 +36,14 @@ export const config = {
 
   jwt: {
     secret: required('JWT_SECRET'),
-    expiresIn: process.env['JWT_EXPIRES_IN'] ?? '8h',
+    // One login covers a full calendar day, not just an 8h shift — a
+    // register closed at day's end and synced offline needs its token to
+    // still be valid whenever the cashier reopens the browser next (often
+    // the next morning, well past 8h). offlineSync.ts also no longer loses
+    // a queued sale/close to an expired token (retries once re-authenticated
+    // instead of marking it failed), so this is a complementary reduction
+    // in how often that path is even needed, not the only fix for it.
+    expiresIn: process.env['JWT_EXPIRES_IN'] ?? '24h',
   },
 
   cors: {

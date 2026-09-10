@@ -103,8 +103,8 @@ export default function PortalProgramOptions() {
       }
       setShowOptionModal(false)
       fetchOptions()
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al guardar')
     } finally {
       setOptionBusy(false)
     }
@@ -116,8 +116,8 @@ export default function PortalProgramOptions() {
       await api.delete(`/api/portal-admin/program-options/${opt.id}`)
       toast.success('Opción eliminada')
       fetchOptions()
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al eliminar')
     }
   }
 
@@ -141,8 +141,8 @@ export default function PortalProgramOptions() {
       toast.success(`${product.name} agregado`)
       setItemQty(prev => ({ ...prev, [product.id]: '' }))
       fetchOptions()
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al agregar producto')
     } finally {
       setAddingProductId(null)
     }
@@ -153,8 +153,8 @@ export default function PortalProgramOptions() {
     try {
       await api.delete(`/api/portal-admin/program-options/${optId}/items/${itemId}`)
       fetchOptions()
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al eliminar producto')
     } finally {
       setRemovingItemId(null)
     }

@@ -2,15 +2,15 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Users, Plus, Search, Edit, Trash2,
-  Phone, Mail, MapPin, Calendar, Package,
-  DollarSign, Clock, Building2, FileText,
-  TrendingUp, AlertCircle, CheckCircle, ChevronDown,
-  Star, MoreVertical, Download, Eye, XCircle
+  Phone, Mail, MapPin, Building2,
+  AlertCircle, CheckCircle,
+  Star, Download, Eye, XCircle
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { api } from '../lib/api'
+import { usePermissions } from '../hooks/usePermissions'
 
 interface Supplier {
   id: string
@@ -32,10 +32,14 @@ interface Supplier {
 }
 
 export default function Suppliers() {
+  const { hasPermission } = usePermissions()
+  const canCreate = hasPermission('suppliers.create')
+  const canEdit = hasPermission('suppliers.edit')
+  const canDelete = hasPermission('suppliers.delete')
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedStatus, setSelectedStatus] = useState<string>('all')
+  const [selectedStatus, setSelectedStatus] = useState<string>('active')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
@@ -58,15 +62,16 @@ export default function Suppliers() {
     isActive: true
   })
 
-  const fetchSuppliers = () => {
+  const fetchSuppliers = (status: string) => {
     setLoading(true)
-    api.get<Supplier[]>('/api/suppliers')
+    const qs = status === 'all' ? '?isActive=all' : `?isActive=${status === 'active'}`
+    api.get<Supplier[]>(`/api/suppliers${qs}`)
       .then(setSuppliers)
       .catch(e => toast.error(e.message))
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchSuppliers() }, [])
+  useEffect(() => { fetchSuppliers(selectedStatus) }, [selectedStatus])
 
   const handleCreateSupplier = () => {
     setFormData({
@@ -125,7 +130,7 @@ export default function Suppliers() {
         .then(() => {
           toast.success('Proveedor actualizado correctamente')
           setShowEditModal(false)
-          fetchSuppliers()
+          fetchSuppliers(selectedStatus)
         })
         .catch(e => toast.error(e.message))
     } else {
@@ -133,7 +138,7 @@ export default function Suppliers() {
         .then(() => {
           toast.success('Proveedor creado correctamente')
           setShowCreateModal(false)
-          fetchSuppliers()
+          fetchSuppliers(selectedStatus)
         })
         .catch(e => toast.error(e.message))
     }
@@ -144,7 +149,7 @@ export default function Suppliers() {
       .then(() => {
         toast.success('Proveedor eliminado correctamente')
         setShowDeleteConfirm(null)
-        fetchSuppliers()
+        fetchSuppliers(selectedStatus)
       })
       .catch(e => toast.error(e.message))
   }
@@ -153,16 +158,13 @@ export default function Suppliers() {
     return isActive ? 'text-green-600 bg-green-100' : 'text-gray-600 bg-gray-100'
   }
 
-  const filteredSuppliers = suppliers.filter(supplier => {
-    const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         supplier.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         supplier.taxId.includes(searchTerm)
-    const matchesStatus = selectedStatus === 'all' ||
-                         (selectedStatus === 'active' && supplier.isActive) ||
-                         (selectedStatus === 'inactive' && !supplier.isActive)
-
-    return matchesSearch && matchesStatus
-  })
+  // Status filtering happens server-side now (see fetchSuppliers) — the
+  // fetched list already matches selectedStatus, only search stays client-side.
+  const filteredSuppliers = suppliers.filter(supplier =>
+    supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    supplier.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    supplier.taxId.includes(searchTerm)
+  )
 
   const stats = {
     total: suppliers.length,
@@ -195,13 +197,15 @@ export default function Suppliers() {
             <Download size={18} />
             Exportar
           </button>
-          <button
-            onClick={handleCreateSupplier}
-            className="btn-primary btn-md flex items-center gap-2"
-          >
-            <Plus size={18} />
-            Nuevo Proveedor
-          </button>
+          {canCreate && (
+            <button
+              onClick={handleCreateSupplier}
+              className="btn-primary btn-md flex items-center gap-2"
+            >
+              <Plus size={18} />
+              Nuevo Proveedor
+            </button>
+          )}
         </div>
       </div>
 
@@ -374,19 +378,23 @@ export default function Suppliers() {
                     <Eye size={16} />
                     Ver
                   </button>
-                  <button
-                    onClick={() => handleEditSupplier(supplier)}
-                    className="btn-primary btn-sm flex-1 flex items-center justify-center gap-2"
-                  >
-                    <Edit size={16} />
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => setShowDeleteConfirm(supplier.id)}
-                    className="btn-sm p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() => handleEditSupplier(supplier)}
+                      className="btn-primary btn-sm flex-1 flex items-center justify-center gap-2"
+                    >
+                      <Edit size={16} />
+                      Editar
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={() => setShowDeleteConfirm(supplier.id)}
+                      className="btn-sm p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -529,7 +537,7 @@ export default function Suppliers() {
                     <label className="label">Límite de Crédito</label>
                     <input
                       type="number"
-                      value={formData.creditLimit}
+                      value={formData.creditLimit === 0 ? '' : formData.creditLimit}
                       onChange={(e) => setFormData({ ...formData, creditLimit: Number(e.target.value) })}
                       className="input"
                       min="0"
@@ -723,15 +731,17 @@ export default function Suppliers() {
               >
                 Cerrar
               </button>
-              <button
-                onClick={() => {
-                  setShowDetailsModal(false)
-                  handleEditSupplier(selectedSupplier)
-                }}
-                className="btn-primary btn-md flex-1"
-              >
-                Editar Proveedor
-              </button>
+              {canEdit && (
+                <button
+                  onClick={() => {
+                    setShowDetailsModal(false)
+                    handleEditSupplier(selectedSupplier)
+                  }}
+                  className="btn-primary btn-md flex-1"
+                >
+                  Editar Proveedor
+                </button>
+              )}
             </div>
           </motion.div>
         </div>

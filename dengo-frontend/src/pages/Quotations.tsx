@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { api } from '../lib/api'
 import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
+import { usePermissions } from '../hooks/usePermissions'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type QuotationStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'CONVERTED'
@@ -114,6 +115,9 @@ export default function Quotations() {
   const { user } = useAuthStore()
   const { currentStore } = useStore()
   const branchId = currentStore?.id ?? user?.branchId ?? ''
+  const { hasPermission } = usePermissions()
+  const canManage = hasPermission('quotations.create')
+  const canConvert = hasPermission('quotations.convert')
 
   // View state
   const [view, setView] = useState<'list' | 'create'>('list')
@@ -431,7 +435,7 @@ export default function Quotations() {
                         type="number"
                         min={0}
                         step={0.01}
-                        value={item.unitPrice}
+                        value={item.unitPrice === 0 ? '' : item.unitPrice}
                         onChange={e => updateItemField(item.id, 'unitPrice', Number(e.target.value))}
                         className="input text-sm text-right w-20 py-1"
                       />
@@ -587,9 +591,11 @@ export default function Quotations() {
           </h1>
           <p className="text-gray-600 text-sm mt-1">Gestiona cotizaciones para tus clientes</p>
         </div>
-        <button onClick={() => setView('create')} className="btn-primary btn-md flex items-center gap-2">
-          <Plus size={20} /> Nueva Cotización
-        </button>
+        {canManage && (
+          <button onClick={() => setView('create')} className="btn-primary btn-md flex items-center gap-2">
+            <Plus size={20} /> Nueva Cotización
+          </button>
+        )}
       </div>
 
       {/* Loading */}
@@ -693,13 +699,13 @@ export default function Quotations() {
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Ver detalles">
                             <Eye size={16} />
                           </button>
-                          {quotation.status === 'DRAFT' && (
+                          {canManage && quotation.status === 'DRAFT' && (
                             <button onClick={() => handleSend(quotation.id)}
                               className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Enviar al cliente">
                               <Send size={16} />
                             </button>
                           )}
-                          {quotation.status === 'SENT' && (
+                          {canManage && quotation.status === 'SENT' && (
                             <>
                               <button onClick={() => handleAccept(quotation.id)}
                                 className="p-2 text-green-600 hover:bg-green-50 rounded-lg" title="Aceptada">
@@ -711,16 +717,18 @@ export default function Quotations() {
                               </button>
                             </>
                           )}
-                          {quotation.status === 'ACCEPTED' && (
+                          {canConvert && quotation.status === 'ACCEPTED' && (
                             <button onClick={() => handleConvert(quotation.id)}
                               className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg" title="Convertir a venta">
                               <DollarSign size={16} />
                             </button>
                           )}
-                          <button onClick={() => setShowDeleteConfirm(quotation.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Eliminar">
-                            <Trash2 size={16} />
-                          </button>
+                          {canManage && (
+                            <button onClick={() => setShowDeleteConfirm(quotation.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Eliminar">
+                              <Trash2 size={16} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </motion.tr>
@@ -803,7 +811,7 @@ export default function Quotations() {
 
             <div className="p-6 border-t flex gap-3 justify-end flex-wrap">
               <button onClick={() => setShowDetailsModal(false)} className="btn-secondary btn-md">Cerrar</button>
-              {selectedQuotation.status === 'DRAFT' && (
+              {canManage && selectedQuotation.status === 'DRAFT' && (
                 <>
                   <button onClick={() => handleSend(selectedQuotation.id)} className="btn-primary btn-md flex items-center gap-2">
                     <Send size={16} /> Enviar al Cliente
@@ -813,7 +821,7 @@ export default function Quotations() {
                   </button>
                 </>
               )}
-              {selectedQuotation.status === 'SENT' && (
+              {canManage && selectedQuotation.status === 'SENT' && (
                 <>
                   <button onClick={() => handleReject(selectedQuotation.id)}
                     className="btn-outline btn-md flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50">
@@ -824,7 +832,7 @@ export default function Quotations() {
                   </button>
                 </>
               )}
-              {selectedQuotation.status === 'ACCEPTED' && (
+              {canConvert && selectedQuotation.status === 'ACCEPTED' && (
                 <button onClick={() => handleConvert(selectedQuotation.id)} className="btn-primary btn-md flex items-center gap-2">
                   <DollarSign size={16} /> Convertir a Venta
                 </button>

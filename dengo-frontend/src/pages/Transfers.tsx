@@ -11,6 +11,7 @@ import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { api } from '../lib/api'
 import { useAuthStore } from '../store'
+import { usePermissions } from '../hooks/usePermissions'
 
 interface Branch {
   id: string
@@ -73,6 +74,11 @@ interface Transfer {
 
 export default function StoreTransfers() {
   const { user } = useAuthStore()
+  const { hasPermission } = usePermissions()
+  const canCreate = hasPermission('transfers.create')
+  const canApprove = hasPermission('transfers.approve')
+  const canReceive = hasPermission('transfers.receive')
+  const canReject = hasPermission('transfers.reject')
 
   const [view, setView] = useState<'list' | 'create'>('list')
   const [transfers, setTransfers] = useState<Transfer[]>([])
@@ -185,8 +191,6 @@ export default function StoreTransfers() {
       : (product.fullName ?? product.name)
     const code = product.barcode ?? product.sku ?? product.id
     const cost = Number(product.cost ?? product.unitCost ?? 0)
-    // Always use product.id — TRANSFER_ITEMS.PRODUCT_ID references PRODUCTS(ID), not PRODUCT_VARIATIONS
-    const productId = product.id
     // Use product+variation combo as dedup key so different variants are separate rows
     const dedupKey = variation && !variation.isDefault ? `${product.id}__${variation.id}` : product.id
 
@@ -620,13 +624,15 @@ export default function StoreTransfers() {
             <Download size={18} />
             Exportar
           </button>
-          <button
-            onClick={() => setView('create')}
-            className="btn-primary btn-md flex items-center gap-2"
-          >
-            <Plus size={18} />
-            Nueva Transferencia
-          </button>
+          {canCreate && (
+            <button
+              onClick={() => setView('create')}
+              className="btn-primary btn-md flex items-center gap-2"
+            >
+              <Plus size={18} />
+              Nueva Transferencia
+            </button>
+          )}
         </div>
       </div>
 
@@ -783,7 +789,7 @@ export default function StoreTransfers() {
                           >
                             <Eye size={18} className="text-gray-600" />
                           </button>
-                          {transfer.status === 'pending' && (
+                          {canApprove && transfer.status === 'pending' && (
                             <button
                               onClick={() => handleApproveTransfer(transfer)}
                               className="p-1 hover:bg-blue-50 rounded transition-colors"
@@ -792,7 +798,7 @@ export default function StoreTransfers() {
                               <Truck size={18} className="text-blue-600" />
                             </button>
                           )}
-                          {(transfer.status === 'in_transit' || transfer.status === 'approved') && (
+                          {canReceive && (transfer.status === 'in_transit' || transfer.status === 'approved') && (
                             <button
                               onClick={() => handleReceiveTransfer(transfer)}
                               className="p-1 hover:bg-green-50 rounded transition-colors"
@@ -931,15 +937,19 @@ export default function StoreTransfers() {
               <button onClick={() => setShowDetailsModal(false)} className="btn-outline btn-md flex-1">Cerrar</button>
               {selectedTransfer.status === 'pending' && (
                 <>
-                  <button onClick={() => handleRejectTransfer(selectedTransfer)} className="btn-danger btn-md">
-                    Rechazar
-                  </button>
-                  <button onClick={() => handleApproveTransfer(selectedTransfer)} className="btn-primary btn-md flex-1">
-                    Aprobar Transferencia
-                  </button>
+                  {canReject && (
+                    <button onClick={() => handleRejectTransfer(selectedTransfer)} className="btn-danger btn-md">
+                      Rechazar
+                    </button>
+                  )}
+                  {canApprove && (
+                    <button onClick={() => handleApproveTransfer(selectedTransfer)} className="btn-primary btn-md flex-1">
+                      Aprobar Transferencia
+                    </button>
+                  )}
                 </>
               )}
-              {(selectedTransfer.status === 'in_transit' || selectedTransfer.status === 'approved') && (
+              {canReceive && (selectedTransfer.status === 'in_transit' || selectedTransfer.status === 'approved') && (
                 <button onClick={() => handleReceiveTransfer(selectedTransfer)} className="btn-primary btn-md flex-1">
                   Confirmar Recepción
                 </button>

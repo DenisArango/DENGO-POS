@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { CartItem, User, Store, Customer, Product, Supplier, PurchaseOrder, Quotation } from '../types'
+import type { CartItem, User, Customer, Supplier, PurchaseOrder, Quotation } from '../types'
 
 interface AuthState {
   user: User | null

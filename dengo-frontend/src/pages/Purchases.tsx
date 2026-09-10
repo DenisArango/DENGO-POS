@@ -2,13 +2,14 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Search, ArrowLeft, Minus, Trash2, CheckCircle,
-  Package, TrendingUp, ChevronDown, ChevronRight, Edit2,
+  Package, TrendingUp, ChevronDown, ChevronRight, Edit2, X, UserPlus,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { api } from '../lib/api'
 import { useAuthStore } from '../store'
+import { usePermissions } from '../hooks/usePermissions'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface StockMovement {
@@ -70,6 +71,13 @@ interface IntakeItem {
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function Purchases() {
   const { user } = useAuthStore()
+  const { hasPermission } = usePermissions()
+  // The actual submit calls POST /api/inventory/intake, gated server-side by
+  // purchases.receive — the only permission this module has, since receiving
+  // is a single direct action with no purchase-order document behind it.
+  const canCreatePurchase = hasPermission('purchases.receive')
+  const canCreateSupplier = hasPermission('suppliers.create')
+  const canEditSupplier = hasPermission('suppliers.edit')
 
   const [view, setView] = useState<'list' | 'create'>('list')
 
@@ -85,7 +93,13 @@ export default function Purchases() {
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
-  const [suppliers, setSuppliers] = useState<{ id: string; name: string; code: string }[]>([])
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string; code: string; phone?: string; email?: string; contactName?: string }[]>([])
+
+  // Quick add/edit supplier (inline, without leaving the purchase)
+  const [showQuickSupplierModal, setShowQuickSupplierModal] = useState(false)
+  const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null)
+  const [quickSupplierForm, setQuickSupplierForm] = useState({ name: '', code: '', contactName: '', phone: '', email: '' })
+  const [savingQuickSupplier, setSavingQuickSupplier] = useState(false)
 
   // Product search
   const [posSearch, setPosSearch] = useState('')
@@ -119,6 +133,55 @@ export default function Purchases() {
       .then(d => setSuppliers(d ?? []))
       .catch(() => {})
   }, [])
+
+  const openQuickAddSupplier = () => {
+    setEditingSupplierId(null)
+    setQuickSupplierForm({ name: '', code: '', contactName: '', phone: '', email: '' })
+    setShowQuickSupplierModal(true)
+  }
+
+  const openQuickEditSupplier = () => {
+    const supplier = suppliers.find(s => s.id === selectedSupplierId)
+    if (!supplier) return
+    setEditingSupplierId(supplier.id)
+    setQuickSupplierForm({
+      name: supplier.name, code: supplier.code,
+      contactName: supplier.contactName ?? '', phone: supplier.phone ?? '', email: supplier.email ?? '',
+    })
+    setShowQuickSupplierModal(true)
+  }
+
+  const handleSaveQuickSupplier = async () => {
+    if (!quickSupplierForm.name.trim() || !quickSupplierForm.code.trim()) {
+      toast.error('Nombre y código son requeridos'); return
+    }
+    setSavingQuickSupplier(true)
+    try {
+      const payload: { name: string; code: string; contactName?: string; phone?: string; email?: string } = {
+        name: quickSupplierForm.name.trim(),
+        code: quickSupplierForm.code.trim(),
+        contactName: quickSupplierForm.contactName.trim() || undefined,
+        phone: quickSupplierForm.phone.trim() || undefined,
+        email: quickSupplierForm.email.trim() || undefined,
+      }
+      const saved = editingSupplierId
+        ? await api.put<typeof suppliers[number]>(`/api/suppliers/${editingSupplierId}`, payload)
+        : await api.post<typeof suppliers[number]>('/api/suppliers', payload)
+      if (editingSupplierId) {
+        setSuppliers(prev => prev.map(s => s.id === saved.id ? saved : s))
+        toast.success('Proveedor actualizado')
+      } else {
+        setSuppliers(prev => [...prev, saved])
+        setSelectedSupplierId(saved.id)
+        toast.success('Proveedor agregado')
+      }
+      setShowQuickSupplierModal(false)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al guardar proveedor')
+    } finally {
+      setSavingQuickSupplier(false)
+    }
+  }
 
   // ── Debounced search ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -256,8 +319,8 @@ export default function Purchases() {
       resetForm()
       setView('list')
       fetchMovements()
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al confirmar ingreso')
     } finally {
       setSaving(false)
     }
@@ -452,18 +515,30 @@ export default function Purchases() {
             {/* Supplier */}
             <div className="bg-white rounded-lg shadow-sm p-4">
               <h3 className="text-sm font-semibold text-gray-700 mb-2">Proveedor</h3>
-              <div className="relative">
-                <select
-                  value={selectedSupplierId}
-                  onChange={e => setSelectedSupplierId(e.target.value)}
-                  className="input w-full appearance-none pr-8"
-                >
-                  <option value="">Sin proveedor especificado</option>
-                  {suppliers.map(s => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <select
+                    value={selectedSupplierId}
+                    onChange={e => setSelectedSupplierId(e.target.value)}
+                    className="input w-full appearance-none pr-8"
+                  >
+                    <option value="">Sin proveedor especificado</option>
+                    {suppliers.map(s => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+                {canEditSupplier && selectedSupplierId && (
+                  <button onClick={openQuickEditSupplier} title="Editar proveedor" className="p-2 text-gray-400 hover:text-primary-600 hover:bg-gray-50 rounded-lg transition-colors">
+                    <Edit2 size={16} />
+                  </button>
+                )}
+                {canCreateSupplier && (
+                  <button onClick={openQuickAddSupplier} title="Nuevo proveedor" className="p-2 text-gray-400 hover:text-primary-600 hover:bg-gray-50 rounded-lg transition-colors">
+                    <UserPlus size={16} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -515,6 +590,75 @@ export default function Purchases() {
             </div>
           </div>
         </div>
+
+        {/* Quick add/edit supplier modal */}
+        <AnimatePresence>
+          {showQuickSupplierModal && (
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+              onClick={() => setShowQuickSupplierModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <UserPlus size={20} className="text-primary-600" /> {editingSupplierId ? 'Editar proveedor' : 'Nuevo proveedor'}
+                  </h3>
+                  <button onClick={() => setShowQuickSupplierModal(false)} className="text-gray-400 hover:text-gray-600">
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="label">Nombre *</label>
+                    <input type="text" value={quickSupplierForm.name}
+                      onChange={e => setQuickSupplierForm(f => ({ ...f, name: e.target.value }))}
+                      className="input w-full" placeholder="Nombre del proveedor" autoFocus />
+                  </div>
+                  <div>
+                    <label className="label">Código *</label>
+                    <input type="text" value={quickSupplierForm.code}
+                      onChange={e => setQuickSupplierForm(f => ({ ...f, code: e.target.value }))}
+                      className="input w-full" placeholder="PROV001" />
+                  </div>
+                  <div>
+                    <label className="label">Contacto</label>
+                    <input type="text" value={quickSupplierForm.contactName}
+                      onChange={e => setQuickSupplierForm(f => ({ ...f, contactName: e.target.value }))}
+                      className="input w-full" placeholder="Persona de contacto" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">Teléfono</label>
+                      <input type="tel" value={quickSupplierForm.phone}
+                        onChange={e => setQuickSupplierForm(f => ({ ...f, phone: e.target.value }))}
+                        className="input w-full" />
+                    </div>
+                    <div>
+                      <label className="label">Email</label>
+                      <input type="email" value={quickSupplierForm.email}
+                        onChange={e => setQuickSupplierForm(f => ({ ...f, email: e.target.value }))}
+                        className="input w-full" />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-5">
+                  <button onClick={() => setShowQuickSupplierModal(false)} className="flex-1 btn-outline btn-md" disabled={savingQuickSupplier}>
+                    Cancelar
+                  </button>
+                  <button onClick={handleSaveQuickSupplier} disabled={savingQuickSupplier} className="flex-1 btn-primary btn-md flex items-center justify-center gap-2">
+                    {savingQuickSupplier && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
+                    {editingSupplierId ? 'Guardar' : 'Agregar y seleccionar'}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Variation modal */}
         <AnimatePresence>
@@ -571,12 +715,14 @@ export default function Purchases() {
           <h1 className="text-2xl font-bold text-gray-800">Ingresos de Mercancía</h1>
           <p className="text-sm text-gray-500 mt-0.5">Registra entradas de productos al inventario</p>
         </div>
-        <button
-          onClick={() => { resetForm(); setSelectedBranchId(user?.branchId ?? ''); setView('create') }}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={18} /> Nuevo Ingreso
-        </button>
+        {canCreatePurchase && (
+          <button
+            onClick={() => { resetForm(); setSelectedBranchId(user?.branchId ?? ''); setView('create') }}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={18} /> Nuevo Ingreso
+          </button>
+        )}
       </div>
 
       {/* Stats */}

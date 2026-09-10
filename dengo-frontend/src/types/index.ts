@@ -4,17 +4,15 @@ export interface User {
   email: string
   name: string
   role: UserRole
+  branchId: string
+  branchIds?: string[]
+  permissions?: string[]
   branch: Store
   createdAt: string
   updatedAt: string
 }
 
-export enum UserRole {
-  ADMIN = 'ADMIN',
-  AUDITOR = 'AUDITOR',
-  INVENTORY_CONTROL = 'INVENTORY_CONTROL',
-  OPERATOR = 'OPERATOR'
-}
+export type UserRole = 'ADMIN' | 'AUDITOR' | 'INVENTORY_CONTROL' | 'OPERATOR'
 
 // Tipos de sucursal/tienda
 export interface Store {
@@ -30,6 +28,15 @@ export interface Store {
   status: 'active' | 'inactive' | 'maintenance'
   openTime: string
   closeTime: string
+  defaultCustomerId?: string
+  logo?: string
+  companyName?: string
+  companyTaxId?: string
+  companyTagline?: string
+  socialMediaName?: string
+  receiptWidthMm?: number
+  invoiceSeries?: string
+  salesReconciliationEnabled?: boolean
   config?: StoreConfig
   createdAt: string
   updatedAt: string
@@ -77,10 +84,8 @@ export interface ProductUnit {
   type: UnitType // DISCRETE, CONTINUOUS
 }
 
-export enum UnitType {
-  DISCRETE = 'DISCRETE', // Unidades enteras (piezas, cajas)
-  CONTINUOUS = 'CONTINUOUS' // Unidades fraccionables (metros, litros, kilos)
-}
+// DISCRETE = unidades enteras (piezas, cajas); CONTINUOUS = fraccionables (metros, litros, kilos)
+export type UnitType = 'DISCRETE' | 'CONTINUOUS'
 
 export interface ProductVariation {
   id: string
@@ -132,14 +137,7 @@ export interface StockMovement {
   createdAt: string
 }
 
-export enum MovementType {
-  IN = 'IN',
-  OUT = 'OUT',
-  ADJUSTMENT = 'ADJUSTMENT',
-  TRANSFER = 'TRANSFER',
-  SALE = 'SALE',
-  RETURN = 'RETURN'
-}
+export type MovementType = 'IN' | 'OUT' | 'ADJUSTMENT' | 'TRANSFER' | 'SALE' | 'RETURN'
 
 // Tipos de ventas
 export interface Sale {
@@ -178,18 +176,9 @@ export interface CartItem {
   discount?: number
 }
 
-export enum PaymentMethod {
-  CASH = 'CASH',
-  CARD = 'CARD',
-  TRANSFER = 'TRANSFER',
-  MIXED = 'MIXED',
-  CREDIT = 'CREDIT'
-}
+export type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'MIXED' | 'CREDIT'
 
-export enum SaleType {
-  CASH = 'CASH',
-  CREDIT = 'CREDIT'
-}
+export type SaleType = 'CASH' | 'CREDIT'
 
 export interface Customer {
   id: string
@@ -229,15 +218,9 @@ export interface CashMovement {
   createdAt: string
 }
 
-export enum CashMovementType {
-  INCOME = 'INCOME',
-  EXPENSE = 'EXPENSE'
-}
+export type CashMovementType = 'INCOME' | 'EXPENSE'
 
-export enum CashRegisterStatus {
-  OPEN = 'OPEN',
-  CLOSED = 'CLOSED'
-}
+export type CashRegisterStatus = 'OPEN' | 'CLOSED'
 
 // Tipos de transferencias
 export interface Transfer {
@@ -260,13 +243,7 @@ export interface TransferItem {
   quantity: number
 }
 
-export enum TransferStatus {
-  PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  IN_TRANSIT = 'IN_TRANSIT',
-  RECEIVED = 'RECEIVED',
-  REJECTED = 'REJECTED'
-}
+export type TransferStatus = 'PENDING' | 'APPROVED' | 'IN_TRANSIT' | 'RECEIVED' | 'REJECTED'
 
 // Tipos de proveedores
 export interface Supplier {
@@ -317,13 +294,9 @@ export interface PurchaseOrderItem {
   receivedQuantity?: number
 }
 
-export enum PurchaseOrderStatus {
-  DRAFT = 'DRAFT', // Borrador
-  PENDING = 'PENDING', // Pendiente de recibir
-  PARTIAL = 'PARTIAL', // Parcialmente recibido
-  RECEIVED = 'RECEIVED', // Recibido completo
-  CANCELLED = 'CANCELLED' // Cancelado
-}
+// DRAFT = borrador; PENDING = pendiente de recibir; PARTIAL = parcialmente recibido;
+// RECEIVED = recibido completo; CANCELLED = cancelado
+export type PurchaseOrderStatus = 'DRAFT' | 'PENDING' | 'PARTIAL' | 'RECEIVED' | 'CANCELLED'
 
 // Tipos de cotizaciones
 export interface Quotation {
@@ -355,14 +328,9 @@ export interface QuotationItem {
   total: number
 }
 
-export enum QuotationStatus {
-  DRAFT = 'DRAFT', // Borrador
-  SENT = 'SENT', // Enviada al cliente
-  ACCEPTED = 'ACCEPTED', // Aceptada
-  REJECTED = 'REJECTED', // Rechazada
-  EXPIRED = 'EXPIRED', // Vencida
-  CONVERTED = 'CONVERTED' // Convertida a venta
-}
+// DRAFT = borrador; SENT = enviada al cliente; ACCEPTED = aceptada; REJECTED = rechazada;
+// EXPIRED = vencida; CONVERTED = convertida a venta
+export type QuotationStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'CONVERTED'
 
 // Tipos para reportes
 export interface DashboardMetrics {

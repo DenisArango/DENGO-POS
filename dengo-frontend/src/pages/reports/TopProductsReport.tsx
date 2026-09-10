@@ -131,7 +131,6 @@ export default function TopProductsReport() {
 
       <AIRecommendations
         reportData={{ type: 'top_products', data: { totalRevenue, totalUnits, products: products.slice(0, 10) } }}
-        autoGenerate={products.length > 0}
       />
     </div>
   )

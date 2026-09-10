@@ -18,6 +18,12 @@ import {
 import { api } from '../lib/api'
 import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
+import { usePermissions } from '../hooks/usePermissions'
+import SalesGoalWidget from '../components/SalesGoalWidget'
+
+const ROLE_LABEL: Record<string, string> = {
+  ADMIN: 'Administrador', AUDITOR: 'Auditor', INVENTORY_CONTROL: 'Control de Inventario', OPERATOR: 'Cajero',
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,14 +39,18 @@ interface CategorySaleEntry {
   max: number
 }
 
-interface RecentTransaction {
-  id: string
-  customer: string
-  products: string
-  amount: string
-  time: string
-  method: string
-  methodColor: string
+interface WeekDayEntry {
+  label: string
+  date: string
+  amount: number
+  isToday: boolean
+}
+
+interface BranchSaleEntry {
+  branchId: string
+  branchName: string
+  total: number
+  count: number
 }
 
 interface InventoryAlert {
@@ -56,41 +66,25 @@ interface DashboardStats {
   dailyTransactions: number
   lowStockCount: number
   cashBalance: number
+  hasOpenRegister: boolean
   dailySalesChange?: number
   dailyTransactionsChange?: number
 }
 
-interface DashboardData {
-  stats: DashboardStats
-  hourlySales: HourlySaleEntry[]
-  categorySales: CategorySaleEntry[]
-  recentTransactions: RecentTransaction[]
-  inventoryAlerts: InventoryAlert[]
-}
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-// API values → Spanish label
-const PM_LABEL_MAP: Record<string, string> = {
-  CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia',
-  CREDIT: 'Crédito', MIXED: 'Mixto',
-}
-// API values → badge color
-const PM_COLOR_MAP: Record<string, string> = {
-  CASH: 'bg-green-100 text-green-700',
-  CARD: 'bg-blue-100 text-blue-700',
-  TRANSFER: 'bg-purple-100 text-purple-700',
-  CREDIT: 'bg-orange-100 text-orange-700',
-  MIXED: 'bg-gray-100 text-gray-700',
-}
+const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
+// `permission: null` = always visible (no view-gate on that route). Filtered
+// per-role in the component so a cashier, say, never sees a shortcut to a
+// page they'd just bounce off with a 403.
 const quickAccessLinks = [
-  { path: '/pos',           label: 'Punto de Venta', icon: ShoppingCart, color: 'text-primary-600 bg-primary-100' },
-  { path: '/inventory',     label: 'Inventario',     icon: Package,      color: 'text-green-600 bg-green-100' },
-  { path: '/purchases',     label: 'Compras',        icon: PlusCircle,   color: 'text-blue-600 bg-blue-100' },
-  { path: '/suppliers',     label: 'Proveedores',    icon: Truck,        color: 'text-orange-600 bg-orange-100' },
-  { path: '/reports',       label: 'Reportes',       icon: FileBarChart, color: 'text-purple-600 bg-purple-100' },
-  { path: '/cash-register', label: 'Caja',           icon: DollarSign,   color: 'text-yellow-600 bg-yellow-100' },
+  { path: '/pos',           label: 'Punto de Venta', icon: ShoppingCart, color: 'text-primary-600 bg-primary-100', permission: 'sales.create' },
+  { path: '/inventory',     label: 'Inventario',     icon: Package,      color: 'text-green-600 bg-green-100',     permission: 'inventory.view' },
+  { path: '/purchases',     label: 'Compras',        icon: PlusCircle,   color: 'text-blue-600 bg-blue-100',       permission: 'purchases.receive' },
+  { path: '/suppliers',     label: 'Proveedores',    icon: Truck,        color: 'text-orange-600 bg-orange-100',   permission: 'suppliers.view' },
+  { path: '/reports',       label: 'Reportes',       icon: FileBarChart, color: 'text-purple-600 bg-purple-100',   permission: 'reports.sales' },
+  { path: '/cash-register', label: 'Caja',           icon: DollarSign,   color: 'text-yellow-600 bg-yellow-100',   permission: 'cash.open' },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -122,37 +116,21 @@ function getAlertBadge(status: string) {
   }
 }
 
-function normaliseTransactions(raw: any[]): RecentTransaction[] {
-  return (raw ?? []).map((tx: any) => {
-    // If saleType is CREDIT, show Crédito regardless of paymentMethod
-    const rawKey = ((tx.paymentMethod ?? tx.method ?? 'CASH') as string).toUpperCase()
-    const isCredit = ((tx.saleType ?? '') as string).toUpperCase() === 'CREDIT'
-    const effectiveKey = isCredit ? 'CREDIT' : rawKey
+// Monday-start week containing `today`, one entry per day (future days get 0).
+function buildWeekEntries(dailySales: { date: string; total: number }[]): WeekDayEntry[] {
+  const byDate = new Map(dailySales.map(d => [d.date, d.total]))
+  const today = new Date()
+  const todayKey = today.toISOString().slice(0, 10)
+  const dow = today.getDay() // 0=Sun..6=Sat
+  const mondayOffset = dow === 0 ? -6 : 1 - dow
+  const monday = new Date(today)
+  monday.setDate(today.getDate() + mondayOffset)
 
-    const itemsLabel = Array.isArray(tx.items)
-      ? tx.items.map((i: any) => i.productName ?? i.name ?? '').filter(Boolean).join(', ')
-      : (tx.products ?? '')
-    const customerName =
-      tx.customer?.fullName ??
-      tx.customer?.name ??
-      tx.customerName ??
-      tx.customer ??
-      'Cliente general'
-    const amountLabel =
-      tx.total != null ? `Q${Number(tx.total).toFixed(2)}` : tx.amount ?? 'Q0.00'
-    const timeLabel =
-      tx.createdAt
-        ? new Date(tx.createdAt).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })
-        : (tx.time ?? '')
-    return {
-      id: tx.id ?? tx.receiptNumber ?? '',
-      customer: customerName,
-      products: itemsLabel,
-      amount: amountLabel,
-      time: timeLabel,
-      method: PM_LABEL_MAP[effectiveKey] ?? effectiveKey,
-      methodColor: PM_COLOR_MAP[effectiveKey] ?? 'bg-gray-100 text-gray-700',
-    }
+  return WEEKDAY_LABELS.map((label, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    const key = d.toISOString().slice(0, 10)
+    return { label, date: key, amount: byDate.get(key) ?? 0, isToday: key === todayKey }
   })
 }
 
@@ -223,11 +201,18 @@ export default function Dashboard() {
     dailyTransactions: 0,
     lowStockCount: 0,
     cashBalance: 0,
+    hasOpenRegister: false,
   })
   const [hourlySales, setHourlySales] = useState<HourlySaleEntry[]>([])
   const [categorySales, setCategorySales] = useState<CategorySaleEntry[]>([])
-  const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([])
+  const [weekSales, setWeekSales] = useState<WeekDayEntry[]>([])
+  const [branchSales, setBranchSales] = useState<BranchSaleEntry[]>([])
   const [inventoryAlerts, setInventoryAlerts] = useState<InventoryAlert[]>([])
+
+  const isAdmin = user?.role === 'ADMIN'
+  const { hasPermission } = usePermissions()
+  const visibleQuickAccessLinks = quickAccessLinks.filter(link => hasPermission(link.permission))
+  const canViewInventory = hasPermission('inventory.view')
 
   useEffect(() => {
     if (branchId) fetchDashboard()
@@ -237,7 +222,18 @@ export default function Dashboard() {
     setLoading(true)
     try {
       const branchQ = branchId ? `?branchId=${branchId}` : ''
-      const data = await api.get<any>(`/api/reports/dashboard${branchQ}`)
+      // Monday of the current week, so "Ventas de la Semana" always covers Mon→today
+      const today = new Date()
+      const dow = today.getDay()
+      const monday = new Date(today)
+      monday.setDate(today.getDate() + (dow === 0 ? -6 : 1 - dow))
+      const weekFrom = monday.toISOString().slice(0, 10)
+
+      const [data, weekly, byBranch] = await Promise.all([
+        api.get<any>(`/api/reports/dashboard${branchQ}`),
+        api.get<{ date: string; total: number }[]>(`/api/reports/daily-sales?from=${weekFrom}${branchId ? `&branchId=${branchId}` : ''}`),
+        isAdmin ? api.get<BranchSaleEntry[]>('/api/reports/sales-by-branch') : Promise.resolve(null),
+      ])
       const s = data.stats ?? {}
 
       setStats({
@@ -245,6 +241,7 @@ export default function Dashboard() {
         dailyTransactions: s.dailyTransactions ?? 0,
         lowStockCount: s.lowStockCount ?? 0,
         cashBalance: s.cashBalance ?? 0,
+        hasOpenRegister: s.hasOpenRegister ?? false,
       })
 
       setHourlySales(normaliseHourly(data.hourlySales ?? []))
@@ -256,7 +253,8 @@ export default function Dashboard() {
       }))
       setCategorySales(normaliseCategory(cats))
 
-      setRecentTransactions(normaliseTransactions(data.recentTransactions ?? []))
+      setWeekSales(buildWeekEntries((weekly ?? []).map(d => ({ date: d.date, total: Number(d.total ?? 0) }))))
+      if (byBranch) setBranchSales(byBranch)
       setInventoryAlerts(normaliseAlerts(data.inventoryAlerts ?? []))
     } catch {
       // Silently fail — dashboard is read-only, showing zeros is acceptable
@@ -284,7 +282,14 @@ export default function Dashboard() {
       {/* ── Header ── */}
       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            Dashboard
+            {user?.role && (
+              <span className="flex items-center gap-1 text-xs font-medium bg-primary-50 text-primary-700 px-2 py-0.5 rounded-full">
+                <Users size={12} /> {ROLE_LABEL[user.role] ?? user.role}
+              </span>
+            )}
+          </h1>
           <p className="text-sm text-gray-500 mt-0.5 capitalize">
             {greeting} &mdash; {dateLabel}
           </p>
@@ -304,6 +309,12 @@ export default function Dashboard() {
 
       {!loading && (
         <>
+          {branchId && (
+            <motion.div variants={itemVariants}>
+              <SalesGoalWidget branchId={branchId} />
+            </motion.div>
+          )}
+
           {/* ── Stats Cards ── */}
           <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {/* Ventas del día */}
@@ -371,9 +382,9 @@ export default function Dashboard() {
                   <p className="text-2xl font-bold text-gray-800 mt-1">
                     Q{stats.cashBalance.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
                   </p>
-                  <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                  <p className={`text-xs mt-1 flex items-center gap-1 ${stats.hasOpenRegister ? 'text-blue-600' : 'text-gray-400'}`}>
                     <DollarSign size={12} />
-                    Caja abierta
+                    {stats.hasOpenRegister ? 'Caja abierta' : 'Sin caja abierta'}
                   </p>
                 </div>
                 <div className="p-3 bg-blue-100 rounded-lg">
@@ -469,63 +480,47 @@ export default function Dashboard() {
 
           {/* ── Bottom Row ── */}
           <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Últimas Transacciones */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h2 className="text-base font-semibold text-gray-800">Últimas Transacciones</h2>
-                <NavLink
-                  to="/pos"
-                  className="text-xs text-primary-600 hover:text-primary-700 flex items-center gap-1 font-medium"
-                >
-                  Ver todo <ArrowRight size={13} />
-                </NavLink>
+            {/* Ventas de la Semana */}
+            <div className={`bg-white rounded-lg shadow-sm p-6 border border-gray-100 ${!canViewInventory ? 'lg:col-span-2' : ''}`}>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-base font-semibold text-gray-800">Ventas de la Semana</h2>
+                <span className="text-xs text-gray-400">Lun – Dom</span>
               </div>
-              {recentTransactions.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-                        <th className="text-left px-6 py-2.5 font-medium">Cliente</th>
-                        <th className="text-left px-4 py-2.5 font-medium hidden sm:table-cell">Productos</th>
-                        <th className="text-right px-4 py-2.5 font-medium">Monto</th>
-                        <th className="text-right px-4 py-2.5 font-medium hidden md:table-cell">Hora</th>
-                        <th className="text-center px-4 py-2.5 font-medium">Método</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {recentTransactions.map((tx) => (
-                        <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-3">
-                            <p className="font-medium text-gray-700 text-xs">{tx.customer}</p>
-                            <p className="text-gray-400 text-[11px]">{tx.id}</p>
-                          </td>
-                          <td className="px-4 py-3 text-gray-500 text-xs hidden sm:table-cell max-w-[140px] truncate">
-                            {tx.products}
-                          </td>
-                          <td className="px-4 py-3 text-right font-semibold text-gray-800 text-xs">
-                            {tx.amount}
-                          </td>
-                          <td className="px-4 py-3 text-right text-gray-400 text-xs hidden md:table-cell">
-                            {tx.time}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded-full ${tx.methodColor}`}>
-                              {tx.method}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              {weekSales.some(d => d.amount > 0) ? (
+                <>
+                  <div className="flex items-end gap-2 h-40">
+                    {weekSales.map(day => {
+                      const max = Math.max(...weekSales.map(d => d.amount), 1)
+                      const heightPct = Math.round((day.amount / max) * 100)
+                      return (
+                        <div key={day.date} className="flex flex-col items-center flex-1 gap-1.5">
+                          <span className="text-[10px] text-gray-400">{day.amount > 0 ? `Q${day.amount.toFixed(0)}` : ''}</span>
+                          <div className="w-full flex items-end justify-center" style={{ height: '120px' }}>
+                            <div
+                              className={`w-full rounded-t-sm transition-all duration-500 ${day.isToday ? 'bg-primary-500' : 'bg-primary-200'}`}
+                              style={{ height: `${Math.max(heightPct, day.amount > 0 ? 4 : 0)}%` }}
+                              title={`Q${day.amount.toFixed(2)}`}
+                            />
+                          </div>
+                          <span className={`text-xs ${day.isToday ? 'font-bold text-primary-600' : 'text-gray-500'}`}>{day.label}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="mt-3 flex justify-between text-xs text-gray-500 border-t border-gray-100 pt-3">
+                    <span>Total semana</span>
+                    <span className="font-semibold text-gray-700">Q{weekSales.reduce((s, d) => s + d.amount, 0).toLocaleString('es-GT', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </>
               ) : (
-                <div className="flex items-center justify-center py-10 text-gray-400 text-sm">
-                  Sin transacciones recientes
+                <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
+                  Sin ventas registradas esta semana
                 </div>
               )}
             </div>
 
-            {/* Alertas de Inventario */}
+            {/* Alertas de Inventario — hidden for roles without inventory access */}
+            {canViewInventory && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                 <h2 className="text-base font-semibold text-gray-800">Alertas de Inventario</h2>
@@ -587,7 +582,51 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+            )}
           </motion.div>
+
+          {/* ── Ventas Mensuales por Sucursal (admin only — needs cross-branch data) ── */}
+          {isAdmin && (
+            <motion.div variants={itemVariants} className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-base font-semibold text-gray-800">Ventas Mensuales por Sucursal</h2>
+                <span className="text-xs text-gray-400">
+                  {new Date().toLocaleDateString('es-GT', { month: 'long', year: 'numeric' })}
+                </span>
+              </div>
+              {branchSales.length > 0 && branchSales.some(b => b.total > 0) ? (
+                <div className="space-y-3">
+                  {branchSales
+                    .slice()
+                    .sort((a, b) => b.total - a.total)
+                    .map((b, idx) => {
+                      const max = Math.max(...branchSales.map(x => x.total), 1)
+                      const widthPct = Math.round((b.total / max) * 100)
+                      return (
+                        <div key={b.branchId}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-gray-700">{b.branchName}</span>
+                            <span className="text-xs text-gray-500">
+                              Q{b.total.toLocaleString('es-GT', { minimumFractionDigits: 2 })} · {b.count} ventas
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-100 rounded-full h-2.5">
+                            <div
+                              className={`${barColors[idx % barColors.length]} h-2.5 rounded-full transition-all duration-700`}
+                              style={{ width: `${widthPct}%` }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-24 text-gray-400 text-sm">
+                  Sin ventas registradas este mes
+                </div>
+              )}
+            </motion.div>
+          )}
 
           {/* ── Quick Access ── */}
           <motion.div variants={itemVariants}>
@@ -595,7 +634,7 @@ export default function Dashboard() {
               <h2 className="text-base font-semibold text-gray-800">Acceso Rápido</h2>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {quickAccessLinks.map(({ path, label, icon: Icon, color }) => {
+              {visibleQuickAccessLinks.map(({ path, label, icon: Icon, color }) => {
                 const [textClass, bgClass] = color.split(' ')
                 return (
                   <NavLink

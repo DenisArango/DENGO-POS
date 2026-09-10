@@ -141,7 +141,6 @@ export default function HourlySalesReport() {
 
       <AIRecommendations
         reportData={{ type: 'hourly_sales', data: { totalSales, transactions: sales.length, peakHour: peakHour?.hour, byHour: hourlyData } }}
-        autoGenerate={sales.length > 0}
       />
     </div>
   )

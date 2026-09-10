@@ -2,92 +2,106 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  ArrowLeft, Plus, Search, Filter, MoreVertical,
-  User, Mail, Phone, Shield, Building2, Calendar,
-  Edit, Trash2, Lock, CheckCircle, XCircle,
-  Key, UserPlus, Download, ChevronDown
+  ArrowLeft, Search, User, Mail, Shield, Building2,
+  Edit, Trash2, CheckCircle, XCircle, UserPlus
 } from 'lucide-react'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { api } from '../lib/api'
+
+interface Branch {
+  id: string
+  name: string
+}
+
+interface CustomRole {
+  id: string
+  name: string
+  isSystem: boolean
+}
 
 interface UserRecord {
   id: string
   name: string
   email: string
-  phone: string
   role: string
-  stores: string[]
-  status: 'active' | 'inactive' | 'suspended'
-  lastLogin?: string
+  customRoleId: string | null
+  branchId: string
+  branch?: Branch
+  additionalBranches?: { branchId: string; branch?: Branch }[]
+  avatarUrl?: string | null
+  isActive: boolean
   createdAt?: string
-  avatar?: string
 }
 
 interface UserFormData {
   name: string
   email: string
-  phone: string
   password: string
   role: string
-  stores: string[]
-  status: 'active' | 'inactive'
+  customRoleId: string
+  branchId: string
+  additionalBranchIds: string[]
+  avatarUrl: string
+  isActive: boolean
 }
 
-const roles = [
-  { id: 'admin', name: 'Administrador', description: 'Acceso completo al sistema' },
-  { id: 'manager', name: 'Gerente', description: 'Gestión de tienda y reportes' },
-  { id: 'cashier', name: 'Cajero', description: 'Operaciones de venta' },
-  { id: 'inventory', name: 'Inventario', description: 'Control de inventario' },
-  { id: 'auditor', name: 'Auditor', description: 'Solo lectura y reportes' }
-]
-
-const storeOptions = [
-  { id: 'all', name: 'Todas las tiendas' },
-  { id: 'store-1', name: 'Tienda Central' },
-  { id: 'store-2', name: 'Sucursal Norte' },
-  { id: 'store-3', name: 'Sucursal Sur' }
+// The 4 legacy roles are always available as a coarse base role, matching User.role in the backend.
+const BASE_ROLES = [
+  { id: 'ADMIN', name: 'Administrador' },
+  { id: 'AUDITOR', name: 'Auditor' },
+  { id: 'INVENTORY_CONTROL', name: 'Control de Inventario' },
+  { id: 'OPERATOR', name: 'Operador (Cajero)' },
 ]
 
 const emptyForm: UserFormData = {
   name: '',
   email: '',
-  phone: '',
   password: '',
-  role: 'cashier',
-  stores: [],
-  status: 'active'
+  role: 'OPERATOR',
+  customRoleId: '',
+  branchId: '',
+  additionalBranchIds: [],
+  avatarUrl: '',
+  isActive: true,
 }
 
 export default function UsersManagement() {
   const navigate = useNavigate()
   const [users, setUsers] = useState<UserRecord[]>([])
+  const [branches, setBranches] = useState<Branch[]>([])
+  const [customRoles, setCustomRoles] = useState<CustomRole[]>([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedRole, setSelectedRole] = useState<string>('all')
-  const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null)
 
   const [formData, setFormData] = useState<UserFormData>(emptyForm)
 
-  const fetchUsers = () => {
+  const fetchAll = () => {
     setLoading(true)
-    api.get<UserRecord[]>('/api/users')
-      .then(setUsers)
+    Promise.all([
+      api.get<UserRecord[]>('/api/users'),
+      api.get<Branch[]>('/api/branches'),
+      api.get<CustomRole[]>('/api/roles'),
+    ])
+      .then(([usersData, branchesData, rolesData]) => {
+        setUsers(usersData)
+        setBranches(branchesData)
+        setCustomRoles(rolesData.filter(r => !r.isSystem))
+      })
       .catch(e => toast.error(e.message))
       .finally(() => setLoading(false))
   }
 
   useEffect(() => {
-    fetchUsers()
+    fetchAll()
   }, [])
 
   const handleCreateUser = () => {
-    setFormData(emptyForm)
+    setFormData({ ...emptyForm, branchId: branches[0]?.id ?? '' })
     setShowCreateModal(true)
   }
 
@@ -96,21 +110,41 @@ export default function UsersManagement() {
     setFormData({
       name: user.name,
       email: user.email,
-      phone: user.phone ?? '',
       password: '',
       role: user.role,
-      stores: user.stores ?? [],
-      status: user.status === 'suspended' ? 'inactive' : user.status
+      customRoleId: user.customRoleId ?? '',
+      branchId: user.branchId,
+      additionalBranchIds: (user.additionalBranches ?? []).map(ab => ab.branchId),
+      avatarUrl: user.avatarUrl ?? '',
+      isActive: user.isActive,
     })
     setShowEditModal(true)
   }
 
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) { toast.error('La imagen no debe superar 2MB'); return }
+    const reader = new FileReader()
+    reader.onloadend = () => setFormData(prev => ({ ...prev, avatarUrl: reader.result as string }))
+    reader.readAsDataURL(file)
+  }
+
+  const toggleAdditionalBranch = (branchId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalBranchIds: prev.additionalBranchIds.includes(branchId)
+        ? prev.additionalBranchIds.filter(id => id !== branchId)
+        : [...prev.additionalBranchIds, branchId],
+    }))
+  }
+
   const handleDeleteUser = (userId: string) => {
-    if (!window.confirm('¿Está seguro de eliminar este usuario?')) return
+    if (!window.confirm('¿Desactivar este usuario? Podrá reactivarse después editándolo.')) return
     api.delete(`/api/users/${userId}`)
       .then(() => {
-        toast.success('Usuario eliminado exitosamente')
-        fetchUsers()
+        toast.success('Usuario desactivado')
+        fetchAll()
       })
       .catch(e => toast.error(e.message))
   }
@@ -119,64 +153,60 @@ export default function UsersManagement() {
     e.preventDefault()
     setSaving(true)
 
+    const payload: Record<string, unknown> = {
+      name: formData.name,
+      email: formData.email,
+      role: formData.role,
+      customRoleId: formData.customRoleId || null,
+      branchId: formData.branchId,
+      additionalBranchIds: formData.additionalBranchIds,
+      avatarUrl: formData.avatarUrl || undefined,
+    }
+    if (formData.password) payload.password = formData.password
+
     if (showCreateModal) {
-      api.post('/api/users', formData)
+      api.post('/api/users', payload)
         .then(() => {
           toast.success('Usuario creado exitosamente')
           setShowCreateModal(false)
-          fetchUsers()
+          fetchAll()
         })
         .catch(e => toast.error(e.message))
         .finally(() => setSaving(false))
     } else if (selectedUser) {
-      const payload: Partial<UserFormData> = { ...formData }
-      if (!payload.password) delete payload.password
       api.put(`/api/users/${selectedUser.id}`, payload)
         .then(() => {
           toast.success('Usuario actualizado exitosamente')
           setShowEditModal(false)
-          fetchUsers()
+          fetchAll()
         })
         .catch(e => toast.error(e.message))
         .finally(() => setSaving(false))
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'text-green-600 bg-green-100'
-      case 'inactive': return 'text-gray-600 bg-gray-100'
-      case 'suspended': return 'text-red-600 bg-red-100'
-      default: return 'text-gray-600 bg-gray-100'
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active': return <CheckCircle size={16} />
-      case 'inactive': return <XCircle size={16} />
-      case 'suspended': return <Lock size={16} />
-      default: return null
     }
   }
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'admin': return 'bg-purple-100 text-purple-700'
-      case 'manager': return 'bg-blue-100 text-blue-700'
-      case 'cashier': return 'bg-green-100 text-green-700'
-      case 'inventory': return 'bg-orange-100 text-orange-700'
-      case 'auditor': return 'bg-gray-100 text-gray-700'
+      case 'ADMIN': return 'bg-purple-100 text-purple-700'
+      case 'AUDITOR': return 'bg-gray-100 text-gray-700'
+      case 'INVENTORY_CONTROL': return 'bg-orange-100 text-orange-700'
+      case 'OPERATOR': return 'bg-green-100 text-green-700'
       default: return 'bg-gray-100 text-gray-700'
     }
+  }
+
+  const roleLabel = (user: UserRecord) => {
+    if (user.customRoleId) {
+      return customRoles.find(r => r.id === user.customRoleId)?.name ?? 'Rol personalizado'
+    }
+    return BASE_ROLES.find(r => r.id === user.role)?.name ?? user.role
   }
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesRole = selectedRole === 'all' || user.role === selectedRole
-    const matchesStatus = selectedStatus === 'all' || user.status === selectedStatus
-    return matchesSearch && matchesRole && matchesStatus
+    return matchesSearch && matchesRole
   })
 
   return (
@@ -193,24 +223,18 @@ export default function UsersManagement() {
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Gestión de Usuarios</h1>
             <p className="text-gray-600 text-sm mt-1">
-              Administrar usuarios y sus permisos
+              Administrar usuarios y sus roles
             </p>
           </div>
         </div>
 
-        <div className="flex gap-3">
-          <button className="btn-outline btn-md flex items-center gap-2">
-            <Download size={18} />
-            Exportar
-          </button>
-          <button
-            onClick={handleCreateUser}
-            className="btn-primary btn-md flex items-center gap-2"
-          >
-            <UserPlus size={18} />
-            Nuevo Usuario
-          </button>
-        </div>
+        <button
+          onClick={handleCreateUser}
+          className="btn-primary btn-md flex items-center gap-2"
+        >
+          <UserPlus size={18} />
+          Nuevo Usuario
+        </button>
       </div>
 
       {/* Loading */}
@@ -241,20 +265,9 @@ export default function UsersManagement() {
               className="input"
             >
               <option value="all">Todos los roles</option>
-              {roles.map(role => (
+              {BASE_ROLES.map(role => (
                 <option key={role.id} value={role.id}>{role.name}</option>
               ))}
-            </select>
-
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="input"
-            >
-              <option value="all">Todos los estados</option>
-              <option value="active">Activos</option>
-              <option value="inactive">Inactivos</option>
-              <option value="suspended">Suspendidos</option>
             </select>
           </div>
         </div>
@@ -263,11 +276,7 @@ export default function UsersManagement() {
       {/* Estadísticas */}
       {!loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-lg shadow-sm p-4"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-gray-600 text-sm">Total Usuarios</span>
               <User className="text-blue-600" size={20} />
@@ -275,49 +284,28 @@ export default function UsersManagement() {
             <p className="text-2xl font-bold text-gray-800">{users.length}</p>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white rounded-lg shadow-sm p-4"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-gray-600 text-sm">Activos</span>
               <CheckCircle className="text-green-600" size={20} />
             </div>
-            <p className="text-2xl font-bold text-gray-800">
-              {users.filter(u => u.status === 'active').length}
-            </p>
+            <p className="text-2xl font-bold text-gray-800">{users.filter(u => u.isActive).length}</p>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white rounded-lg shadow-sm p-4"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-gray-600 text-sm">Administradores</span>
               <Shield className="text-purple-600" size={20} />
             </div>
-            <p className="text-2xl font-bold text-gray-800">
-              {users.filter(u => u.role === 'admin').length}
-            </p>
+            <p className="text-2xl font-bold text-gray-800">{users.filter(u => u.role === 'ADMIN').length}</p>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white rounded-lg shadow-sm p-4"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">En línea ahora</span>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              </div>
+              <span className="text-gray-600 text-sm">Sucursales con usuarios</span>
+              <Building2 className="text-gray-600" size={20} />
             </div>
-            <p className="text-2xl font-bold text-gray-800">—</p>
+            <p className="text-2xl font-bold text-gray-800">{new Set(users.map(u => u.branchId)).size}</p>
           </motion.div>
         </div>
       )}
@@ -331,9 +319,8 @@ export default function UsersManagement() {
                 <tr>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Usuario</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Rol</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Tiendas</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Sucursal</th>
                   <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Estado</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Último Acceso</th>
                   <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Acciones</th>
                 </tr>
               </thead>
@@ -342,85 +329,52 @@ export default function UsersManagement() {
                   <tr key={user.id} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                          <User size={20} className="text-gray-600" />
-                        </div>
+                        {user.avatarUrl ? (
+                          <img src={user.avatarUrl} alt={user.name} className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                            <User size={20} className="text-gray-600" />
+                          </div>
+                        )}
                         <div>
                           <p className="font-medium text-gray-800">{user.name}</p>
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <Mail size={12} />
-                              {user.email}
-                            </span>
-                            {user.phone && (
-                              <span className="flex items-center gap-1">
-                                <Phone size={12} />
-                                {user.phone}
-                              </span>
-                            )}
-                          </div>
+                          <span className="flex items-center gap-1 text-xs text-gray-500">
+                            <Mail size={12} />
+                            {user.email}
+                          </span>
                         </div>
                       </div>
                     </td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getRoleBadgeColor(user.role)}`}>
-                        {roles.find(r => r.id === user.role)?.name ?? user.role}
+                        {roleLabel(user)}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-wrap gap-1">
-                        {(user.stores ?? []).includes('all') ? (
-                          <span className="text-sm text-gray-600">Todas las tiendas</span>
-                        ) : (
-                          (user.stores ?? []).map(storeId => (
-                            <span key={storeId} className="inline-flex px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">
-                              {storeOptions.find(s => s.id === storeId)?.name ?? storeId}
-                            </span>
-                          ))
-                        )}
-                      </div>
+                    <td className="py-3 px-4 text-sm text-gray-700">
+                      {user.branch?.name ?? '—'}
+                      {(user.additionalBranches?.length ?? 0) > 0 && (
+                        <span className="ml-1.5 text-xs text-gray-400">+{user.additionalBranches!.length}</span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(user.status)}`}>
-                        {getStatusIcon(user.status)}
-                        {user.status === 'active' ? 'Activo' :
-                         user.status === 'inactive' ? 'Inactivo' : 'Suspendido'}
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${user.isActive ? 'text-green-600 bg-green-100' : 'text-gray-600 bg-gray-100'}`}>
+                        {user.isActive ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                        {user.isActive ? 'Activo' : 'Inactivo'}
                       </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      {user.lastLogin ? (
-                        <>
-                          <p className="text-sm text-gray-600">
-                            {format(new Date(user.lastLogin), "d MMM yyyy", { locale: es })}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {format(new Date(user.lastLogin), "HH:mm", { locale: es })}
-                          </p>
-                        </>
-                      ) : (
-                        <p className="text-sm text-gray-400">Sin acceso aún</p>
-                      )}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleEditUser(user)}
                           className="p-1 hover:bg-gray-100 rounded transition-colors"
-                          title="Editar"
+                          title="Editar (incluye restablecer contraseña)"
                         >
                           <Edit size={18} className="text-gray-600" />
                         </button>
                         <button
-                          onClick={() => console.log('Reset password:', user.id)}
-                          className="p-1 hover:bg-gray-100 rounded transition-colors"
-                          title="Restablecer contraseña"
-                        >
-                          <Key size={18} className="text-gray-600" />
-                        </button>
-                        <button
                           onClick={() => handleDeleteUser(user.id)}
                           className="p-1 hover:bg-gray-100 rounded transition-colors"
-                          title="Eliminar"
+                          title="Desactivar"
                         >
                           <Trash2 size={18} className="text-red-600" />
                         </button>
@@ -430,7 +384,7 @@ export default function UsersManagement() {
                 ))}
                 {filteredUsers.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-gray-500">
+                    <td colSpan={5} className="py-12 text-center text-gray-500">
                       No se encontraron usuarios
                     </td>
                   </tr>
@@ -454,10 +408,28 @@ export default function UsersManagement() {
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre completo
+              <div className="flex items-center gap-4">
+                {formData.avatarUrl ? (
+                  <div className="relative">
+                    <img src={formData.avatarUrl} alt="Foto" className="h-16 w-16 rounded-full object-cover border border-gray-200" />
+                    <button type="button" onClick={() => setFormData({ ...formData, avatarUrl: '' })}
+                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5">
+                      <XCircle size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="h-16 w-16 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center">
+                    <User size={24} className="text-gray-300" />
+                  </div>
+                )}
+                <label className="btn-outline btn-sm cursor-pointer">
+                  Subir foto
+                  <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
                 </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
                 <input
                   type="text"
                   value={formData.name}
@@ -468,27 +440,13 @@ export default function UsersManagement() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="input w-full"
                   required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Teléfono
-                </label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="input w-full"
                 />
               </div>
 
@@ -501,75 +459,80 @@ export default function UsersManagement() {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="input w-full"
+                  minLength={6}
                   required={showCreateModal}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Rol
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Rol base</label>
                 <select
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   className="input w-full"
                   required
                 >
-                  {roles.map(role => (
+                  {BASE_ROLES.map(role => (
                     <option key={role.id} value={role.id}>{role.name}</option>
                   ))}
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tiendas asignadas
-                </label>
-                <div className="space-y-2">
-                  {storeOptions.map(store => (
-                    <label key={store.id} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.stores.includes(store.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            if (store.id === 'all') {
-                              setFormData({ ...formData, stores: ['all'] })
-                            } else {
-                              setFormData({
-                                ...formData,
-                                stores: formData.stores.filter(s => s !== 'all').concat(store.id)
-                              })
-                            }
-                          } else {
-                            setFormData({
-                              ...formData,
-                              stores: formData.stores.filter(s => s !== store.id)
-                            })
-                          }
-                        }}
-                        disabled={store.id !== 'all' && formData.stores.includes('all')}
-                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                      />
-                      <span className="text-sm text-gray-700">{store.name}</span>
-                    </label>
-                  ))}
+              {customRoles.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Rol personalizado (opcional)</label>
+                  <select
+                    value={formData.customRoleId}
+                    onChange={(e) => setFormData({ ...formData, customRoleId: e.target.value })}
+                    className="input w-full"
+                  >
+                    <option value="">Usar los permisos por defecto del rol base</option>
+                    {customRoles.map(role => (
+                      <option key={role.id} value={role.id}>{role.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Si eliges un rol personalizado, sus permisos (definidos en Roles y Permisos) reemplazan los del rol base.
+                  </p>
                 </div>
-              </div>
+              )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Estado
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sucursal</label>
                 <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
+                  value={formData.branchId}
+                  onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
                   className="input w-full"
+                  required
                 >
-                  <option value="active">Activo</option>
-                  <option value="inactive">Inactivo</option>
+                  <option value="" disabled>Selecciona una sucursal</option>
+                  {branches.map(branch => (
+                    <option key={branch.id} value={branch.id}>{branch.name}</option>
+                  ))}
                 </select>
               </div>
+
+              {branches.length > 1 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sucursales adicionales</label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    El usuario podrá cambiar entre estas sucursales al vender, además de su sucursal principal.
+                  </p>
+                  <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-40 overflow-y-auto">
+                    {branches.filter(b => b.id !== formData.branchId).map(branch => (
+                      <label key={branch.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.additionalBranchIds.includes(branch.id)}
+                          onChange={() => toggleAdditionalBranch(branch.id)}
+                          className="rounded border-gray-300"
+                        />
+                        {branch.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-3 pt-4">
                 <button

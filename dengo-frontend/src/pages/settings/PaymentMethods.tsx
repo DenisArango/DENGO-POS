@@ -1,81 +1,62 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, CreditCard, DollarSign, Building2, Smartphone, Check, X } from 'lucide-react'
+import { ArrowLeft, CreditCard, DollarSign, Building2, ArrowLeftRight, type LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
+import { api } from '../../lib/api'
 
-interface PaymentMethodConfig {
-  id: string
-  name: string
-  icon: React.ComponentType<any>
+interface PaymentMethodSetting {
+  method: string
   enabled: boolean
   commission: number
-  description: string
 }
 
-const defaultPaymentMethods: PaymentMethodConfig[] = [
-  {
-    id: 'cash',
-    name: 'Efectivo',
-    icon: DollarSign,
-    enabled: true,
-    commission: 0,
-    description: 'Pago en efectivo. Sin comisiones.'
-  },
-  {
-    id: 'card',
-    name: 'Tarjeta de Crédito/Débito',
-    icon: CreditCard,
-    enabled: true,
-    commission: 2.5,
-    description: 'Aceptar pagos con tarjeta. Comisión aplicable.'
-  },
-  {
-    id: 'transfer',
-    name: 'Transferencia Bancaria',
-    icon: Building2,
-    enabled: true,
-    commission: 0,
-    description: 'Transferencia directa a cuenta bancaria.'
-  },
-  {
-    id: 'digital_wallet',
-    name: 'Billetera Digital',
-    icon: Smartphone,
-    enabled: false,
-    commission: 1.5,
-    description: 'Pagos mediante billeteras digitales (PayPal, etc.)'
-  }
-]
+const METHOD_INFO: Record<string, { name: string; icon: LucideIcon; description: string }> = {
+  CASH: { name: 'Efectivo', icon: DollarSign, description: 'Pago en efectivo. Sin comisiones.' },
+  CARD: { name: 'Tarjeta de Crédito/Débito', icon: CreditCard, description: 'Aceptar pagos con tarjeta. Comisión aplicable según tu terminal.' },
+  TRANSFER: { name: 'Transferencia Bancaria', icon: Building2, description: 'Transferencia directa a cuenta bancaria.' },
+  MIXED: { name: 'Mixto (efectivo + transferencia)', icon: ArrowLeftRight, description: 'Divide una venta entre efectivo y transferencia. Pausado por defecto — actívalo aquí si tu negocio lo necesita.' },
+}
+
+const METHOD_ORDER = ['CASH', 'CARD', 'TRANSFER', 'MIXED']
 
 export default function PaymentMethods() {
   const navigate = useNavigate()
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodConfig[]>(defaultPaymentMethods)
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodSetting[]>([])
   const [hasChanges, setHasChanges] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
-  const toggleMethod = (id: string) => {
+  useEffect(() => {
+    api.get<PaymentMethodSetting[]>('/api/settings/payment-methods')
+      .then(data => setPaymentMethods([...data].sort((a, b) => METHOD_ORDER.indexOf(a.method) - METHOD_ORDER.indexOf(b.method))))
+      .catch(e => toast.error(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const toggleMethod = (method: string) => {
     setPaymentMethods(methods =>
-      methods.map(m =>
-        m.id === id ? { ...m, enabled: !m.enabled } : m
-      )
+      methods.map(m => m.method === method ? { ...m, enabled: !m.enabled } : m)
     )
     setHasChanges(true)
   }
 
-  const updateCommission = (id: string, commission: number) => {
+  const updateCommission = (method: string, commission: number) => {
     setPaymentMethods(methods =>
-      methods.map(m =>
-        m.id === id ? { ...m, commission } : m
-      )
+      methods.map(m => m.method === method ? { ...m, commission } : m)
     )
     setHasChanges(true)
   }
 
   const handleSave = () => {
-    // Aquí iría la lógica para guardar en el backend
-    console.log('Guardando métodos de pago:', paymentMethods)
-    toast.success('Configuración de métodos de pago guardada exitosamente')
-    setHasChanges(false)
+    setSaving(true)
+    api.put('/api/settings/payment-methods', paymentMethods)
+      .then(() => {
+        toast.success('Configuración de métodos de pago guardada exitosamente')
+        setHasChanges(false)
+      })
+      .catch(e => toast.error(e.message))
+      .finally(() => setSaving(false))
   }
 
   return (
@@ -102,20 +83,29 @@ export default function PaymentMethods() {
 
         <button
           onClick={handleSave}
-          disabled={!hasChanges}
+          disabled={!hasChanges || saving}
           className={`btn-primary btn-md ${
-            !hasChanges ? 'opacity-50 cursor-not-allowed' : ''
+            !hasChanges || saving ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >
           Guardar Cambios
         </button>
       </div>
 
+      {loading ? (
+        <div className="flex justify-center py-24">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+        </div>
+      ) : (
+      <>
       {/* Lista de métodos de pago */}
       <div className="space-y-4">
-        {paymentMethods.map((method, index) => (
+        {paymentMethods.map((method, index) => {
+          const info = METHOD_INFO[method.method]
+          if (!info) return null
+          return (
           <motion.div
-            key={method.id}
+            key={method.method}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
@@ -125,7 +115,7 @@ export default function PaymentMethods() {
               <div className={`p-3 rounded-lg ${
                 method.enabled ? 'bg-primary-100' : 'bg-gray-100'
               }`}>
-                <method.icon className={
+                <info.icon className={
                   method.enabled ? 'text-primary-600' : 'text-gray-400'
                 } size={24} />
               </div>
@@ -133,12 +123,12 @@ export default function PaymentMethods() {
               <div className="flex-1">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <h3 className="font-semibold text-gray-800">{method.name}</h3>
-                    <p className="text-sm text-gray-600 mt-1">{method.description}</p>
+                    <h3 className="font-semibold text-gray-800">{info.name}</h3>
+                    <p className="text-sm text-gray-600 mt-1">{info.description}</p>
                   </div>
 
                   <button
-                    onClick={() => toggleMethod(method.id)}
+                    onClick={() => toggleMethod(method.method)}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                       method.enabled ? 'bg-primary-600' : 'bg-gray-300'
                     }`}
@@ -155,8 +145,8 @@ export default function PaymentMethods() {
                       <label className="label">Comisión (%)</label>
                       <input
                         type="number"
-                        value={method.commission}
-                        onChange={(e) => updateCommission(method.id, parseFloat(e.target.value) || 0)}
+                        value={method.commission === 0 ? '' : method.commission}
+                        onChange={(e) => updateCommission(method.method, parseFloat(e.target.value) || 0)}
                         className="input w-full"
                         min="0"
                         max="100"
@@ -180,7 +170,8 @@ export default function PaymentMethods() {
               </div>
             </div>
           </motion.div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Info card */}
@@ -197,6 +188,8 @@ export default function PaymentMethods() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   )
 }

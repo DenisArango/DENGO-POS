@@ -4,6 +4,8 @@ import { ArrowLeft, Store as StoreIcon, Plus, Edit, Trash2, X, MapPin, Phone, Cl
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
+import { usePermissions } from '../../hooks/usePermissions'
+import { useStore } from '../../contexts/StoreContext'
 
 interface BranchData {
   id?: string
@@ -23,31 +25,121 @@ interface BranchData {
   companyTaxId?: string
   companyTagline?: string
   companyWebsite?: string
+  socialMediaName?: string
+  defaultCustomerId?: string
+  receiptWidthMm?: number
+  invoiceSeries?: string
+  salesReconciliationEnabled?: boolean
   createdAt?: string
   updatedAt?: string
+}
+
+interface CustomerOption {
+  id: string
+  name?: string
+  fullName?: string
+  nit?: string
 }
 
 const EMPTY_FORM: BranchData = {
   name: '', code: '', type: 'branch', address: '', city: '', phone: '',
   email: '', manager: '', status: 'active', openTime: '08:00', closeTime: '20:00',
   logo: '', companyName: '', companyTaxId: '', companyTagline: '', companyWebsite: '',
+  socialMediaName: '',
+  defaultCustomerId: '', receiptWidthMm: 55, invoiceSeries: 'A',
+  salesReconciliationEnabled: false,
+}
+
+interface RegisterDefinition {
+  id: string
+  name: string
+  registerNumber: string
+  isActive: boolean
 }
 
 export default function Stores() {
   const navigate = useNavigate()
+  const { hasPermission } = usePermissions()
+  const { refreshStores } = useStore()
+  const canManageStores = hasPermission('settings.stores')
+  const canManageRegisters = hasPermission('settings.cashRegisters')
   const [stores, setStores] = useState<BranchData[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editingStore, setEditingStore] = useState<BranchData | null>(null)
   const [formData, setFormData] = useState<BranchData>({ ...EMPTY_FORM })
+  const [customers, setCustomers] = useState<CustomerOption[]>([])
+
+  // Cash register definitions for the store being edited
+  const [registerDefs, setRegisterDefs] = useState<RegisterDefinition[]>([])
+  const [loadingRegisterDefs, setLoadingRegisterDefs] = useState(false)
+  const [newRegisterName, setNewRegisterName] = useState('')
+  const [newRegisterNumber, setNewRegisterNumber] = useState('')
+  const [savingRegisterDef, setSavingRegisterDef] = useState(false)
+  const [editingRegisterDefId, setEditingRegisterDefId] = useState<string | null>(null)
+  const [editRegisterDefName, setEditRegisterDefName] = useState('')
 
   useEffect(() => {
     api.get<BranchData[]>('/api/branches')
       .then(d => setStores(d ?? []))
       .catch(e => toast.error(e.message))
       .finally(() => setLoading(false))
+    api.get<CustomerOption[]>('/api/customers')
+      .then(d => setCustomers(d ?? []))
+      .catch(() => {})
   }, [])
+
+  const fetchRegisterDefs = (branchId: string) => {
+    setLoadingRegisterDefs(true)
+    api.get<RegisterDefinition[]>(`/api/cash-registers/register-definitions?branchId=${branchId}`)
+      .then(d => setRegisterDefs(d ?? []))
+      .catch(() => setRegisterDefs([]))
+      .finally(() => setLoadingRegisterDefs(false))
+  }
+
+  const handleAddRegisterDef = async () => {
+    if (!editingStore?.id) return
+    if (!newRegisterName.trim() || !newRegisterNumber.trim()) {
+      toast.error('Ingresa nombre y número de caja'); return
+    }
+    setSavingRegisterDef(true)
+    try {
+      const def = await api.post<RegisterDefinition>('/api/cash-registers/register-definitions', {
+        branchId: editingStore.id, name: newRegisterName.trim(), registerNumber: newRegisterNumber.trim(),
+      })
+      setRegisterDefs(prev => [...prev, def])
+      setNewRegisterName('')
+      setNewRegisterNumber(String(Number(newRegisterNumber) + 1 || ''))
+      toast.success('Caja agregada')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al agregar caja')
+    } finally { setSavingRegisterDef(false) }
+  }
+
+  const handleRemoveRegisterDef = async (id: string) => {
+    if (!confirm('¿Eliminar esta caja de la configuración de la tienda?')) return
+    try {
+      await api.delete(`/api/cash-registers/register-definitions/${id}`)
+      setRegisterDefs(prev => prev.filter(d => d.id !== id))
+      toast.success('Caja eliminada')
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Error al eliminar') }
+  }
+
+  const startEditRegisterDef = (def: RegisterDefinition) => {
+    setEditingRegisterDefId(def.id)
+    setEditRegisterDefName(def.name)
+  }
+
+  const handleSaveRegisterDefName = async (id: string) => {
+    if (!editRegisterDefName.trim()) { toast.error('El nombre no puede estar vacío'); return }
+    try {
+      const updated = await api.put<RegisterDefinition>(`/api/cash-registers/register-definitions/${id}`, { name: editRegisterDefName.trim() })
+      setRegisterDefs(prev => prev.map(d => d.id === id ? updated : d))
+      setEditingRegisterDefId(null)
+      toast.success('Caja actualizada')
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Error al actualizar') }
+  }
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -62,10 +154,14 @@ export default function Stores() {
     if (store) {
       setEditingStore(store)
       setFormData({ ...EMPTY_FORM, ...store })
+      if (store.id) fetchRegisterDefs(store.id)
     } else {
       setEditingStore(null)
       setFormData({ ...EMPTY_FORM })
+      setRegisterDefs([])
     }
+    setNewRegisterName('')
+    setNewRegisterNumber('')
     setShowModal(true)
   }
 
@@ -86,8 +182,12 @@ export default function Stores() {
         toast.success('Sucursal creada')
       }
       setShowModal(false)
-    } catch (e: any) {
-      toast.error(e?.message ?? 'Error al guardar')
+      // Refresh the app-wide StoreContext too — otherwise POS/recibos keep
+      // using the logo/receiptWidthMm/etc. that was cached before this edit,
+      // until a full page reload.
+      refreshStores()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al guardar')
     } finally { setSaving(false) }
   }
 
@@ -97,7 +197,8 @@ export default function Stores() {
       await api.delete(`/api/branches/${id}`)
       setStores(stores.filter(s => s.id !== id))
       toast.success('Sucursal desactivada')
-    } catch (e: any) { toast.error(e?.message ?? 'Error') }
+      refreshStores()
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Error') }
   }
 
   const getStatusBadge = (status: string) => {
@@ -140,13 +241,15 @@ export default function Stores() {
           </div>
         </div>
 
-        <button
-          onClick={() => handleOpenModal()}
-          className="btn-primary btn-md flex items-center gap-2"
-        >
-          <Plus size={18} />
-          Nueva Tienda
-        </button>
+        {canManageStores && (
+          <button
+            onClick={() => handleOpenModal()}
+            className="btn-primary btn-md flex items-center gap-2"
+          >
+            <Plus size={18} />
+            Nueva Tienda
+          </button>
+        )}
       </div>
 
       {loading && <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" /></div>}
@@ -202,16 +305,18 @@ export default function Stores() {
                 <p className="text-sm font-medium text-gray-700">{store.manager}</p>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={() => handleOpenModal(store)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Editar"
-                >
-                  <Edit size={16} className="text-gray-600" />
-                </button>
-                {store.type !== 'main' && (
+                {canManageStores && (
                   <button
-                    onClick={() => handleDelete(store.id)}
+                    onClick={() => handleOpenModal(store)}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Editar"
+                  >
+                    <Edit size={16} className="text-gray-600" />
+                  </button>
+                )}
+                {canManageStores && store.type !== 'main' && (
+                  <button
+                    onClick={() => store.id && handleDelete(store.id)}
                     className="p-2 hover:bg-red-50 rounded-lg transition-colors"
                     title="Eliminar"
                   >
@@ -401,6 +506,10 @@ export default function Stores() {
                     <label className="label">Sitio web</label>
                     <input type="text" value={formData.companyWebsite ?? ''} onChange={e => setFormData({ ...formData, companyWebsite: e.target.value })} className="input w-full" placeholder="www.empresa.com" />
                   </div>
+                  <div className="md:col-span-2">
+                    <label className="label">Nombre en redes sociales (se imprime en el recibo con los íconos de Facebook, Instagram y TikTok)</label>
+                    <input type="text" value={formData.socialMediaName ?? ''} onChange={e => setFormData({ ...formData, socialMediaName: e.target.value })} className="input w-full" placeholder="Ej: @variedadesdayana" />
+                  </div>
                 </div>
                 {/* Logo */}
                 <div className="mt-4">
@@ -425,6 +534,135 @@ export default function Stores() {
                     <span className="text-xs text-gray-400">Máx. 2MB. PNG/JPG recomendado.</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Printing + invoicing */}
+              <div className="border-t pt-5 mt-5">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Impresión y facturación</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Ancho de papel de la impresora</label>
+                    <div className="flex gap-1.5 mb-2">
+                      {[55, 58, 80].map(w => (
+                        <button key={w} type="button"
+                          onClick={() => setFormData({ ...formData, receiptWidthMm: w })}
+                          className={`btn-sm flex-1 ${formData.receiptWidthMm === w ? 'btn-primary' : 'btn-outline'}`}>
+                          {w}mm
+                        </button>
+                      ))}
+                    </div>
+                    <input type="number" min={30} max={120} value={formData.receiptWidthMm ?? 55}
+                      onChange={e => setFormData({ ...formData, receiptWidthMm: Number(e.target.value) })}
+                      className="input w-full" placeholder="Otro ancho en mm" />
+                    <p className="text-xs text-gray-500 mt-1">3nStar RPT001 y similares miden 55mm. Ajusta este valor si usas otra impresora térmica.</p>
+                  </div>
+                  <div>
+                    <label className="label">Serie de factura</label>
+                    <input type="text" maxLength={10} value={formData.invoiceSeries ?? 'A'}
+                      onChange={e => setFormData({ ...formData, invoiceSeries: e.target.value.toUpperCase() })}
+                      className="input w-full" placeholder="A" />
+                    <p className="text-xs text-gray-500 mt-1">El número de factura sube solo, en orden, dentro de esta serie — no se puede editar directamente.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Default customer */}
+              <div className="border-t pt-5 mt-5">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Cliente por defecto en Punto de Venta</h4>
+                <p className="text-xs text-gray-500 mb-3">Se selecciona automáticamente al iniciar una venta en esta sucursal (ej. "Consumidor Final"). El cajero puede cambiarlo, pero toda venta requiere un cliente.</p>
+                <select
+                  value={formData.defaultCustomerId ?? ''}
+                  onChange={e => setFormData({ ...formData, defaultCustomerId: e.target.value })}
+                  className="input w-full"
+                >
+                  <option value="">Sin cliente por defecto</option>
+                  {customers.map(c => (
+                    <option key={c.id} value={c.id}>{c.fullName ?? c.name}{c.nit ? ` · NIT ${c.nit}` : ''}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Cash register definitions — fixed per-store config, required before a sale can register a register */}
+              <div className="border-t pt-5 mt-5">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Cajas registradoras</h4>
+                <p className="text-xs text-gray-500 mb-3">Configuración fija de cajas disponibles en esta sucursal. El cajero elige una al abrir turno; una venta no puede registrarse sin caja seleccionada.</p>
+                {!editingStore?.id ? (
+                  <p className="text-xs text-gray-400 italic">Guarda la tienda primero para poder agregar cajas.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {loadingRegisterDefs ? (
+                      <div className="flex justify-center py-3"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600" /></div>
+                    ) : registerDefs.length === 0 ? (
+                      <p className="text-xs text-gray-400">Aún no hay cajas configuradas.</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {registerDefs.map(def => (
+                          <div key={def.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 gap-2">
+                            {editingRegisterDefId === def.id ? (
+                              <>
+                                <input
+                                  type="text" value={editRegisterDefName} autoFocus
+                                  onChange={e => setEditRegisterDefName(e.target.value)}
+                                  onKeyDown={e => { if (e.key === 'Enter') handleSaveRegisterDefName(def.id); if (e.key === 'Escape') setEditingRegisterDefId(null) }}
+                                  className="input input-sm flex-1"
+                                />
+                                <span className="text-gray-400 text-sm">#{def.registerNumber}</span>
+                                <button onClick={() => handleSaveRegisterDefName(def.id)} className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors" title="Guardar">
+                                  <Save size={14} />
+                                </button>
+                                <button onClick={() => setEditingRegisterDefId(null)} className="p-1 text-gray-400 hover:text-gray-600 transition-colors" title="Cancelar">
+                                  <X size={14} />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-sm text-gray-700">{def.name} <span className="text-gray-400">#{def.registerNumber}</span></span>
+                                {canManageRegisters && (
+                                  <div className="flex items-center gap-1">
+                                    <button onClick={() => startEditRegisterDef(def)} className="p-1 text-gray-400 hover:text-primary-600 transition-colors" title="Editar nombre">
+                                      <Edit size={14} />
+                                    </button>
+                                    <button onClick={() => handleRemoveRegisterDef(def.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors" title="Eliminar">
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {canManageRegisters && (
+                      <div className="flex gap-2">
+                        <input type="text" value={newRegisterName} onChange={e => setNewRegisterName(e.target.value)} placeholder="Nombre (ej. Caja 1)" className="input flex-1 text-sm" />
+                        <input type="text" value={newRegisterNumber} onChange={e => setNewRegisterNumber(e.target.value)} placeholder="Número" className="input w-24 text-sm" />
+                        <button onClick={handleAddRegisterDef} disabled={savingRegisterDef} className="btn-outline btn-sm flex items-center gap-1 whitespace-nowrap">
+                          <Plus size={14} /> Agregar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Onboarding sales reconciliation — parallel-run check against an external report */}
+              <div className="border-t pt-5 mt-5">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Conciliación de ventas (implementación)</h4>
+                <p className="text-xs text-gray-500 mb-3">
+                  Mientras el cliente corre DENGO en paralelo con su Excel u otro reporte externo, activa esto para
+                  poder ingresar ese total al cerrar caja — se imprime un comprobante aparte con Total Programa,
+                  Total Excel y la diferencia. Apágalo una vez que confíen en el sistema.
+                </p>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.salesReconciliationEnabled ?? false}
+                    onChange={e => setFormData({ ...formData, salesReconciliationEnabled: e.target.checked })}
+                    className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-gray-700">Activar campo de conciliación al cerrar caja</span>
+                </label>
               </div>
 
               <div className="flex gap-3 mt-6">

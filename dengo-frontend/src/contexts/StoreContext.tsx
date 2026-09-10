@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import type { Store } from '../types'
 import { useAuthStore } from '../store'
+import { setCache, getCache } from '../lib/offlineDb'
 
 interface StoreContextType {
   currentStore: Store | null
@@ -9,6 +10,7 @@ interface StoreContextType {
   switchStore: (storeId: string) => void
   canSwitchStore: boolean
   isLoading: boolean
+  refreshStores: () => Promise<void>
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined)
@@ -38,6 +40,15 @@ function branchToStore(b: any): Store {
     status,
     openTime: b.openTime ?? '08:00',
     closeTime: b.closeTime ?? '20:00',
+    defaultCustomerId: b.defaultCustomerId ?? undefined,
+    logo: b.logo ?? undefined,
+    companyName: b.companyName ?? undefined,
+    companyTaxId: b.companyTaxId ?? undefined,
+    companyTagline: b.companyTagline ?? undefined,
+    socialMediaName: b.socialMediaName ?? undefined,
+    receiptWidthMm: b.receiptWidthMm ?? 55,
+    invoiceSeries: b.invoiceSeries ?? undefined,
+    salesReconciliationEnabled: b.salesReconciliationEnabled ?? false,
     config: {
       currency: b.currency ?? 'GTQ',
       timezone: b.timezone ?? 'America/Guatemala',
@@ -72,6 +83,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setCanSwitchStore(true)
   }, [user?.role])
 
+  // Shared between a fresh fetch and the offline-cache fallback below, so
+  // both populate currentStore/availableStores the same way.
+  const applyStores = (stores: Store[]) => {
+    setAvailableStores(stores)
+    // If a store is already selected, refresh it in place (e.g. after
+    // editing its logo/receipt width in Sucursales) instead of re-picking
+    // one — re-picking would also fight the user's active selection.
+    setCurrentStore(prev => {
+      if (prev) {
+        const fresh = stores.find(s => s.id === prev.id)
+        return fresh ?? prev
+      }
+      const savedId = localStorage.getItem('selectedStoreId')
+      const saved = stores.find(s => s.id === savedId && s.status === 'active')
+      if (saved) return saved
+      if (stores.length > 0) {
+        localStorage.setItem('selectedStoreId', stores[0]!.id)
+        return stores[0]!
+      }
+      return null
+    })
+  }
+
+  // Falls back to the last branch list synced while online instead of
+  // leaving currentStore empty. Used for BOTH a thrown fetch() (no network
+  // at all) AND a non-ok response like a 500 (server reachable but broken)
+  // — a 500 doesn't throw, it's a normal resolved response with a bad status,
+  // so relying on try/catch alone misses it. Without this, a store-derived
+  // receipt field (logo, tagline, social media, even the branch name) prints
+  // blank the moment the backend hiccups, not just during a real outage.
+  const fallBackToCachedStores = async () => {
+    const cached = await getCache<any[]>('branches')
+    if (cached && cached.length > 0) applyStores(cached.map(branchToStore))
+  }
+
   const loadStores = async (authToken: string) => {
     setIsLoading(true)
     try {
@@ -80,8 +126,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         headers: { Authorization: `Bearer ${authToken}` },
       })
 
+      if (res.status === 401) {
+        // Invalid/expired token — this is a raw fetch(), not lib/api.ts's
+        // apiFetch, so nothing else sends the user to /login for this
+        // specific request; do it here instead of silently leaving them on
+        // a page that can never load its stores. Falling back to cached
+        // stores would be actively wrong for this case (they're not this
+        // user's data to keep showing once their session is invalid).
+        localStorage.removeItem('auth-storage')
+        window.location.href = '/login'
+        setIsLoading(false)
+        return
+      }
       if (!res.ok) {
-        // If unauthorized, the global api handler will redirect to login
+        console.error(`Error al cargar sucursales (HTTP ${res.status}), usando caché local`)
+        await fallBackToCachedStores()
         setIsLoading(false)
         return
       }
@@ -91,25 +150,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setIsLoading(false)
         return
       }
-
-      const stores: Store[] = branches.map(branchToStore)
-      setAvailableStores(stores)
-
-      // Restore last selected branch or default to first
-      const savedId = localStorage.getItem('selectedStoreId')
-      const saved = stores.find(s => s.id === savedId && s.status === 'active')
-      if (saved) {
-        setCurrentStore(saved)
-      } else if (stores.length > 0) {
-        setCurrentStore(stores[0])
-        localStorage.setItem('selectedStoreId', stores[0].id)
-      }
+      await setCache('branches', branches)
+      applyStores(branches.map(branchToStore))
     } catch (err) {
-      console.error('Error al cargar sucursales:', err)
+      console.error('Error al cargar sucursales, usando caché local:', err)
+      await fallBackToCachedStores()
     } finally {
       setIsLoading(false)
     }
   }
+
+  const refreshStores = () => (token ? loadStores(token) : Promise.resolve())
 
   const handleSetCurrentStore = (store: Store) => {
     setCurrentStore(store)
@@ -132,6 +183,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       switchStore,
       canSwitchStore,
       isLoading,
+      refreshStores,
     }}>
       {children}
     </StoreContext.Provider>

@@ -88,8 +88,8 @@ export default function Messages() {
       setMsgInput('')
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
       fetchThreads()
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al enviar mensaje')
     } finally {
       setSending(false)
     }

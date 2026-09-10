@@ -3,16 +3,21 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Trash2, Plus, Minus, X, DollarSign, CreditCard,
-  UserPlus, User, Barcode, ShoppingCart, Printer, Tag,
-  Calendar, AlertCircle, Receipt, ArrowLeftRight, Edit2, History, ExternalLink
+  UserPlus, User, Barcode, ShoppingCart, Printer,
+  Calendar, AlertCircle, Receipt, ArrowLeftRight, Edit2, History, ExternalLink, Wallet
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { useCartStore } from '../store'
 import { useAuthStore } from '../store'
-import { api } from '../lib/api'
+import { api, ApiError } from '../lib/api'
 import { toast } from 'sonner'
 import { useStore } from '../contexts/StoreContext'
+import { usePermissions } from '../hooks/usePermissions'
+import ThermalReceipt from '../components/print/ThermalReceipt'
+import SalesGoalWidget from '../components/SalesGoalWidget'
+import { queuePendingSale, setCache, getCache, addSaleToRegisterTally } from '../lib/offlineDb'
+import { trySync, refreshPendingCount, getLocallyClosingRegisterIds } from '../lib/offlineSync'
+import { getAdjustmentReasons, type AdjustmentReason } from '../lib/inventoryReasons'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -51,9 +56,13 @@ interface CustomerRecord {
   name?: string
   email?: string
   phone?: string
+  comments?: string
+  creditEnabled?: boolean
+  creditLimitEnabled?: boolean
   creditLimit?: number
   creditUsed?: number
-  creditAvailable?: number
+  creditAvailable?: number | null // null = crédito sin límite
+  creditUsedPercent?: number
 }
 
 type PaymentMethodType = 'CASH' | 'CARD' | 'TRANSFER' | 'MIXED' | 'CREDIT'
@@ -87,6 +96,19 @@ interface CompletedSale {
   customerName?: string
   customerNit?: string
   createdAt: string
+  requiresInvoice?: boolean
+  invoiceSeries?: string | null
+  invoiceSeqNumber?: number | null
+  buyerNit?: string | null
+  buyerName?: string | null
+  felStatus?: string | null
+  pendingSync?: boolean
+  cardReference?: string | null
+  transferReference?: string | null
+  // Set only on the offline-queued path — the same clientRequestId the sale
+  // is queued and later synced under, so a receipt printed before syncing
+  // can still be traced to its real correlativo (search sales by this ref).
+  offlineRef?: string
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -97,6 +119,11 @@ function getCustomerName(c: CustomerRecord): string {
 
 function getCustomerNit(c: CustomerRecord): string {
   return c.nit ?? 'CF'
+}
+
+function creditHint(c: CustomerRecord): string {
+  if (!c.creditEnabled) return ''
+  return ` · Créd: ${c.creditAvailable === null ? 'Ilimitado' : `Q${(c.creditAvailable ?? 0).toFixed(2)}`}`
 }
 
 function normaliseProduct(p: ProductRecord): ProductRecord {
@@ -134,37 +161,73 @@ export default function POS() {
   const { user } = useAuthStore()
   const { currentStore } = useStore()
   const BRANCH_ID = currentStore?.id ?? user?.branchId ?? ''
+  const { hasPermission } = usePermissions()
+  const canCreateCustomer = hasPermission('customers.create')
+  const canEditCustomer = hasPermission('customers.edit')
 
-  // Active cash register (persisted in localStorage per branch)
+  // Active cash register — the choice is required before any sale and is
+  // remembered only for the current calendar day (a new day always forces a
+  // fresh pick), scoped per branch since a cashier can switch stores.
+  const todayKey = new Date().toISOString().slice(0, 10)
+  const registerStorageKey = `pos-register-${BRANCH_ID}-${todayKey}`
+
   const [openRegisters, setOpenRegisters] = useState<{ id: string; name: string; registerNumber: string }[]>([])
-  const [selectedRegisterId, setSelectedRegisterId] = useState<string>(() => {
-    return localStorage.getItem(`pos-register-${BRANCH_ID}`) ?? ''
-  })
+  const [selectedRegisterId, setSelectedRegisterId] = useState<string>('')
+  const [showRegisterPanel, setShowRegisterPanel] = useState(false)
+  const [registersLoaded, setRegistersLoaded] = useState(false)
 
   useEffect(() => {
     if (!BRANCH_ID) return
+    setRegistersLoaded(false)
+    const registerCacheKey = `registers-${BRANCH_ID}`
     api.get<any[]>(`/api/cash-registers/current?branchId=${BRANCH_ID}`)
-      .then(d => {
-        const list = (Array.isArray(d) ? d : (d ? [d] : [])).filter(Boolean)
-        setOpenRegisters(list.map(r => ({ id: r.id, name: r.name ?? 'Caja', registerNumber: r.registerNumber ?? '?' })))
-        // Auto-select if only one open or restore saved
-        const saved = localStorage.getItem(`pos-register-${BRANCH_ID}`)
-        if (list.length === 1 && !saved) {
-          setSelectedRegisterId(list[0].id)
-          localStorage.setItem(`pos-register-${BRANCH_ID}`, list[0].id)
-        } else if (saved && list.some((r: any) => r.id === saved)) {
+      .then(async d => {
+        // The server doesn't know about a close still sitting in the offline
+        // queue (see CashRegister.tsx) — drop it here too, so a register
+        // closed offline doesn't stay selectable for new sales.
+        const closingIds = await getLocallyClosingRegisterIds()
+        const rawOpens = (Array.isArray(d) ? d : (d ? [d] : [])).filter(Boolean)
+        const list = rawOpens.filter(r => !closingIds.has(r.id))
+          .map(r => ({ id: r.id, name: r.name ?? 'Caja', registerNumber: r.registerNumber ?? '?' }))
+        setOpenRegisters(list)
+        setCache(registerCacheKey, list)
+        // Also feed CashRegister.tsx's own cache (it needs the full record —
+        // initialAmount, movements, sales — not just this page's id/name/
+        // registerNumber) under the SAME key it writes on its own successful
+        // fetches. POS.tsx is visited far more than Caja, so without this,
+        // a cashier who goes offline having never happened to open Caja
+        // this session finds it empty there even though it was open the
+        // whole time — exactly what "ya estaba en esa pantalla" was
+        // masking: it only worked because Caja itself had already fetched.
+        setCache(`registers-full-${BRANCH_ID}`, rawOpens)
+        const saved = localStorage.getItem(registerStorageKey)
+        if (saved && list.some(r => r.id === saved)) {
           setSelectedRegisterId(saved)
-        } else if (list.length > 0 && !list.some((r: any) => r.id === saved)) {
-          setSelectedRegisterId(list[0].id)
-          localStorage.setItem(`pos-register-${BRANCH_ID}`, list[0].id)
+        } else {
+          setSelectedRegisterId('')
+          if (list.length > 0) setShowRegisterPanel(true)
         }
       })
-      .catch(() => {})
+      .catch(async () => {
+        // Server unreachable — reuse whatever register list was last seen so
+        // a shift already in progress isn't blocked from selling.
+        const closingIds = await getLocallyClosingRegisterIds()
+        const cachedAll = await getCache<{ id: string; name: string; registerNumber: string }[]>(registerCacheKey)
+        const cached = cachedAll?.filter(r => !closingIds.has(r.id))
+        if (cached) {
+          setOpenRegisters(cached)
+          const saved = localStorage.getItem(registerStorageKey)
+          if (saved && cached.some(r => r.id === saved)) setSelectedRegisterId(saved)
+        }
+      })
+      .finally(() => setRegistersLoaded(true))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [BRANCH_ID])
 
   const handleRegisterChange = (id: string) => {
     setSelectedRegisterId(id)
-    localStorage.setItem(`pos-register-${BRANCH_ID}`, id)
+    localStorage.setItem(registerStorageKey, id)
+    setShowRegisterPanel(false)
   }
 
   // Search
@@ -181,6 +244,12 @@ export default function POS() {
   const [loadingCustomers, setLoadingCustomers] = useState(false)
   const [showCustomerHistory, setShowCustomerHistory] = useState(false)
   const [customerSales, setCustomerSales] = useState<any[]>([])
+
+  // Quick add/edit customer (inline, without leaving the sale)
+  const [showQuickCustomerModal, setShowQuickCustomerModal] = useState(false)
+  const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
+  const [quickCustomerForm, setQuickCustomerForm] = useState({ name: '', nit: '', phone: '', email: '', creditEnabled: false, creditLimitEnabled: true, creditLimit: '' })
+  const [savingQuickCustomer, setSavingQuickCustomer] = useState(false)
   const [loadingCustomerSales, setLoadingCustomerSales] = useState(false)
 
   // Cart
@@ -188,6 +257,7 @@ export default function POS() {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerRecord | null>(null)
   const [saleType, setSaleType] = useState<SaleTypeValue>('CASH')
   const [itemDiscounts, setItemDiscounts] = useState<Record<string, number>>({})
+  const [bulkDiscountInput, setBulkDiscountInput] = useState('')
 
   // Variation modal — used both for initial add and for changing variation of cart item
   const [showVariationModal, setShowVariationModal] = useState(false)
@@ -195,14 +265,35 @@ export default function POS() {
   const [variationQuantities, setVariationQuantities] = useState<Record<string, number>>({})
   const [changingVariationItem, setChangingVariationItem] = useState<CartItem | null>(null) // non-null = changing existing item
 
+  // Out-of-stock gate at add time — see ensureStockAvailable(). Non-null
+  // while the "adjust inventory now?" prompt is open for a cashier with
+  // inventory.adjust; resolve(true/false) unblocks whichever add() is waiting.
+  const [stockPrompt, setStockPrompt] = useState<{
+    product: ProductRecord; variation: ProductVariation; requestedQty: number; available: number
+    resolve: (proceed: boolean) => void
+  } | null>(null)
+  const [stockPromptNewStock, setStockPromptNewStock] = useState('')
+  const [stockPromptReason, setStockPromptReason] = useState('')
+  const [savingStockPrompt, setSavingStockPrompt] = useState(false)
+  // This prompt only ever fires to cover a shortfall — always an increase —
+  // so only UP-direction reasons ever apply here (see lib/inventoryReasons.ts).
+  const [stockPromptReasonOptions, setStockPromptReasonOptions] = useState<AdjustmentReason[]>([])
+  useEffect(() => { getAdjustmentReasons('UP').then(setStockPromptReasonOptions) }, [])
+
   // Payment
+  const [enabledPaymentMethods, setEnabledPaymentMethods] = useState<Set<string>>(new Set(['CASH', 'CARD', 'TRANSFER']))
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('CASH')
   const [cashReceived, setCashReceived] = useState('')
-  const [transferAmount, setTransferAmount] = useState('')
   const [transferDocumentNumber, setTransferDocumentNumber] = useState('')
+  const [cardReference, setCardReference] = useState('')
   const [mixedCashAmount, setMixedCashAmount] = useState('')
   const [mixedTransferAmount, setMixedTransferAmount] = useState('')
   const [mixedTransferDoc, setMixedTransferDoc] = useState('')
+
+  // Factura — discrecional, apagado por defecto (solo recibo)
+  const [wantsInvoice, setWantsInvoice] = useState(false)
+  const [invoiceBuyerNit, setInvoiceBuyerNit] = useState('')
+  const [invoiceBuyerName, setInvoiceBuyerName] = useState('')
 
   // Quantity string display — allows free-text editing (cleared on commit/blur)
   const [itemQtyStrings, setItemQtyStrings] = useState<Record<string, string>>({})
@@ -222,15 +313,52 @@ export default function POS() {
   // ── Fetch customers on mount ───────────────────────────────────────────────
   useEffect(() => {
     fetchCustomers()
+    fetchEnabledPaymentMethods()
+    loadProductCatalogCache()
   }, [])
+
+  // Full active-product snapshot, refreshed whenever it's reachable — the
+  // fallback performSearch/handleBarcodeScan read from when the live search
+  // endpoint can't be reached.
+  async function loadProductCatalogCache() {
+    try {
+      const data = await api.get<ProductRecord[]>('/api/products?isActive=true')
+      await setCache('products', data ?? [])
+    } catch {
+      // No network yet — whatever was cached from a previous session stays in place
+    }
+  }
+
+  // Auto-select the branch's default customer so a sale never starts with no
+  // customer chosen. Only applies while nothing has been picked yet — it
+  // never overrides a customer the cashier already selected.
+  useEffect(() => {
+    if (selectedCustomer || !currentStore?.defaultCustomerId || customers.length === 0) return
+    const defaultCustomer = customers.find(c => c.id === currentStore.defaultCustomerId)
+    if (defaultCustomer) setSelectedCustomer(defaultCustomer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customers, currentStore?.defaultCustomerId])
+
+  async function fetchEnabledPaymentMethods() {
+    try {
+      const data = await api.get<{ method: string; enabled: boolean }[]>('/api/settings/payment-methods')
+      setEnabledPaymentMethods(new Set(data.filter(m => m.enabled).map(m => m.method)))
+    } catch {
+      // Non-critical; keep the CASH/CARD/TRANSFER default so checkout still works
+    }
+  }
 
   async function fetchCustomers() {
     setLoadingCustomers(true)
     try {
       const data = await api.get<CustomerRecord[]>('/api/customers')
       setCustomers(data ?? [])
+      setCache('customers', data ?? [])
     } catch {
-      // Non-critical; customer search will just show empty
+      // Offline or server down — fall back to the last successful load so
+      // checkout can still pick a customer.
+      const cached = await getCache<CustomerRecord[]>('customers')
+      if (cached) setCustomers(cached)
     } finally {
       setLoadingCustomers(false)
     }
@@ -261,8 +389,19 @@ export default function POS() {
       setSearchResults(results)
       setShowSearchResults(results.length > 0 || query.length > 0)
     } catch {
-      setSearchResults([])
-      setShowSearchResults(false)
+      // Server unreachable — search the last cached catalog snapshot instead
+      const cached = await getCache<ProductRecord[]>('products')
+      const q = query.toLowerCase()
+      const results = (cached ?? [])
+        .filter(p => p.isActive !== false && (
+          p.name?.toLowerCase().includes(q) ||
+          p.barcode?.toLowerCase().includes(q) ||
+          p.sku?.toLowerCase().includes(q)
+        ))
+        .slice(0, 8)
+        .map(normaliseProduct)
+      setSearchResults(results)
+      setShowSearchResults(results.length > 0 || query.length > 0)
     }
   }
 
@@ -280,16 +419,20 @@ export default function POS() {
   const total = subtotal
   const itemCount = cartItems.reduce((s, item) => s + item.quantity, 0)
 
-  const canSellOnCredit = selectedCustomer &&
-    (selectedCustomer.creditAvailable ?? 0) > 0
+  const canSellOnCredit = !!selectedCustomer && !!selectedCustomer.creditEnabled &&
+    (selectedCustomer.creditAvailable === null || (selectedCustomer.creditAvailable ?? 0) > 0)
 
-  const canComplete = cartItems.length > 0 && !saving && (
-    saleType === 'CREDIT' ||
-    paymentMethod === 'CARD' ||
-    paymentMethod === 'TRANSFER' ||
-    (paymentMethod === 'CASH' && cashReceived !== '' && parseFloat(cashReceived) >= total) ||
-    (paymentMethod === 'MIXED' && parseFloat(mixedCashAmount || '0') + parseFloat(mixedTransferAmount || '0') >= total)
-  )
+  const canComplete = cartItems.length > 0 && !saving &&
+    !!selectedCustomer &&
+    !!selectedRegisterId &&
+    (!wantsInvoice || invoiceBuyerNit.trim().length > 0) &&
+    (
+      saleType === 'CREDIT' ||
+      paymentMethod === 'CARD' ||
+      paymentMethod === 'TRANSFER' ||
+      (paymentMethod === 'CASH' && cashReceived !== '' && parseFloat(cashReceived) >= total) ||
+      (paymentMethod === 'MIXED' && parseFloat(mixedCashAmount || '0') + parseFloat(mixedTransferAmount || '0') >= total)
+    )
 
   const change = cashReceived && parseFloat(cashReceived) >= total
     ? parseFloat(cashReceived) - total
@@ -319,6 +462,21 @@ export default function POS() {
     })
   }
 
+  // Same stock gate as adding a new item, but for raising the quantity of a
+  // line already in the cart (the "+" stepper and typing a quantity by
+  // hand) — lowering never needs a check. ensureStockAvailable adds
+  // `additionalQty` on top of whatever's already in the cart for this line,
+  // so passing (newQty - item.quantity) makes it evaluate the same absolute
+  // target this call is trying to reach.
+  async function changeQuantity(item: CartItem, newQty: number) {
+    if (newQty <= item.quantity || !item.variation) {
+      updateQuantity(item.product.id, item.variation?.id, newQty)
+      return
+    }
+    if (!(await ensureStockAvailable(item.product, item.variation, newQty - item.quantity))) return
+    updateQuantity(item.product.id, item.variation.id, newQty)
+  }
+
   function updateQuantity(productId: string, variationId: string | undefined, qty: number) {
     const key = getItemKey(productId, variationId)
     setCartItems(prev =>
@@ -335,20 +493,116 @@ export default function POS() {
     setItemQtyStrings(prev => { const next = { ...prev }; delete next[key]; return next })
   }
 
+  // Applies one % to every current cart line's own discount field instead of
+  // subtracting from the grand total — the client sells some seasonal items
+  // already priced with a discount baked in, and those need to stay excluded.
+  // Applying it here (same field the per-line % input writes to) means the
+  // cashier can bulk-apply, then clear it back to 0 on just the excluded rows.
+  function applyDiscountToAll() {
+    const pct = Math.min(100, Math.max(0, parseFloat(bulkDiscountInput) || 0))
+    if (cartItems.length === 0) return
+    setItemDiscounts(prev => {
+      const next = { ...prev }
+      cartItems.forEach(item => { next[getItemKey(item.product.id, item.variation?.id)] = pct })
+      return next
+    })
+    toast.success(`${pct}% aplicado a ${cartItems.length} artículo(s) — puedes quitarlo de uno en particular en su fila`)
+  }
+
   function clearCart() {
     setCartItems([])
     setItemDiscounts({})
     setItemQtyStrings({})
+    setBulkDiscountInput('')
+  }
+
+  // Gate on stock BEFORE adding, not just at final checkout — additionalQty
+  // is on top of whatever's already in the cart for this exact product+
+  // variation. Resolves true when it's fine to add (enough stock, no
+  // inventory record, or the stock check itself couldn't run — e.g. offline,
+  // matching the same "allow the sale" fallback the final checkout check
+  // already used). Resolves false when blocked: either the cashier has no
+  // inventory.adjust and just gets told no, or they do and either cancel or
+  // finish the inline adjustment (in which case this resolves true instead).
+  async function ensureStockAvailable(product: ProductRecord, variation: ProductVariation, additionalQty: number): Promise<boolean> {
+    if (!BRANCH_ID) return true
+    const key = getItemKey(product.id, variation.id)
+    const existing = cartItems.find(i => getItemKey(i.product.id, i.variation?.id) === key)
+    const totalRequested = (existing?.quantity ?? 0) + additionalQty
+    const isRealVariation = !variation.id.endsWith('-default')
+    const productId = isRealVariation ? variation.productId : product.id
+
+    let available: number
+    try {
+      const inv = await api.get<{ quantity: number }>(`/api/inventory/${productId}/${BRANCH_ID}`)
+      available = Number(inv?.quantity ?? 0)
+    } catch {
+      return true
+    }
+    if (available >= totalRequested) return true
+
+    if (!hasPermission('inventory.adjust')) {
+      toast.error(`Stock insuficiente — disponible: ${available}, necesitas: ${totalRequested}`)
+      return false
+    }
+
+    return new Promise<boolean>(resolve => {
+      setStockPromptNewStock(String(totalRequested))
+      setStockPromptReason('')
+      setStockPrompt({ product, variation, requestedQty: totalRequested, available, resolve })
+    })
+  }
+
+  async function confirmStockAdjustment() {
+    if (!stockPrompt) return
+    if (!stockPromptReason) { toast.error('Selecciona una razón para el ajuste'); return }
+    const newStock = parseInt(stockPromptNewStock, 10)
+    if (isNaN(newStock) || newStock < stockPrompt.requestedQty) {
+      toast.error(`El nuevo stock debe ser al menos ${stockPrompt.requestedQty}`); return
+    }
+    const isRealVariation = !stockPrompt.variation.id.endsWith('-default')
+    const productId = isRealVariation ? stockPrompt.variation.productId : stockPrompt.product.id
+    setSavingStockPrompt(true)
+    try {
+      await api.put(`/api/inventory/${productId}/${BRANCH_ID}`, { quantity: newStock, reason: stockPromptReason })
+      toast.success('Inventario ajustado')
+      stockPrompt.resolve(true)
+      setStockPrompt(null)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al ajustar inventario')
+    } finally {
+      setSavingStockPrompt(false)
+    }
+  }
+
+  function cancelStockAdjustment() {
+    stockPrompt?.resolve(false)
+    setStockPrompt(null)
   }
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleAddProduct = (product: ProductRecord) => {
+  const handleAddProduct = async (product: ProductRecord) => {
     setSearchTerm('')
     setShowSearchResults(false)
     const variations = getVariations(product)
-    // Always auto-add with the default variation; user can change from the cart line
-    const defaultVar = variations.find(v => v.isDefault) ?? variations[0]
-    addToCart(product, defaultVar, 1)
+    // A product with real presentations (ej. Coca-Cola 600ml/1L/3L) opens the
+    // picker so the cashier can choose — and can add more than one
+    // presentation of the same product without it just bumping the quantity
+    // of whichever one was added first. Only a single-presentation product
+    // skips straight to the cart. Stock is checked per-variation once one's
+    // actually chosen (see handleAddVariationToCart), not here.
+    if (variations.length > 1) {
+      setChangingVariationItem(null)
+      setSelectedProductForVariation(product)
+      const initialQtys: Record<string, number> = {}
+      variations.forEach(v => { initialQtys[v.id] = 1 })
+      setVariationQuantities(initialQtys)
+      setShowVariationModal(true)
+      return
+    }
+    const variation = variations[0]!
+    if (!(await ensureStockAvailable(product, variation, 1))) return
+    addToCart(product, variation, 1)
     toast.success(`${product.name} agregado`)
   }
 
@@ -374,6 +628,7 @@ export default function POS() {
     if (exactProduct) {
       const matchedVariation = getVariations(exactProduct).find(v => v.barcode === barcode)
       if (matchedVariation) {
+        if (!(await ensureStockAvailable(exactProduct, matchedVariation, 1))) return
         addToCart(exactProduct, matchedVariation, 1)
         setSearchTerm('')
         setShowSearchResults(false)
@@ -395,6 +650,7 @@ export default function POS() {
           ? { ...data.variation, price: Number(data.variation.price ?? 0), conversionFactor: Number(data.variation.conversionFactor ?? 1) }
           : undefined
         if (variation) {
+          if (!(await ensureStockAvailable(product, variation, 1))) return
           addToCart(product, variation, 1)
           setSearchTerm('')
           setShowSearchResults(false)
@@ -406,7 +662,28 @@ export default function POS() {
         toast.error('Producto no encontrado')
       }
     } catch {
-      toast.error('Producto no encontrado')
+      // Server unreachable — try to resolve the barcode from the cached catalog
+      const cached = await getCache<ProductRecord[]>('products')
+      const match = (cached ?? []).find(p =>
+        p.barcode === barcode || getVariations(p).some(v => v.barcode === barcode)
+      )
+      if (match) {
+        const product = normaliseProduct(match)
+        const matchedVariation = getVariations(match).find(v => v.barcode === barcode)
+        // Already confirmed unreachable above — skip the stock check here
+        // instead of firing another doomed request; matches ensureStockAvailable's
+        // own fallback of allowing the add when the check itself can't run.
+        if (matchedVariation) {
+          addToCart(product, matchedVariation, 1)
+          setSearchTerm('')
+          setShowSearchResults(false)
+          toast.success(`${product.name} (${matchedVariation.name}) agregado`)
+        } else {
+          handleAddProduct(product)
+        }
+      } else {
+        toast.error('Producto no encontrado')
+      }
     }
   }
 
@@ -415,8 +692,68 @@ export default function POS() {
     setShowCustomerModal(false)
     setShowCustomerDropdown(false)
     setCustomerSearch('')
-    if (!customer.creditAvailable || customer.creditAvailable <= 0) {
+    const hasCredit = customer.creditEnabled && (customer.creditAvailable === null || (customer.creditAvailable ?? 0) > 0)
+    if (!hasCredit) {
       setSaleType('CASH')
+    }
+  }
+
+  const openQuickAddCustomer = () => {
+    setEditingCustomerId(null)
+    setQuickCustomerForm({ name: customerSearch, nit: '', phone: '', email: '', creditEnabled: false, creditLimitEnabled: true, creditLimit: '' })
+    setShowCustomerModal(false)
+    setShowCustomerDropdown(false)
+    setShowQuickCustomerModal(true)
+  }
+
+  const openQuickEditCustomer = (customer: CustomerRecord) => {
+    setEditingCustomerId(customer.id)
+    setQuickCustomerForm({
+      name: getCustomerName(customer),
+      nit: customer.nit ?? '',
+      phone: customer.phone ?? '',
+      email: customer.email ?? '',
+      creditEnabled: !!customer.creditEnabled,
+      creditLimitEnabled: customer.creditLimitEnabled ?? true,
+      creditLimit: customer.creditLimit ? String(customer.creditLimit) : '',
+    })
+    setShowQuickCustomerModal(true)
+  }
+
+  const handleSaveQuickCustomer = async () => {
+    if (!quickCustomerForm.name.trim() || !quickCustomerForm.nit.trim()) {
+      toast.error('Nombre y NIT son requeridos'); return
+    }
+    setSavingQuickCustomer(true)
+    try {
+      const payload: any = {
+        name: quickCustomerForm.name.trim(),
+        nit: quickCustomerForm.nit.trim(),
+        phone: quickCustomerForm.phone.trim() || undefined,
+        email: quickCustomerForm.email.trim() || undefined,
+        creditEnabled: quickCustomerForm.creditEnabled,
+        creditLimitEnabled: quickCustomerForm.creditLimitEnabled,
+      }
+      if (quickCustomerForm.creditEnabled && quickCustomerForm.creditLimitEnabled) {
+        payload.creditLimit = parseFloat(quickCustomerForm.creditLimit) || 0
+      }
+      const saved = editingCustomerId
+        ? await api.put<CustomerRecord>(`/api/customers/${editingCustomerId}`, payload)
+        : await api.post<CustomerRecord>('/api/customers', payload)
+      if (editingCustomerId) {
+        setCustomers(prev => prev.map(c => c.id === saved.id ? saved : c))
+        if (selectedCustomer?.id === saved.id) setSelectedCustomer(saved)
+        toast.success('Cliente actualizado')
+      } else {
+        setCustomers(prev => [...prev, saved])
+        handleSelectCustomer(saved)
+        toast.success('Cliente agregado')
+      }
+      setShowQuickCustomerModal(false)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al guardar cliente')
+    } finally {
+      setSavingQuickCustomer(false)
     }
   }
 
@@ -429,10 +766,18 @@ export default function POS() {
     } catch { setCustomerSales([]) } finally { setLoadingCustomerSales(false) }
   }
 
-  const handleAddVariationToCart = (variation: ProductVariation, qty: number) => {
+  const closeVariationModal = () => {
+    setShowVariationModal(false)
+    setSelectedProductForVariation(null)
+    setChangingVariationItem(null)
+    setVariationQuantities({})
+  }
+
+  const handleAddVariationToCart = async (variation: ProductVariation, qty: number) => {
     if (!selectedProductForVariation) return
     if (changingVariationItem) {
-      // Replace existing item's variation
+      // Replace existing item's variation — this is the one-line "switch
+      // presentation" action, so it does close the modal afterward.
       const oldKey = getItemKey(changingVariationItem.product.id, changingVariationItem.variation?.id)
       const oldDiscount = itemDiscounts[oldKey] ?? 0
       setCartItems(prev => prev.map(i =>
@@ -446,25 +791,35 @@ export default function POS() {
         return { ...next, [getItemKey(changingVariationItem.product.id, variation.id)]: oldDiscount }
       })
       toast.success(`Variación cambiada a ${variation.name}`)
+      closeVariationModal()
     } else {
+      // Adding fresh — keep the modal open so the cashier can add another
+      // presentation of the same product right after (ej. 600ml y luego 3L)
+      // instead of it just bumping the quantity of whichever was added first.
+      if (!(await ensureStockAvailable(selectedProductForVariation, variation, qty))) return
       addToCart(selectedProductForVariation, variation, qty)
       toast.success(`${selectedProductForVariation.name} (${variation.name}) agregado`)
+      setVariationQuantities(prev => ({ ...prev, [variation.id]: 1 }))
     }
-    setShowVariationModal(false)
-    setSelectedProductForVariation(null)
-    setChangingVariationItem(null)
-    setVariationQuantities({})
   }
 
   const completeSaleRequest = async () => {
     setSaving(true)
     try {
+      // A credit sale still carries whatever paymentMethod was last clicked
+      // in the CASH/CARD/TRANSFER/MIXED selector (that selector is about
+      // how a *paid-now* sale was paid, and isn't reset for credit) — sent
+      // as-is, that leftover value both prints wrong on the receipt AND
+      // (worse) makes computeSales() in cash-registers.ts bucket the sale as
+      // real cash/card/transfer, inflating the expected cash at register
+      // close for money that was never actually received.
+      const effectivePaymentMethod: PaymentMethodType = saleType === 'CREDIT' ? 'CREDIT' : paymentMethod
       const payload: any = {
         branchId: BRANCH_ID,
         customerId: selectedCustomer?.id,
         cashRegisterId: selectedRegisterId || undefined,
         saleType,
-        paymentMethod,
+        paymentMethod: effectivePaymentMethod,
         items: cartItems.map(item => {
           const key = getItemKey(item.product.id, item.variation?.id)
           const unitPrice = item.variation ? item.variation.price : item.product.basePrice
@@ -483,65 +838,146 @@ export default function POS() {
         tax: 0,
         discount: 0,
         total,
+        requiresInvoice: wantsInvoice,
+      }
+      if (wantsInvoice) {
+        if (invoiceBuyerNit.trim()) payload.buyerNit = invoiceBuyerNit.trim()
+        if (invoiceBuyerName.trim()) payload.buyerName = invoiceBuyerName.trim()
       }
 
-      // Add payment breakdown
-      if (paymentMethod === 'CASH') {
-        payload.cashAmount = total
-      } else if (paymentMethod === 'TRANSFER') {
-        payload.transferAmount = total
-        if (transferDocumentNumber) payload.transferDocumentNumber = transferDocumentNumber
-      } else if (paymentMethod === 'MIXED') {
-        const ca = parseFloat(mixedCashAmount || '0')
-        const ta = parseFloat(mixedTransferAmount || '0')
-        payload.cashAmount = ca
-        payload.transferAmount = ta
-        if (mixedTransferDoc) payload.transferDocumentNumber = mixedTransferDoc
+      // Add payment breakdown — none of this applies to a credit sale (no
+      // money changed hands yet), so it's skipped entirely rather than
+      // reflecting whatever the CASH/CARD/etc. selector happened to show.
+      if (saleType !== 'CREDIT') {
+        if (paymentMethod === 'CASH') {
+          payload.cashAmount = total
+        } else if (paymentMethod === 'CARD') {
+          if (cardReference.trim()) payload.cardReference = cardReference.trim()
+        } else if (paymentMethod === 'TRANSFER') {
+          payload.transferAmount = total
+          if (transferDocumentNumber) payload.transferDocumentNumber = transferDocumentNumber
+        } else if (paymentMethod === 'MIXED') {
+          const ca = parseFloat(mixedCashAmount || '0')
+          const ta = parseFloat(mixedTransferAmount || '0')
+          payload.cashAmount = ca
+          payload.transferAmount = ta
+          if (mixedTransferDoc) payload.transferDocumentNumber = mixedTransferDoc
+        }
       }
 
-      const created = await api.post<any>('/api/sales', payload)
+      // Build the receipt shown on-screen from either the server's response
+      // (normal path) or purely from local cart state (offline-queued path,
+      // where there is no server response yet).
+      const buildReceipt = (created: any, pendingSync: boolean, offlineRequestId?: string): CompletedSale => {
+        const now = new Date().toISOString()
+        // Short, easy-to-read-and-copy form of the clientRequestId — 8 hex
+        // chars is still effectively unique at this volume of sales, and the
+        // backend search matches on a substring, so this short form alone
+        // is enough to find the real sale later. Printing the full 36-char
+        // UUID would work too, but nobody's copying that by hand correctly.
+        const offlineRef = offlineRequestId ? offlineRequestId.slice(0, 8).toUpperCase() : undefined
+        return {
+          id: created?.id ?? Date.now().toString(),
+          invoiceNumber: created?.invoiceNumber ?? created?.receiptNumber ?? (offlineRef ? `REF-${offlineRef}` : `FAC-${Date.now()}`),
+          branchName: created?.branch?.name ?? currentStore?.name ?? 'Tienda',
+          items: cartItems.map(item => {
+            const unitPrice = item.variation ? item.variation.price : item.product.basePrice
+            const disc = itemDiscounts[getItemKey(item.product.id, item.variation?.id)] || 0
+            return {
+              id: getItemKey(item.product.id, item.variation?.id),
+              productName: item.product.name,
+              variationName: item.variation?.name,
+              quantity: item.quantity,
+              unitPrice,
+              discount: disc,
+              total: unitPrice * item.quantity * (1 - disc / 100),
+            }
+          }),
+          subtotal,
+          total,
+          paymentMethod: created?.paymentMethod ?? effectivePaymentMethod,
+          saleType,
+          customerName: selectedCustomer ? getCustomerName(selectedCustomer) : undefined,
+          customerNit: selectedCustomer ? getCustomerNit(selectedCustomer) : undefined,
+          createdAt: created?.createdAt ?? now,
+          requiresInvoice: created?.requiresInvoice ?? wantsInvoice,
+          invoiceSeries: created?.invoiceSeries,
+          invoiceSeqNumber: created?.invoiceSeqNumber,
+          buyerNit: created?.buyerNit,
+          buyerName: created?.buyerName,
+          felStatus: pendingSync ? 'NONE' : created?.felStatus,
+          pendingSync,
+          // Gated on saleType !== 'CREDIT' too, not just the raw paymentMethod
+          // selector — that selector isn't reset for a credit sale, so on
+          // its own it could leak a reference typed for an earlier non-credit
+          // sale this session onto a credit sale's receipt.
+          cardReference: created?.cardReference ?? (saleType !== 'CREDIT' && paymentMethod === 'CARD' ? cardReference.trim() || undefined : undefined),
+          transferReference: created?.transferDocumentNumber ??
+            (saleType === 'CREDIT' ? undefined
+              : paymentMethod === 'TRANSFER' ? transferDocumentNumber.trim() || undefined
+              : paymentMethod === 'MIXED' ? mixedTransferDoc.trim() || undefined
+              : undefined),
+          offlineRef,
+        }
+      }
 
-      // Build a local receipt from the response (or from local state as fallback)
-      const now = new Date().toISOString()
-      const receipt: CompletedSale = {
-        id: created?.id ?? Date.now().toString(),
-        invoiceNumber: created?.invoiceNumber ?? created?.receiptNumber ?? `FAC-${Date.now()}`,
-        branchName: created?.branch?.name ?? 'Tienda',
-        items: cartItems.map(item => {
-          const unitPrice = item.variation ? item.variation.price : item.product.basePrice
-          const disc = itemDiscounts[getItemKey(item.product.id, item.variation?.id)] || 0
-          return {
-            id: getItemKey(item.product.id, item.variation?.id),
-            productName: item.product.name,
-            variationName: item.variation?.name,
-            quantity: item.quantity,
-            unitPrice,
-            discount: disc,
-            total: unitPrice * item.quantity * (1 - disc / 100),
+      const finishLocally = (created: any, pendingSync: boolean, successMessage: string, offlineRef?: string) => {
+        // Updates CashRegister.tsx's live reconciliation tally the instant
+        // this sale completes — online or queued offline, it doesn't
+        // matter, since neither page re-fetches the register's sales total
+        // on its own (see offlineDb.ts's addSaleToRegisterTally). Without
+        // this, a cashier who doesn't happen to revisit Caja between sales
+        // sees a stale "efectivo esperado" at close time.
+        if (selectedRegisterId) {
+          const contribution: { total: number; cash?: number; card?: number; transfer?: number; credit?: number } = { total }
+          if (payload.paymentMethod === 'CASH') contribution.cash = total
+          else if (payload.paymentMethod === 'CARD') contribution.card = total
+          else if (payload.paymentMethod === 'TRANSFER') contribution.transfer = total
+          else if (payload.paymentMethod === 'CREDIT') contribution.credit = total
+          else if (payload.paymentMethod === 'MIXED') {
+            contribution.cash = payload.cashAmount ?? 0
+            contribution.transfer = payload.transferAmount ?? 0
           }
-        }),
-        subtotal,
-        total,
-        paymentMethod,
-        saleType,
-        customerName: selectedCustomer ? getCustomerName(selectedCustomer) : undefined,
-        customerNit: selectedCustomer ? getCustomerNit(selectedCustomer) : undefined,
-        createdAt: created?.createdAt ?? now,
+          addSaleToRegisterTally(selectedRegisterId, contribution)
+        }
+        setLastCashReceived(cashReceived)
+        setCompletedSale(buildReceipt(created, pendingSync, offlineRef))
+        setShowReceiptModal(true)
+        clearCart()
+        setCashReceived('')
+        setCardReference('')
+        setTransferDocumentNumber('')
+        setMixedCashAmount('')
+        setMixedTransferAmount('')
+        setMixedTransferDoc('')
+        setWantsInvoice(false)
+        setInvoiceBuyerNit('')
+        setInvoiceBuyerName('')
+        toast.success(successMessage)
       }
 
-      setLastCashReceived(cashReceived)
-      setCompletedSale(receipt)
-      setShowReceiptModal(true)
-      clearCart()
-      setCashReceived('')
-      setTransferAmount('')
-      setTransferDocumentNumber('')
-      setMixedCashAmount('')
-      setMixedTransferAmount('')
-      setMixedTransferDoc('')
-      toast.success('¡Venta completada!')
-    } catch (err: any) {
-      toast.error(err?.message ?? 'Error al procesar la venta')
+      try {
+        const created = await api.post<any>('/api/sales', payload)
+        finishLocally(created, false, '¡Venta completada!')
+      } catch (err) {
+        // A raw fetch() failure (server unreachable) throws a TypeError, and
+        // a 5xx (ApiError.status >= 500) means the server itself broke —
+        // neither is the cashier's fault and neither means the sale data is
+        // bad, so both get queued locally the same way a dropped connection
+        // does. A 4xx is a genuine rejection (insufficient stock, invalid
+        // NIT, etc.) the cashier needs to see and fix, so that still just
+        // surfaces as an error instead of silently queuing a sale that will
+        // only fail again on sync.
+        const isRetryable = err instanceof TypeError || (err instanceof ApiError && err.status >= 500)
+        if (isRetryable) {
+          const queued = await queuePendingSale(payload)
+          await refreshPendingCount()
+          finishLocally(null, true, 'Sin conexión con el servidor — venta guardada, se sincronizará automáticamente', queued.localId)
+          trySync()
+        } else {
+          toast.error(err instanceof Error ? err.message : 'Error al procesar la venta')
+        }
+      }
     } finally {
       setSaving(false)
     }
@@ -549,6 +985,12 @@ export default function POS() {
 
   const handleCompleteSale = async () => {
     if (cartItems.length === 0) { toast.error('El carrito está vacío'); return }
+    if (!selectedCustomer) { toast.error('Selecciona un cliente antes de cobrar'); return }
+    if (!selectedRegisterId) {
+      toast.error(openRegisters.length === 0 ? 'No hay caja abierta — abre una caja antes de vender' : 'Selecciona una caja antes de cobrar')
+      if (openRegisters.length > 0) setShowRegisterPanel(true)
+      return
+    }
     if (saleType === 'CREDIT' && !selectedCustomer) { toast.error('Selecciona un cliente para venta a crédito'); return }
     if (paymentMethod === 'CASH' && saleType !== 'CREDIT') {
       if (!cashReceived || parseFloat(cashReceived) < total) { toast.error('Ingresa el efectivo recibido'); return }
@@ -595,31 +1037,37 @@ export default function POS() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-3 md:h-[calc(100vh-7rem)]">
+    <>
+    <div className="flex flex-col gap-3 md:h-[calc(100vh-7rem)] print:hidden">
 
-      {/* ── Register selector ── */}
-      {openRegisters.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm px-4 py-2 flex items-center gap-3">
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">Caja activa:</span>
-          {openRegisters.length === 1 ? (
-            <span className="text-sm font-medium text-primary-700">{openRegisters[0].name} #{openRegisters[0].registerNumber}</span>
-          ) : (
-            <select
-              value={selectedRegisterId}
-              onChange={e => handleRegisterChange(e.target.value)}
-              className="input text-sm py-1 flex-1 max-w-xs"
-            >
-              <option value="">Sin caja seleccionada</option>
-              {openRegisters.map(r => (
-                <option key={r.id} value={r.id}>{r.name} #{r.registerNumber}</option>
-              ))}
-            </select>
-          )}
-          {!selectedRegisterId && openRegisters.length > 0 && (
-            <span className="text-xs text-orange-500">Selecciona una caja para registrar las ventas</span>
-          )}
+      {/* ── Register indicator / alert ── */}
+      {registersLoaded && openRegisters.length === 0 ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 flex items-center justify-between gap-3">
+          <span className="text-sm text-red-700 font-medium flex items-center gap-2">
+            <AlertCircle size={16} /> No hay ninguna caja abierta en esta sucursal. No se puede vender sin caja.
+          </span>
+          <button onClick={() => navigate('/cash-register')} className="btn-primary btn-sm whitespace-nowrap">
+            Abrir caja
+          </button>
         </div>
-      )}
+      ) : openRegisters.length > 0 ? (
+        <button
+          onClick={() => setShowRegisterPanel(true)}
+          className={`self-start flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors ${
+            selectedRegisterId ? 'bg-white text-primary-700 hover:bg-gray-50' : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+          }`}
+        >
+          <Wallet size={15} />
+          {selectedRegisterId
+            ? (() => {
+                const reg = openRegisters.find(r => r.id === selectedRegisterId)
+                return reg ? `Caja: ${reg.name} #${reg.registerNumber}` : 'Cambiar caja'
+              })()
+            : 'Selecciona una caja para vender'}
+        </button>
+      ) : null}
+
+      {BRANCH_ID && <SalesGoalWidget branchId={BRANCH_ID} compact />}
 
       {/* ── Search bar ── */}
       <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center gap-3 relative">
@@ -758,11 +1206,11 @@ export default function POS() {
                           inputMode="decimal"
                           value={itemQtyStrings[key] ?? String(item.quantity)}
                           onChange={e => setItemQtyStrings(prev => ({ ...prev, [key]: e.target.value }))}
-                          onBlur={() => {
+                          onBlur={async () => {
                             const str = itemQtyStrings[key]
                             if (str !== undefined) {
                               const n = parseFloat(str)
-                              if (!isNaN(n) && n > 0) updateQuantity(item.product.id, item.variation?.id, n)
+                              if (!isNaN(n) && n > 0) await changeQuantity(item, n)
                               setItemQtyStrings(prev => { const next = { ...prev }; delete next[key]; return next })
                             }
                           }}
@@ -772,8 +1220,8 @@ export default function POS() {
                           className="w-14 text-center text-sm border border-gray-200 rounded py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
                         />
                         <button
-                          onClick={() => {
-                            updateQuantity(item.product.id, item.variation?.id, item.quantity + 1)
+                          onClick={async () => {
+                            await changeQuantity(item, item.quantity + 1)
                             setItemQtyStrings(prev => { const n = { ...prev }; delete n[key]; return n })
                           }}
                           className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded transition-colors">
@@ -823,23 +1271,47 @@ export default function POS() {
         <div className="w-full md:w-72 flex flex-col gap-3 overflow-y-auto">
 
           {/* Customer */}
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Cliente</p>
+          <div className={`bg-white rounded-lg shadow-sm p-4 ${!selectedCustomer ? 'ring-1 ring-orange-300' : ''}`}>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+              Cliente <span className="text-red-500">*</span>
+              {!selectedCustomer && <span className="text-orange-500 normal-case font-normal ml-1">requerido para vender</span>}
+            </p>
             {selectedCustomer ? (
               <div className="bg-primary-50 border border-primary-200 rounded-lg px-3 py-2">
                 <div className="flex items-start justify-between">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-gray-800 truncate">{getCustomerName(selectedCustomer)}</p>
                     <p className="text-xs text-gray-500">NIT: {getCustomerNit(selectedCustomer)}</p>
-                    {(selectedCustomer.creditLimit ?? 0) > 0 && (
-                      <p className="text-xs text-green-600">Crédito: Q{(selectedCustomer.creditAvailable ?? 0).toFixed(2)}</p>
+                    {selectedCustomer.creditEnabled && (
+                      <p className="text-xs text-green-600">
+                        Crédito: {selectedCustomer.creditAvailable === null ? 'Ilimitado' : `Q${(selectedCustomer.creditAvailable ?? 0).toFixed(2)}`}
+                      </p>
+                    )}
+                    {(selectedCustomer.creditUsedPercent ?? 0) >= 75 && (
+                      <p className="text-xs text-orange-600 font-medium flex items-center gap-1 mt-0.5">
+                        <AlertCircle size={11} /> {selectedCustomer.creditUsedPercent!.toFixed(0)}% del crédito usado
+                      </p>
+                    )}
+                    {selectedCustomer.comments && (
+                      <p className="text-xs text-gray-500 italic mt-1 border-t border-primary-100 pt-1">"{selectedCustomer.comments}"</p>
                     )}
                   </div>
                   <div className="flex gap-1 ml-2 flex-shrink-0">
                     <button onClick={() => openCustomerHistory(selectedCustomer)} title="Ver historial" className="p-1 text-gray-400 hover:text-blue-600 transition-colors">
                       <History size={13} />
                     </button>
-                    <button onClick={() => { setSelectedCustomer(null); setSaleType('CASH') }} title="Quitar cliente" className="p-1 text-gray-400 hover:text-red-500 transition-colors">
+                    {canEditCustomer && (
+                      <button onClick={() => openQuickEditCustomer(selectedCustomer)} title="Editar cliente" className="p-1 text-gray-400 hover:text-primary-600 transition-colors">
+                        <Edit2 size={13} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setSelectedCustomer(null)
+                        setSaleType('CASH')
+                      }}
+                      title="Quitar cliente"
+                      className="p-1 text-gray-400 hover:text-red-500 transition-colors">
                       <X size={13} />
                     </button>
                   </div>
@@ -858,7 +1330,7 @@ export default function POS() {
                   className="input w-full pl-8 text-sm py-2"
                 />
                 {showCustomerDropdown && (
-                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-52 overflow-y-auto">
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
                     {filteredCustomers.length === 0 ? (
                       <p className="px-3 py-2 text-xs text-gray-400">{customerSearch ? 'Sin resultados' : 'Escribe para buscar...'}</p>
                     ) : (
@@ -866,9 +1338,15 @@ export default function POS() {
                         <button key={customer.id} onMouseDown={() => handleSelectCustomer(customer)}
                           className="w-full text-left px-3 py-2 hover:bg-primary-50 transition-colors border-b border-gray-50 last:border-0">
                           <p className="text-sm font-medium text-gray-800">{getCustomerName(customer)}</p>
-                          <p className="text-xs text-gray-400">NIT: {getCustomerNit(customer)}{(customer.creditLimit ?? 0) > 0 ? ` · Créd: Q${(customer.creditAvailable ?? 0).toFixed(2)}` : ''}</p>
+                          <p className="text-xs text-gray-400">NIT: {getCustomerNit(customer)}{creditHint(customer)}</p>
                         </button>
                       ))
+                    )}
+                    {canCreateCustomer && (
+                      <button onMouseDown={openQuickAddCustomer}
+                        className="w-full text-left px-3 py-2 hover:bg-primary-50 transition-colors flex items-center gap-1.5 text-primary-600 font-medium text-sm">
+                        <UserPlus size={14} /> Nuevo cliente{customerSearch ? ` "${customerSearch}"` : ''}
+                      </button>
                     )}
                   </div>
                 )}
@@ -909,8 +1387,11 @@ export default function POS() {
                     { m: 'CASH' as PaymentMethodType, label: 'Efectivo', Icon: DollarSign },
                     { m: 'CARD' as PaymentMethodType, label: 'Tarjeta', Icon: CreditCard },
                     { m: 'TRANSFER' as PaymentMethodType, label: 'Transfer.', Icon: Receipt },
+                    // 'Mixto' (efectivo + transferencia) está deshabilitado por defecto en
+                    // Configuración → Métodos de Pago porque rara vez se usa en la práctica —
+                    // actívalo ahí, no aquí, si un negocio lo necesita.
                     { m: 'MIXED' as PaymentMethodType, label: 'Mixto', Icon: ArrowLeftRight },
-                  ] as const).map(({ m, label, Icon }) => (
+                  ] as const).filter(({ m }) => enabledPaymentMethods.has(m)).map(({ m, label, Icon }) => (
                     <button
                       key={m}
                       onClick={() => setPaymentMethod(m)}
@@ -927,17 +1408,64 @@ export default function POS() {
           </div>
 
           {/* Totals */}
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex justify-between text-sm text-gray-600 mb-1">
+          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+            <div className="flex justify-between text-sm text-gray-500 mb-2">
               <span>Subtotal</span>
               <span>Q{subtotal.toFixed(2)}</span>
             </div>
-            <div className="border-t border-gray-100 mt-2 pt-2">
+            {cartItems.length > 0 && (
+              <div className="flex justify-between items-center text-sm text-gray-500 mb-2">
+                <span>Descuento general</span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    value={bulkDiscountInput}
+                    onChange={e => setBulkDiscountInput(e.target.value)}
+                    onBlur={applyDiscountToAll}
+                    onKeyDown={e => e.key === 'Enter' && ((e.target as HTMLInputElement).blur())}
+                    placeholder="0"
+                    min="0" max="100"
+                    className="w-14 text-center text-sm border border-gray-200 rounded py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  />
+                  <span>%</span>
+                </div>
+              </div>
+            )}
+            <div className="border-t border-gray-100 pt-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-700">Total</span>
-                <span className="text-2xl font-bold text-primary-600">Q{total.toFixed(2)}</span>
+                <span className="text-base font-semibold text-gray-700">Total</span>
+                <span className="text-4xl font-extrabold text-primary-600 tracking-tight">Q{total.toFixed(2)}</span>
               </div>
             </div>
+          </div>
+
+          {/* Factura — discrecional, apagado por defecto */}
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <label className="flex items-center justify-between cursor-pointer">
+              <span className="text-sm font-medium text-gray-700">¿Generar factura?</span>
+              <input type="checkbox" checked={wantsInvoice}
+                onChange={e => {
+                  const checked = e.target.checked
+                  setWantsInvoice(checked)
+                  if (checked) {
+                    setInvoiceBuyerNit(selectedCustomer?.nit && selectedCustomer.nit !== 'C/F' && selectedCustomer.nit !== 'CF' ? selectedCustomer.nit : '')
+                    setInvoiceBuyerName(selectedCustomer ? getCustomerName(selectedCustomer) : '')
+                  }
+                }}
+                className="w-5 h-5 text-primary-600 rounded" />
+            </label>
+            {!wantsInvoice && <p className="text-xs text-gray-400 mt-1">Por defecto se imprime solo el recibo.</p>}
+            {wantsInvoice && (
+              <div className="mt-3 space-y-2">
+                <input type="text" value={invoiceBuyerNit} onChange={e => setInvoiceBuyerNit(e.target.value)}
+                  placeholder="NIT del cliente" className="input w-full text-sm" />
+                <input type="text" value={invoiceBuyerName} onChange={e => setInvoiceBuyerName(e.target.value)}
+                  placeholder="Nombre para la factura" className="input w-full text-sm" />
+                {!invoiceBuyerNit.trim() && (
+                  <p className="text-xs text-orange-500">Se necesita un NIT válido — este cliente no tiene uno registrado.</p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Cash received */}
@@ -960,6 +1488,22 @@ export default function POS() {
                   <span className="font-bold text-green-600">Q{change.toFixed(2)}</span>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Card reference — the charge itself runs on the bank's own datáfono,
+              outside DENGO; this is just the voucher's authorization number, kept
+              for reconciling against the bank's settlement report at cash close. */}
+          {saleType === 'CASH' && paymentMethod === 'CARD' && (
+            <div className="bg-white rounded-lg shadow-sm p-4 space-y-2">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Referencia de tarjeta (opcional)</p>
+              <input
+                type="text"
+                value={cardReference}
+                onChange={e => setCardReference(e.target.value)}
+                placeholder="No. de autorización / voucher"
+                className="input w-full text-sm"
+              />
             </div>
           )}
 
@@ -1009,7 +1553,7 @@ export default function POS() {
               <p className="text-xs font-semibold text-blue-700 mb-1">Venta a crédito</p>
               <div className="flex justify-between text-xs text-blue-600">
                 <span>Crédito disponible:</span>
-                <span className="font-bold">Q{(selectedCustomer.creditAvailable ?? 0).toFixed(2)}</span>
+                <span className="font-bold">{selectedCustomer.creditAvailable === null ? 'Ilimitado' : `Q${(selectedCustomer.creditAvailable ?? 0).toFixed(2)}`}</span>
               </div>
             </div>
           )}
@@ -1041,7 +1585,7 @@ export default function POS() {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-            onClick={() => { setShowVariationModal(false); setSelectedProductForVariation(null) }}
+            onClick={closeVariationModal}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
@@ -1052,8 +1596,11 @@ export default function POS() {
                 <div>
                   <h3 className="text-lg font-bold text-gray-800">Seleccionar presentación</h3>
                   <p className="text-sm text-gray-500">{selectedProductForVariation.name}</p>
+                  {!changingVariationItem && (
+                    <p className="text-xs text-gray-400 mt-0.5">Puedes agregar más de una presentación antes de cerrar</p>
+                  )}
                 </div>
-                <button onClick={() => { setShowVariationModal(false); setSelectedProductForVariation(null) }}
+                <button onClick={closeVariationModal}
                   className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
               </div>
               <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -1094,6 +1641,62 @@ export default function POS() {
                     </div>
                   )
                 })}
+              </div>
+              {!changingVariationItem && (
+                <button onClick={closeVariationModal} className="btn-outline btn-md w-full mt-4">
+                  Listo
+                </button>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Stock-adjustment prompt — appears when adding a product without
+          enough stock and the cashier has inventory.adjust. Resolving it
+          (or cancelling) is what unblocks ensureStockAvailable()'s promise. ── */}
+      <AnimatePresence>
+        {stockPrompt && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            onClick={cancelStockAdjustment}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-lg p-6 max-w-md w-full"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle size={22} className="text-orange-600" />
+                <h3 className="text-lg font-bold text-gray-800">Stock insuficiente</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                <span className="font-medium">{stockPrompt.product.name}{stockPrompt.variation.name !== 'Pieza' ? ` (${stockPrompt.variation.name})` : ''}</span>
+                {' '}— disponible: {stockPrompt.available}, necesitas: {stockPrompt.requestedQty}.
+                Tienes permiso para ajustar el inventario; hazlo aquí para continuar con la venta.
+              </p>
+              <div className="space-y-3">
+                <div>
+                  <label className="label">Nuevo stock *</label>
+                  <input type="number" min={stockPrompt.requestedQty} value={stockPromptNewStock}
+                    onChange={e => setStockPromptNewStock(e.target.value)} className="input w-full" />
+                </div>
+                <div>
+                  <label className="label">Razón del ajuste *</label>
+                  <select value={stockPromptReason} onChange={e => setStockPromptReason(e.target.value)} className="input w-full">
+                    <option value="">Seleccionar razón</option>
+                    {stockPromptReasonOptions.map(r => <option key={r.id} value={r.label}>{r.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="mt-5 flex gap-3">
+                <button onClick={cancelStockAdjustment} disabled={savingStockPrompt} className="flex-1 btn-outline btn-md">
+                  Cancelar
+                </button>
+                <button onClick={confirmStockAdjustment} disabled={savingStockPrompt} className="flex-1 btn-primary btn-md">
+                  {savingStockPrompt ? 'Guardando...' : 'Ajustar y continuar'}
+                </button>
               </div>
             </motion.div>
           </motion.div>
@@ -1148,9 +1751,9 @@ export default function POS() {
                           <p className="font-medium text-gray-800 text-sm">{getCustomerName(customer)}</p>
                         </div>
                         <p className="text-xs text-gray-500 mt-0.5">NIT: {getCustomerNit(customer)}</p>
-                        {(customer.creditLimit ?? 0) > 0 && (
+                        {customer.creditEnabled && (
                           <p className="text-xs text-green-600 mt-0.5">
-                            Crédito disponible: Q{(customer.creditAvailable ?? 0).toFixed(2)}
+                            Crédito disponible: {customer.creditAvailable === null ? 'Ilimitado' : `Q${(customer.creditAvailable ?? 0).toFixed(2)}`}
                           </p>
                         )}
                       </button>
@@ -1158,9 +1761,16 @@ export default function POS() {
                   )}
                 </div>
               )}
-              <button onClick={() => setShowCustomerModal(false)} className="btn-outline btn-md w-full mt-4">
-                Cancelar
-              </button>
+              <div className="flex gap-2 mt-4">
+                <button onClick={() => setShowCustomerModal(false)} className={`btn-outline btn-md ${canCreateCustomer ? 'flex-1' : 'w-full'}`}>
+                  Cancelar
+                </button>
+                {canCreateCustomer && (
+                  <button onClick={openQuickAddCustomer} className="btn-primary btn-md flex-1 flex items-center justify-center gap-1.5">
+                    <UserPlus size={16} /> Nuevo
+                  </button>
+                )}
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -1217,6 +1827,137 @@ export default function POS() {
         </div>
       )}
 
+      {/* ── Quick add/edit customer modal ── */}
+      <AnimatePresence>
+        {showQuickCustomerModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            onClick={() => setShowQuickCustomerModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-lg p-6 max-w-sm w-full"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <UserPlus size={20} className="text-primary-600" /> {editingCustomerId ? 'Editar cliente' : 'Nuevo cliente'}
+                </h3>
+                <button onClick={() => setShowQuickCustomerModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="label">Nombre *</label>
+                  <input type="text" value={quickCustomerForm.name}
+                    onChange={e => setQuickCustomerForm(f => ({ ...f, name: e.target.value }))}
+                    className="input w-full" placeholder="Nombre completo" autoFocus />
+                </div>
+                <div>
+                  <label className="label">NIT *</label>
+                  <input type="text" value={quickCustomerForm.nit}
+                    onChange={e => setQuickCustomerForm(f => ({ ...f, nit: e.target.value }))}
+                    className="input w-full" placeholder="CF o número de NIT" />
+                </div>
+                <div>
+                  <label className="label">Teléfono</label>
+                  <input type="tel" value={quickCustomerForm.phone}
+                    onChange={e => setQuickCustomerForm(f => ({ ...f, phone: e.target.value }))}
+                    className="input w-full" />
+                </div>
+                <div>
+                  <label className="label">Email</label>
+                  <input type="email" value={quickCustomerForm.email}
+                    onChange={e => setQuickCustomerForm(f => ({ ...f, email: e.target.value }))}
+                    className="input w-full" />
+                </div>
+                <div className="border-t pt-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={quickCustomerForm.creditEnabled}
+                      onChange={e => setQuickCustomerForm(f => ({ ...f, creditEnabled: e.target.checked }))}
+                      className="w-4 h-4 text-primary-600 rounded" />
+                    <span className="text-sm text-gray-700">Permite ventas a crédito</span>
+                  </label>
+                  {quickCustomerForm.creditEnabled && (
+                    <div className="mt-2 pl-6 space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={quickCustomerForm.creditLimitEnabled}
+                          onChange={e => setQuickCustomerForm(f => ({ ...f, creditLimitEnabled: e.target.checked }))}
+                          className="w-4 h-4 text-primary-600 rounded" />
+                        <span className="text-sm text-gray-700">Con límite</span>
+                      </label>
+                      {quickCustomerForm.creditLimitEnabled ? (
+                        <input type="number" min="0" step="0.01" value={quickCustomerForm.creditLimit}
+                          onChange={e => setQuickCustomerForm(f => ({ ...f, creditLimit: e.target.value }))}
+                          className="input w-full" placeholder="Límite de crédito, Q0.00" />
+                      ) : (
+                        <p className="text-xs text-gray-400">Sin límite — puede vender a crédito cualquier monto.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-3 mt-5">
+                <button onClick={() => setShowQuickCustomerModal(false)} className="flex-1 btn-outline btn-md" disabled={savingQuickCustomer}>
+                  Cancelar
+                </button>
+                <button onClick={handleSaveQuickCustomer} disabled={savingQuickCustomer} className="flex-1 btn-primary btn-md flex items-center justify-center gap-2">
+                  {savingQuickCustomer && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
+                  {editingCustomerId ? 'Guardar' : 'Agregar y seleccionar'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Register selection panel ── */}
+      <AnimatePresence>
+        {showRegisterPanel && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            onClick={() => selectedRegisterId && setShowRegisterPanel(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-lg p-6 max-w-sm w-full"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <Wallet size={20} className="text-primary-600" /> Selecciona una caja
+                </h3>
+                {selectedRegisterId && (
+                  <button onClick={() => setShowRegisterPanel(false)} className="text-gray-400 hover:text-gray-600">
+                    <X size={20} />
+                  </button>
+                )}
+              </div>
+              <p className="text-sm text-gray-500 mb-4">Esta caja quedará asociada a tus ventas por el resto del día.</p>
+              <div className="space-y-2">
+                {openRegisters.map(reg => (
+                  <button
+                    key={reg.id}
+                    onClick={() => handleRegisterChange(reg.id)}
+                    className={`w-full text-left px-4 py-3 rounded-lg border transition-colors flex items-center justify-between ${
+                      selectedRegisterId === reg.id
+                        ? 'bg-primary-50 border-primary-300 text-primary-700'
+                        : 'bg-white border-gray-200 hover:border-primary-300 hover:bg-primary-50'
+                    }`}
+                  >
+                    <span className="font-medium">{reg.name} #{reg.registerNumber}</span>
+                    {selectedRegisterId === reg.id && <span className="text-xs font-semibold">Actual</span>}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Stock Warning Modal ── */}
       <AnimatePresence>
         {showStockWarning && (
@@ -1272,7 +2013,7 @@ export default function POS() {
         {showReceiptModal && completedSale && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 print:hidden"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
@@ -1281,13 +2022,21 @@ export default function POS() {
             >
               <div id="receipt-content">
                 <div className="text-center mb-4 pb-4 border-b-2 border-gray-200">
-                  <h2 className="text-2xl font-bold text-gray-800">DENGO POS</h2>
+                  {currentStore?.logo && (
+                    <img src={currentStore.logo} alt="Logo" className="h-14 mx-auto mb-2 object-contain" />
+                  )}
+                  <h2 className="text-2xl font-bold text-gray-800">{currentStore?.companyName ?? 'DENGO POS'}</h2>
                   <p className="text-sm text-gray-500">{completedSale.branchName}</p>
                   {selectedRegisterId && openRegisters.length > 0 && (() => {
                     const reg = openRegisters.find(r => r.id === selectedRegisterId)
                     return reg ? <p className="text-xs text-gray-400">{reg.name} #{reg.registerNumber}</p> : null
                   })()}
                 </div>
+                {completedSale.pendingSync && (
+                  <div className="mb-3 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800 text-center font-medium">
+                    Pendiente de sincronizar — se enviará automáticamente al recuperar la conexión
+                  </div>
+                )}
                 <div className="mb-4 grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <p className="text-gray-500">Factura:</p>
@@ -1316,25 +2065,49 @@ export default function POS() {
                     </tr>
                   </thead>
                   <tbody>
-                    {completedSale.items.map(item => (
-                      <tr key={item.id} className="border-b border-gray-100">
-                        <td className="py-2">
-                          <p className="font-medium">{item.productName}</p>
-                          {item.variationName && item.variationName !== 'Pieza' && (
-                            <p className="text-xs text-gray-400">({item.variationName})</p>
-                          )}
-                          {item.discount > 0 && (
-                            <p className="text-xs text-orange-500">-{item.discount}% desc.</p>
-                          )}
-                        </td>
-                        <td className="py-2 text-center">{item.quantity}</td>
-                        <td className="py-2 text-right">Q{item.unitPrice.toFixed(2)}</td>
-                        <td className="py-2 text-right font-medium">Q{item.total.toFixed(2)}</td>
-                      </tr>
-                    ))}
+                    {completedSale.items.map(item => {
+                      const originalTotal = item.unitPrice * item.quantity
+                      return (
+                        <tr key={item.id} className="border-b border-gray-100">
+                          <td className="py-2">
+                            <p className="font-medium">{item.productName}</p>
+                            {item.variationName && item.variationName !== 'Pieza' && (
+                              <p className="text-xs text-gray-400">({item.variationName})</p>
+                            )}
+                            {item.discount > 0 && (
+                              <p className="text-xs text-orange-500">-{item.discount}% desc.</p>
+                            )}
+                          </td>
+                          <td className="py-2 text-center">{item.quantity}</td>
+                          <td className="py-2 text-right">Q{item.unitPrice.toFixed(2)}</td>
+                          <td className="py-2 text-right">
+                            {item.discount > 0 && (
+                              <p className="text-xs text-gray-400 line-through">Q{originalTotal.toFixed(2)}</p>
+                            )}
+                            <p className="font-medium">Q{item.total.toFixed(2)}</p>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
                 <div className="pt-3 border-t-2 border-gray-200 space-y-1.5 mb-4">
+                  {(() => {
+                    const originalSubtotal = completedSale.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0)
+                    const totalDiscount = originalSubtotal - completedSale.subtotal
+                    return totalDiscount > 0.005 ? (
+                      <>
+                        <div className="flex justify-between text-sm text-gray-500">
+                          <span>Precio original:</span>
+                          <span className="line-through">Q{originalSubtotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-orange-500 font-medium">
+                          <span>Descuento:</span>
+                          <span>-Q{totalDiscount.toFixed(2)}</span>
+                        </div>
+                      </>
+                    ) : null
+                  })()}
                   <div className="flex justify-between font-bold text-lg">
                     <span>TOTAL:</span>
                     <span className="text-primary-600">Q{completedSale.total.toFixed(2)}</span>
@@ -1375,5 +2148,46 @@ export default function POS() {
         )}
       </AnimatePresence>
     </div>
+
+    {completedSale && (
+      <ThermalReceipt
+          widthMm={currentStore?.receiptWidthMm ?? 55}
+          data={{
+            invoiceNumber: completedSale.invoiceNumber,
+            branchName: completedSale.branchName,
+            branchAddress: currentStore?.address,
+            branchPhone: currentStore?.phone,
+            logo: currentStore?.logo,
+            companyName: currentStore?.companyName,
+            companyTaxId: currentStore?.companyTaxId,
+            companyTagline: currentStore?.companyTagline,
+            socialMediaName: currentStore?.socialMediaName,
+            registerLabel: (() => {
+              const reg = openRegisters.find(r => r.id === selectedRegisterId)
+              return reg ? `${reg.name} #${reg.registerNumber}` : undefined
+            })(),
+            createdAt: completedSale.createdAt,
+            items: completedSale.items,
+            subtotal: completedSale.subtotal,
+            total: completedSale.total,
+            paymentMethodLabel: paymentMethodLabel[completedSale.paymentMethod],
+            cashReceived: completedSale.paymentMethod === 'CASH' && lastCashReceived ? parseFloat(lastCashReceived) : undefined,
+            change: completedSale.paymentMethod === 'CASH' && lastCashReceived ? parseFloat(lastCashReceived) - completedSale.total : undefined,
+            customerName: completedSale.customerName,
+            customerNit: completedSale.customerNit,
+            requiresInvoice: completedSale.requiresInvoice,
+            invoiceSeries: completedSale.invoiceSeries,
+            invoiceSeqNumber: completedSale.invoiceSeqNumber,
+            buyerNit: completedSale.buyerNit,
+            buyerName: completedSale.buyerName,
+            felStatus: completedSale.felStatus,
+            pendingSync: completedSale.pendingSync,
+            offlineRef: completedSale.offlineRef,
+            cardReference: completedSale.cardReference,
+            transferReference: completedSale.transferReference,
+          }}
+        />
+    )}
+    </>
   )
 }

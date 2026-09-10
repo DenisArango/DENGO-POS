@@ -10,7 +10,6 @@ import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
 
-const PM_LABEL: Record<string, string> = { CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia', CREDIT: 'Crédito', MIXED: 'Mixto' }
 const PM_COLOR: Record<string, string> = { CASH: '#10B981', CARD: '#3B82F6', TRANSFER: '#8B5CF6', CREDIT: '#F59E0B', MIXED: '#6B7280' }
 
 export default function CashFlowReport() {
@@ -181,7 +180,6 @@ export default function CashFlowReport() {
 
       <AIRecommendations
         reportData={{ type: 'cash_flow', data: { cashIn: totalCash, cashOut: totalCard + totalTransfer, netFlow: totalSales } }}
-        autoGenerate={registers.length > 0}
       />
     </div>
   )

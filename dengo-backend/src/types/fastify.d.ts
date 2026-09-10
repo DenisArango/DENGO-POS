@@ -6,13 +6,17 @@ declare module '@fastify/jwt' {
       id: string
       role: string
       branchId: string
+      branchIds: string[]
       email: string
+      permissions: string[]
     }
     user: {
       id: string
       role: string
       branchId: string
+      branchIds: string[]
       email: string
+      permissions: string[]
     }
   }
 }

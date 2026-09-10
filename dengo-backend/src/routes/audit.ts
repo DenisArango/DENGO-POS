@@ -1,15 +1,9 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma.js'
+import { requirePermission } from '../lib/permissions.js'
 
 function requireAuditor(fastify: FastifyInstance) {
-  return [
-    fastify.authenticate,
-    async (req: any, reply: any) => {
-      if (!['ADMIN', 'AUDITOR'].includes(req.user.role)) {
-        return reply.status(403).send({ error: 'Acceso denegado' })
-      }
-    },
-  ]
+  return [fastify.authenticate, requirePermission('reports.audit')]
 }
 
 export default async function auditRoutes(fastify: FastifyInstance) {

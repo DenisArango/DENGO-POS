@@ -3,7 +3,7 @@ import { api } from '../lib/api'
 
 export interface ReportData {
   type: string
-  data: any
+  data: Record<string, unknown>
   context?: string
 }
 

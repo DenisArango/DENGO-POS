@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { updateStock } from '../services/inventory.service.js'
 import { log } from '../services/audit.service.js'
+import { canAccessBranch } from '../lib/branch-scope.js'
+import { hasPermission, requirePermission } from '../lib/permissions.js'
 
 const include = {
   fromBranch: true, toBranch: true,
@@ -13,10 +15,14 @@ const include = {
 }
 
 export default async function transferRoutes(fastify: FastifyInstance) {
-  fastify.get('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('transfers.view')] }, async (request, reply) => {
     const q = request.query as { fromBranchId?: string; toBranchId?: string; status?: string }
+    // Non-admins only see transfers touching their own branch (either side) —
+    // a transfer has two branches, so it can't be pinned to one like other resources.
+    const own = request.user.role !== 'ADMIN' ? request.user.branchId : undefined
     return reply.send(await prisma.transfer.findMany({
       where: {
+        ...(own ? { OR: [{ fromBranchId: own }, { toBranchId: own }] } : {}),
         ...(q.fromBranchId ? { fromBranchId: q.fromBranchId } : {}),
         ...(q.toBranchId ? { toBranchId: q.toBranchId } : {}),
         ...(q.status ? { status: q.status as any } : {}),
@@ -26,14 +32,17 @@ export default async function transferRoutes(fastify: FastifyInstance) {
     }))
   })
 
-  fastify.get('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/:id', { preHandler: [fastify.authenticate, requirePermission('transfers.view')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const t = await prisma.transfer.findUnique({ where: { id }, include })
     if (!t) return reply.status(404).send({ error: 'Transferencia no encontrada' })
+    if (!canAccessBranch(request, t.fromBranchId) && !canAccessBranch(request, t.toBranchId)) {
+      return reply.status(403).send({ error: 'Acceso denegado' })
+    }
     return reply.send(t)
   })
 
-  fastify.post('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post('/', { preHandler: [fastify.authenticate, requirePermission('transfers.create')] }, async (request, reply) => {
     const body = z.object({
       fromBranchId: z.string(),
       toBranchId: z.string(),
@@ -43,6 +52,9 @@ export default async function transferRoutes(fastify: FastifyInstance) {
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
     if (body.data.fromBranchId === body.data.toBranchId) {
       return reply.status(400).send({ error: 'Las sucursales de origen y destino deben ser diferentes' })
+    }
+    if (!canAccessBranch(request, body.data.fromBranchId) && !canAccessBranch(request, body.data.toBranchId)) {
+      return reply.status(403).send({ error: 'Acceso denegado' })
     }
 
     const t = await prisma.transfer.create({
@@ -61,10 +73,11 @@ export default async function transferRoutes(fastify: FastifyInstance) {
 
   // Approve → deduct from source
   fastify.put('/:id/approve', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    if (request.user.role !== 'ADMIN') return reply.status(403).send({ error: 'Acceso denegado' })
+    if (!hasPermission(request, 'transfers.approve')) return reply.status(403).send({ error: 'Acceso denegado' })
     const { id } = request.params as { id: string }
     const t = await prisma.transfer.findUnique({ where: { id }, include: { items: true } })
     if (!t || t.status !== 'PENDING') return reply.status(404).send({ error: 'Transferencia no válida' })
+    if (!canAccessBranch(request, t.fromBranchId)) return reply.status(403).send({ error: 'Acceso denegado' })
 
     for (const item of t.items) {
       await updateStock(item.productId, t.fromBranchId, -Number(item.quantity), {
@@ -85,10 +98,11 @@ export default async function transferRoutes(fastify: FastifyInstance) {
   })
 
   // Receive → add to destination
-  fastify.put('/:id/receive', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.put('/:id/receive', { preHandler: [fastify.authenticate, requirePermission('transfers.receive')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const t = await prisma.transfer.findUnique({ where: { id }, include: { items: true } })
     if (!t || t.status !== 'IN_TRANSIT') return reply.status(404).send({ error: 'Transferencia no válida o no está en tránsito' })
+    if (!canAccessBranch(request, t.toBranchId)) return reply.status(403).send({ error: 'Acceso denegado' })
 
     for (const item of t.items) {
       await updateStock(item.productId, t.toBranchId, Number(item.quantity), {
@@ -109,10 +123,13 @@ export default async function transferRoutes(fastify: FastifyInstance) {
   })
 
   fastify.put('/:id/reject', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    if (request.user.role !== 'ADMIN') return reply.status(403).send({ error: 'Acceso denegado' })
+    if (!hasPermission(request, 'transfers.reject')) return reply.status(403).send({ error: 'Acceso denegado' })
     const { id } = request.params as { id: string }
     const t = await prisma.transfer.findUnique({ where: { id } })
     if (!t || t.status === 'RECEIVED' || t.status === 'REJECTED') return reply.status(404).send({ error: 'No se puede rechazar esta transferencia' })
+    if (!canAccessBranch(request, t.fromBranchId) && !canAccessBranch(request, t.toBranchId)) {
+      return reply.status(403).send({ error: 'Acceso denegado' })
+    }
 
     // If already approved (IN_TRANSIT), reverse the stock deduction
     if (t.status === 'IN_TRANSIT') {

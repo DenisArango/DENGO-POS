@@ -16,6 +16,9 @@ interface ProductModalProps {
   mode?: 'create' | 'edit' | 'duplicate'
   categories?: { id: string; name: string; color?: string }[]
   units?: { id: string; name: string; abbreviation: string; type: string }[]
+  // Defaults true so existing call sites (that don't pass it) keep working —
+  // the backend strips price fields server-side regardless, this is UX only.
+  canEditPrice?: boolean
 }
 
 interface ProductFormData {
@@ -54,6 +57,7 @@ export default function ProductModal({
   mode = 'create',
   categories = [],
   units = [],
+  canEditPrice = true,
 }: ProductModalProps) {
   const [formData, setFormData] = useState<ProductFormData>({
     barcode: '',
@@ -171,8 +175,8 @@ export default function ProductModal({
       setNewBarcode('')
       setNewBarcodeDesc('')
       toast.success('Código de barras agregado')
-    } catch (err: any) {
-      toast.error(err?.message ?? 'Error al agregar código')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al agregar código')
     }
   }
 
@@ -210,8 +214,8 @@ export default function ProductModal({
       setShowCatDropdown(false)
       onCategoryCreated?.(cat)
       toast.success(`Categoría "${name}" creada`)
-    } catch (e: any) {
-      toast.error(e?.message ?? 'Error al crear categoría')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al crear categoría')
     } finally { setCreatingCat(false) }
   }
 
@@ -474,7 +478,7 @@ export default function ProductModal({
                         <label className="label">Stock Mínimo</label>
                         <input
                           type="number"
-                          value={formData.minStock}
+                          value={formData.minStock === 0 ? '' : formData.minStock}
                           onChange={(e) => setFormData(prev => ({ ...prev, minStock: parseInt(e.target.value) || 0 }))}
                           className="input"
                           placeholder="10"
@@ -485,11 +489,12 @@ export default function ProductModal({
                         <label className="label">Precio Base *</label>
                         <input
                           type="number"
-                          value={formData.basePrice}
+                          value={formData.basePrice === 0 ? '' : formData.basePrice}
                           onChange={(e) => setFormData(prev => ({ ...prev, basePrice: parseFloat(e.target.value) || 0 }))}
-                          className="input"
+                          className="input disabled:bg-gray-50 disabled:text-gray-400"
                           placeholder="0.00"
                           step="0.01"
+                          disabled={!canEditPrice}
                         />
                       </div>
 
@@ -497,14 +502,18 @@ export default function ProductModal({
                         <label className="label">Costo *</label>
                         <input
                           type="number"
-                          value={formData.cost}
+                          value={formData.cost === 0 ? '' : formData.cost}
                           onChange={(e) => setFormData(prev => ({ ...prev, cost: parseFloat(e.target.value) || 0 }))}
-                          className="input"
+                          className="input disabled:bg-gray-50 disabled:text-gray-400"
                           placeholder="0.00"
                           step="0.01"
+                          disabled={!canEditPrice}
                         />
                       </div>
                     </div>
+                    {!canEditPrice && (
+                      <p className="text-xs text-gray-400 -mt-2">No tienes permiso para editar precios o costos.</p>
+                    )}
 
                     {/* Profit margin */}
                     {formData.basePrice > 0 && formData.cost > 0 && (
@@ -661,15 +670,16 @@ export default function ProductModal({
                           <label className="label text-xs">Precio</label>
                           <input
                             type="number"
-                            value={variation.price}
+                            value={variation.price === 0 ? '' : variation.price}
                             onChange={(e) => {
                               const newVars = [...formData.variations]
                               newVars[index].price = parseFloat(e.target.value) || 0
                               setFormData(prev => ({ ...prev, variations: newVars }))
                             }}
-                            className="input input-sm"
+                            className="input input-sm disabled:bg-gray-50 disabled:text-gray-400"
                             placeholder="0.00"
                             step="0.01"
+                            disabled={!canEditPrice}
                           />
                         </div>
                         <div>

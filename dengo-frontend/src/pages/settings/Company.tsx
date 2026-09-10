@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Building2, Save, Upload, MapPin, Phone, Mail, Globe, FileText, Hash } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
+import { api } from '../../lib/api'
 
 interface CompanyInfo {
   name: string
@@ -19,24 +20,33 @@ interface CompanyInfo {
   industry: string
 }
 
-const mockCompanyInfo: CompanyInfo = {
-  name: 'DENGO POS',
-  legalName: 'DENGO Sistemas S.A. de C.V.',
-  taxId: '123456789-0',
-  address: 'Av. Principal 123',
-  city: 'Ciudad de Guatemala',
+const emptyCompanyInfo: CompanyInfo = {
+  name: '',
+  legalName: '',
+  taxId: '',
+  address: '',
+  city: '',
   country: 'Guatemala',
-  phone: '+502 2345-6789',
-  email: 'contacto@dengopos.com',
-  website: 'www.dengopos.com',
-  description: 'Sistema de punto de venta para pequeños y medianos negocios',
+  phone: '',
+  email: '',
+  website: '',
+  description: '',
   industry: 'Retail'
 }
 
 export default function Company() {
   const navigate = useNavigate()
-  const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(mockCompanyInfo)
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(emptyCompanyInfo)
   const [hasChanges, setHasChanges] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    api.get<Partial<CompanyInfo>>('/api/settings/company')
+      .then(data => setCompanyInfo({ ...emptyCompanyInfo, ...data }))
+      .catch(e => toast.error(e.message))
+      .finally(() => setLoading(false))
+  }, [])
 
   const handleChange = (field: keyof CompanyInfo, value: string) => {
     setCompanyInfo(prev => ({ ...prev, [field]: value }))
@@ -44,10 +54,14 @@ export default function Company() {
   }
 
   const handleSave = () => {
-    // Aquí iría la lógica para guardar en el backend
-    console.log('Guardando información de empresa:', companyInfo)
-    toast.success('Información de empresa actualizada exitosamente')
-    setHasChanges(false)
+    setSaving(true)
+    api.put('/api/settings/company', companyInfo)
+      .then(() => {
+        toast.success('Información de empresa actualizada exitosamente')
+        setHasChanges(false)
+      })
+      .catch(e => toast.error(e.message))
+      .finally(() => setSaving(false))
   }
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,16 +102,21 @@ export default function Company() {
 
         <button
           onClick={handleSave}
-          disabled={!hasChanges}
+          disabled={!hasChanges || saving}
           className={`btn-primary btn-md flex items-center gap-2 ${
-            !hasChanges ? 'opacity-50 cursor-not-allowed' : ''
+            !hasChanges || saving ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >
-          <Save size={18} />
+          {saving ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> : <Save size={18} />}
           Guardar Cambios
         </button>
       </div>
 
+      {loading ? (
+        <div className="flex justify-center py-24">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Logo */}
         <div className="lg:col-span-1">
@@ -321,6 +340,7 @@ export default function Company() {
           </motion.div>
         </div>
       </div>
+      )}
     </div>
   )
 }

@@ -38,8 +38,14 @@ export default function Login() {
         body: JSON.stringify({ email: data.email, password: data.password }),
       })
 
-      if (res.status === 401) throw new Error('INVALID_CREDENTIALS')
-      if (!res.ok) throw new Error('SERVER_ERROR')
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        // Surface the backend's actual message — it's specific for lockouts
+        // ("Cuenta bloqueada por 15 minutos...") and license blocks, and a
+        // generic "Credenciales incorrectas" otherwise (never confirms which
+        // field was wrong).
+        throw new Error(body?.error ?? 'Error del servidor. Intenta nuevamente.')
+      }
 
       const { token, user: u } = await res.json()
 
@@ -48,6 +54,9 @@ export default function Login() {
         email: u.email,
         name: u.name,
         role: u.role,
+        branchId: u.branchId,
+        branchIds: u.branchIds,
+        permissions: u.permissions,
         branch: {
           id: u.branch.id,
           name: u.branch.name,
@@ -78,13 +87,7 @@ export default function Login() {
       navigate('/pos')
     } catch (error) {
       if (error instanceof Error) {
-        if (error.message === 'INVALID_CREDENTIALS') {
-          toast.error('Credenciales inválidas. Verifica tu email y contraseña.')
-        } else if (error.message === 'SERVER_ERROR') {
-          toast.error('Error del servidor. Intenta nuevamente.')
-        } else {
-          toast.error('Error de conexión. Verifica que el servidor esté activo.')
-        }
+        toast.error(error.message || 'Error de conexión. Verifica que el servidor esté activo.')
       }
       console.error('Login error:', error)
     } finally {

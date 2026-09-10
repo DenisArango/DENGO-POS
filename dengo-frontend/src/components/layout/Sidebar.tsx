@@ -30,22 +30,28 @@ import { useAppStore, useAuthStore } from '../../store'
 import { usePendingPortalOrders } from '../../hooks/usePendingPortalOrders'
 import { useUnreadMessages } from '../../hooks/useUnreadMessages'
 import { useUnreadPortalMessages } from '../../hooks/useUnreadPortalMessages'
+import { userHasPermission } from '../../hooks/usePermissions'
 
+// `roles` keeps the legacy base-role gate (still how the 4 built-in roles
+// see the menu they always saw). `permissions` is an any-of fallback so a
+// custom role that was only granted fine-grained permissions — never one of
+// the 4 base roles — still gets a link to the pages it can actually use,
+// instead of only reaching them by typing the URL directly.
 const menuItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['ADMIN', 'OPERATOR', 'AUDITOR', 'INVENTORY_CONTROL'] },
-  { path: '/pos', icon: ShoppingCart, label: 'Punto de Venta', roles: ['ADMIN', 'OPERATOR'] },
-  { path: '/products', icon: Package, label: 'Productos', roles: ['ADMIN', 'INVENTORY_CONTROL'] },
-  { path: '/inventory', icon: Warehouse, label: 'Inventario', roles: ['ADMIN', 'INVENTORY_CONTROL', 'AUDITOR'] },
-  { path: '/purchases', icon: PackageCheck, label: 'Compras', roles: ['ADMIN', 'INVENTORY_CONTROL'] },
-  { path: '/suppliers', icon: Truck, label: 'Proveedores', roles: ['ADMIN', 'INVENTORY_CONTROL'] },
-  { path: '/reports', icon: FileBarChart, label: 'Reportes', roles: ['ADMIN', 'AUDITOR'] },
-  { path: '/cash-register', icon: DollarSign, label: 'Caja', roles: ['ADMIN', 'OPERATOR', 'AUDITOR'] },
-  { path: '/transfers', icon: ArrowLeftRight, label: 'Traslados', roles: ['ADMIN', 'INVENTORY_CONTROL'] },
-  { path: '/customers', icon: UserCircle, label: 'Clientes', roles: ['ADMIN', 'OPERATOR'] },
-  { path: '/quotations', icon: ClipboardList, label: 'Cotizaciones', roles: ['ADMIN', 'OPERATOR'] },
+  { path: '/pos', icon: ShoppingCart, label: 'Punto de Venta', roles: ['ADMIN', 'OPERATOR'], permissions: ['sales.create'] },
+  { path: '/products', icon: Package, label: 'Productos', roles: ['ADMIN', 'INVENTORY_CONTROL'], permissions: ['inventory.view'] },
+  { path: '/inventory', icon: Warehouse, label: 'Inventario', roles: ['ADMIN', 'INVENTORY_CONTROL', 'AUDITOR'], permissions: ['inventory.view'] },
+  { path: '/purchases', icon: PackageCheck, label: 'Compras', roles: ['ADMIN', 'INVENTORY_CONTROL'], permissions: ['purchases.receive'] },
+  { path: '/suppliers', icon: Truck, label: 'Proveedores', roles: ['ADMIN', 'INVENTORY_CONTROL'], permissions: ['suppliers.view'] },
+  { path: '/reports', icon: FileBarChart, label: 'Reportes', roles: ['ADMIN', 'AUDITOR'], permissions: ['reports.sales', 'reports.inventory', 'reports.financial', 'reports.audit'] },
+  { path: '/cash-register', icon: DollarSign, label: 'Caja', roles: ['ADMIN', 'OPERATOR', 'AUDITOR'], permissions: ['cash.open', 'cash.close', 'cash.movements'] },
+  { path: '/transfers', icon: ArrowLeftRight, label: 'Traslados', roles: ['ADMIN', 'INVENTORY_CONTROL'], permissions: ['transfers.view'] },
+  { path: '/customers', icon: UserCircle, label: 'Clientes', roles: ['ADMIN', 'OPERATOR'], permissions: ['customers.view'] },
+  { path: '/quotations', icon: ClipboardList, label: 'Cotizaciones', roles: ['ADMIN', 'OPERATOR'], permissions: ['quotations.view'] },
   { path: '/messages', icon: MessageSquare, label: 'Mensajes', roles: ['ADMIN', 'OPERATOR', 'AUDITOR', 'INVENTORY_CONTROL'], badge: 'unreadMessages' },
-  { path: '/settings/users', icon: Users, label: 'Usuarios', roles: ['ADMIN'] },
-  { path: '/settings', icon: Settings, label: 'Configuración', roles: ['ADMIN'] },
+  { path: '/settings/users', icon: Users, label: 'Usuarios', roles: ['ADMIN'], permissions: ['settings.users'] },
+  { path: '/settings', icon: Settings, label: 'Configuración', roles: ['ADMIN'], permissions: ['settings.users', 'settings.roles', 'settings.stores', 'settings.system', 'settings.cashRegisters', 'goals.manage'] },
 ]
 
 const portalItems = [
@@ -59,7 +65,7 @@ const portalItems = [
   { path: '/portal/config', icon: Globe, label: 'Config. Portal', roles: ['ADMIN'] },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ offlineRestricted = false, allowedPaths = [] }: { offlineRestricted?: boolean; allowedPaths?: string[] }) {
   const { isSidebarCollapsed, toggleSidebar } = useAppStore()
   const { user, logout } = useAuthStore()
   const pendingPortalOrders = usePendingPortalOrders()
@@ -67,11 +73,21 @@ export default function Sidebar() {
   const unreadPortalMessages = useUnreadPortalMessages()
 
   const filteredMenuItems = menuItems.filter(item =>
-    user && item.roles.includes(user.role)
+    user && (
+      item.roles.includes(user.role) ||
+      (item as { permissions?: string[] }).permissions?.some(p => userHasPermission(user, p))
+    )
   )
   const filteredPortalItems = portalItems.filter(item =>
     user && item.roles.includes(user.role)
   )
+
+  // While offline, grey out and disable every link that isn't part of the
+  // selling workflow (see MainLayout's OFFLINE_ALLOWED_PATHS) instead of
+  // letting the cashier click through to a page that's just going to bounce
+  // them back — MainLayout's redirect still catches it either way, but this
+  // avoids the jarring click-then-snap-back.
+  const isDisabled = (path: string) => offlineRestricted && !allowedPaths.some(p => path.startsWith(p))
 
   return (
     <aside className={`fixed left-0 top-0 h-full bg-white border-r border-gray-200 transition-all duration-300 z-40 ${
@@ -102,13 +118,18 @@ export default function Sidebar() {
         {filteredMenuItems.map((item) => {
           const mBadgeCount = (item as any).badge === 'unreadMessages' ? unreadMessages : 0
           const mShowBadge = mBadgeCount > 0
+          const disabled = isDisabled(item.path)
           return (
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={e => disabled && e.preventDefault()}
+              title={disabled ? 'No disponible sin conexión' : undefined}
               className={({ isActive }) =>
                 `relative flex items-center px-4 py-3 mx-2 mb-1 rounded-lg transition-all ${
-                  isActive
+                  disabled
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : isActive
                     ? 'bg-primary-50 text-primary-600 border-l-4 border-primary-600'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`
@@ -153,13 +174,18 @@ export default function Sidebar() {
             {filteredPortalItems.map((item) => {
               const badgeCount = item.badge === 'pendingPortalOrders' ? pendingPortalOrders : item.badge === 'unreadMessages' ? unreadMessages : item.badge === 'unreadPortalMessages' ? unreadPortalMessages : 0
             const showBadge = badgeCount > 0
+              const disabled = isDisabled(item.path)
               return (
                 <NavLink
                   key={item.path}
                   to={item.path}
+                  onClick={e => disabled && e.preventDefault()}
+                  title={disabled ? 'No disponible sin conexión' : undefined}
                   className={({ isActive }) =>
                     `relative flex items-center px-4 py-3 mx-2 mb-1 rounded-lg transition-all ${
-                      isActive
+                      disabled
+                        ? 'text-gray-300 cursor-not-allowed'
+                        : isActive
                         ? 'bg-primary-50 text-primary-600 border-l-4 border-primary-600'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     }`

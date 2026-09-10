@@ -1,12 +1,12 @@
 # DENGO POS – API Backend
 
-Fastify 5 + Prisma 5 + SQL Server · Node 20 · TypeScript 5.8
+Fastify 5 + Prisma 5 + PostgreSQL · Node 20 · TypeScript 5.8
 
 ## Quick Start
 
 ### 1. Prerequisites
 - Node.js 20+
-- SQL Server 2019+ (or Azure SQL)
+- PostgreSQL 14+ (self-hosted, or a managed provider like Neon/Supabase/Railway)
 - npm / pnpm
 
 ### 2. Setup
@@ -14,24 +14,18 @@ Fastify 5 + Prisma 5 + SQL Server · Node 20 · TypeScript 5.8
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env with your SQL Server connection string and JWT secret
+# Edit .env with your PostgreSQL connection string and JWT secret
 npm install
 ```
 
 ### 3. Database
 
-**Option A – Run the raw SQL script first (recommended)**
-```sql
--- In SQL Server Management Studio or sqlcmd:
--- 1. Run database/schema.sql
--- 2. Run database/seed.sql
+```bash
+npx prisma generate   # generate Prisma client
+npx prisma db push    # sync schema to a fresh PostgreSQL database
 ```
 
-**Option B – Use Prisma (after configuring DATABASE_URL)**
-```bash
-npm run prisma:push      # sync schema to existing DB
-npm run prisma:generate  # generate Prisma client
-```
+> **Note:** the old SQL Server (T-SQL) scripts from before the PostgreSQL migration have been removed — `prisma db push` against the schema in `prisma/schema.prisma` is the current, correct way to create the schema; use `src/seed.ts` (or `prisma/seed-portal.ts` for Portal Escolar starter data) to load starter data.
 
 ### 4. Run
 

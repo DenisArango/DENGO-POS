@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Printer, Trash2, Save, Search, X,
-  CheckCircle, AlertTriangle, Plus
+  CheckCircle, AlertTriangle, Receipt
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../../lib/api'
-import { useAuthStore } from '../../store'
+import { usePermissions } from '../../hooks/usePermissions'
 import { toast } from 'sonner'
+import ThermalReceipt from '../../components/print/ThermalReceipt'
 
 const PM_LABEL: Record<string, string> = {
   CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia',
@@ -47,8 +48,9 @@ function toCost(item: EditItem) {
 export default function SaleDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { user } = useAuthStore()
-  const isAdmin = user?.role === 'ADMIN'
+  const { hasPermission } = usePermissions()
+  const canEdit = hasPermission('sales.edit')
+  const canVoid = hasPermission('sales.cancel')
 
   const [sale, setSale] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
@@ -66,6 +68,12 @@ export default function SaleDetail() {
   const [showVoidConfirm, setShowVoidConfirm] = useState(false)
   const [voidReason, setVoidReason] = useState('')
   const [voiding, setVoiding] = useState(false)
+
+  // Generate invoice (factura) after the fact
+  const [showInvoiceForm, setShowInvoiceForm] = useState(false)
+  const [invoiceBuyerNit, setInvoiceBuyerNit] = useState('')
+  const [invoiceBuyerName, setInvoiceBuyerName] = useState('')
+  const [generatingInvoice, setGeneratingInvoice] = useState(false)
 
   const fetchSale = useCallback(async () => {
     if (!id) return
@@ -167,8 +175,34 @@ export default function SaleDetail() {
       toast.success('Venta actualizada')
       setEditMode(false)
       fetchSale()
-    } catch (e: any) { toast.error(e?.message ?? 'Error al guardar')
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Error al guardar')
     } finally { setSaving(false) }
+  }
+
+  const openInvoiceForm = () => {
+    if (!sale) return
+    setInvoiceBuyerNit(sale.customer?.nit && sale.customer.nit !== 'C/F' && sale.customer.nit !== 'CF' ? sale.customer.nit : '')
+    setInvoiceBuyerName(sale.customer?.name ?? '')
+    setShowInvoiceForm(true)
+  }
+
+  const generateInvoice = async () => {
+    if (!id) return
+    if (!invoiceBuyerNit.trim()) { toast.error('Ingresa un NIT válido'); return }
+    setGeneratingInvoice(true)
+    try {
+      await api.post(`/api/sales/${id}/generate-invoice`, {
+        buyerNit: invoiceBuyerNit.trim(),
+        buyerName: invoiceBuyerName.trim() || undefined,
+      })
+      toast.success('Factura generada')
+      setShowInvoiceForm(false)
+      fetchSale()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al generar factura')
+    } finally {
+      setGeneratingInvoice(false)
+    }
   }
 
   const handleVoid = async () => {
@@ -179,33 +213,18 @@ export default function SaleDetail() {
       toast.success('Venta anulada')
       setShowVoidConfirm(false)
       fetchSale()
-    } catch (e: any) { toast.error(e?.message ?? 'Error al anular')
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Error al anular')
     } finally { setVoiding(false) }
   }
 
-  const printSale = () => {
-    if (!sale) return
-    const items = (sale.items ?? []).map((item: any) =>
-      `${item.product?.name} × ${Number(item.quantity).toFixed(0)} = Q${Number(item.total).toFixed(2)}`
-    ).join('\n')
-    const win = window.open('', '_blank', 'width=400,height=600')
-    if (!win) return
-    win.document.write(`<html><head><title>${sale.invoiceNumber}</title>
-      <style>body{font-family:monospace;font-size:12px;padding:16px}pre{white-space:pre-wrap}</style></head><body>
-      <h2 style="text-align:center">${sale.branch?.name ?? 'DENGO POS'}</h2>
-      <p style="text-align:center">${sale.invoiceNumber}</p>
-      <p>Fecha: ${format(new Date(sale.createdAt), 'dd/MM/yyyy HH:mm', { locale: es })}</p>
-      <p>Cliente: ${sale.customer?.name ?? 'General'}</p>
-      <p>Cajero: ${sale.cashier?.name ?? '—'}</p>
-      <hr/><pre>${items}</pre><hr/>
-      <p><b>Total: Q${Number(sale.total).toFixed(2)}</b></p>
-      <p>Método: ${PM_LABEL[sale.paymentMethod] ?? sale.paymentMethod}</p>
-      ${sale.transferDocumentNumber ? `<p>Ref. transferencia: ${sale.transferDocumentNumber}</p>` : ''}
-      <p style="text-align:center;margin-top:16px">¡Gracias por su compra!</p>
-      </body></html>`)
-    win.document.close()
-    win.print()
-  }
+  // Same thermal component the POS checkout receipt uses — printed straight
+  // from this page (window.print()) instead of the old approach of opening a
+  // blank popup window and writing raw HTML into it. That old approach had no
+  // @page sizing at all (so it inherited whatever paper Windows defaulted to)
+  // and, being a real navigable window, picked up Chrome's automatic
+  // date/title/URL/page-number print header — both fixed by going through
+  // the same path POS.tsx already uses correctly.
+  const printSale = () => window.print()
 
   if (loading) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" /></div>
   if (!sale) return <div className="text-center py-20 text-gray-400">Venta no encontrada</div>
@@ -218,7 +237,8 @@ export default function SaleDetail() {
     : (sale.saleProfit ?? 0)
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <>
+    <div className="space-y-6 max-w-4xl mx-auto print:hidden">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -235,15 +255,20 @@ export default function SaleDetail() {
           <button onClick={printSale} className="btn-outline btn-sm flex items-center gap-1.5">
             <Printer size={15} /> Imprimir
           </button>
-          {isAdmin && !sale.isVoided && !editMode && (
-            <>
-              <button onClick={startEdit} className="btn-outline btn-sm flex items-center gap-1.5">
-                <Save size={15} /> Editar
-              </button>
-              <button onClick={() => setShowVoidConfirm(true)} className="btn-sm bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded-lg px-3 flex items-center gap-1.5">
-                <Trash2 size={15} /> Anular
-              </button>
-            </>
+          {!sale.isVoided && !editMode && canEdit && !sale.requiresInvoice && (
+            <button onClick={openInvoiceForm} className="btn-outline btn-sm flex items-center gap-1.5">
+              <Receipt size={15} /> Generar factura
+            </button>
+          )}
+          {!sale.isVoided && !editMode && canEdit && (
+            <button onClick={startEdit} className="btn-outline btn-sm flex items-center gap-1.5">
+              <Save size={15} /> Editar
+            </button>
+          )}
+          {!sale.isVoided && !editMode && canVoid && (
+            <button onClick={() => setShowVoidConfirm(true)} className="btn-sm bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded-lg px-3 flex items-center gap-1.5">
+              <Trash2 size={15} /> Anular
+            </button>
           )}
           {editMode && (
             <>
@@ -283,8 +308,37 @@ export default function SaleDetail() {
         {sale.cashAmount > 0 && <div><p className="text-xs text-gray-400">Efectivo</p><p className="text-sm font-medium">Q{Number(sale.cashAmount).toFixed(2)}</p></div>}
         {sale.transferAmount > 0 && <div><p className="text-xs text-gray-400">Transferencia</p><p className="text-sm font-medium">Q{Number(sale.transferAmount).toFixed(2)}</p></div>}
         {sale.transferDocumentNumber && <div><p className="text-xs text-gray-400">Referencia</p><p className="text-sm font-mono">{sale.transferDocumentNumber}</p></div>}
+        {sale.cardReference && <div><p className="text-xs text-gray-400">Referencia tarjeta</p><p className="text-sm font-mono">{sale.cardReference}</p></div>}
         {sale.notes && <div className="flex-1"><p className="text-xs text-gray-400">Notas</p><p className="text-sm text-gray-700">{sale.notes}</p></div>}
       </div>
+
+      {/* Invoice (factura) info */}
+      {sale.requiresInvoice && (
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 flex flex-wrap gap-4 items-center">
+          <div>
+            <p className="text-xs text-purple-500">Factura</p>
+            <p className="text-sm font-medium text-purple-800">Serie {sale.invoiceSeries} No. {sale.invoiceSeqNumber}</p>
+          </div>
+          <div>
+            <p className="text-xs text-purple-500">NIT comprador</p>
+            <p className="text-sm font-mono text-purple-800">{sale.buyerNit}</p>
+          </div>
+          <div>
+            <p className="text-xs text-purple-500">Nombre</p>
+            <p className="text-sm text-purple-800">{sale.buyerName}</p>
+          </div>
+          <div>
+            <p className="text-xs text-purple-500">Emisor (NIT sucursal)</p>
+            <p className="text-sm font-mono text-purple-800">{sale.branch?.companyTaxId ?? '—'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-purple-500">Estado</p>
+            <p className="text-sm font-medium text-purple-800">
+              {sale.felStatus === 'CERTIFIED' ? 'Certificada' : sale.felStatus === 'FAILED' ? 'Error de certificación' : 'Pendiente de certificación'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Items */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -494,6 +548,37 @@ export default function SaleDetail() {
         </div>
       )}
 
+      {/* Generate invoice */}
+      {showInvoiceForm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-purple-100 rounded-lg"><Receipt size={22} className="text-purple-600" /></div>
+              <div>
+                <h3 className="font-bold text-gray-800">Generar factura</h3>
+                <p className="text-xs text-gray-500">{sale.invoiceNumber} — se factura a nombre de la sucursal {sale.branch?.name}</p>
+              </div>
+            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">NIT del comprador *</label>
+            <input type="text" value={invoiceBuyerNit} onChange={e => setInvoiceBuyerNit(e.target.value)}
+              placeholder="NIT" className="input w-full mb-3" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre para la factura</label>
+            <input type="text" value={invoiceBuyerName} onChange={e => setInvoiceBuyerName(e.target.value)}
+              placeholder="Nombre" className="input w-full mb-4" />
+            <p className="text-xs text-gray-400 mb-4">
+              Emisor: {sale.branch?.companyName ?? sale.branch?.name} — NIT {sale.branch?.companyTaxId ?? 'sin configurar'}
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowInvoiceForm(false)} className="flex-1 btn-outline btn-md" disabled={generatingInvoice}>Cancelar</button>
+              <button onClick={generateInvoice} disabled={generatingInvoice || !invoiceBuyerNit.trim()} className="flex-1 btn-primary btn-md disabled:opacity-50 flex items-center justify-center gap-2">
+                {generatingInvoice && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
+                Generar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Void confirm */}
       {showVoidConfirm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -520,5 +605,45 @@ export default function SaleDetail() {
         </div>
       )}
     </div>
+
+    <ThermalReceipt
+      widthMm={sale.branch?.receiptWidthMm ?? 55}
+      data={{
+        invoiceNumber: sale.invoiceNumber,
+        branchName: sale.branch?.name ?? 'Tienda',
+        branchAddress: sale.branch?.address,
+        branchPhone: sale.branch?.phone,
+        logo: sale.branch?.logo,
+        companyName: sale.branch?.companyName,
+        companyTaxId: sale.branch?.companyTaxId,
+        companyTagline: sale.branch?.companyTagline,
+        socialMediaName: sale.branch?.socialMediaName,
+        registerLabel: sale.cashRegister ? `${sale.cashRegister.name} #${sale.cashRegister.registerNumber}` : undefined,
+        createdAt: sale.createdAt,
+        items: (sale.items ?? []).map((item: any) => ({
+          id: item.id,
+          productName: item.product?.name ?? '–',
+          variationName: item.variation?.name,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          discount: Number(item.discount ?? 0) * 100,
+          total: Number(item.total),
+        })),
+        subtotal: Number(sale.subtotal),
+        total: Number(sale.total),
+        paymentMethodLabel: PM_LABEL[sale.paymentMethod] ?? sale.paymentMethod,
+        cardReference: sale.cardReference,
+        transferReference: sale.transferDocumentNumber,
+        customerName: sale.customer?.name,
+        customerNit: sale.customer?.nit,
+        requiresInvoice: sale.requiresInvoice,
+        invoiceSeries: sale.invoiceSeries,
+        invoiceSeqNumber: sale.invoiceSeqNumber,
+        buyerNit: sale.buyerNit,
+        buyerName: sale.buyerName,
+        felStatus: sale.felStatus,
+      }}
+    />
+    </>
   )
 }

@@ -220,8 +220,13 @@ model ProductBarcode {
 
 model Product {
   id          String   @id @default(cuid()) @map("ID") @db.VarChar(36)
-  barcode     String?  @unique @map("BARCODE") @db.VarChar(50)
-  sku         String?  @map("SKU") @db.VarChar(50)
+  // 150, not the original 50: Loyverse exports concatenate a variant
+  // product's several barcodes into one pipe-separated SKU value (seen up to
+  // 111 chars in a real client import) — real data, not a data-entry error,
+  // so the column needs to actually hold it rather than the import script
+  // silently truncating and losing part of it.
+  barcode     String?  @unique @map("BARCODE") @db.VarChar(150)
+  sku         String?  @map("SKU") @db.VarChar(150)
   name        String   @map("NAME") @db.VarChar(200)
   brand       String?  @map("BRAND") @db.VarChar(100)
   description String?  @map("DESCRIPTION")

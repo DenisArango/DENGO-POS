@@ -4,17 +4,37 @@
  * client onboarding:
  *
  *   npx tsx scripts/import-loyverse.ts \
- *     --branch=<branchId> \
+ *     --branch="Sucursal Zona 1" \
  *     --items=items_export.xlsx \
  *     --inventory=inventory_list.xlsx \
  *     --customers=customers_export.xlsx \
  *     --suppliers=suppliers_export.xlsx \
- *     [--dry-run]
+ *     [--branch-code=ZONA1] [--dry-run]
  *
  * All 4 file flags are optional and independent — pass only what you have.
  * Always run with --dry-run first: it prints the exact summary (created /
  * matched / skipped / warnings) without writing anything, so you can review
  * before committing to a real client's database.
+ *
+ * --branch is a NAME, not a database id. It's looked up case-insensitively
+ * against existing branches; if none matches, one is created on the spot as
+ * a **provisional placeholder** (just name/code/currency — no address, logo,
+ * printer width, default customer, etc.) so this script never blocks on "the
+ * branch doesn't exist yet in the app." The client fills in the rest later
+ * from Configuración → Tiendas — same pattern as the admin seed script.
+ * --branch-code optionally sets its code explicitly; otherwise one is
+ * slugified from the name.
+ *
+ * The Loyverse export is one Excel file PER BRANCH (their inventory report
+ * is branch-scoped), so onboarding a multi-branch client means running this
+ * script once per branch with a different --branch and --inventory each
+ * time. Products are a GLOBAL catalog in DENGO (only Inventory — the
+ * quantity — is per-branch), and the same item routinely appears in more
+ * than one branch's export — so every run after the first one MATCHES
+ * existing products (by barcode, then SKU, then exact name) instead of
+ * creating duplicates, and still links matched products into that branch's
+ * inventory. A matched product's price/cost from an earlier run is never
+ * overwritten by a later branch's file.
  */
 import { readFileSync } from 'node:fs'
 import * as XLSX from 'xlsx'
@@ -24,6 +44,7 @@ import { looksLikeRealNit } from '../src/lib/nit.js'
 // ── CLI args ─────────────────────────────────────────────────────────────
 type Args = {
   branch?: string
+  branchCode?: string
   items?: string
   inventory?: string
   customers?: string
@@ -35,8 +56,11 @@ function parseArgs(): Args {
   const args: Args = { dryRun: false }
   for (const raw of process.argv.slice(2)) {
     if (raw === '--dry-run') { args.dryRun = true; continue }
-    const m = raw.match(/^--([a-z]+)=(.*)$/)
-    if (m) (args as any)[m[1] === 'branch' ? 'branch' : m[1]] = m[2]
+    const m = raw.match(/^--([a-z-]+)=(.*)$/)
+    if (m) {
+      const key = m[1] === 'branch-code' ? 'branchCode' : m[1]
+      ;(args as any)[key!] = m[2]
+    }
   }
   return args
 }
@@ -71,6 +95,28 @@ function uniqueCode(base: string, used: Set<string>, maxLen: number, fallbackSuf
   }
   used.add(candidate)
   return candidate
+}
+
+// Looks up a branch by name (case-insensitive) or by --branch-code if given;
+// creates a provisional placeholder (name/code/type only — no address, logo,
+// printer width, default customer) if nothing matches, so onboarding a
+// multi-branch client never has to pre-create branches by hand in the app
+// first. The client completes the rest later from Configuración → Tiendas.
+async function resolveBranch(name: string, codeOverride: string | undefined, dryRun: boolean): Promise<{ id: string; created: boolean }> {
+  const existing = await prisma.branch.findFirst({
+    where: codeOverride
+      ? { OR: [{ name: { equals: name, mode: 'insensitive' } }, { code: codeOverride }] }
+      : { name: { equals: name, mode: 'insensitive' } },
+  })
+  if (existing) return { id: existing.id, created: false }
+
+  const existingCodes = new Set((await prisma.branch.findMany({ select: { code: true } })).map(b => b.code))
+  const code = codeOverride ?? uniqueCode(slugify(name), existingCodes, 20, 'B')
+  const isFirstBranch = existingCodes.size === 0
+
+  if (dryRun) return { id: 'DRY-RUN-BRANCH', created: true }
+  const branch = await prisma.branch.create({ data: { name: name.slice(0, 150), code, type: isFirstBranch ? 'main' : 'branch' } })
+  return { id: branch.id, created: true }
 }
 
 function joinAddress(parts: (string | undefined)[]): string | undefined {
@@ -203,13 +249,14 @@ async function main() {
   // ── Products + inventory ─────────────────────────────────────────────────
   if (args.items) {
     if (!args.branch) {
-      console.error('❌ --items requiere --branch=<branchId> para poder cargar el stock')
+      console.error('❌ --items requiere --branch="Nombre de la sucursal" para poder cargar el stock')
       process.exit(1)
     }
-    const branch = await prisma.branch.findUnique({ where: { id: args.branch } })
-    if (!branch) {
-      console.error(`❌ No existe una sucursal con id "${args.branch}"`)
-      process.exit(1)
+    const { id: branchId, created: branchCreated } = await resolveBranch(args.branch, args.branchCode, args.dryRun)
+    if (branchCreated) {
+      console.log(`📍 Sucursal "${args.branch}" no existía — creada como provisional (código: ${args.branchCode ?? '(generado automáticamente)'}). El cliente debe completar dirección, logo, ancho de impresora, etc. desde Configuración → Tiendas.`)
+    } else {
+      console.log(`📍 Sucursal "${args.branch}" ya existía — se usa la existente.`)
     }
 
     // One shared default unit for everything imported this way — Loyverse's
@@ -237,12 +284,24 @@ async function main() {
     }
 
     const rows = readSheet(args.items)
-    const usedBarcodes = new Set<string>()
-    for (const p of await prisma.product.findMany({ select: { barcode: true } })) {
-      if (p.barcode) usedBarcodes.add(p.barcode)
-    }
 
-    let created = 0, skipped = 0
+    // Products are a GLOBAL catalog (only Inventory is per-branch) — the same
+    // item routinely appears in more than one branch's export, so a second
+    // (or third...) branch's run must MATCH an already-imported product
+    // instead of creating a duplicate. Matched in this order: barcode, then
+    // SKU, then exact name. A matched product's price/cost is never touched
+    // by a later run — only its linkage into this branch's inventory changes.
+    const existingByBarcode = new Map<string, string>()
+    const existingBySku = new Map<string, string>()
+    const existingByName = new Map<string, string>()
+    for (const p of await prisma.product.findMany({ select: { id: true, barcode: true, sku: true, name: true } })) {
+      if (p.barcode) existingByBarcode.set(p.barcode, p.id)
+      if (p.sku) existingBySku.set(p.sku, p.id)
+      existingByName.set(p.name.toLowerCase(), p.id)
+    }
+    const usedBarcodes = new Set(existingByBarcode.keys())
+
+    let created = 0, matched = 0, skipped = 0
     const skuToProductId = new Map<string, string>()
 
     for (const row of rows) {
@@ -252,6 +311,16 @@ async function main() {
 
       const sku = str(row['Número de artículo']) || undefined
       let barcode = str(row['Nombre de visualización del código de barras']) || str(row['Identificador del producto']) || undefined
+
+      const matchedId = (barcode && existingByBarcode.get(barcode))
+        || (sku && existingBySku.get(sku))
+        || existingByName.get(name.slice(0, 200).toLowerCase())
+      if (matchedId) {
+        matched++
+        if (sku) skuToProductId.set(sku, matchedId)
+        continue
+      }
+
       if (barcode) {
         if (usedBarcodes.has(barcode)) {
           warnings.push(`Producto "${name}" — código de barras "${barcode}" ya usado por otro producto, se deja sin código`)
@@ -284,7 +353,7 @@ async function main() {
       if (sku) skuToProductId.set(sku, product.id)
       created++
     }
-    console.log(`Productos: ${created} nuevos, ${skipped} omitidos (sin nombre o son servicio)`)
+    console.log(`Productos: ${created} nuevos, ${matched} ya existían (mismo código de barras/SKU/nombre — vinculados a esta sucursal sin duplicar), ${skipped} omitidos (sin nombre o son servicio)`)
     console.log(`Categorías: ${categoryCache.size} en total (nuevas + existentes)`)
 
     // ── Inventory (stock quantities) ────────────────────────────────────
@@ -298,8 +367,8 @@ async function main() {
         const quantity = num(row['Cantidad'])
         if (!args.dryRun) {
           await prisma.inventory.upsert({
-            where: { productId_branchId: { productId, branchId: args.branch! } },
-            create: { productId, branchId: args.branch!, quantity },
+            where: { productId_branchId: { productId, branchId } },
+            create: { productId, branchId, quantity },
             update: { quantity },
           })
         }

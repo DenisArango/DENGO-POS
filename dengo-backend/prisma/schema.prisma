@@ -137,6 +137,15 @@ model Role {
   name        String   @unique @map("NAME") @db.VarChar(60)
   description String?  @map("DESCRIPTION") @db.VarChar(300)
   isSystem    Boolean  @default(false) @map("IS_SYSTEM") // seeded built-in role; name is locked but permissions can still be edited
+  // Optional daily login window for this role — checked once at POST
+  // /api/auth/login, never against an already-open session. ADMIN always
+  // bypasses this regardless of its own role's settings (same "can never be
+  // locked out" philosophy as the permission bypass in lib/permissions.ts).
+  // scheduleStart/End are "HH:mm"; scheduleStart > scheduleEnd means the
+  // window wraps past midnight (e.g. 22:00-06:00 for an overnight shift).
+  scheduleEnabled Boolean @default(false) @map("SCHEDULE_ENABLED")
+  scheduleStart   String? @map("SCHEDULE_START") @db.VarChar(5)
+  scheduleEnd     String? @map("SCHEDULE_END") @db.VarChar(5)
   createdAt   DateTime @default(now()) @map("CREATED_AT")
   updatedAt   DateTime @updatedAt @map("UPDATED_AT")
 

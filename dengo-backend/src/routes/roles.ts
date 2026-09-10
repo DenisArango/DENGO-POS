@@ -6,7 +6,7 @@ import { PERMISSION_CATALOG, ALL_PERMISSION_KEYS, requirePermission } from '../l
 
 const roleInclude = { permissions: { select: { permissionKey: true } }, _count: { select: { users: true } } }
 
-function serializeRole(role: { id: string; name: string; description: string | null; isSystem: boolean; permissions: { permissionKey: string }[]; _count: { users: number } }) {
+function serializeRole(role: { id: string; name: string; description: string | null; isSystem: boolean; scheduleEnabled: boolean; scheduleStart: string | null; scheduleEnd: string | null; permissions: { permissionKey: string }[]; _count: { users: number } }) {
   return {
     id: role.id,
     name: role.name,
@@ -14,10 +14,19 @@ function serializeRole(role: { id: string; name: string; description: string | n
     isSystem: role.isSystem,
     userCount: role._count.users,
     permissions: role.permissions.map(p => p.permissionKey),
+    scheduleEnabled: role.scheduleEnabled,
+    scheduleStart: role.scheduleStart,
+    scheduleEnd: role.scheduleEnd,
   }
 }
 
 const permissionsSchema = z.array(z.enum(ALL_PERMISSION_KEYS as [string, ...string[]]))
+const hhmm = z.string().regex(/^\d{1,2}:\d{2}$/, 'Formato HH:mm')
+const scheduleSchema = z.object({
+  scheduleEnabled: z.boolean().optional(),
+  scheduleStart: hhmm.nullish(),
+  scheduleEnd: hhmm.nullish(),
+})
 
 export default async function roleRoutes(fastify: FastifyInstance) {
   // GET /api/roles/catalog — the fixed list of gate-able permission keys, for the admin UI
@@ -35,7 +44,7 @@ export default async function roleRoutes(fastify: FastifyInstance) {
       name: z.string().min(2).max(60),
       description: z.string().max(300).optional(),
       permissions: permissionsSchema.default([]),
-    }).safeParse(request.body)
+    }).merge(scheduleSchema).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
 
     try {
@@ -43,6 +52,9 @@ export default async function roleRoutes(fastify: FastifyInstance) {
         data: {
           name: body.data.name,
           ...(body.data.description !== undefined ? { description: body.data.description } : {}),
+          ...(body.data.scheduleEnabled !== undefined ? { scheduleEnabled: body.data.scheduleEnabled } : {}),
+          ...(body.data.scheduleStart !== undefined ? { scheduleStart: body.data.scheduleStart } : {}),
+          ...(body.data.scheduleEnd !== undefined ? { scheduleEnd: body.data.scheduleEnd } : {}),
           isSystem: false,
           permissions: { create: body.data.permissions.map(permissionKey => ({ permissionKey })) },
         },
@@ -63,7 +75,7 @@ export default async function roleRoutes(fastify: FastifyInstance) {
       name: z.string().min(2).max(60).optional(),
       description: z.string().max(300).optional(),
       permissions: permissionsSchema.optional(),
-    }).safeParse(request.body)
+    }).merge(scheduleSchema).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
 
     const existing = await prisma.role.findUnique({ where: { id } })
@@ -82,6 +94,9 @@ export default async function roleRoutes(fastify: FastifyInstance) {
         data: {
           ...(body.data.name ? { name: body.data.name } : {}),
           ...(body.data.description !== undefined ? { description: body.data.description } : {}),
+          ...(body.data.scheduleEnabled !== undefined ? { scheduleEnabled: body.data.scheduleEnabled } : {}),
+          ...(body.data.scheduleStart !== undefined ? { scheduleStart: body.data.scheduleStart } : {}),
+          ...(body.data.scheduleEnd !== undefined ? { scheduleEnd: body.data.scheduleEnd } : {}),
         },
         include: roleInclude,
       })

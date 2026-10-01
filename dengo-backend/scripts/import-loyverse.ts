@@ -193,8 +193,14 @@ async function main() {
     let created = 0, skipped = 0, matched = 0
     let withCredit = 0, unlimited = 0
 
-    const existing = await prisma.customer.findMany({ select: { nit: true } })
-    for (const c of existing) usedNits.add(c.nit)
+    // Two separate sets on purpose: `existingNits` is what was already in the
+    // DB *before* this run started (so re-running the same file — e.g.
+    // retrying after an error partway through — recognizes every row as
+    // already imported and skips it, instead of creating a full second copy
+    // of all of them). `usedNits` only tracks collisions *within this run*,
+    // where two different rows in the same file genuinely share a NIT.
+    const existingNits = new Set((await prisma.customer.findMany({ select: { nit: true } })).map(c => c.nit))
+    for (const n of existingNits) usedNits.add(n)
 
     for (const row of rows) {
       const name = str(row['Nombre (s)'])
@@ -204,13 +210,22 @@ async function main() {
       const rawNit = str(row['Nit'])
       const validNit = looksLikeRealNit(rawNit)
       let nit = validNit ? rawNit : `SIN-NIT-${loyverseId || slugify(name)}`
+
+      if (existingNits.has(nit)) {
+        // Already in the database under this exact NIT/placeholder — almost
+        // certainly the same source row from an earlier run of this script.
+        // Match and skip, same as suppliers/products do.
+        matched++
+        continue
+      }
       if (usedNits.has(nit)) {
-        // Real duplicate NIT in the source data, or a second blank-NIT customer
-        // whose generated placeholder collided — suffix it rather than skip.
+        // Two DIFFERENT rows in this same file share a real NIT (or two
+        // blank-NIT customers whose generated placeholder collided) — these
+        // are genuinely two different customers, so suffix instead of skipping.
         let n = 2
         let candidate = `${nit}-${n}`
         while (usedNits.has(candidate)) { n++; candidate = `${nit}-${n}` }
-        warnings.push(`Cliente "${name}" — NIT "${nit}" duplicado, usando "${candidate}"`)
+        warnings.push(`Cliente "${name}" — NIT "${nit}" duplicado dentro del mismo archivo, usando "${candidate}"`)
         nit = candidate
       }
       usedNits.add(nit)

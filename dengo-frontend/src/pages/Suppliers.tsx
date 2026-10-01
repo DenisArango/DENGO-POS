@@ -365,7 +365,7 @@ export default function Suppliers() {
                   {supplier.creditLimit > 0 && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600">Límite de crédito:</span>
-                      <span className="font-medium">${supplier.creditLimit.toLocaleString()}</span>
+                      <span className="font-medium">Q{supplier.creditLimit.toLocaleString()}</span>
                     </div>
                   )}
                 </div>
@@ -698,7 +698,7 @@ export default function Suppliers() {
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
                     <p className="text-sm text-gray-600">Límite de crédito</p>
-                    <p className="font-medium">${(selectedSupplier.creditLimit || 0).toLocaleString()}</p>
+                    <p className="font-medium">Q{(selectedSupplier.creditLimit || 0).toLocaleString()}</p>
                   </div>
                 </div>
               </div>

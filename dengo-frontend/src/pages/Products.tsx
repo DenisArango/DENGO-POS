@@ -53,28 +53,45 @@ export default function Products() {
   const canDelete = hasPermission('inventory.delete')
   const canEditPrice = hasPermission('inventory.editPrice')
   const canViewMoneyTotals = hasPermission('settings.system')
+  const PAGE_SIZE = 50
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [units, setUnits] = useState<{ id: string; name: string; abbreviation: string; type: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [showProductModal, setShowProductModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<any>(null)
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'duplicate'>('create')
   const [showFilters, setShowFilters] = useState(false)
+  const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [stats, setStats] = useState({ total: 0, lowStock: 0, outOfStock: 0, totalValue: 0 })
+
+  // Búsqueda con pequeño retraso para no disparar una llamada al backend en
+  // cada tecla — vuelve a la página 1 cada vez que cambia lo que se busca.
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(searchTerm); setPage(1) }, 300)
+    return () => clearTimeout(t)
+  }, [searchTerm])
+
+  useEffect(() => { setPage(1) }, [selectedCategory])
 
   const fetchProducts = () => {
     setLoading(true)
+    const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
+    if (debouncedSearch) params.set('search', debouncedSearch)
+    if (selectedCategory) params.set('categoryId', selectedCategory)
     Promise.all([
-      api.get<Product[]>('/api/products'),
+      api.get<{ data: Product[]; total: number; stats: { total: number; lowStock: number; outOfStock: number; totalValue: number } }>(`/api/products?${params}`),
       api.get<Category[]>('/api/categories'),
       api.get<{ id: string; name: string; abbreviation: string; type: string }[]>('/api/units'),
     ])
-      .then(([prods, cats, unitList]) => {
+      .then(([res, cats, unitList]) => {
         // Normalise backend shape → UI shape
-        const normalised = prods.map(p => ({
+        const normalised = res.data.map(p => ({
           ...p,
           fullName: p.fullName ?? p.name ?? '',
           category: typeof p.category === 'object' ? (p.category as Category)?.name ?? '' : p.category ?? '',
@@ -93,6 +110,8 @@ export default function Products() {
           })),
         }))
         setProducts(normalised)
+        setTotalCount(res.total)
+        setStats(res.stats)
         setCategories(cats)
         setUnits(unitList)
       })
@@ -100,17 +119,9 @@ export default function Products() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchProducts() }, [])
+  useEffect(() => { fetchProducts() }, [page, debouncedSearch, selectedCategory])
 
-  const filteredProducts = products.filter(product => {
-    const name = product.fullName ?? product.name ?? ''
-    const matchesSearch =
-      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (product.barcode ?? '').includes(searchTerm) ||
-      (product.sku ?? '').toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = !selectedCategory || product.category === selectedCategory
-    return matchesSearch && matchesCategory
-  })
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
   const handleCreateProduct = () => {
     setEditingProduct(null)
@@ -221,7 +232,7 @@ export default function Products() {
             <span className="text-gray-600 text-sm">Total Productos</span>
             <Package className="text-primary-600" size={20} />
           </div>
-          <p className="text-2xl font-bold text-gray-800">{products.length}</p>
+          <p className="text-2xl font-bold text-gray-800">{stats.total}</p>
         </div>
         {canViewMoneyTotals && (
           <div className="bg-white rounded-lg shadow-sm p-4">
@@ -230,7 +241,7 @@ export default function Products() {
               <DollarSign className="text-green-600" size={20} />
             </div>
             <p className="text-2xl font-bold text-gray-800">
-              Q{products.reduce((sum, p) => sum + (p.basePrice * (p.stock ?? 0)), 0).toFixed(2)}
+              Q{stats.totalValue.toFixed(2)}
             </p>
           </div>
         )}
@@ -240,7 +251,7 @@ export default function Products() {
             <AlertTriangle className="text-yellow-600" size={20} />
           </div>
           <p className="text-2xl font-bold text-gray-800">
-            {products.filter(p => (p.stock ?? 0) > 0 && (p.stock ?? 0) <= (p.minStock ?? 0)).length}
+            {stats.lowStock}
           </p>
         </div>
         <div className="bg-white rounded-lg shadow-sm p-4">
@@ -249,7 +260,7 @@ export default function Products() {
             <Archive className="text-red-600" size={20} />
           </div>
           <p className="text-2xl font-bold text-gray-800">
-            {products.filter(p => (p.stock ?? 0) === 0).length}
+            {stats.outOfStock}
           </p>
         </div>
       </div>
@@ -320,9 +331,9 @@ export default function Products() {
                 {categories.map((category) => (
                   <button
                     key={category.id}
-                    onClick={() => setSelectedCategory(category.name)}
+                    onClick={() => setSelectedCategory(category.id)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                      selectedCategory === category.name
+                      selectedCategory === category.id
                         ? 'bg-primary-600 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
@@ -343,7 +354,7 @@ export default function Products() {
       <div className="bg-white rounded-lg shadow-sm p-6">
         {viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredProducts.map((product) => (
+            {products.map((product) => (
               <motion.div
                 key={product.id}
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -421,7 +432,7 @@ export default function Products() {
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.map((product) => (
+                {products.map((product) => (
                   <tr key={product.id} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div>
@@ -479,6 +490,36 @@ export default function Products() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!loading && products.length === 0 && (
+          <div className="text-center py-12 text-gray-500">
+            {debouncedSearch || selectedCategory ? 'No se encontraron productos' : 'No hay productos registrados'}
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4 mt-4 border-t">
+            <p className="text-sm text-gray-600">
+              Página {page} de {totalPages} · {totalCount} productos
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Siguiente
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -9,12 +9,25 @@
  *     --inventory=inventory_list.xlsx \
  *     --customers=customers_export.xlsx \
  *     --suppliers=suppliers_export.xlsx \
+ *     --employees=employees_export.xlsx \
  *     [--branch-code=ZONA1] [--dry-run]
  *
- * All 4 file flags are optional and independent — pass only what you have.
+ * All 5 file flags are optional and independent — pass only what you have.
  * Always run with --dry-run first: it prints the exact summary (created /
  * matched / skipped / warnings) without writing anything, so you can review
  * before committing to a real client's database.
+ *
+ * --employees creates one DENGO User per row (matched by email on re-runs,
+ * same "already exists, skip" pattern as customers/suppliers), always as a
+ * plain OPERATOR (sales + cash register, nothing administrative) regardless
+ * of anything in the source file — Loyverse's employee export carries no
+ * real role/permission data, so granting anything wider from it would be
+ * guessing. A random temporary password is generated per employee and
+ * printed once at the end (never written to disk) — share these out of
+ * band; each employee should change their password on first login. Like
+ * --items, this needs --branch (the employee's starting branch; the owner
+ * can add others per-person afterward from Usuarios). The owner then
+ * assigns real roles/fine permissions per person from Configuración → Roles.
  *
  * --branch is a NAME, not a database id. It's looked up case-insensitively
  * against existing branches; if none matches, one is created on the spot as
@@ -37,9 +50,11 @@
  * overwritten by a later branch's file.
  */
 import { readFileSync } from 'node:fs'
+import { randomBytes } from 'node:crypto'
 import * as XLSX from 'xlsx'
 import { prisma } from '../src/lib/prisma.js'
 import { looksLikeRealNit } from '../src/lib/nit.js'
+import { hashPassword } from '../src/services/auth.service.js'
 
 // ── CLI args ─────────────────────────────────────────────────────────────
 type Args = {
@@ -49,6 +64,7 @@ type Args = {
   inventory?: string
   customers?: string
   suppliers?: string
+  employees?: string
   dryRun: boolean
 }
 
@@ -127,6 +143,13 @@ function joinAddress(parts: (string | undefined)[]): string | undefined {
 const num = (v: unknown): number => {
   const n = Number(v)
   return Number.isFinite(n) ? n : 0
+}
+
+// 6 random bytes, base64url-encoded — 8 readable characters, no quoting
+// issues, ~48 bits of entropy. Plenty for a one-time temp password the
+// employee is expected to change on first login.
+function generateTempPassword(): string {
+  return randomBytes(6).toString('base64url')
 }
 const str = (v: unknown): string => String(v ?? '').trim()
 // looksLikeRealNit imported from src/lib/nit.js — shared with sales.ts so
@@ -259,6 +282,55 @@ async function main() {
       created++
     }
     console.log(`Clientes: ${created} nuevos (${withCredit} con crédito habilitado, ${unlimited} de esos sin límite), ${matched} ya existían, ${skipped} sin nombre (omitidos)`)
+  }
+
+  // ── Employees (Users) ────────────────────────────────────────────────────
+  // Everyone imports as OPERATOR (ventas + caja, sin nada administrativo) —
+  // el Loyverse export no trae un rol real, y asignar algo más amplio desde
+  // datos ambiguos sería un riesgo de seguridad. El dueño ajusta roles y
+  // permisos finos por persona desde Configuración → Roles una vez que todos
+  // puedan iniciar sesión.
+  const employeeCredentials: { email: string; password: string }[] = []
+  if (args.employees) {
+    if (!args.branch) {
+      console.error('❌ --employees requiere --branch="Nombre de la sucursal" para asignarles una sucursal de inicio')
+      process.exit(1)
+    }
+    const { id: branchId } = await resolveBranch(args.branch, args.branchCode, args.dryRun)
+
+    const rows = readSheet(args.employees)
+    let created = 0, skipped = 0, matched = 0
+
+    const existingEmails = new Set((await prisma.user.findMany({ select: { email: true } })).map(u => u.email.toLowerCase()))
+
+    for (const row of rows) {
+      const name = str(row['Nombre (s)']) || str(row['Usuario'])
+      const email = str(row['Correo electrónico']).toLowerCase()
+      if (!name || !email) { skipped++; continue }
+
+      if (existingEmails.has(email)) { matched++; continue }
+      existingEmails.add(email)
+
+      // Seen in real client data: the Nit column (normally blank for
+      // employees) repurposed to write the literal word "Admin" on exactly
+      // one row. That's a signal worth surfacing, not a reason to
+      // auto-elevate — flagged in the warnings instead.
+      if (str(row['Nit']).toLowerCase() === 'admin') {
+        warnings.push(`Empleado "${name}" (${email}) — tenía "Admin" en la columna Nit del export; se importó como OPERATOR igual que el resto, revisa si debe tener el rol ADMIN desde Configuración → Usuarios`)
+      }
+
+      const password = generateTempPassword()
+      employeeCredentials.push({ email, password })
+
+      if (!args.dryRun) {
+        const passwordHash = await hashPassword(password)
+        await prisma.user.create({
+          data: { email, name: name.slice(0, 150), passwordHash, role: 'OPERATOR', branchId },
+        })
+      }
+      created++
+    }
+    console.log(`Empleados: ${created} nuevos (rol OPERATOR), ${matched} ya existían (mismo correo), ${skipped} sin nombre o sin correo (omitidos)`)
   }
 
   // ── Products + inventory ─────────────────────────────────────────────────
@@ -408,6 +480,11 @@ async function main() {
   } else if (args.inventory) {
     console.error('❌ --inventory requiere --items en la misma corrida (necesita crear los productos primero)')
     process.exit(1)
+  }
+
+  if (employeeCredentials.length && !args.dryRun) {
+    console.log(`\n🔑 Credenciales temporales — compártelas con cada empleado, deben cambiar su contraseña en su primer inicio de sesión:`)
+    for (const c of employeeCredentials) console.log(`   ${c.email}  →  ${c.password}`)
   }
 
   if (warnings.length) {

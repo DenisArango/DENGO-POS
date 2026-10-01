@@ -36,7 +36,21 @@ export default async function roleRoutes(fastify: FastifyInstance) {
 
   fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('settings.roles')] }, async (_request, reply) => {
     const roles = await prisma.role.findMany({ include: roleInclude, orderBy: { createdAt: 'asc' } })
-    return reply.send(roles.map(serializeRole))
+
+    // `_count.users` only counts users with an explicit customRoleId pointing
+    // at this Role row. A user on one of the 4 built-in system roles
+    // (ADMIN/AUDITOR/INVENTORY_CONTROL/OPERATOR) with no override just has
+    // User.role set to that name and customRoleId null — invisible to that
+    // count, which made every system role's card show 0/usuarios even when
+    // plenty of real users were on it. Top up system roles with those too.
+    const baseRoleCounts = await prisma.user.groupBy({ by: ['role'], where: { customRoleId: null }, _count: { role: true } })
+    const baseCountByName = new Map(baseRoleCounts.map(r => [r.role, r._count.role]))
+
+    return reply.send(roles.map(role => {
+      const serialized = serializeRole(role)
+      if (role.isSystem) serialized.userCount += baseCountByName.get(role.name) ?? 0
+      return serialized
+    }))
   })
 
   fastify.post('/', { preHandler: [fastify.authenticate, requirePermission('settings.roles')] }, async (request, reply) => {

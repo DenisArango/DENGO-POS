@@ -528,7 +528,7 @@ export default function ProductModal({
                           <div>
                             <p className="text-xs text-green-600">Ganancia por unidad:</p>
                             <p className="font-medium text-green-900">
-                              ${(formData.basePrice - formData.cost).toFixed(2)}
+                              Q{(formData.basePrice - formData.cost).toFixed(2)}
                             </p>
                           </div>
                         </div>

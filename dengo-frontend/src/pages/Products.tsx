@@ -400,7 +400,7 @@ export default function Products() {
                     <span className={`font-medium ${
                       (product.stock ?? 0) <= (product.minStock ?? 0) ? 'text-red-600' : 'text-green-600'
                     }`}>
-                      {product.stock ?? 0} {product.baseUnit}s
+                      {product.stock ?? 0} {product.baseUnit}
                     </span>
                   </div>
                   <div className="flex justify-between">

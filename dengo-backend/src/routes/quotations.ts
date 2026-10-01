@@ -35,17 +35,47 @@ const include = {
 
 export default async function quotationRoutes(fastify: FastifyInstance) {
   fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('quotations.view')] }, async (request, reply) => {
-    const q = request.query as { status?: string; customerId?: string; branchId?: string }
+    const q = request.query as { status?: string; customerId?: string; branchId?: string; page?: string; limit?: string }
     const branchId = resolveBranchScope(request, q.branchId)
-    return reply.send(await prisma.quotation.findMany({
-      where: {
-        ...(branchId ? { branchId } : {}),
-        ...(q.status ? { status: q.status as any } : {}),
-        ...(q.customerId ? { customerId: q.customerId } : {}),
-      },
-      include,
-      orderBy: { createdAt: 'desc' },
-    }))
+    const statusWhere = {
+      ...(branchId ? { branchId } : {}),
+      ...(q.customerId ? { customerId: q.customerId } : {}),
+    }
+    const where = {
+      ...statusWhere,
+      ...(q.status ? { status: q.status as any } : {}),
+    }
+
+    // Paginated path — opt-in via `page`, used by the Quotations page. No
+    // natural cap otherwise (grows with every quotation ever created). Stats
+    // reflect every status (not just the one currently selected) so the
+    // status cards stay meaningful regardless of which filter is active.
+    if (q.page) {
+      const page = Math.max(1, parseInt(q.page, 10) || 1)
+      const limit = Math.min(200, Math.max(1, parseInt(q.limit ?? '50', 10) || 50))
+      const [data, total, statusTotal, statusCounts] = await Promise.all([
+        prisma.quotation.findMany({ where, include, orderBy: { createdAt: 'desc' }, skip: (page - 1) * limit, take: limit }),
+        prisma.quotation.count({ where }),
+        prisma.quotation.count({ where: statusWhere }),
+        prisma.quotation.groupBy({ by: ['status'], where: statusWhere, _count: { status: true } }),
+      ])
+      const countByStatus = new Map(statusCounts.map(s => [s.status, s._count.status]))
+      return reply.send({
+        data,
+        total,
+        page,
+        limit,
+        stats: {
+          total: statusTotal,
+          draft: countByStatus.get('DRAFT') ?? 0,
+          sent: countByStatus.get('SENT') ?? 0,
+          accepted: countByStatus.get('ACCEPTED') ?? 0,
+          rejected: (countByStatus.get('REJECTED') ?? 0) + (countByStatus.get('EXPIRED') ?? 0),
+        },
+      })
+    }
+
+    return reply.send(await prisma.quotation.findMany({ where, include, orderBy: { createdAt: 'desc' } }))
   })
 
   fastify.get('/:id', { preHandler: [fastify.authenticate, requirePermission('quotations.view')] }, async (request, reply) => {

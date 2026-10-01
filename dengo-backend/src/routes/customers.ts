@@ -58,19 +58,48 @@ function withCreditFields<T extends { creditEnabled: boolean; creditLimitEnabled
 
 export default async function customerRoutes(fastify: FastifyInstance) {
   fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('customers.view')] }, async (request, reply) => {
-    const q = request.query as { search?: string }
-    const customers = await prisma.customer.findMany({
-      where: {
-        isActive: true,
-        ...(q.search ? {
-          OR: [
-            { name: { contains: q.search, mode: 'insensitive' } },
-            { nit: { contains: q.search, mode: 'insensitive' } },
-          ],
-        } : {}),
-      },
-      orderBy: { name: 'asc' },
-    })
+    const q = request.query as { search?: string; isActive?: string; hasCredit?: string; page?: string; limit?: string }
+    // Default (param absent) stays active-only, same opt-in pattern as
+    // suppliers — 'all'/'false' are explicit choices, not the old hardcoded
+    // isActive:true that made the page's own "Inactivos"/"Todos" filters a no-op.
+    const where = {
+      ...(q.isActive === 'all' ? {} : { isActive: q.isActive === 'false' ? false : true }),
+      ...(q.hasCredit === 'true' ? { creditLimit: { gt: 0 } } : {}),
+      ...(q.search ? {
+        OR: [
+          { name: { contains: q.search, mode: 'insensitive' as const } },
+          { nit: { contains: q.search, mode: 'insensitive' as const } },
+          { email: { contains: q.search, mode: 'insensitive' as const } },
+          { phone: { contains: q.search, mode: 'insensitive' as const } },
+        ],
+      } : {}),
+    }
+
+    // Paginated path — opt-in via `page`, used by the Customers management
+    // page. Stats reflect the status filter but not the search text, same
+    // scope the page's stat cards always showed before pagination existed.
+    if (q.page) {
+      const page = Math.max(1, parseInt(q.page, 10) || 1)
+      const limit = Math.min(200, Math.max(1, parseInt(q.limit ?? '50', 10) || 50))
+      const statusWhere = q.isActive === 'all' ? {} : { isActive: q.isActive === 'false' ? false : true }
+      const [customers, total, statusTotal, active, withCredit, creditAgg] = await Promise.all([
+        prisma.customer.findMany({ where, orderBy: { name: 'asc' }, skip: (page - 1) * limit, take: limit }),
+        prisma.customer.count({ where }),
+        prisma.customer.count({ where: statusWhere }),
+        prisma.customer.count({ where: { ...statusWhere, isActive: true } }),
+        prisma.customer.count({ where: { ...statusWhere, creditLimit: { gt: 0 } } }),
+        prisma.customer.aggregate({ where: statusWhere, _sum: { creditUsed: true } }),
+      ])
+      return reply.send({
+        data: customers.map(withCreditFields),
+        total,
+        page,
+        limit,
+        stats: { total: statusTotal, active, withCredit, totalCreditUsed: Number(creditAgg._sum.creditUsed ?? 0) },
+      })
+    }
+
+    const customers = await prisma.customer.findMany({ where, orderBy: { name: 'asc' } })
     return reply.send(customers.map(withCreditFields))
   })
 

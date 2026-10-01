@@ -4,7 +4,7 @@ import {
   Plus, Search, Eye, Trash2, Send, CheckCircle, XCircle,
   FileText, AlertCircle, X, ClipboardList,
   RefreshCw, Clock, DollarSign, ArrowLeft, Package,
-  Minus, User
+  User
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -127,11 +127,15 @@ export default function Quotations() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const PAGE_SIZE = 50
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null)
+  const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [stats, setStats] = useState({ total: 0, draft: 0, sent: 0, accepted: 0, rejected: 0 })
 
   // Create form state
   const [selectedCustomerId, setSelectedCustomerId] = useState('')
@@ -149,14 +153,22 @@ export default function Quotations() {
   // ── Data fetching ──────────────────────────────────────────────────────────
   const fetchQuotations = () => {
     setLoading(true)
-    api.get<Quotation[]>('/api/quotations')
-      .then(setQuotations)
+    const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
+    if (filterStatus !== 'all') params.set('status', filterStatus)
+    api.get<{ data: Quotation[]; total: number; stats: typeof stats }>(`/api/quotations?${params}`)
+      .then(res => {
+        setQuotations(res.data ?? [])
+        setTotalCount(res.total ?? 0)
+        setStats(res.stats ?? { total: 0, draft: 0, sent: 0, accepted: 0, rejected: 0 })
+      })
       .catch(e => toast.error(e.message))
       .finally(() => setLoading(false))
   }
 
+  useEffect(() => { setPage(1) }, [filterStatus])
+  useEffect(() => { fetchQuotations() }, [page, filterStatus])
+
   useEffect(() => {
-    fetchQuotations()
     api.get<Customer[]>('/api/customers')
       .then(list => setCustomers((list ?? []).filter(c => c.isActive !== false)))
       .catch(() => {})
@@ -216,14 +228,6 @@ export default function Quotations() {
       if (field === 'productName') updated.productId = undefined
       updated.subtotal = updated.quantity * updated.unitPrice
       return updated
-    }))
-  }
-
-  function updateItemQty(id: string, delta: number) {
-    setDraftItems(prev => prev.map(item => {
-      if (item.id !== id) return item
-      const newQty = Math.max(1, item.quantity + delta)
-      return { ...item, quantity: newQty, subtotal: newQty * item.unitPrice }
     }))
   }
 
@@ -307,21 +311,14 @@ export default function Quotations() {
       .catch(e => toast.error(e.message))
   }
 
-  const filteredQuotations = quotations.filter(q => {
-    const matchSearch =
-      (q.quotationNumber ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (q.customer?.name ?? '').toLowerCase().includes(searchTerm.toLowerCase())
-    const matchStatus = filterStatus === 'all' || q.status === filterStatus
-    return matchSearch && matchStatus
-  })
+  // Búsqueda por número/cliente sigue siendo del lado del cliente, sobre la
+  // página actual — el estado y la paginación ya van al servidor.
+  const filteredQuotations = quotations.filter(q =>
+    (q.quotationNumber ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (q.customer?.name ?? '').toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
-  const stats = {
-    total: quotations.length,
-    draft: quotations.filter(q => q.status === 'DRAFT').length,
-    sent: quotations.filter(q => q.status === 'SENT').length,
-    accepted: quotations.filter(q => q.status === 'ACCEPTED').length,
-    rejected: quotations.filter(q => q.status === 'REJECTED' || q.status === 'EXPIRED').length,
-  }
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
   // ── CREATE VIEW ────────────────────────────────────────────────────────────
   if (view === 'create') {
@@ -418,14 +415,15 @@ export default function Quotations() {
                     </div>
 
                     {/* Quantity */}
-                    <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => updateItemQty(item.id, -1)} className="p-1 rounded hover:bg-gray-200 text-gray-500">
-                        <Minus size={13} />
-                      </button>
-                      <span className="w-8 text-center font-semibold text-sm">{item.quantity}</span>
-                      <button onClick={() => updateItemQty(item.id, 1)} className="p-1 rounded hover:bg-gray-200 text-gray-500">
-                        <Plus size={13} />
-                      </button>
+                    <div className="flex items-center justify-center">
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={item.quantity}
+                        onChange={e => updateItemField(item.id, 'quantity', Math.max(1, Number(e.target.value)))}
+                        className="w-16 text-center font-semibold text-sm border border-gray-200 rounded px-1 py-1"
+                      />
                     </div>
 
                     {/* Unit price */}
@@ -736,6 +734,17 @@ export default function Quotations() {
                 </tbody>
               </table>
             </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-5 py-3 border-t">
+                <p className="text-sm text-gray-600">Página {page} de {totalPages} · {totalCount} cotizaciones</p>
+                <div className="flex gap-2">
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
+                    className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed">Anterior</button>
+                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
+                    className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed">Siguiente</button>
+                </div>
+              </div>
+            )}
           </div>
         )
       )}

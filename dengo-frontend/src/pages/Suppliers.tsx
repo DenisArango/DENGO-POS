@@ -36,10 +36,15 @@ export default function Suppliers() {
   const canCreate = hasPermission('suppliers.create')
   const canEdit = hasPermission('suppliers.edit')
   const canDelete = hasPermission('suppliers.delete')
+  const PAGE_SIZE = 50
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<string>('active')
+  const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [stats, setStats] = useState({ total: 0, active: 0, averageRating: 0 })
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
@@ -62,16 +67,36 @@ export default function Suppliers() {
     isActive: true
   })
 
-  const fetchSuppliers = (status: string) => {
+  // Búsqueda con pequeño retraso para no disparar una llamada al backend en
+  // cada tecla — vuelve a la página 1 cada vez que cambia lo que se busca.
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(searchTerm); setPage(1) }, 300)
+    return () => clearTimeout(t)
+  }, [searchTerm])
+
+  useEffect(() => { setPage(1) }, [selectedStatus])
+
+  const fetchSuppliers = () => {
     setLoading(true)
-    const qs = status === 'all' ? '?isActive=all' : `?isActive=${status === 'active'}`
-    api.get<Supplier[]>(`/api/suppliers${qs}`)
-      .then(setSuppliers)
+    const params = new URLSearchParams({
+      isActive: selectedStatus === 'all' ? 'all' : String(selectedStatus === 'active'),
+      page: String(page),
+      limit: String(PAGE_SIZE),
+    })
+    if (debouncedSearch) params.set('search', debouncedSearch)
+    api.get<{ data: Supplier[]; total: number; stats: { total: number; active: number; averageRating: number } }>(`/api/suppliers?${params}`)
+      .then(res => {
+        setSuppliers(res.data)
+        setTotalCount(res.total)
+        setStats(res.stats)
+      })
       .catch(e => toast.error(e.message))
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchSuppliers(selectedStatus) }, [selectedStatus])
+  useEffect(() => { fetchSuppliers() }, [selectedStatus, page, debouncedSearch])
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
   const handleCreateSupplier = () => {
     setFormData({
@@ -130,7 +155,7 @@ export default function Suppliers() {
         .then(() => {
           toast.success('Proveedor actualizado correctamente')
           setShowEditModal(false)
-          fetchSuppliers(selectedStatus)
+          fetchSuppliers()
         })
         .catch(e => toast.error(e.message))
     } else {
@@ -138,7 +163,7 @@ export default function Suppliers() {
         .then(() => {
           toast.success('Proveedor creado correctamente')
           setShowCreateModal(false)
-          fetchSuppliers(selectedStatus)
+          fetchSuppliers()
         })
         .catch(e => toast.error(e.message))
     }
@@ -149,7 +174,7 @@ export default function Suppliers() {
       .then(() => {
         toast.success('Proveedor eliminado correctamente')
         setShowDeleteConfirm(null)
-        fetchSuppliers(selectedStatus)
+        fetchSuppliers()
       })
       .catch(e => toast.error(e.message))
   }
@@ -158,19 +183,6 @@ export default function Suppliers() {
     return isActive ? 'text-green-600 bg-green-100' : 'text-gray-600 bg-gray-100'
   }
 
-  // Status filtering happens server-side now (see fetchSuppliers) — the
-  // fetched list already matches selectedStatus, only search stays client-side.
-  const filteredSuppliers = suppliers.filter(supplier =>
-    supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.taxId.includes(searchTerm)
-  )
-
-  const stats = {
-    total: suppliers.length,
-    active: suppliers.filter(s => s.isActive).length,
-    averageRating: suppliers.length > 0 ? suppliers.reduce((sum, s) => sum + (s.rating || 0), 0) / suppliers.length : 0
-  }
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -291,7 +303,7 @@ export default function Suppliers() {
       </div>
 
       {/* Lista de proveedores */}
-      {filteredSuppliers.length === 0 ? (
+      {suppliers.length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">
           <AlertCircle size={48} className="mx-auto text-gray-400 mb-4" />
           <p className="text-gray-600">
@@ -305,7 +317,7 @@ export default function Suppliers() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSuppliers.map((supplier, index) => (
+          {suppliers.map((supplier, index) => (
             <motion.div
               key={supplier.id}
               initial={{ opacity: 0, scale: 0.9 }}
@@ -399,6 +411,30 @@ export default function Suppliers() {
               </div>
             </motion.div>
           ))}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            Página {page} de {totalPages} · {totalCount} proveedores
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Anterior
+            </button>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Siguiente
+            </button>
+          </div>
         </div>
       )}
 

@@ -25,14 +25,47 @@ const schema = z.object({
 
 export default async function supplierRoutes(fastify: FastifyInstance) {
   fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('suppliers.view')] }, async (request, reply) => {
-    const q = request.query as { isActive?: string }
+    const q = request.query as { isActive?: string; search?: string; page?: string; limit?: string }
     // Default (param absent) stays active-only, so every existing caller that
     // never sent this param (e.g. the supplier picker in Purchases.tsx) keeps
     // seeing only active suppliers — 'all' is the one new explicit opt-in.
-    return reply.send(await prisma.supplier.findMany({
-      where: q.isActive === 'all' ? {} : { isActive: q.isActive === 'false' ? false : true },
-      orderBy: { name: 'asc' },
-    }))
+    const statusWhere = q.isActive === 'all' ? {} : { isActive: q.isActive === 'false' ? false : true }
+    const where = {
+      ...statusWhere,
+      ...(q.search ? {
+        OR: [
+          { name: { contains: q.search, mode: 'insensitive' as const } },
+          { code: { contains: q.search, mode: 'insensitive' as const } },
+          { taxId: { contains: q.search, mode: 'insensitive' as const } },
+        ],
+      } : {}),
+    }
+
+    // Paginated path — opt-in via `page`, used by the Suppliers management
+    // page. Purchases.tsx's unfiltered picker never sends it and keeps the
+    // plain unbounded array below. Stats reflect the status filter (active/
+    // inactive/all) but not the search text — same scope the page's stat
+    // cards always showed before pagination existed.
+    if (q.page) {
+      const page = Math.max(1, parseInt(q.page, 10) || 1)
+      const limit = Math.min(200, Math.max(1, parseInt(q.limit ?? '50', 10) || 50))
+      const [data, total, statusTotal, active, ratingAgg] = await Promise.all([
+        prisma.supplier.findMany({ where, orderBy: { name: 'asc' }, skip: (page - 1) * limit, take: limit }),
+        prisma.supplier.count({ where }),
+        prisma.supplier.count({ where: statusWhere }),
+        prisma.supplier.count({ where: { ...statusWhere, isActive: true } }),
+        prisma.supplier.aggregate({ where: statusWhere, _avg: { rating: true } }),
+      ])
+      return reply.send({
+        data,
+        total,
+        page,
+        limit,
+        stats: { total: statusTotal, active, averageRating: Number(ratingAgg._avg.rating ?? 0) },
+      })
+    }
+
+    return reply.send(await prisma.supplier.findMany({ where, orderBy: { name: 'asc' } }))
   })
 
   fastify.get('/:id', { preHandler: [fastify.authenticate, requirePermission('suppliers.view')] }, async (request, reply) => {

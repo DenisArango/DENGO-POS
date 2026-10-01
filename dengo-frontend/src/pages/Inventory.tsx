@@ -143,13 +143,17 @@ export default function Inventory() {
   const canEditPrice = hasPermission('inventory.editPrice')
   const canViewMoneyTotals = hasPermission('settings.system')
 
+  const PAGE_SIZE = 50
   const [inventory, setInventory] = useState<InventoryItemWithStatus[]>([])
   const [loading, setLoading] = useState(false)
-  const [categories, setCategories] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [stats, setStats] = useState({ totalProducts: 0, totalValue: 0, totalSaleValue: 0, lowStock: 0, overstock: 0 })
 
   // Adjustment modal
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false)
@@ -182,14 +186,26 @@ export default function Inventory() {
   const [movements, setMovements] = useState<StockMovement[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
 
+  // Búsqueda con pequeño retraso para no disparar una llamada al backend en
+  // cada tecla — vuelve a la página 1 cada vez que cambia lo que se busca.
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(searchTerm); setPage(1) }, 300)
+    return () => clearTimeout(t)
+  }, [searchTerm])
+
+  useEffect(() => { setPage(1) }, [selectedCategory, selectedStatus])
+
   const fetchInventory = () => {
     setLoading(true)
-    api.get<InventoryItem[]>(`/api/inventory?branchId=${branchId}`)
-      .then(items => {
-        const normalised = items.map(normaliseItem)
-        setInventory(normalised)
-        const cats = Array.from(new Set(normalised.map(i => i.categoryName).filter(Boolean)))
-        setCategories(cats)
+    const params = new URLSearchParams({ branchId, page: String(page), limit: String(PAGE_SIZE) })
+    if (debouncedSearch) params.set('search', debouncedSearch)
+    if (selectedCategory) params.set('category', selectedCategory)
+    if (selectedStatus) params.set('status', selectedStatus)
+    api.get<{ data: InventoryItem[]; total: number; stats: typeof stats }>(`/api/inventory?${params}`)
+      .then(res => {
+        setInventory(res.data.map(normaliseItem))
+        setTotalCount(res.total)
+        setStats(res.stats)
       })
       .catch(e => toast.error(e.message))
       .finally(() => setLoading(false))
@@ -197,7 +213,7 @@ export default function Inventory() {
 
   useEffect(() => {
     if (branchId) fetchInventory()
-  }, [branchId])
+  }, [branchId, page, debouncedSearch, selectedCategory, selectedStatus])
 
   useEffect(() => {
     api.get<{ id: string; name: string; color?: string }[]>('/api/categories')
@@ -206,22 +222,21 @@ export default function Inventory() {
       .then(setProductUnits).catch(() => {})
   }, [])
 
-  const filteredInventory = inventory.filter(item => {
-    const matchesSearch =
-      item.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.barcode.includes(searchTerm)
-    const matchesCategory = !selectedCategory || item.categoryName === selectedCategory
-    const matchesStatus = !selectedStatus || item.status === selectedStatus
-    return matchesSearch && matchesCategory && matchesStatus
-  })
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
-  const stats = {
-    totalProducts: inventory.length,
-    totalValue: inventory.reduce((acc, item) => acc + (item.quantity * item.cost), 0),
-    totalSaleValue: inventory.reduce((acc, item) => acc + (item.quantity * item.basePrice), 0),
-    lowStock: inventory.filter(item => item.status === 'low' || item.status === 'critical').length,
-    overstock: inventory.filter(item => item.status === 'overstock').length
+  const handleExportCsv = async () => {
+    try {
+      const params = new URLSearchParams({ branchId })
+      if (debouncedSearch) params.set('search', debouncedSearch)
+      if (selectedCategory) params.set('category', selectedCategory)
+      const items = await api.get<InventoryItem[]>(`/api/inventory?${params}`)
+      const normalised = items.map(normaliseItem).filter(item =>
+        !selectedStatus || item.status === selectedStatus
+      )
+      downloadInventoryCsv(normalised)
+    } catch (e: any) {
+      toast.error(e.message)
+    }
   }
 
   // ── Adjustment ────────────────────────────────────────────────────────────
@@ -357,8 +372,8 @@ export default function Inventory() {
         </h1>
         <div className="flex gap-3">
           <button
-            onClick={() => downloadInventoryCsv(filteredInventory)}
-            disabled={filteredInventory.length === 0}
+            onClick={handleExportCsv}
+            disabled={totalCount === 0}
             className="btn-outline btn-md flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Download size={18} />
@@ -426,7 +441,7 @@ export default function Inventory() {
                         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${!selectedCategory ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                         Todas
                       </button>
-                      {categories.map(cat => (
+                      {Array.from(new Set(productCategories.map(c => c.name))).map(cat => (
                         <button key={cat} onClick={() => setSelectedCategory(cat)}
                           className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${selectedCategory === cat ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                           {cat}
@@ -476,7 +491,7 @@ export default function Inventory() {
                 </tr>
               </thead>
               <tbody>
-                {filteredInventory.map(item => (
+                {inventory.map(item => (
                   <motion.tr key={`${item.productId}-${item.branchId}`}
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                     className="border-b hover:bg-gray-50 transition-colors">
@@ -535,7 +550,7 @@ export default function Inventory() {
                     </td>
                   </motion.tr>
                 ))}
-                {filteredInventory.length === 0 && (
+                {inventory.length === 0 && (
                   <tr>
                     <td colSpan={10} className="py-12 text-center text-gray-500">
                       No se encontraron productos en inventario
@@ -545,6 +560,30 @@ export default function Inventory() {
               </tbody>
             </table>
           </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t">
+              <p className="text-sm text-gray-600">
+                Página {page} de {totalPages} · {totalCount} productos
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

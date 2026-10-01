@@ -39,23 +39,19 @@ const include = {
 export default async function productRoutes(fastify: FastifyInstance) {
   // GET /api/products
   fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
-    const q = request.query as { search?: string; categoryId?: string; isActive?: string }
-    const products = await prisma.product.findMany({
-      where: {
-        isActive: q.isActive === 'false' ? false : true,
-        ...(q.categoryId ? { categoryId: q.categoryId } : {}),
-        ...(q.search ? {
-          OR: [
-            { name: { contains: q.search, mode: 'insensitive' } },
-            { barcode: { contains: q.search, mode: 'insensitive' } },
-            { sku: { contains: q.search, mode: 'insensitive' } },
-            { altBarcodes: { some: { barcode: { contains: q.search, mode: 'insensitive' } } } },
-          ],
-        } : {}),
-      },
-      include,
-      orderBy: { name: 'asc' },
-    })
+    const q = request.query as { search?: string; categoryId?: string; isActive?: string; page?: string; limit?: string }
+    const where = {
+      isActive: q.isActive === 'false' ? false : true,
+      ...(q.categoryId ? { categoryId: q.categoryId } : {}),
+      ...(q.search ? {
+        OR: [
+          { name: { contains: q.search, mode: 'insensitive' as const } },
+          { barcode: { contains: q.search, mode: 'insensitive' as const } },
+          { sku: { contains: q.search, mode: 'insensitive' as const } },
+          { altBarcodes: { some: { barcode: { contains: q.search, mode: 'insensitive' as const } } } },
+        ],
+      } : {}),
+    }
 
     // Product is a global catalog entity with no branchId of its own — real
     // stock lives on Inventory, scoped per branch. Without this join every
@@ -69,6 +65,40 @@ export default async function productRoutes(fastify: FastifyInstance) {
     })
     const stockByProduct = new Map(stockRows.map(r => [r.productId, Number(r._sum.quantity ?? 0)]))
 
+    // Paginated path — used by the Products management page. `page` is the
+    // opt-in signal; every other caller (POS/Purchases/Transfers/Quotations/
+    // SaleDetail product-search dropdowns) never sends it and keeps getting
+    // the plain unbounded array below, unchanged.
+    if (q.page) {
+      const page = Math.max(1, parseInt(q.page, 10) || 1)
+      const limit = Math.min(200, Math.max(1, parseInt(q.limit ?? '50', 10) || 50))
+      const [products, total, statsRows] = await Promise.all([
+        prisma.product.findMany({ where, include, orderBy: { name: 'asc' }, skip: (page - 1) * limit, take: limit }),
+        prisma.product.count({ where }),
+        // Stats reflect the whole active catalog regardless of search/category
+        // filters (matches the page's prior behavior) — kept lean (no include)
+        // since this can scan the full 10k+ row catalog.
+        prisma.product.findMany({ where: { isActive: true }, select: { id: true, basePrice: true, minStock: true } }),
+      ])
+
+      let lowStock = 0, outOfStock = 0, totalValue = 0
+      for (const p of statsRows) {
+        const stock = stockByProduct.get(p.id) ?? 0
+        if (stock === 0) outOfStock++
+        else if (stock <= Number(p.minStock ?? 0)) lowStock++
+        totalValue += stock * Number(p.basePrice ?? 0)
+      }
+
+      return reply.send({
+        data: products.map(p => ({ ...p, stock: stockByProduct.get(p.id) ?? 0 })),
+        total,
+        page,
+        limit,
+        stats: { total: statsRows.length, lowStock, outOfStock, totalValue },
+      })
+    }
+
+    const products = await prisma.product.findMany({ where, include, orderBy: { name: 'asc' } })
     return reply.send(products.map(p => ({ ...p, stock: stockByProduct.get(p.id) ?? 0 })))
   })
 

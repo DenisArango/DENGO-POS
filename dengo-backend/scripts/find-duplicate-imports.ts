@@ -58,21 +58,32 @@ async function checkCustomers() {
     if (group.length < 2) continue
     groupsWithSameName++
 
-    // Within this name-group, find pairs where one NIT is the other's NIT + "-N".
+    // A name-group can contain MULTIPLE distinct people who happen to share
+    // the same name (e.g. two different "AGRIPINA" customers, each with
+    // their own SIN-NIT placeholder) — each one independently duplicated by
+    // the bug. So pair row-by-row (whose NIT is some OTHER row's NIT + "-N")
+    // instead of assuming the whole group has a single original — that
+    // earlier assumption silently skipped exactly this case.
     const sorted = [...group].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-    const original = sorted[0]!
-    const dupes = sorted.slice(1).filter(c => isSuffixOf(original.nit, c.nit))
+    const pairs: { original: typeof sorted[number]; dupe: typeof sorted[number] }[] = []
+    for (const candidate of sorted) {
+      const match = sorted.find(c => c.id !== candidate.id && isSuffixOf(c.nit, candidate.nit))
+      if (match) pairs.push({ original: match, dupe: candidate })
+    }
+    const pairedIds = new Set(pairs.flatMap(p => [p.original.id, p.dupe.id]))
+    const unmatched = sorted.filter(c => !pairedIds.has(c.id))
 
-    if (dupes.length === sorted.length - 1) {
-      // Every extra row in this name-group is a clean "-N" suffix of the
-      // first one — textbook re-import artifact.
-      console.log(`\n"${original.name}" — 1 original (NIT ${original.nit}) + ${dupes.length} duplicado(s):`)
-      for (const d of dupes) console.log(`   NIT ${d.nit} (creado ${d.createdAt.toISOString()})`)
-      safeDuplicateIds.push(...dupes.map(d => d.id))
-    } else {
+    if (pairs.length) {
+      console.log(`\n"${sorted[0]!.name}" — ${pairs.length} duplicado(s) identificado(s):`)
+      for (const { original, dupe } of pairs) {
+        console.log(`   original NIT ${original.nit} (creado ${original.createdAt.toISOString()}) ← duplicado NIT ${dupe.nit} (creado ${dupe.createdAt.toISOString()})`)
+      }
+      safeDuplicateIds.push(...pairs.map(p => p.dupe.id))
+    }
+    if (unmatched.length) {
       unclearGroups++
-      console.log(`\n⚠️  "${original.name}" — ${group.length} filas con el mismo nombre, pero los NIT no siguen el patrón esperado (revisar a mano):`)
-      for (const c of sorted) console.log(`   NIT ${c.nit} (creado ${c.createdAt.toISOString()})`)
+      console.log(`\n⚠️  "${sorted[0]!.name}" — ${unmatched.length} fila(s) con el mismo nombre pero sin un NIT que las relacione (revisar a mano):`)
+      for (const c of unmatched) console.log(`   NIT ${c.nit} (creado ${c.createdAt.toISOString()})`)
     }
   }
 

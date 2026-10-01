@@ -16,20 +16,57 @@ const include = {
 
 export default async function transferRoutes(fastify: FastifyInstance) {
   fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('transfers.view')] }, async (request, reply) => {
-    const q = request.query as { fromBranchId?: string; toBranchId?: string; status?: string }
+    const q = request.query as { fromBranchId?: string; toBranchId?: string; status?: string; page?: string; limit?: string }
     // Non-admins only see transfers touching their own branch (either side) —
     // a transfer has two branches, so it can't be pinned to one like other resources.
     const own = request.user.role !== 'ADMIN' ? request.user.branchId : undefined
-    return reply.send(await prisma.transfer.findMany({
-      where: {
-        ...(own ? { OR: [{ fromBranchId: own }, { toBranchId: own }] } : {}),
-        ...(q.fromBranchId ? { fromBranchId: q.fromBranchId } : {}),
-        ...(q.toBranchId ? { toBranchId: q.toBranchId } : {}),
-        ...(q.status ? { status: q.status as any } : {}),
-      },
-      include,
-      orderBy: { createdAt: 'desc' },
-    }))
+    const where = {
+      ...(own ? { OR: [{ fromBranchId: own }, { toBranchId: own }] } : {}),
+      ...(q.fromBranchId ? { fromBranchId: q.fromBranchId } : {}),
+      ...(q.toBranchId ? { toBranchId: q.toBranchId } : {}),
+      ...(q.status ? { status: q.status as any } : {}),
+    }
+
+    // Paginated path — opt-in via `page`, used by the Transfers page. This
+    // list has no natural cap (grows with every transfer ever made between
+    // branches), so without this it would eventually get as slow as
+    // Products/Suppliers/Customers were before their own pagination fix.
+    // Stats reflect every transfer matching the filters, not just the
+    // current page — status counts via groupBy, totalValue via a lean
+    // (items+cost only, no branch/user includes) parallel query.
+    if (q.page) {
+      const page = Math.max(1, parseInt(q.page, 10) || 1)
+      const limit = Math.min(200, Math.max(1, parseInt(q.limit ?? '50', 10) || 50))
+      const [data, total, statusCounts, valueRows] = await Promise.all([
+        prisma.transfer.findMany({ where, include, orderBy: { createdAt: 'desc' }, skip: (page - 1) * limit, take: limit }),
+        prisma.transfer.count({ where }),
+        prisma.transfer.groupBy({ by: ['status'], where, _count: { status: true } }),
+        prisma.transfer.findMany({
+          where,
+          select: { items: { select: { quantity: true, product: { select: { cost: true } } } } },
+        }),
+      ])
+
+      const countByStatus = new Map(statusCounts.map(s => [s.status, s._count.status]))
+      const totalValue = valueRows.reduce((sum, t) =>
+        sum + t.items.reduce((s, i) => s + Number(i.quantity) * Number(i.product.cost), 0), 0)
+
+      return reply.send({
+        data,
+        total,
+        page,
+        limit,
+        stats: {
+          total,
+          pending: countByStatus.get('PENDING') ?? 0,
+          inTransit: (countByStatus.get('IN_TRANSIT') ?? 0) + (countByStatus.get('APPROVED') ?? 0),
+          completed: countByStatus.get('RECEIVED') ?? 0,
+          totalValue,
+        },
+      })
+    }
+
+    return reply.send(await prisma.transfer.findMany({ where, include, orderBy: { createdAt: 'desc' } }))
   })
 
   fastify.get('/:id', { preHandler: [fastify.authenticate, requirePermission('transfers.view')] }, async (request, reply) => {

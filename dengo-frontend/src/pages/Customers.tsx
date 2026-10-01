@@ -59,10 +59,15 @@ export default function Customers() {
   const canEdit = hasPermission('customers.edit')
   const canDelete = hasPermission('customers.delete')
   const canRegisterPayment = hasPermission('customers.registerPayment')
+  const PAGE_SIZE = 50
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [stats, setStats] = useState({ total: 0, active: 0, withCredit: 0, totalCreditUsed: 0 })
   const [showModal, setShowModal] = useState(false)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
@@ -124,36 +129,40 @@ export default function Customers() {
     }
   }
 
+  // Búsqueda con pequeño retraso para no disparar una llamada al backend en
+  // cada tecla — vuelve a la página 1 cada vez que cambia lo que se busca.
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(searchTerm); setPage(1) }, 300)
+    return () => clearTimeout(t)
+  }, [searchTerm])
+
+  useEffect(() => { setPage(1) }, [filterStatus])
+
   const fetchCustomers = () => {
     setLoading(true)
-    api.get<Customer[]>('/api/customers')
-      .then(setCustomers)
+    const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
+    if (debouncedSearch) params.set('search', debouncedSearch)
+    if (filterStatus === 'credit') {
+      params.set('isActive', 'all')
+      params.set('hasCredit', 'true')
+    } else if (filterStatus === 'active' || filterStatus === 'inactive') {
+      params.set('isActive', String(filterStatus === 'active'))
+    } else {
+      params.set('isActive', 'all')
+    }
+    api.get<{ data: Customer[]; total: number; stats: typeof stats }>(`/api/customers?${params}`)
+      .then(res => {
+        setCustomers(res.data)
+        setTotalCount(res.total)
+        setStats(res.stats)
+      })
       .catch(e => toast.error(e.message))
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchCustomers() }, [])
+  useEffect(() => { fetchCustomers() }, [page, debouncedSearch, filterStatus])
 
-  const filtered = customers.filter(c => {
-    const matchSearch =
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.nit.includes(searchTerm) ||
-      (c.email ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (c.phone ?? '').includes(searchTerm)
-    const matchStatus =
-      filterStatus === 'all' ||
-      (filterStatus === 'active' && c.isActive !== false) ||
-      (filterStatus === 'inactive' && c.isActive === false) ||
-      (filterStatus === 'credit' && (c.creditLimit ?? 0) > 0)
-    return matchSearch && matchStatus
-  })
-
-  const stats = {
-    total: customers.length,
-    active: customers.filter(c => c.isActive !== false).length,
-    withCredit: customers.filter(c => (c.creditLimit ?? 0) > 0).length,
-    totalCreditUsed: customers.reduce((s, c) => s + Number(c.creditUsed ?? 0), 0),
-  }
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
   const openCreate = () => {
     setEditingCustomer(null)
@@ -351,7 +360,7 @@ export default function Customers() {
       </div>
 
       {/* List */}
-      {filtered.length === 0 ? (
+      {customers.length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">
           <User size={48} className="mx-auto text-gray-400 mb-4" />
           <p className="text-gray-600">
@@ -372,7 +381,7 @@ export default function Customers() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filtered.map(customer => (
+              {customers.map(customer => (
                 <motion.tr key={customer.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   className="hover:bg-gray-50">
                   <td className="p-4">
@@ -467,6 +476,30 @@ export default function Customers() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            Página {page} de {totalPages} · {totalCount} clientes
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Anterior
+            </button>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Siguiente
+            </button>
+          </div>
         </div>
       )}
 

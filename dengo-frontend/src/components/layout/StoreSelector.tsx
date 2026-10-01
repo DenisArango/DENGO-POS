@@ -198,7 +198,7 @@ export default function StoreSelector({
                           <div className="flex items-center gap-1">
                             <DollarSign size={12} className="text-green-600" />
                             <span className="text-gray-600">
-                              ${(store.stats.dailySales / 1000).toFixed(1)}k
+                              Q{(store.stats.dailySales / 1000).toFixed(1)}k
                             </span>
                           </div>
                           <div className="flex items-center gap-1">

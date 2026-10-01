@@ -496,30 +496,72 @@ export default async function reportRoutes(fastify: FastifyInstance) {
 
   // GET /api/reports/cash-registers-history
   fastify.get('/cash-registers-history', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const q = request.query as { branchId?: string; from?: string; to?: string }
+    const q = request.query as { branchId?: string; from?: string; to?: string; page?: string; limit?: string }
     const branchId = request.user.role !== 'ADMIN' ? request.user.branchId : (q.branchId ?? undefined)
-    return reply.send(await prisma.cashRegister.findMany({
-      where: {
-        ...(branchId ? { branchId } : {}),
-        ...(q.from || q.to ? {
-          openedAt: {
-            ...(q.from ? { gte: new Date(q.from) } : {}),
-            ...(q.to ? { lte: new Date(q.to) } : {}),
-          },
-        } : {}),
-      },
-      include: {
-        openedBy: { select: { id: true, name: true } },
-        closedBy: { select: { id: true, name: true } },
-        branch: { select: { id: true, name: true } },
-        movements: {
-          include: { performedBy: { select: { id: true, name: true } } },
-          orderBy: { createdAt: 'asc' },
+    const where = {
+      ...(branchId ? { branchId } : {}),
+      ...(q.from || q.to ? {
+        openedAt: {
+          ...(q.from ? { gte: new Date(q.from) } : {}),
+          ...(q.to ? { lte: new Date(q.to) } : {}),
         },
+      } : {}),
+    }
+    const include = {
+      openedBy: { select: { id: true, name: true } },
+      closedBy: { select: { id: true, name: true } },
+      branch: { select: { id: true, name: true } },
+      movements: {
+        include: { performedBy: { select: { id: true, name: true } } },
+        orderBy: { createdAt: 'asc' as const },
       },
-      orderBy: { openedAt: 'desc' },
-      take: 100,
-    }))
+    }
+
+    // Paginated path — opt-in via `page`, used by CashFlowReport.tsx. Before
+    // this, the list silently capped at 100 sessions with no way to see more
+    // and no indication anything was cut off. Totals and the daily chart are
+    // computed from a separate lean query (just the 4 numeric columns, no
+    // user/movement includes) over the WHOLE date range — so they stay
+    // correct regardless of which page of the detail list is showing.
+    if (q.page) {
+      const page = Math.max(1, parseInt(q.page, 10) || 1)
+      const limit = Math.min(200, Math.max(1, parseInt(q.limit ?? '30', 10) || 30))
+      const [data, total, totalsAgg, dailyRows] = await Promise.all([
+        prisma.cashRegister.findMany({ where, include, orderBy: { openedAt: 'desc' }, skip: (page - 1) * limit, take: limit }),
+        prisma.cashRegister.count({ where }),
+        prisma.cashRegister.aggregate({ where, _sum: { totalSales: true, cashSales: true, cardSales: true, transferSales: true } }),
+        prisma.cashRegister.findMany({ where, select: { openedAt: true, cashSales: true, cardSales: true, transferSales: true } }),
+      ])
+
+      const byDay = new Map<string, { cash: number; card: number; transfer: number }>()
+      for (const r of dailyRows) {
+        const key = r.openedAt.toISOString().slice(0, 10)
+        const bucket = byDay.get(key) ?? { cash: 0, card: 0, transfer: 0 }
+        bucket.cash += Number(r.cashSales)
+        bucket.card += Number(r.cardSales)
+        bucket.transfer += Number(r.transferSales)
+        byDay.set(key, bucket)
+      }
+      const chartData = [...byDay.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, v]) => ({ date, cash: v.cash, card: v.card, transfer: v.transfer }))
+
+      return reply.send({
+        data,
+        total,
+        page,
+        limit,
+        stats: {
+          totalSales: Number(totalsAgg._sum.totalSales ?? 0),
+          cashSales: Number(totalsAgg._sum.cashSales ?? 0),
+          cardSales: Number(totalsAgg._sum.cardSales ?? 0),
+          transferSales: Number(totalsAgg._sum.transferSales ?? 0),
+        },
+        chartData,
+      })
+    }
+
+    return reply.send(await prisma.cashRegister.findMany({ where, include, orderBy: { openedAt: 'desc' }, take: 100 }))
   })
 
   // GET /api/reports/product-rotation

@@ -16,34 +16,46 @@ export default function CashFlowReport() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const { currentStore } = useStore()
+  const PAGE_SIZE = 30
   const [from, setFrom] = useState(format(subDays(new Date(), 6), 'yyyy-MM-dd'))
   const [to, setTo] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [loading, setLoading] = useState(false)
   const [registers, setRegisters] = useState<any[]>([])
   const [expanded, setExpanded] = useState<string | null>(null)
   const [filters, setFilters] = useState<ReportFilterState>({ branchId: currentStore?.id ?? user?.branchId ?? '', cashRegisterId: '' })
+  const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [stats, setStats] = useState({ totalSales: 0, cashSales: 0, cardSales: 0, transferSales: 0 })
+  const [rawChartData, setRawChartData] = useState<{ date: string; cash: number; card: number; transfer: number }[]>([])
 
-  useEffect(() => { fetchData() }, [from, to, filters])
+  useEffect(() => { setPage(1) }, [from, to, filters])
+  useEffect(() => { fetchData() }, [from, to, filters, page])
 
   async function fetchData() {
     setLoading(true)
     try {
       const branchQ = filters.branchId ? `&branchId=${filters.branchId}` : ''
-      const data = await api.get<any[]>(`/api/reports/cash-registers-history?from=${from}T00:00:00&to=${to}T23:59:59${branchQ}`)
-      setRegisters(data ?? [])
+      const res = await api.get<{ data: any[]; total: number; stats: typeof stats; chartData: typeof rawChartData }>(
+        `/api/reports/cash-registers-history?from=${from}T00:00:00&to=${to}T23:59:59${branchQ}&page=${page}&limit=${PAGE_SIZE}`
+      )
+      setRegisters(res.data ?? [])
+      setTotalCount(res.total ?? 0)
+      setStats(res.stats ?? { totalSales: 0, cashSales: 0, cardSales: 0, transferSales: 0 })
+      setRawChartData(res.chartData ?? [])
     } catch { setRegisters([]) } finally { setLoading(false) }
   }
 
-  const totalSales = registers.reduce((s, r) => s + Number(r.totalSales ?? 0), 0)
-  const totalCash = registers.reduce((s, r) => s + Number(r.cashSales ?? 0), 0)
-  const totalCard = registers.reduce((s, r) => s + Number(r.cardSales ?? 0), 0)
-  const totalTransfer = registers.reduce((s, r) => s + Number(r.transferSales ?? 0), 0)
+  const totalSales = stats.totalSales
+  const totalCash = stats.cashSales
+  const totalCard = stats.cardSales
+  const totalTransfer = stats.transferSales
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
-  const chartData = [...registers].reverse().map(r => ({
-    date: format(new Date(r.openedAt), 'dd/MM', { locale: es }),
-    Efectivo: Math.round(Number(r.cashSales ?? 0) * 100) / 100,
-    Tarjeta: Math.round(Number(r.cardSales ?? 0) * 100) / 100,
-    Transferencia: Math.round(Number(r.transferSales ?? 0) * 100) / 100,
+  const chartData = rawChartData.map(r => ({
+    date: format(new Date(r.date), 'dd/MM', { locale: es }),
+    Efectivo: Math.round(r.cash * 100) / 100,
+    Tarjeta: Math.round(r.card * 100) / 100,
+    Transferencia: Math.round(r.transfer * 100) / 100,
   }))
 
   return (
@@ -70,7 +82,7 @@ export default function CashFlowReport() {
           { label: 'Ventas totales', value: `Q${totalSales.toFixed(2)}`, icon: DollarSign, color: 'text-green-600 bg-green-100' },
           { label: 'En efectivo', value: `Q${totalCash.toFixed(2)}`, icon: TrendingUp, color: 'text-blue-600 bg-blue-100' },
           { label: 'Tarjeta/Trans.', value: `Q${(totalCard + totalTransfer).toFixed(2)}`, icon: CreditCard, color: 'text-purple-600 bg-purple-100' },
-          { label: 'Sesiones de caja', value: String(registers.length), icon: TrendingDown, color: 'text-orange-600 bg-orange-100' },
+          { label: 'Sesiones de caja', value: String(totalCount), icon: TrendingDown, color: 'text-orange-600 bg-orange-100' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
             <div className={`p-2.5 rounded-lg ${s.color}`}><s.icon size={20} /></div>
@@ -176,6 +188,17 @@ export default function CashFlowReport() {
               })}
             </div>
         }
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-5 py-3 border-t">
+            <p className="text-sm text-gray-600">Página {page} de {totalPages} · {totalCount} sesiones</p>
+            <div className="flex gap-2">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
+                className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed">Anterior</button>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
+                className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed">Siguiente</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <AIRecommendations

@@ -86,10 +86,14 @@ export default function StoreTransfers() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  const PAGE_SIZE = 50
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null)
+  const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [stats, setStats] = useState({ total: 0, pending: 0, inTransit: 0, completed: 0, totalValue: 0 })
 
   // ── Create view state ──────────────────────────────────────────────────────
   const [fromStore, setFromStore] = useState('')
@@ -139,16 +143,29 @@ export default function StoreTransfers() {
   })
 
   // ── Data fetching ──────────────────────────────────────────────────────────
+  const STATUS_TO_API: Record<string, string> = {
+    pending: 'PENDING', approved: 'APPROVED', in_transit: 'IN_TRANSIT',
+    completed: 'RECEIVED', cancelled: 'CANCELLED', rejected: 'REJECTED',
+  }
+
   const fetchTransfers = () => {
     setLoading(true)
-    api.get<any[]>('/api/transfers')
-      .then(list => setTransfers((list ?? []).map(normalizeTransfer)))
+    const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
+    if (selectedStatus !== 'all' && STATUS_TO_API[selectedStatus]) params.set('status', STATUS_TO_API[selectedStatus]!)
+    api.get<{ data: any[]; total: number; stats: typeof stats }>(`/api/transfers?${params}`)
+      .then(res => {
+        setTransfers((res.data ?? []).map(normalizeTransfer))
+        setTotalCount(res.total ?? 0)
+        setStats(res.stats ?? { total: 0, pending: 0, inTransit: 0, completed: 0, totalValue: 0 })
+      })
       .catch(e => toast.error(e.message))
       .finally(() => setLoading(false))
   }
 
+  useEffect(() => { setPage(1) }, [selectedStatus])
+  useEffect(() => { fetchTransfers() }, [page, selectedStatus])
+
   useEffect(() => {
-    fetchTransfers()
     api.get<Branch[]>('/api/branches').then(setBranches).catch(e => toast.error(e.message))
   }, [])
 
@@ -344,22 +361,16 @@ export default function StoreTransfers() {
       .catch(e => toast.error(e.message))
   }
 
+  // Búsqueda por código/sucursal sigue siendo del lado del cliente, aplicada
+  // solo sobre la página actual — estado y paginación ya van al servidor.
   const filteredTransfers = transfers.filter(transfer => {
     const from = displayName(transfer, 'from').toLowerCase()
     const to = displayName(transfer, 'to').toLowerCase()
     const code = (transfer.code ?? transfer.id ?? '').toLowerCase()
-    const matchesSearch = code.includes(searchTerm.toLowerCase()) || from.includes(searchTerm.toLowerCase()) || to.includes(searchTerm.toLowerCase())
-    const matchesStatus = selectedStatus === 'all' || transfer.status === selectedStatus
-    return matchesSearch && matchesStatus
+    return code.includes(searchTerm.toLowerCase()) || from.includes(searchTerm.toLowerCase()) || to.includes(searchTerm.toLowerCase())
   })
 
-  const stats = {
-    total: transfers.length,
-    pending: transfers.filter(t => t.status === 'pending').length,
-    inTransit: transfers.filter(t => t.status === 'in_transit' || t.status === 'approved').length,
-    completed: transfers.filter(t => t.status === 'completed').length,
-    totalValue: transfers.reduce((sum, t) => sum + (t.totalValue ?? t.items.reduce((s, i) => s + i.totalCost, 0)), 0)
-  }
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
   // ── Render: CREATE VIEW ───────────────────────────────────────────────────
   if (view === 'create') {
@@ -681,7 +692,7 @@ export default function StoreTransfers() {
               <span className="text-gray-600 text-sm">Valor Total</span>
               <Package className="text-purple-600" size={20} />
             </div>
-            <p className="text-2xl font-bold text-gray-800">${stats.totalValue.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-gray-800">Q{stats.totalValue.toLocaleString()}</p>
             <p className="text-xs text-purple-600 mt-1">En transferencias</p>
           </motion.div>
         </div>
@@ -818,6 +829,17 @@ export default function StoreTransfers() {
               </tbody>
             </table>
           </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-5 py-3 border-t">
+              <p className="text-sm text-gray-600">Página {page} de {totalPages} · {totalCount} transferencias</p>
+              <div className="flex gap-2">
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
+                  className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed">Anterior</button>
+                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
+                  className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed">Siguiente</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -922,7 +944,7 @@ export default function StoreTransfers() {
                       <tr>
                         <td colSpan={3} className="py-2 px-3 text-right font-medium">Total:</td>
                         <td className="py-2 px-3 text-right font-bold">
-                          ${(selectedTransfer.totalValue ?? selectedTransfer.items.reduce((s, i) => s + i.totalCost, 0)).toFixed(2)}
+                          Q{(selectedTransfer.totalValue ?? selectedTransfer.items.reduce((s, i) => s + i.totalCost, 0)).toFixed(2)}
                         </td>
                       </tr>
                     </tfoot>

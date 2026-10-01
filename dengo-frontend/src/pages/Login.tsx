@@ -176,11 +176,6 @@ export default function Login() {
         </button>
       </form>
 
-      {/* Credenciales de prueba */}
-      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
-        <p className="text-xs text-blue-700 text-center font-medium mb-1">Credenciales de prueba</p>
-        <p className="text-xs text-blue-600 text-center">admin@dengo.gt · Admin1234!</p>
-      </div>
     </div>
   )
 }

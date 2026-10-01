@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Plus, Search, ArrowLeft, Minus, Trash2, CheckCircle,
+  Plus, Search, ArrowLeft, Trash2, CheckCircle,
   Package, TrendingUp, ChevronDown, ChevronRight, Edit2, X, UserPlus,
 } from 'lucide-react'
 import { format } from 'date-fns'
@@ -235,9 +235,6 @@ export default function Purchases() {
   }
 
   // ── Item helpers ───────────────────────────────────────────────────────────
-  const updateQty = (id: string, delta: number) =>
-    setIntakeItems(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i))
-
   const setQtyDirect = (id: string, val: string) => {
     const n = parseFloat(val)
     if (!isNaN(n) && n > 0) setIntakeItems(prev => prev.map(i => i.id === id ? { ...i, quantity: n } : i))
@@ -421,27 +418,15 @@ export default function Purchases() {
 
                         {/* Qty controls */}
                         <td className="px-3 py-2 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              onClick={() => updateQty(item.id, -1)}
-                              className="w-6 h-6 rounded flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
-                            >
-                              <Minus size={12} />
-                            </button>
+                          <div className="flex items-center justify-center">
                             <input
                               type="number"
                               value={item.quantity}
                               onChange={e => setQtyDirect(item.id, e.target.value)}
-                              className="w-14 text-center border border-gray-200 rounded px-1 py-0.5 text-sm focus:outline-none focus:border-primary-400"
+                              className="w-16 text-center border border-gray-200 rounded px-1 py-1 text-sm focus:outline-none focus:border-primary-400"
                               min="0.001"
                               step="1"
                             />
-                            <button
-                              onClick={() => updateQty(item.id, 1)}
-                              className="w-6 h-6 rounded flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
-                            >
-                              <Plus size={12} />
-                            </button>
                           </div>
                         </td>
 

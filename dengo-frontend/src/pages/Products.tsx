@@ -52,6 +52,7 @@ export default function Products() {
   const canEdit = hasPermission('inventory.edit')
   const canDelete = hasPermission('inventory.delete')
   const canEditPrice = hasPermission('inventory.editPrice')
+  const canViewMoneyTotals = hasPermission('settings.system')
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [units, setUnits] = useState<{ id: string; name: string; abbreviation: string; type: string }[]>([])
@@ -222,15 +223,17 @@ export default function Products() {
           </div>
           <p className="text-2xl font-bold text-gray-800">{products.length}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Valor Inventario</span>
-            <DollarSign className="text-green-600" size={20} />
+        {canViewMoneyTotals && (
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-gray-600 text-sm">Valor Inventario</span>
+              <DollarSign className="text-green-600" size={20} />
+            </div>
+            <p className="text-2xl font-bold text-gray-800">
+              Q{products.reduce((sum, p) => sum + (p.basePrice * (p.stock ?? 0)), 0).toFixed(2)}
+            </p>
           </div>
-          <p className="text-2xl font-bold text-gray-800">
-            ${products.reduce((sum, p) => sum + (p.basePrice * (p.stock ?? 0)), 0).toFixed(2)}
-          </p>
-        </div>
+        )}
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-gray-600 text-sm">Stock Bajo</span>
@@ -379,7 +382,7 @@ export default function Products() {
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Precio base:</span>
-                    <span className="font-medium">${product.basePrice.toFixed(2)}/{product.baseUnit}</span>
+                    <span className="font-medium">Q{product.basePrice.toFixed(2)}/{product.baseUnit}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Stock:</span>
@@ -431,7 +434,7 @@ export default function Products() {
                       <span className="text-sm text-gray-600">{product.category as string}</span>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      ${product.basePrice.toFixed(2)}/{product.baseUnit}
+                      Q{product.basePrice.toFixed(2)}/{product.baseUnit}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <span className={`font-medium ${

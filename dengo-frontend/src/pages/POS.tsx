@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, Trash2, Plus, Minus, X, DollarSign, CreditCard,
+  Search, Trash2, X, DollarSign, CreditCard,
   UserPlus, User, Barcode, ShoppingCart, Printer,
   Calendar, AlertCircle, Receipt, ArrowLeftRight, Edit2, History, ExternalLink, Wallet
 } from 'lucide-react'
@@ -1190,17 +1190,8 @@ export default function POS() {
                         </div>
                       </div>
                       <p className="text-right text-sm text-gray-600">Q{Number(price).toFixed(2)}</p>
-                      {/* Quantity control */}
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => {
-                            const newQty = Math.max(0.001, item.quantity - 1)
-                            updateQuantity(item.product.id, item.variation?.id, newQty)
-                            setItemQtyStrings(prev => { const n = { ...prev }; delete n[key]; return n })
-                          }}
-                          className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded transition-colors">
-                          <Minus size={13} />
-                        </button>
+                      {/* Quantity control — un solo campo, se escribe la cantidad directo */}
+                      <div className="flex items-center justify-center">
                         <input
                           type="text"
                           inputMode="decimal"
@@ -1217,16 +1208,8 @@ export default function POS() {
                           onKeyDown={e => {
                             if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                           }}
-                          className="w-14 text-center text-sm border border-gray-200 rounded py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          className="w-16 text-center text-sm border border-gray-200 rounded py-1 focus:outline-none focus:ring-1 focus:ring-primary-500"
                         />
-                        <button
-                          onClick={async () => {
-                            await changeQuantity(item, item.quantity + 1)
-                            setItemQtyStrings(prev => { const n = { ...prev }; delete n[key]; return n })
-                          }}
-                          className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded transition-colors">
-                          <Plus size={13} />
-                        </button>
                       </div>
                       {/* Discount */}
                       <div className="flex items-center justify-center gap-1">
@@ -1268,7 +1251,7 @@ export default function POS() {
         </div>
 
         {/* Right: Checkout panel */}
-        <div className="w-full md:w-72 flex flex-col gap-3 overflow-y-auto">
+        <div className="w-full md:w-96 flex flex-col gap-3 overflow-y-auto">
 
           {/* Customer */}
           <div className={`bg-white rounded-lg shadow-sm p-4 ${!selectedCustomer ? 'ring-1 ring-orange-300' : ''}`}>
@@ -1622,15 +1605,9 @@ export default function POS() {
                         <p className="text-lg font-bold text-primary-600">Q{variation.price.toFixed(2)}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex items-center border border-gray-300 rounded-lg">
-                          <button onClick={() => setVariationQuantities(p => ({ ...p, [variation.id]: Math.max(1, qty - 1) }))}
-                            className="px-2 py-1 hover:bg-gray-100"><Minus size={14} /></button>
-                          <input type="number" value={qty}
-                            onChange={e => setVariationQuantities(p => ({ ...p, [variation.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
-                            className="w-12 text-center border-x border-gray-300 py-1 focus:outline-none text-sm" min="1" />
-                          <button onClick={() => setVariationQuantities(p => ({ ...p, [variation.id]: qty + 1 }))}
-                            className="px-2 py-1 hover:bg-gray-100"><Plus size={14} /></button>
-                        </div>
+                        <input type="number" value={qty}
+                          onChange={e => setVariationQuantities(p => ({ ...p, [variation.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
+                          className="w-14 text-center border border-gray-300 rounded-lg py-1 focus:outline-none text-sm" min="1" />
                         <button
                           onClick={() => handleAddVariationToCart(variation, qty)}
                           className="flex-1 btn-primary btn-sm flex items-center justify-center gap-1">

@@ -4,7 +4,7 @@ import {
   ArrowUpDown, Plus, Search, Filter, Package,
   Building2, Truck, Clock, CheckCircle,
   XCircle, ArrowRight, ChevronDown,
-  Download, Eye, BarChart3, ArrowLeft, Minus
+  Download, Eye, BarChart3, ArrowLeft
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -218,10 +218,10 @@ export default function StoreTransfers() {
     })
   }
 
-  function updateItemQty(productId: string, delta: number) {
+  function setItemQty(productId: string, quantity: number) {
     setTransferItems(prev => prev.map(i => {
       if (i.productId !== productId) return i
-      const newQty = Math.max(1, i.quantity + delta)
+      const newQty = Math.max(1, quantity)
       return { ...i, quantity: newQty, totalCost: newQty * i.unitCost }
     }))
   }
@@ -378,7 +378,7 @@ export default function StoreTransfers() {
             <h1 className="text-lg font-bold text-gray-800">Nueva Transferencia</h1>
             <p className="text-xs text-gray-500">
               {transferItems.length > 0
-                ? `${transferItems.length} producto(s) · $${transferItems.reduce((s, i) => s + i.totalCost, 0).toFixed(2)}`
+                ? `${transferItems.length} producto(s) · Q${transferItems.reduce((s, i) => s + i.totalCost, 0).toFixed(2)}`
                 : 'Sin productos agregados'}
             </p>
           </div>
@@ -467,16 +467,14 @@ export default function StoreTransfers() {
                           <p className="text-xs text-red-600 mt-0.5">⚠ Cantidad supera el stock disponible</p>
                         )}
                       </div>
-                      <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => updateItemQty(item.productId, -1)} className="p-1 rounded hover:bg-gray-200 text-gray-500">
-                          <Minus size={14} />
-                        </button>
-                        <span className={`w-10 text-center font-semibold text-sm ${overStock ? 'text-red-600' : 'text-gray-800'}`}>
-                          {item.quantity}
-                        </span>
-                        <button onClick={() => updateItemQty(item.productId, 1)} className="p-1 rounded hover:bg-gray-200 text-gray-500">
-                          <Plus size={14} />
-                        </button>
+                      <div className="flex items-center justify-center">
+                        <input
+                          type="number"
+                          value={item.quantity}
+                          onChange={e => setItemQty(item.productId, parseFloat(e.target.value) || 1)}
+                          className={`w-14 text-center border rounded py-1 text-sm font-semibold focus:outline-none ${overStock ? 'text-red-600 border-red-300' : 'text-gray-800 border-gray-200'}`}
+                          min="1"
+                        />
                       </div>
                       <button onClick={() => removeTransferItem(item.productId)} className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded">
                         <XCircle size={16} />
@@ -491,7 +489,7 @@ export default function StoreTransfers() {
             <div className="border-t p-3 flex items-center justify-between bg-gray-50 rounded-b-lg text-sm">
               <span className="text-gray-500">{transferItems.length} producto(s)</span>
               <span className="font-semibold text-gray-800">
-                ${transferItems.reduce((s, i) => s + i.totalCost, 0).toFixed(2)}
+                Q{transferItems.reduce((s, i) => s + i.totalCost, 0).toFixed(2)}
               </span>
             </div>
           </div>
@@ -768,7 +766,7 @@ export default function StoreTransfers() {
                         <span className="font-medium">{transfer.totalItems ?? transfer.items.length}</span>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <span className="font-medium">${value.toFixed(2)}</span>
+                        <span className="font-medium">Q{value.toFixed(2)}</span>
                       </td>
                       <td className="py-3 px-4 text-center">
                         <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(transfer.status)}`}>
@@ -915,8 +913,8 @@ export default function StoreTransfers() {
                             <p className="text-xs text-gray-500">{item.productCode}</p>
                           </td>
                           <td className="py-2 px-3 text-center">{item.quantity}</td>
-                          <td className="py-2 px-3 text-right">${item.unitCost.toFixed(2)}</td>
-                          <td className="py-2 px-3 text-right font-medium">${item.totalCost.toFixed(2)}</td>
+                          <td className="py-2 px-3 text-right">Q{item.unitCost.toFixed(2)}</td>
+                          <td className="py-2 px-3 text-right font-medium">Q{item.totalCost.toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>

@@ -141,6 +141,7 @@ export default function Inventory() {
   const canEditProducts = hasPermission('inventory.edit')
   const canAdjustStock = hasPermission('inventory.adjust')
   const canEditPrice = hasPermission('inventory.editPrice')
+  const canViewMoneyTotals = hasPermission('settings.system')
 
   const [inventory, setInventory] = useState<InventoryItemWithStatus[]>([])
   const [loading, setLoading] = useState(false)
@@ -378,8 +379,10 @@ export default function Inventory() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {[
             { label: 'Total Productos', value: stats.totalProducts, Icon: Package, color: 'text-primary-600' },
-            { label: 'Costo Total', value: `Q${stats.totalValue.toFixed(2)}`, Icon: BarChart3, color: 'text-green-600' },
-            { label: 'Valor de Venta Total', value: `Q${stats.totalSaleValue.toFixed(2)}`, Icon: BarChart3, color: 'text-primary-600' },
+            ...(canViewMoneyTotals ? [
+              { label: 'Costo Total', value: `Q${stats.totalValue.toFixed(2)}`, Icon: BarChart3, color: 'text-green-600' },
+              { label: 'Valor de Venta Total', value: `Q${stats.totalSaleValue.toFixed(2)}`, Icon: BarChart3, color: 'text-primary-600' },
+            ] : []),
             { label: 'Stock Bajo', value: stats.lowStock, Icon: TrendingDown, color: 'text-yellow-600' },
             { label: 'Sobrestock', value: stats.overstock, Icon: TrendingUp, color: 'text-blue-600' },
           ].map(({ label, value, Icon, color }, i) => (

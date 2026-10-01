@@ -623,7 +623,7 @@ export default function ProductModal({
                       </div>
                       <div>
                         <label className="text-xs text-gray-600">Precio</label>
-                        <p className="font-medium">${formData.basePrice.toFixed(2)}</p>
+                        <p className="font-medium">Q{formData.basePrice.toFixed(2)}</p>
                       </div>
                       <div>
                         <label className="text-xs text-gray-600">Código</label>

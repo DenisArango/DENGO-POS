@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { log } from '../services/audit.service.js'
 import { requirePermission } from '../lib/permissions.js'
+import { multiWordSearch } from '../lib/search.js'
 
 const schema = z.object({
   code: z.string().min(1),
@@ -32,13 +33,11 @@ export default async function supplierRoutes(fastify: FastifyInstance) {
     const statusWhere = q.isActive === 'all' ? {} : { isActive: q.isActive === 'false' ? false : true }
     const where = {
       ...statusWhere,
-      ...(q.search ? {
-        OR: [
-          { name: { contains: q.search, mode: 'insensitive' as const } },
-          { code: { contains: q.search, mode: 'insensitive' as const } },
-          { taxId: { contains: q.search, mode: 'insensitive' as const } },
-        ],
-      } : {}),
+      ...(q.search ? multiWordSearch(q.search, word => [
+        { name: { contains: word, mode: 'insensitive' as const } },
+        { code: { contains: word, mode: 'insensitive' as const } },
+        { taxId: { contains: word, mode: 'insensitive' as const } },
+      ]) : {}),
     }
 
     // Paginated path — opt-in via `page`, used by the Suppliers management

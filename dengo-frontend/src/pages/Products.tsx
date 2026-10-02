@@ -58,6 +58,10 @@ export default function Products() {
   const [categories, setCategories] = useState<Category[]>([])
   const [units, setUnits] = useState<{ id: string; name: string; abbreviation: string; type: string }[]>([])
   const [loading, setLoading] = useState(true)
+  // See Customers.tsx for why this exists — only the first load blocks with
+  // a full-page spinner; later fetches (search/pagination/filters) must not
+  // unmount the search input or it loses focus mid-type.
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -116,7 +120,7 @@ export default function Products() {
         setUnits(unitList)
       })
       .catch(e => toast.error(e.message))
-      .finally(() => setLoading(false))
+      .finally(() => { setLoading(false); setHasLoadedOnce(true) })
   }
 
   useEffect(() => { fetchProducts() }, [page, debouncedSearch, selectedCategory])
@@ -200,14 +204,14 @@ export default function Products() {
     }
   }
 
-  if (loading) return (
+  if (loading && !hasLoadedOnce) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 transition-opacity ${loading ? 'opacity-60' : ''}`}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">

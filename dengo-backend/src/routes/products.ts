@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js'
 import { log } from '../services/audit.service.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
 import { resolveBranchScope } from '../lib/branch-scope.js'
+import { multiWordSearch } from '../lib/search.js'
 
 const variationSchema = z.object({
   id: z.string().optional(),
@@ -43,14 +44,12 @@ export default async function productRoutes(fastify: FastifyInstance) {
     const where = {
       isActive: q.isActive === 'false' ? false : true,
       ...(q.categoryId ? { categoryId: q.categoryId } : {}),
-      ...(q.search ? {
-        OR: [
-          { name: { contains: q.search, mode: 'insensitive' as const } },
-          { barcode: { contains: q.search, mode: 'insensitive' as const } },
-          { sku: { contains: q.search, mode: 'insensitive' as const } },
-          { altBarcodes: { some: { barcode: { contains: q.search, mode: 'insensitive' as const } } } },
-        ],
-      } : {}),
+      ...(q.search ? multiWordSearch(q.search, word => [
+        { name: { contains: word, mode: 'insensitive' as const } },
+        { barcode: { contains: word, mode: 'insensitive' as const } },
+        { sku: { contains: word, mode: 'insensitive' as const } },
+        { altBarcodes: { some: { barcode: { contains: word, mode: 'insensitive' as const } } } },
+      ]) : {}),
     }
 
     // Product is a global catalog entity with no branchId of its own — real

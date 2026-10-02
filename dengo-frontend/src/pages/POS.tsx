@@ -18,6 +18,7 @@ import SalesGoalWidget from '../components/SalesGoalWidget'
 import { queuePendingSale, setCache, getCache, addSaleToRegisterTally } from '../lib/offlineDb'
 import { trySync, refreshPendingCount, getLocallyClosingRegisterIds } from '../lib/offlineSync'
 import { getAdjustmentReasons, type AdjustmentReason } from '../lib/inventoryReasons'
+import { matchesSearch } from '../lib/search'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -509,13 +510,7 @@ export default function POS() {
     ? parseFloat(cashReceived) - total
     : null
 
-  const filteredCustomers = customers.filter(c => {
-    const q = customerSearch.toLowerCase()
-    return (
-      getCustomerName(c).toLowerCase().includes(q) ||
-      (c.nit ?? '').toLowerCase().includes(q)
-    )
-  })
+  const filteredCustomers = customers.filter(c => matchesSearch([getCustomerName(c), c.nit], customerSearch))
 
   // ── Cart helpers ──────────────────────────────────────────────────────────
   function addToCart(product: ProductRecord, variation: ProductVariation, quantity: number) {

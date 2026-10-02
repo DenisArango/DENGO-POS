@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { api } from '../lib/api'
 import { useAuthStore } from '../store'
 import { usePermissions } from '../hooks/usePermissions'
+import { matchesSearch } from '../lib/search'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface StockMovement {
@@ -94,6 +95,8 @@ export default function Purchases() {
   const [saving, setSaving] = useState(false)
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
   const [suppliers, setSuppliers] = useState<{ id: string; name: string; code: string; phone?: string; email?: string; contactName?: string }[]>([])
+  const [supplierSearch, setSupplierSearch] = useState('')
+  const [showSupplierDropdown, setShowSupplierDropdown] = useState(false)
 
   // Quick add/edit supplier (inline, without leaving the purchase)
   const [showQuickSupplierModal, setShowQuickSupplierModal] = useState(false)
@@ -134,9 +137,12 @@ export default function Purchases() {
       .catch(() => {})
   }, [])
 
+  const selectedSupplier = suppliers.find(s => s.id === selectedSupplierId) ?? null
+  const filteredSuppliers = suppliers.filter(s => matchesSearch([s.name, s.code], supplierSearch))
+
   const openQuickAddSupplier = () => {
     setEditingSupplierId(null)
-    setQuickSupplierForm({ name: '', code: '', contactName: '', phone: '', email: '' })
+    setQuickSupplierForm({ name: supplierSearch, code: '', contactName: '', phone: '', email: '' })
     setShowQuickSupplierModal(true)
   }
 
@@ -173,6 +179,8 @@ export default function Purchases() {
       } else {
         setSuppliers(prev => [...prev, saved])
         setSelectedSupplierId(saved.id)
+        setSupplierSearch('')
+        setShowSupplierDropdown(false)
         toast.success('Proveedor agregado')
       }
       setShowQuickSupplierModal(false)
@@ -257,6 +265,8 @@ export default function Purchases() {
     setIntakeItems([])
     setNotes('')
     setSelectedSupplierId('')
+    setSupplierSearch('')
+    setShowSupplierDropdown(false)
     setPosSearch('')
     setPosResults([])
     setShowResults(false)
@@ -501,27 +511,57 @@ export default function Purchases() {
             <div className="bg-white rounded-lg shadow-sm p-4">
               <h3 className="text-sm font-semibold text-gray-700 mb-2">Proveedor</h3>
               <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <select
-                    value={selectedSupplierId}
-                    onChange={e => setSelectedSupplierId(e.target.value)}
-                    className="input w-full appearance-none pr-8"
-                  >
-                    <option value="">Sin proveedor especificado</option>
-                    {suppliers.map(s => (
-                      <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                </div>
+                {selectedSupplier ? (
+                  <div className="flex-1 flex items-center justify-between bg-primary-50 border border-primary-200 rounded-lg px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{selectedSupplier.name}</p>
+                      <p className="text-xs text-gray-500">{selectedSupplier.code}</p>
+                    </div>
+                    <button
+                      onClick={() => setSelectedSupplierId('')}
+                      title="Quitar proveedor"
+                      className="p-1 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative flex-1">
+                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={supplierSearch}
+                      onChange={e => { setSupplierSearch(e.target.value); setShowSupplierDropdown(true) }}
+                      onFocus={() => setShowSupplierDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowSupplierDropdown(false), 150)}
+                      placeholder="Buscar proveedor por nombre o código..."
+                      className="input w-full pl-8 text-sm py-2"
+                    />
+                    {showSupplierDropdown && (
+                      <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                        {filteredSuppliers.length === 0 ? (
+                          <p className="px-3 py-2 text-xs text-gray-400">{supplierSearch ? 'Sin resultados' : 'Escribe para buscar... (o deja vacío para ingreso sin proveedor)'}</p>
+                        ) : (
+                          filteredSuppliers.slice(0, 8).map(s => (
+                            <button key={s.id} onMouseDown={() => { setSelectedSupplierId(s.id); setSupplierSearch(''); setShowSupplierDropdown(false) }}
+                              className="w-full text-left px-3 py-2 hover:bg-primary-50 transition-colors border-b border-gray-50 last:border-0">
+                              <p className="text-sm font-medium text-gray-800">{s.name}</p>
+                              <p className="text-xs text-gray-400">{s.code}</p>
+                            </button>
+                          ))
+                        )}
+                        {canCreateSupplier && (
+                          <button onMouseDown={openQuickAddSupplier}
+                            className="w-full text-left px-3 py-2 hover:bg-primary-50 transition-colors flex items-center gap-1.5 text-primary-600 font-medium text-sm">
+                            <UserPlus size={14} /> Nuevo proveedor{supplierSearch ? ` "${supplierSearch}"` : ''}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
                 {canEditSupplier && selectedSupplierId && (
                   <button onClick={openQuickEditSupplier} title="Editar proveedor" className="p-2 text-gray-400 hover:text-primary-600 hover:bg-gray-50 rounded-lg transition-colors">
                     <Edit2 size={16} />
-                  </button>
-                )}
-                {canCreateSupplier && (
-                  <button onClick={openQuickAddSupplier} title="Nuevo proveedor" className="p-2 text-gray-400 hover:text-primary-600 hover:bg-gray-50 rounded-lg transition-colors">
-                    <UserPlus size={16} />
                   </button>
                 )}
               </div>

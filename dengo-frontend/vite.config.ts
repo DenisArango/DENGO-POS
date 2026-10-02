@@ -4,6 +4,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // npm sets this automatically from package.json's "version" field whenever
+  // this config runs via an npm script (npm run build/dev) — baked into the
+  // bundle as a plain string constant, not a runtime env lookup, so it's
+  // always accurate for whatever was actually built. See vite-env.d.ts.
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.0.0'),
+  },
   plugins: [
     react(),
     // Caches the app shell (JS/CSS/HTML/icons) in the browser so the app

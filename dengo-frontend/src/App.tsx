@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { Toaster, toast } from 'sonner'
 import Router from './router'
+import ErrorBoundary from './components/ErrorBoundary'
 import { StoreProvider } from './contexts/StoreContext'
 import { CONNECTIVITY_ERROR_MESSAGE, api } from './lib/api'
 import { useLicenseStore } from './store'
@@ -68,21 +69,23 @@ function App() {
   useDisableNumberInputScroll()
   useLicense()
   return (
-    <StoreProvider>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <Router />
-          <Toaster 
-            position="top-right"
-            richColors
-            closeButton
-            expand={false}
-            duration={3000}
-          />
-        </BrowserRouter>
-        <ReactQueryDevtools initialIsOpen={false} />
-      </QueryClientProvider>
-    </StoreProvider>
+    <ErrorBoundary>
+      <StoreProvider>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <Router />
+            <Toaster
+              position="top-right"
+              richColors
+              closeButton
+              expand={false}
+              duration={3000}
+            />
+          </BrowserRouter>
+          <ReactQueryDevtools initialIsOpen={false} />
+        </QueryClientProvider>
+      </StoreProvider>
+    </ErrorBoundary>
   )
 }
 

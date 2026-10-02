@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bell, AlertTriangle, ArrowUpDown, FileText, X, Package, CheckCircle, GraduationCap } from 'lucide-react'
+import { Bell, AlertTriangle, ArrowUpDown, FileText, X, Package, CheckCircle, GraduationCap, MessageSquare } from 'lucide-react'
 import { api } from '../../lib/api'
 import { useNavigate } from 'react-router-dom'
+import { useLicenseStore } from '../../store'
 
 interface Notification {
   id: string
@@ -19,6 +20,7 @@ interface NotificationPanelProps {
 
 export default function NotificationPanel({ branchId }: NotificationPanelProps) {
   const navigate = useNavigate()
+  const maestrosEnabled = useLicenseStore(s => s.maestrosEnabled)
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const panelRef = useRef<HTMLDivElement>(null)
@@ -44,12 +46,17 @@ export default function NotificationPanel({ branchId }: NotificationPanelProps) 
       const fromQ  = branchId ? `?fromBranchId=${branchId}&status=PENDING`    : '?status=PENDING'
       const toQ    = branchId ? `?toBranchId=${branchId}&status=IN_TRANSIT`   : '?status=IN_TRANSIT'
 
-      const [inventory, pendingOut, incomingIn, quotations, portalOrders] = await Promise.allSettled([
+      const [inventory, pendingOut, incomingIn, quotations, portalOrders, unreadMessages] = await Promise.allSettled([
         api.get<any[]>(`/api/inventory${branchQ}`),
         api.get<any[]>(`/api/transfers${fromQ}`),
         api.get<any[]>(`/api/transfers${toQ}`),
         api.get<any[]>('/api/quotations?status=ACCEPTED'),
-        api.get<{ data: any[]; total: number }>('/api/portal-admin/orders?status=PENDING&limit=200'),
+        // Portal de maestros apagado para este cliente (licencia) — ni se
+        // pide, en vez de disparar un 403 cada minuto sin nada que mostrar.
+        maestrosEnabled
+          ? api.get<{ data: any[]; total: number }>('/api/portal-admin/orders?status=PENDING&limit=200')
+          : Promise.resolve(null),
+        api.get<{ count: number }>('/api/messages/unread'),
       ])
 
       // ── Stock crítico / bajo ────────────────────────────────────────────────
@@ -140,7 +147,7 @@ export default function NotificationPanel({ branchId }: NotificationPanelProps) 
       }
 
       // ── Pedidos del portal pendientes de revisión ────────────────────────────
-      if (portalOrders.status === 'fulfilled') {
+      if (portalOrders.status === 'fulfilled' && portalOrders.value) {
         const pending = portalOrders.value?.data ?? []
         if (pending.length > 0) {
           const names = pending.slice(0, 2)
@@ -153,6 +160,21 @@ export default function NotificationPanel({ branchId }: NotificationPanelProps) 
             title: `${pending.length} pedido${pending.length > 1 ? 's' : ''} del portal pendiente${pending.length > 1 ? 's' : ''}`,
             description: `De: ${names}${pending.length > 2 ? ` y ${pending.length - 2} más` : ''}`,
             path: '/portal/orders',
+          })
+        }
+      }
+
+      // ── Mensajes internos sin leer ───────────────────────────────────────────
+      if (unreadMessages.status === 'fulfilled') {
+        const count = unreadMessages.value?.count ?? 0
+        if (count > 0) {
+          items.push({
+            id: 'unread-messages',
+            type: 'info',
+            icon: <MessageSquare size={16} className="text-blue-500" />,
+            title: `${count} mensaje${count > 1 ? 's' : ''} sin leer`,
+            description: 'Tienes mensajes internos pendientes de responder.',
+            path: '/messages',
           })
         }
       }

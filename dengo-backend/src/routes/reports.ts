@@ -1,7 +1,8 @@
-import type { FastifyInstance } from 'fastify'
+import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { prisma } from '../lib/prisma.js'
 import { getBusinessDayBounds, toBusinessDateKey, getBusinessHour } from '../lib/timezone.js'
 import { computeSales } from './cash-registers.js'
+import { resolveBranchScope } from '../lib/branch-scope.js'
 
 // Expected cash currently sitting in a branch's open register(s): opening
 // float + cash sales (incl. cash abonos, via computeSales) + income
@@ -26,10 +27,10 @@ async function computeCashBalance(branchId: string): Promise<{ balance: number; 
 //   - a composite key "name:registerNumber:branchId" (from the filter dropdown)
 //   - a real cashRegister.id (from direct session filter)
 function buildSaleFilter(
-  user: { role: string; branchId: string },
+  request: FastifyRequest,
   q: { branchId?: string; cashRegisterId?: string; from?: string; to?: string }
 ) {
-  const branchId = user.role !== 'ADMIN' ? user.branchId : (q.branchId ?? undefined)
+  const branchId = resolveBranchScope(request, q.branchId)
 
   // Detect composite key vs session ID
   let registerFilter: object = {}
@@ -62,7 +63,12 @@ export default async function reportRoutes(fastify: FastifyInstance) {
   // GET /api/reports/dashboard
   fastify.get('/dashboard', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const q = request.query as { branchId?: string }
-    const branchId = request.user.role !== 'ADMIN' ? request.user.branchId : (q.branchId ?? request.user.branchId)
+    // Unlike every other report, the dashboard always needs ONE definite
+    // branch to scope to (computeCashBalance and the queries below assume a
+    // real id, never "all branches") — resolveBranchScope alone can return
+    // undefined for an ADMIN with nothing selected, so fall back to their own
+    // branch exactly like before this used resolveBranchScope.
+    const branchId = resolveBranchScope(request, q.branchId) ?? request.user.branchId
 
     const { start: startOfDay, end: endOfDay } = getBusinessDayBounds()
 
@@ -103,7 +109,15 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       }),
     ])
 
-    const inventoryAlerts = allInventory
+    // Same 3-tier severity Dashboard.tsx's normaliseAlerts() computes on the
+    // frontend (out=0 stock, critical=≤30% of minStock, else low) — mirrored
+    // here so the worst problems sort first BEFORE capping the list. Without
+    // the cap, a catalog with hundreds of low-stock products sent the whole
+    // thing over the wire on every dashboard load — the real reason this was
+    // slow. `lowStockCount` still reflects the TRUE total, computed before
+    // slicing; only the detail list sent to the panel is capped.
+    const severityRank = (qty: number, min: number) => (qty === 0 ? 0 : qty <= min * 0.3 ? 1 : 2)
+    const allInventoryAlerts = allInventory
       .filter(i => Number(i.quantity) <= Number(i.product.minStock))
       .map(i => ({
         id: i.product.id,
@@ -111,6 +125,8 @@ export default async function reportRoutes(fastify: FastifyInstance) {
         currentStock: Number(i.quantity),
         minStock: Number(i.product.minStock),
       }))
+      .sort((a, b) => severityRank(a.currentStock, a.minStock) - severityRank(b.currentStock, b.minStock))
+    const inventoryAlerts = allInventoryAlerts.slice(0, 15)
 
     // Hourly distribution from ALL today's sales
     const salesByHour: Record<number, number> = {}
@@ -141,7 +157,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       stats: {
         dailySales,
         dailyTransactions: todaySales._count.id,
-        lowStockCount: inventoryAlerts.length,
+        lowStockCount: allInventoryAlerts.length,
         cashBalance,
         hasOpenRegister: openRegisterCount > 0,
         dailyCost,
@@ -163,7 +179,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       branchId?: string; from?: string; to?: string; paymentMethod?: string
       saleType?: string; search?: string; cashRegisterId?: string; includeVoided?: string
     }
-    const filter = buildSaleFilter(request.user, q)
+    const filter = buildSaleFilter(request, q)
     // Spread the full filter (handles both cashRegisterId and cashRegister: {name,registerNumber})
     const { isVoided: _iv, ...registerAndDateFilter } = filter as any
     const where: any = {
@@ -238,7 +254,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
   // (no historical price reconstruction) — only the quantity is historical.
   fastify.get('/inventory-status', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const q = request.query as { branchId?: string; asOf?: string }
-    const branchId = request.user.role !== 'ADMIN' ? request.user.branchId : (q.branchId ?? undefined)
+    const branchId = resolveBranchScope(request, q.branchId)
 
     const rows = await prisma.inventory.findMany({
       where: branchId ? { branchId } : {},
@@ -287,7 +303,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
   // GET /api/reports/top-products
   fastify.get('/top-products', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const q = request.query as { branchId?: string; cashRegisterId?: string; from?: string; to?: string }
-    const filter = buildSaleFilter(request.user, q)
+    const filter = buildSaleFilter(request, q)
 
     // Aggregate by saleItems to get per-branch accuracy. take caps a request
     // with no (or a very wide) date range from pulling a store's entire sale
@@ -319,7 +335,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
   // GET /api/reports/daily-sales
   fastify.get('/daily-sales', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const q = request.query as { branchId?: string; cashRegisterId?: string; from?: string; to?: string }
-    const filter = buildSaleFilter(request.user, q)
+    const filter = buildSaleFilter(request, q)
 
     const sales = await prisma.sale.findMany({
       where: filter,
@@ -384,7 +400,10 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     const monthStart = q.month ? new Date(`${q.month}-01T00:00:00`) : new Date(now.getFullYear(), now.getMonth(), 1)
     const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1)
 
-    const branchId = request.user.role !== 'ADMIN' ? request.user.branchId : undefined
+    // No branchId query param on this one — it's a cross-branch comparison
+    // dashboard, ADMIN-only in practice (a non-admin stays pinned to their
+    // own branch, same as before).
+    const branchId = resolveBranchScope(request)
 
     const sales = await prisma.sale.findMany({
       where: {
@@ -419,7 +438,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
   // GET /api/reports/stock-movements
   fastify.get('/stock-movements', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const q = request.query as { branchId?: string; from?: string; to?: string; type?: string }
-    const branchId = request.user.role !== 'ADMIN' ? request.user.branchId : (q.branchId ?? undefined)
+    const branchId = resolveBranchScope(request, q.branchId)
     return reply.send(await prisma.stockMovement.findMany({
       where: {
         ...(branchId ? { branchId } : {}),
@@ -445,7 +464,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
   fastify.get('/sales-by-product', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const q = request.query as { branchId?: string; cashRegisterId?: string; from?: string; to?: string; limit?: string }
     const limit = Math.min(parseInt(q.limit ?? '50'), 200)
-    const filter = buildSaleFilter(request.user, q)
+    const filter = buildSaleFilter(request, q)
 
     const items = await prisma.saleItem.findMany({
       where: { sale: filter },
@@ -497,7 +516,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
   // GET /api/reports/cash-registers-history
   fastify.get('/cash-registers-history', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const q = request.query as { branchId?: string; from?: string; to?: string; page?: string; limit?: string }
-    const branchId = request.user.role !== 'ADMIN' ? request.user.branchId : (q.branchId ?? undefined)
+    const branchId = resolveBranchScope(request, q.branchId)
     const where = {
       ...(branchId ? { branchId } : {}),
       ...(q.from || q.to ? {
@@ -567,7 +586,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
   // GET /api/reports/product-rotation
   fastify.get('/product-rotation', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const q = request.query as { branchId?: string; cashRegisterId?: string }
-    const branchId = request.user.role !== 'ADMIN' ? request.user.branchId : (q.branchId ?? undefined)
+    const branchId = resolveBranchScope(request, q.branchId)
     const since = new Date()
     since.setDate(since.getDate() - 30)
 
@@ -623,7 +642,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
   // GET /api/reports/cash-registers — DISTINCT name+number combos for filter dropdowns
   fastify.get('/cash-registers', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const q = request.query as { branchId?: string }
-    const branchId = request.user.role !== 'ADMIN' ? request.user.branchId : (q.branchId ?? undefined)
+    const branchId = resolveBranchScope(request, q.branchId)
 
     // Distinct name+registerNumber combinations (one entry per physical register)
     const rows = await prisma.cashRegister.findMany({

@@ -162,17 +162,27 @@ export default function Inventory() {
   const [adjustment, setAdjustment] = useState<StockAdjustment>({
     productId: '', branchId, currentStock: 0, newStock: 0, reason: '', notes: ''
   })
+  // The cashier picks the direction explicitly (Aumentar/Disminuir) instead
+  // of it being inferred from a typed absolute "nuevo stock" — asking for a
+  // delta ("¿cuánto?") plus a direction is the same thing conceptually, but
+  // skips the mental math ("stock actual menos cuánto") the old absolute
+  // field forced on every decrease.
+  const [adjustmentMode, setAdjustmentMode] = useState<'UP' | 'DOWN'>('UP')
+  const [adjustmentQtyStr, setAdjustmentQtyStr] = useState('')
+  const adjustmentQty = parseFloat(adjustmentQtyStr) || 0
+  const adjustmentNewStock = adjustmentMode === 'UP'
+    ? adjustment.currentStock + adjustmentQty
+    : adjustment.currentStock - adjustmentQty
   // Reasons are direction-specific (Configuración → Motivos de Ajuste) — both
-  // lists loaded once so switching between raising/lowering the number just
-  // swaps which one the dropdown reads from, no re-fetch needed mid-edit.
+  // lists loaded once so switching between Aumentar/Disminuir just swaps
+  // which one the dropdown reads from, no re-fetch needed mid-edit.
   const [reasonsUp, setReasonsUp] = useState<AdjustmentReason[]>([])
   const [reasonsDown, setReasonsDown] = useState<AdjustmentReason[]>([])
   useEffect(() => {
     getAdjustmentReasons('UP').then(setReasonsUp)
     getAdjustmentReasons('DOWN').then(setReasonsDown)
   }, [])
-  const adjustmentDirection: 'UP' | 'DOWN' = adjustment.newStock >= adjustment.currentStock ? 'UP' : 'DOWN'
-  const adjustmentReasonOptions = adjustmentDirection === 'UP' ? reasonsUp : reasonsDown
+  const adjustmentReasonOptions = adjustmentMode === 'UP' ? reasonsUp : reasonsDown
 
   // Edit product modal
   const [showProductModal, setShowProductModal] = useState(false)
@@ -250,21 +260,25 @@ export default function Inventory() {
       reason: '',
       notes: ''
     })
+    setAdjustmentMode('UP')
+    setAdjustmentQtyStr('')
     setShowAdjustmentModal(true)
   }
 
   const saveAdjustment = () => {
     if (!adjustment.reason) { toast.error('Seleccione una razón para el ajuste'); return }
-    if (adjustment.newStock === adjustment.currentStock) { toast.error('El nuevo stock debe ser diferente al actual'); return }
+    if (adjustmentQty <= 0) { toast.error('Ingresa una cantidad mayor a 0'); return }
+    if (adjustmentMode === 'DOWN' && adjustmentQty > adjustment.currentStock) {
+      toast.error(`No puedes disminuir más de lo que hay (${adjustment.currentStock})`); return
+    }
 
     setSavingAdjustment(true)
     api.put(`/api/inventory/${adjustment.productId}/${adjustment.branchId}`, {
-      quantity: adjustment.newStock,
+      quantity: adjustmentNewStock,
       reason: adjustment.reason,
     })
       .then(() => {
-        const diff = adjustment.newStock - adjustment.currentStock
-        toast.success(`Stock ${diff > 0 ? 'incrementado' : 'reducido'} exitosamente (${diff > 0 ? '+' : ''}${diff})`)
+        toast.success(`Stock ${adjustmentMode === 'UP' ? 'incrementado' : 'reducido'} exitosamente (${adjustmentMode === 'UP' ? '+' : '-'}${adjustmentQty})`)
         setShowAdjustmentModal(false)
         fetchInventory()
       })
@@ -604,35 +618,55 @@ export default function Inventory() {
                   <h3 className="font-medium text-gray-800 mb-1">{selectedItem.displayName}</h3>
                   <p className="text-sm text-gray-600">SKU: {selectedItem.sku || '—'}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">Stock Actual</label>
-                    <div className="bg-gray-100 p-3 rounded-lg text-center">
-                      <p className="text-2xl font-bold text-gray-800">{adjustment.currentStock}</p>
-                      <p className="text-sm text-gray-600">{selectedItem.baseUnit}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="label">Nuevo Stock</label>
-                    <input type="number" value={adjustment.newStock}
-                      onChange={(e) => {
-                        const newStock = parseInt(e.target.value) || 0
-                        setAdjustment(prev => {
-                          const oldDirection = prev.newStock >= prev.currentStock ? 'UP' : 'DOWN'
-                          const newDirection = newStock >= prev.currentStock ? 'UP' : 'DOWN'
-                          // A reason picked for one direction never applies to the
-                          // other — clear it instead of letting a stale "Rotura/Daño"
-                          // ride along onto what's now an increase.
-                          return { ...prev, newStock, reason: oldDirection === newDirection ? prev.reason : '' }
-                        })
-                      }}
-                      className="input text-center text-2xl font-bold" min="0" />
+                <div>
+                  <label className="label">Stock Actual</label>
+                  <div className="bg-gray-100 p-3 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-gray-800">{adjustment.currentStock}</p>
+                    <p className="text-sm text-gray-600">{selectedItem.baseUnit}</p>
                   </div>
                 </div>
-                {adjustment.newStock !== adjustment.currentStock && (
-                  <div className={`p-3 rounded-lg flex items-center gap-2 ${adjustment.newStock > adjustment.currentStock ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                    {adjustment.newStock > adjustment.currentStock ? <Plus size={20} /> : <Minus size={20} />}
-                    <span className="font-medium">Diferencia: {Math.abs(adjustment.newStock - adjustment.currentStock)} {selectedItem.baseUnit}</span>
+                <div>
+                  <label className="label">¿Qué quieres hacer?</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAdjustmentMode(prev => { if (prev !== 'UP') setAdjustment(a => ({ ...a, reason: '' })); return 'UP' })}
+                      className={`py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+                        adjustmentMode === 'UP' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <Plus size={18} /> Aumentar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAdjustmentMode(prev => { if (prev !== 'DOWN') setAdjustment(a => ({ ...a, reason: '' })); return 'DOWN' })}
+                      className={`py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+                        adjustmentMode === 'DOWN' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <Minus size={18} /> Disminuir
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="label">Cantidad a {adjustmentMode === 'UP' ? 'aumentar' : 'disminuir'}</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={adjustmentQtyStr}
+                    onChange={(e) => setAdjustmentQtyStr(e.target.value)}
+                    onFocus={(e) => e.target.select()}
+                    className="input text-center text-2xl font-bold"
+                    placeholder="0"
+                  />
+                </div>
+                {adjustmentQty > 0 && (
+                  <div className={`p-3 rounded-lg flex items-center justify-between gap-2 ${adjustmentMode === 'UP' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    <span className="font-medium flex items-center gap-2">
+                      {adjustmentMode === 'UP' ? <Plus size={20} /> : <Minus size={20} />}
+                      {adjustmentQty} {selectedItem.baseUnit}
+                    </span>
+                    <span className="text-sm">Nuevo stock: <strong>{adjustmentNewStock}</strong></span>
                   </div>
                 )}
                 <div>
@@ -644,7 +678,7 @@ export default function Inventory() {
                   </select>
                   {adjustmentReasonOptions.length === 0 && (
                     <p className="text-xs text-gray-400 mt-1">
-                      No hay motivos configurados para {adjustmentDirection === 'UP' ? 'aumentos' : 'disminuciones'} — agrégalos en Configuración → Motivos de Ajuste.
+                      No hay motivos configurados para {adjustmentMode === 'UP' ? 'aumentos' : 'disminuciones'} — agrégalos en Configuración → Motivos de Ajuste.
                     </p>
                   )}
                 </div>

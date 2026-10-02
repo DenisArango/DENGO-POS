@@ -523,7 +523,14 @@ export default function Dashboard() {
             {canViewInventory && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h2 className="text-base font-semibold text-gray-800">Alertas de Inventario</h2>
+                <h2 className="text-base font-semibold text-gray-800">
+                  Alertas de Inventario
+                  {stats.lowStockCount > 0 && (
+                    <span className="ml-1.5 text-xs font-medium text-gray-400">
+                      ({stats.lowStockCount}{stats.lowStockCount > inventoryAlerts.length ? `, mostrando ${inventoryAlerts.length}` : ''})
+                    </span>
+                  )}
+                </h2>
                 <NavLink
                   to="/inventory"
                   className="text-xs text-primary-600 hover:text-primary-700 flex items-center gap-1 font-medium"

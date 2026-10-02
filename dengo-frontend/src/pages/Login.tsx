@@ -176,6 +176,7 @@ export default function Login() {
         </button>
       </form>
 
+      <p className="text-center text-[11px] text-gray-300 mt-6">DENGO POS v{__APP_VERSION__}</p>
     </div>
   )
 }

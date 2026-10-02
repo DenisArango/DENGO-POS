@@ -123,7 +123,8 @@ function getCustomerNit(c: CustomerRecord): string {
 
 function creditHint(c: CustomerRecord): string {
   if (!c.creditEnabled) return ''
-  return ` · Créd: ${c.creditAvailable === null ? 'Ilimitado' : `Q${(c.creditAvailable ?? 0).toFixed(2)}`}`
+  const limit = c.creditAvailable === null ? 'Ilimitado' : `Q${(c.creditLimit ?? 0).toFixed(2)}`
+  return ` · Créd: Q${(c.creditUsed ?? 0).toFixed(2)} / ${limit}`
 }
 
 function normaliseProduct(p: ProductRecord): ProductRecord {
@@ -297,6 +298,62 @@ export default function POS() {
 
   // Quantity string display — allows free-text editing (cleared on commit/blur)
   const [itemQtyStrings, setItemQtyStrings] = useState<Record<string, string>>({})
+  // Per-line effective unit price, back-calculated when the cashier edits
+  // the line's TOTAL directly instead of its price (e.g. "6 hojas por Q1" —
+  // Q1/6 doesn't round to the catalog's Q0.15/hoja). Session-only: never
+  // written back to Product.basePrice/variation.price, only sent as this
+  // sale's own SaleItem.unitPrice (the backend already accepts whatever
+  // unitPrice the client sends, same as the existing discount feature).
+  const [itemPriceOverride, setItemPriceOverride] = useState<Record<string, number>>({})
+  const [itemTotalStrings, setItemTotalStrings] = useState<Record<string, string>>({})
+
+  // ── Venta en curso: sobrevive salir y volver a esta pantalla ────────────────
+  // React desmonta POS.tsx al navegar a otra sección, perdiendo todo su
+  // useState — esto guarda una copia de la venta que se está armando (carrito,
+  // descuentos, precios ajustados, cliente, factura) en localStorage por
+  // sucursal, y la restaura la próxima vez que se entra a Ventas. Se limpia
+  // sola cuando el carrito queda vacío (venta completada o cancelada).
+  const draftKey = `pos-draft-sale-${BRANCH_ID}`
+  const draftHydratedRef = useRef(false)
+
+  useEffect(() => {
+    if (draftHydratedRef.current || !BRANCH_ID) return
+    draftHydratedRef.current = true
+    try {
+      const raw = localStorage.getItem(draftKey)
+      if (!raw) return
+      const draft = JSON.parse(raw)
+      if (Array.isArray(draft.cartItems) && draft.cartItems.length > 0) {
+        setCartItems(draft.cartItems)
+        setItemDiscounts(draft.itemDiscounts ?? {})
+        setItemPriceOverride(draft.itemPriceOverride ?? {})
+        setSelectedCustomer(draft.selectedCustomer ?? null)
+        setSaleType(draft.saleType ?? 'CASH')
+        setWantsInvoice(draft.wantsInvoice ?? false)
+        setInvoiceBuyerNit(draft.invoiceBuyerNit ?? '')
+        setInvoiceBuyerName(draft.invoiceBuyerName ?? '')
+        toast.info('Se restauró la venta que tenías en curso')
+      }
+    } catch {
+      // Draft corrupto o ilegible — se ignora, no bloquea el uso normal del POS.
+    }
+  }, [BRANCH_ID])
+
+  useEffect(() => {
+    if (!draftHydratedRef.current || !BRANCH_ID) return
+    try {
+      if (cartItems.length === 0 && !selectedCustomer) {
+        localStorage.removeItem(draftKey)
+      } else {
+        localStorage.setItem(draftKey, JSON.stringify({
+          cartItems, itemDiscounts, itemPriceOverride, selectedCustomer,
+          saleType, wantsInvoice, invoiceBuyerNit, invoiceBuyerName,
+        }))
+      }
+    } catch {
+      // localStorage lleno o bloqueado — la venta sigue funcionando, solo no persiste.
+    }
+  }, [cartItems, itemDiscounts, itemPriceOverride, selectedCustomer, saleType, wantsInvoice, invoiceBuyerNit, invoiceBuyerName, BRANCH_ID])
 
   // Receipt
   const [showReceiptModal, setShowReceiptModal] = useState(false)
@@ -409,10 +466,24 @@ export default function POS() {
   const getItemKey = (productId: string, variationId?: string) =>
     `${productId}-${variationId || 'default'}`
 
+  const getItemPrice = (item: CartItem) => {
+    const key = getItemKey(item.product.id, item.variation?.id)
+    return itemPriceOverride[key] ?? (item.variation ? item.variation.price : item.product.basePrice)
+  }
+
   const getLineTotal = (item: CartItem) => {
-    const price = item.variation ? item.variation.price : item.product.basePrice
+    const price = getItemPrice(item)
     const disc = itemDiscounts[getItemKey(item.product.id, item.variation?.id)] || 0
     return price * item.quantity * (1 - disc / 100)
+  }
+
+  // Back-calculates the effective unit price for a manually-edited line
+  // total, so quantity x price x (1 - descuento%) lands exactly on what the
+  // cashier typed. Returns undefined if it can't (0 quantity, 100% discount).
+  const priceForTotal = (newTotal: number, quantity: number, discountPct: number): number | undefined => {
+    const factor = quantity * (1 - discountPct / 100)
+    if (!(factor > 0)) return undefined
+    return newTotal / factor
   }
 
   const subtotal = cartItems.reduce((s, item) => s + getLineTotal(item), 0)
@@ -491,6 +562,8 @@ export default function POS() {
     setCartItems(prev => prev.filter(i => getItemKey(i.product.id, i.variation?.id) !== key))
     setItemDiscounts(prev => { const next = { ...prev }; delete next[key]; return next })
     setItemQtyStrings(prev => { const next = { ...prev }; delete next[key]; return next })
+    setItemPriceOverride(prev => { const next = { ...prev }; delete next[key]; return next })
+    setItemTotalStrings(prev => { const next = { ...prev }; delete next[key]; return next })
   }
 
   // Applies one % to every current cart line's own discount field instead of
@@ -513,6 +586,8 @@ export default function POS() {
     setCartItems([])
     setItemDiscounts({})
     setItemQtyStrings({})
+    setItemPriceOverride({})
+    setItemTotalStrings({})
     setBulkDiscountInput('')
   }
 
@@ -822,7 +897,7 @@ export default function POS() {
         paymentMethod: effectivePaymentMethod,
         items: cartItems.map(item => {
           const key = getItemKey(item.product.id, item.variation?.id)
-          const unitPrice = item.variation ? item.variation.price : item.product.basePrice
+          const unitPrice = getItemPrice(item)
           const discPct = itemDiscounts[key] || 0
           const isRealVariation = item.variation && !item.variation.id.endsWith('-default')
           return {
@@ -881,7 +956,7 @@ export default function POS() {
           invoiceNumber: created?.invoiceNumber ?? created?.receiptNumber ?? (offlineRef ? `REF-${offlineRef}` : `FAC-${Date.now()}`),
           branchName: created?.branch?.name ?? currentStore?.name ?? 'Tienda',
           items: cartItems.map(item => {
-            const unitPrice = item.variation ? item.variation.price : item.product.basePrice
+            const unitPrice = getItemPrice(item)
             const disc = itemDiscounts[getItemKey(item.product.id, item.variation?.id)] || 0
             return {
               id: getItemKey(item.product.id, item.variation?.id),
@@ -1160,7 +1235,8 @@ export default function POS() {
               <AnimatePresence initial={false}>
                 {cartItems.map((item, idx) => {
                   const key = getItemKey(item.product.id, item.variation?.id)
-                  const price = item.variation ? item.variation.price : item.product.basePrice
+                  const price = getItemPrice(item)
+                  const isPriceOverridden = itemPriceOverride[key] !== undefined
                   const disc = itemDiscounts[key] || 0
                   const lineTotal = getLineTotal(item)
                   return (
@@ -1189,7 +1265,12 @@ export default function POS() {
                           )}
                         </div>
                       </div>
-                      <p className="text-right text-sm text-gray-600">Q{Number(price).toFixed(2)}</p>
+                      <p
+                        className={`text-right text-sm ${isPriceOverridden ? 'text-primary-600 font-medium' : 'text-gray-600'}`}
+                        title={isPriceOverridden ? 'Precio ajustado para esta venta — no cambia el precio del producto' : undefined}
+                      >
+                        Q{Number(price).toFixed(2)}
+                      </p>
                       {/* Quantity control — un solo campo, se escribe la cantidad directo */}
                       <div className="flex items-center justify-center">
                         <input
@@ -1226,7 +1307,39 @@ export default function POS() {
                         />
                         <span className="text-gray-400 text-xs">%</span>
                       </div>
-                      <p className="text-right text-sm font-semibold text-gray-800">Q{lineTotal.toFixed(2)}</p>
+                      {/* Total editable — útil cuando el precio real no es exacto
+                          (ej. 6 hojas por Q1, no por Q0.90). El precio unitario de
+                          esta línea se recalcula solo para que cuadre con el total
+                          escrito; nunca se guarda en el producto. */}
+                      <div className="flex items-center justify-end">
+                        <span className="text-gray-400 text-xs mr-0.5">Q</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={itemTotalStrings[key] ?? lineTotal.toFixed(2)}
+                          onChange={e => setItemTotalStrings(prev => ({ ...prev, [key]: e.target.value }))}
+                          onFocus={e => e.target.select()}
+                          onBlur={() => {
+                            const str = itemTotalStrings[key]
+                            if (str !== undefined) {
+                              const n = parseFloat(str)
+                              if (!isNaN(n) && n >= 0) {
+                                const newPrice = priceForTotal(n, item.quantity, disc)
+                                if (newPrice !== undefined) {
+                                  setItemPriceOverride(prev => ({ ...prev, [key]: newPrice }))
+                                }
+                              }
+                              setItemTotalStrings(prev => { const next = { ...prev }; delete next[key]; return next })
+                            }
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                          }}
+                          className={`w-16 text-right text-sm font-semibold border rounded py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 ${
+                            isPriceOverridden ? 'border-primary-300 text-primary-700' : 'border-gray-200 text-gray-800'
+                          }`}
+                        />
+                      </div>
                       <button
                         onClick={() => removeItem(item.product.id, item.variation?.id)}
                         className="text-gray-300 hover:text-red-500 transition-colors">
@@ -1267,7 +1380,7 @@ export default function POS() {
                     <p className="text-xs text-gray-500">NIT: {getCustomerNit(selectedCustomer)}</p>
                     {selectedCustomer.creditEnabled && (
                       <p className="text-xs text-green-600">
-                        Crédito: {selectedCustomer.creditAvailable === null ? 'Ilimitado' : `Q${(selectedCustomer.creditAvailable ?? 0).toFixed(2)}`}
+                        Crédito: Q{(selectedCustomer.creditUsed ?? 0).toFixed(2)} / {selectedCustomer.creditAvailable === null ? 'Ilimitado' : `Q${(selectedCustomer.creditLimit ?? 0).toFixed(2)}`}
                       </p>
                     )}
                     {(selectedCustomer.creditUsedPercent ?? 0) >= 75 && (
@@ -1656,8 +1769,10 @@ export default function POS() {
               <div className="space-y-3">
                 <div>
                   <label className="label">Nuevo stock *</label>
-                  <input type="number" min={stockPrompt.requestedQty} value={stockPromptNewStock}
-                    onChange={e => setStockPromptNewStock(e.target.value)} className="input w-full" />
+                  <input type="text" inputMode="numeric" value={stockPromptNewStock}
+                    onChange={e => setStockPromptNewStock(e.target.value)}
+                    onFocus={e => e.target.select()}
+                    className="input w-full" />
                 </div>
                 <div>
                   <label className="label">Razón del ajuste *</label>

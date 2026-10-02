@@ -310,7 +310,7 @@ export default function Suppliers() {
             {searchTerm ? 'No se encontraron proveedores' : 'No hay proveedores registrados'}
           </p>
           {!searchTerm && (
-            <button onClick={handleCreateSupplier} className="btn-primary mt-4">
+            <button onClick={handleCreateSupplier} className="btn-primary btn-md mt-4">
               Agregar Primer Proveedor
             </button>
           )}

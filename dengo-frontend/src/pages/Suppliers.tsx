@@ -39,6 +39,9 @@ export default function Suppliers() {
   const PAGE_SIZE = 50
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [loading, setLoading] = useState(true)
+  // See Customers.tsx for why this exists — only the first load blocks with
+  // a full-page spinner; later fetches must not unmount the search input.
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<string>('active')
@@ -91,7 +94,7 @@ export default function Suppliers() {
         setStats(res.stats)
       })
       .catch(e => toast.error(e.message))
-      .finally(() => setLoading(false))
+      .finally(() => { setLoading(false); setHasLoadedOnce(true) })
   }
 
   useEffect(() => { fetchSuppliers() }, [selectedStatus, page, debouncedSearch])
@@ -184,14 +187,14 @@ export default function Suppliers() {
   }
 
 
-  if (loading) return (
+  if (loading && !hasLoadedOnce) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 transition-opacity ${loading ? 'opacity-60' : ''}`}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

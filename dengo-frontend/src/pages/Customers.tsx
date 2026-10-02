@@ -62,6 +62,12 @@ export default function Customers() {
   const PAGE_SIZE = 50
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
+  // Only the very first load shows the full-page spinner. Every later fetch
+  // (search debounce, pagination, filter change) reuses `loading` just for a
+  // subtle in-place indicator — without this, the search input itself was
+  // unmounting and remounting on every keystroke-pause, stealing focus and
+  // forcing a re-click to keep typing.
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
@@ -157,7 +163,7 @@ export default function Customers() {
         setStats(res.stats)
       })
       .catch(e => toast.error(e.message))
-      .finally(() => setLoading(false))
+      .finally(() => { setLoading(false); setHasLoadedOnce(true) })
   }
 
   useEffect(() => { fetchCustomers() }, [page, debouncedSearch, filterStatus])
@@ -300,14 +306,14 @@ export default function Customers() {
     return `Q${Number(c.creditUsed ?? 0).toFixed(2)} / Q${Number(c.creditLimit ?? 0).toFixed(2)}`
   }
 
-  if (loading) return (
+  if (loading && !hasLoadedOnce) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 transition-opacity ${loading ? 'opacity-60' : ''}`}>
 
       {/* Header */}
       <div className="flex justify-between items-center">

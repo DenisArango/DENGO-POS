@@ -146,6 +146,10 @@ export default function Inventory() {
   const PAGE_SIZE = 50
   const [inventory, setInventory] = useState<InventoryItemWithStatus[]>([])
   const [loading, setLoading] = useState(false)
+  // See Customers.tsx for why this exists — only the first load hides the
+  // controls behind a spinner; later fetches must not unmount the search
+  // input or it loses focus mid-type.
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -218,7 +222,7 @@ export default function Inventory() {
         setStats(res.stats)
       })
       .catch(e => toast.error(e.message))
-      .finally(() => setLoading(false))
+      .finally(() => { setLoading(false); setHasLoadedOnce(true) })
   }
 
   useEffect(() => {
@@ -377,7 +381,7 @@ export default function Inventory() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 transition-opacity ${loading && hasLoadedOnce ? 'opacity-60' : ''}`}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -397,14 +401,14 @@ export default function Inventory() {
       </div>
 
       {/* Loading */}
-      {loading && (
+      {loading && !hasLoadedOnce && (
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
         </div>
       )}
 
       {/* Estadísticas */}
-      {!loading && (
+      {(!loading || hasLoadedOnce) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {[
             { label: 'Total Productos', value: stats.totalProducts, Icon: Package, color: 'text-primary-600' },
@@ -428,7 +432,7 @@ export default function Inventory() {
       )}
 
       {/* Controles */}
-      {!loading && (
+      {(!loading || hasLoadedOnce) && (
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1 relative">
@@ -486,7 +490,7 @@ export default function Inventory() {
       )}
 
       {/* Tabla */}
-      {!loading && (
+      {(!loading || hasLoadedOnce) && (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">

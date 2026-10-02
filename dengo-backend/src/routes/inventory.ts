@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma.js'
 import { updateStock, setStock } from '../services/inventory.service.js'
 import { resolveBranchScope, canAccessBranch } from '../lib/branch-scope.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
+import { multiWordSearch } from '../lib/search.js'
 
 // Same thresholds as the frontend's computeStatus() — duplicated here because
 // 'low'/'critical'/'overstock' compares two columns from different tables
@@ -27,13 +28,11 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
       ...(branchId ? { branchId } : {}),
       ...((q.search || q.category) ? {
         product: {
-          ...(q.search ? {
-            OR: [
-              { name: { contains: q.search, mode: 'insensitive' as const } },
-              { barcode: { contains: q.search, mode: 'insensitive' as const } },
-              { sku: { contains: q.search, mode: 'insensitive' as const } },
-            ],
-          } : {}),
+          ...(q.search ? multiWordSearch(q.search, word => [
+            { name: { contains: word, mode: 'insensitive' as const } },
+            { barcode: { contains: word, mode: 'insensitive' as const } },
+            { sku: { contains: word, mode: 'insensitive' as const } },
+          ]) : {}),
           ...(q.category ? { category: { name: q.category } } : {}),
         },
       } : {}),
@@ -52,8 +51,13 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
       const conditions: Prisma.Sql[] = []
       if (branchId) conditions.push(Prisma.sql`i."BRANCH_ID" = ${branchId}`)
       if (q.search) {
-        const s = `%${q.search}%`
-        conditions.push(Prisma.sql`(p."NAME" ILIKE ${s} OR p."BARCODE" ILIKE ${s} OR p."SKU" ILIKE ${s})`)
+        // Same multi-word AND-of-OR as multiWordSearch() — "hojas bond"
+        // matches "Hojas de Papel Bond" even though the words aren't
+        // adjacent, which a single ILIKE '%hojas bond%' would miss.
+        for (const word of q.search.trim().split(/\s+/).filter(Boolean)) {
+          const w = `%${word}%`
+          conditions.push(Prisma.sql`(p."NAME" ILIKE ${w} OR p."BARCODE" ILIKE ${w} OR p."SKU" ILIKE ${w})`)
+        }
       }
       if (q.category) conditions.push(Prisma.sql`c."NAME" = ${q.category}`)
       if (q.status) conditions.push(Prisma.sql`${STATUS_CASE_SQL} = ${q.status}`)

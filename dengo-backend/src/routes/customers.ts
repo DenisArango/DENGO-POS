@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
 import { log } from '../services/audit.service.js'
+import { multiWordSearch } from '../lib/search.js'
 
 const schema = z.object({
   nit: z.string().min(1),
@@ -65,14 +66,12 @@ export default async function customerRoutes(fastify: FastifyInstance) {
     const where = {
       ...(q.isActive === 'all' ? {} : { isActive: q.isActive === 'false' ? false : true }),
       ...(q.hasCredit === 'true' ? { creditLimit: { gt: 0 } } : {}),
-      ...(q.search ? {
-        OR: [
-          { name: { contains: q.search, mode: 'insensitive' as const } },
-          { nit: { contains: q.search, mode: 'insensitive' as const } },
-          { email: { contains: q.search, mode: 'insensitive' as const } },
-          { phone: { contains: q.search, mode: 'insensitive' as const } },
-        ],
-      } : {}),
+      ...(q.search ? multiWordSearch(q.search, word => [
+        { name: { contains: word, mode: 'insensitive' as const } },
+        { nit: { contains: word, mode: 'insensitive' as const } },
+        { email: { contains: word, mode: 'insensitive' as const } },
+        { phone: { contains: word, mode: 'insensitive' as const } },
+      ]) : {}),
     }
 
     // Paginated path — opt-in via `page`, used by the Customers management

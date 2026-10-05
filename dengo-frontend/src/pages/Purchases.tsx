@@ -57,6 +57,7 @@ interface ProductOption {
   barcode?: string
   sku?: string
   cost?: number
+  basePrice?: number
   isActive?: boolean
   variations?: ProductVariation[]
 }
@@ -67,6 +68,7 @@ interface IntakeItem {
   productName: string
   quantity: number
   unitCost: number
+  unitPrice: number
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -114,9 +116,11 @@ export default function Purchases() {
   const [showVariationModal, setShowVariationModal] = useState(false)
   const [selectedForVariation, setSelectedForVariation] = useState<ProductOption | null>(null)
 
-  // Inline cost edit
+  // Inline cost/price edit
   const [editingCostId, setEditingCostId] = useState<string | null>(null)
   const [editCostVal, setEditCostVal] = useState('')
+  const [editingPriceId, setEditingPriceId] = useState<string | null>(null)
+  const [editPriceVal, setEditPriceVal] = useState('')
 
   // ── Load data ─────────────────────────────────────────────────────────────
   const fetchMovements = () => {
@@ -202,7 +206,7 @@ export default function Purchases() {
   async function searchProducts(query: string) {
     try {
       const data = await api.get<ProductOption[]>(`/api/products?search=${encodeURIComponent(query)}&isActive=true`)
-      const results = (data ?? []).filter(p => p.isActive !== false).slice(0, 8)
+      const results = (data ?? []).filter(p => p.isActive !== false)
       setPosResults(results)
       setShowResults(results.length > 0)
     } catch {
@@ -231,12 +235,13 @@ export default function Purchases() {
       ? `${product.fullName ?? product.name} (${variation.name})`
       : (product.fullName ?? product.name)
     const cost = Number(product.cost ?? 0)
+    const price = Number(product.basePrice ?? 0)
     setIntakeItems(prev => {
       const existing = prev.find(i => i.productId === productId)
       if (existing) {
         return prev.map(i => i.productId === productId ? { ...i, quantity: i.quantity + 1 } : i)
       }
-      return [...prev, { id: Math.random().toString(36).slice(2), productId, productName: name, quantity: 1, unitCost: cost }]
+      return [...prev, { id: Math.random().toString(36).slice(2), productId, productName: name, quantity: 1, unitCost: cost, unitPrice: price }]
     })
     setShowVariationModal(false)
     setSelectedForVariation(null)
@@ -261,6 +266,17 @@ export default function Purchases() {
     setEditingCostId(null)
   }
 
+  const startEditPrice = (item: IntakeItem) => {
+    setEditingPriceId(item.id)
+    setEditPriceVal(item.unitPrice.toFixed(2))
+  }
+
+  const commitPrice = (id: string) => {
+    const n = parseFloat(editPriceVal)
+    if (!isNaN(n) && n >= 0) setIntakeItems(prev => prev.map(i => i.id === id ? { ...i, unitPrice: n } : i))
+    setEditingPriceId(null)
+  }
+
   const resetForm = () => {
     setIntakeItems([])
     setNotes('')
@@ -271,6 +287,7 @@ export default function Purchases() {
     setPosResults([])
     setShowResults(false)
     setEditingCostId(null)
+    setEditingPriceId(null)
   }
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -320,6 +337,7 @@ export default function Purchases() {
           productName: i.productName,
           quantity: i.quantity,
           unitCost: i.unitCost,
+          unitPrice: i.unitPrice,
         })),
       })
       toast.success(`Ingreso confirmado — ${intakeItems.length} producto(s), ${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(2)} unidades`)
@@ -406,12 +424,15 @@ export default function Purchases() {
                   <p className="text-sm">Busca productos para agregarlos al ingreso</p>
                 </div>
               ) : (
+                <>
+                <p className="px-4 pt-2 text-xs text-gray-400">Costo y precio de venta se guardan en el producto al confirmar el ingreso.</p>
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 sticky top-0">
                     <tr>
                       <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Producto</th>
                       <th className="text-center px-3 py-2 text-xs font-medium text-gray-500 w-36">Cantidad</th>
                       <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 w-32">Costo unit.</th>
+                      <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 w-32">Precio venta</th>
                       <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 w-28">Subtotal</th>
                       <th className="w-10" />
                     </tr>
@@ -466,6 +487,32 @@ export default function Purchases() {
                           )}
                         </td>
 
+                        {/* Sale price (inline edit) — saved to Product.basePrice on confirm */}
+                        <td className="px-4 py-2 text-right">
+                          {editingPriceId === item.id ? (
+                            <input
+                              type="number"
+                              value={editPriceVal}
+                              onChange={e => setEditPriceVal(e.target.value)}
+                              onBlur={() => commitPrice(item.id)}
+                              onKeyDown={e => { if (e.key === 'Enter') commitPrice(item.id); if (e.key === 'Escape') setEditingPriceId(null) }}
+                              className="w-24 text-right border border-primary-400 rounded px-2 py-0.5 text-sm focus:outline-none"
+                              autoFocus
+                              step="0.01"
+                              min="0"
+                            />
+                          ) : (
+                            <button
+                              onClick={() => startEditPrice(item)}
+                              className="flex items-center gap-1 ml-auto text-gray-700 hover:text-primary-600 group"
+                              title="Editar precio de venta"
+                            >
+                              <span>Q{item.unitPrice.toFixed(2)}</span>
+                              <Edit2 size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </button>
+                          )}
+                        </td>
+
                         <td className="px-4 py-2 text-right font-semibold text-gray-800">
                           Q{(item.quantity * item.unitCost).toFixed(2)}
                         </td>
@@ -482,6 +529,7 @@ export default function Purchases() {
                     ))}
                   </tbody>
                 </table>
+                </>
               )}
             </div>
           </div>
@@ -541,7 +589,7 @@ export default function Purchases() {
                         {filteredSuppliers.length === 0 ? (
                           <p className="px-3 py-2 text-xs text-gray-400">{supplierSearch ? 'Sin resultados' : 'Escribe para buscar... (o deja vacío para ingreso sin proveedor)'}</p>
                         ) : (
-                          filteredSuppliers.slice(0, 8).map(s => (
+                          filteredSuppliers.slice(0, 50).map(s => (
                             <button key={s.id} onMouseDown={() => { setSelectedSupplierId(s.id); setSupplierSearch(''); setShowSupplierDropdown(false) }}
                               className="w-full text-left px-3 py-2 hover:bg-primary-50 transition-colors border-b border-gray-50 last:border-0">
                               <p className="text-sm font-medium text-gray-800">{s.name}</p>

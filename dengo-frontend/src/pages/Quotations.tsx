@@ -4,7 +4,7 @@ import {
   Plus, Search, Eye, Trash2, Send, CheckCircle, XCircle,
   FileText, AlertCircle, X, ClipboardList,
   RefreshCw, Clock, DollarSign, ArrowLeft, Package,
-  User
+  User, ChevronDown, Ban
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -13,9 +13,10 @@ import { api } from '../lib/api'
 import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
+import { matchesSearch } from '../lib/search'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type QuotationStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'CONVERTED'
+type QuotationStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'CONVERTED' | 'CANCELLED'
 
 interface Customer {
   id: string
@@ -82,6 +83,7 @@ const STATUS_CONFIG: Record<QuotationStatus, { label: string; color: string }> =
   REJECTED:  { label: 'Rechazada',  color: 'bg-red-100 text-red-700' },
   EXPIRED:   { label: 'Vencida',    color: 'bg-orange-100 text-orange-700' },
   CONVERTED: { label: 'Convertida', color: 'bg-purple-100 text-purple-700' },
+  CANCELLED: { label: 'Cancelada',  color: 'bg-gray-100 text-gray-500' },
 }
 
 function safeDate(value: any, fallback = '—'): string {
@@ -102,7 +104,7 @@ function safeDateLong(value: any, fallback = '—'): string {
 
 function StatusBadge({ status }: { status: QuotationStatus }) {
   const cfg = STATUS_CONFIG[status] ?? { label: status, color: 'bg-gray-100 text-gray-700' }
-  const Icon = { DRAFT: FileText, SENT: Send, ACCEPTED: CheckCircle, REJECTED: XCircle, EXPIRED: Clock, CONVERTED: RefreshCw }[status] ?? FileText
+  const Icon = { DRAFT: FileText, SENT: Send, ACCEPTED: CheckCircle, REJECTED: XCircle, EXPIRED: Clock, CONVERTED: RefreshCw, CANCELLED: Ban }[status] ?? FileText
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${cfg.color}`}>
       <Icon size={12} /> {cfg.label}
@@ -114,7 +116,7 @@ function StatusBadge({ status }: { status: QuotationStatus }) {
 export default function Quotations() {
   const { user } = useAuthStore()
   const { currentStore } = useStore()
-  const branchId = currentStore?.id ?? user?.branchId ?? ''
+  const defaultBranchId = currentStore?.id ?? user?.branchId ?? ''
   const { hasPermission } = usePermissions()
   const canManage = hasPermission('quotations.create')
   const canConvert = hasPermission('quotations.convert')
@@ -138,11 +140,16 @@ export default function Quotations() {
   const [stats, setStats] = useState({ total: 0, draft: 0, sent: 0, accepted: 0, rejected: 0 })
 
   // Create form state
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
+  const [selectedBranchId, setSelectedBranchId] = useState(defaultBranchId)
   const [selectedCustomerId, setSelectedCustomerId] = useState('')
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
   const [quotationNotes, setQuotationNotes] = useState('')
   const [validUntil, setValidUntil] = useState('')
   const [discountPct, setDiscountPct] = useState(0)
   const [draftItems, setDraftItems] = useState<DraftItem[]>([])
+  const [itemSubtotalStrings, setItemSubtotalStrings] = useState<Record<string, string>>({})
 
   // Product search state
   const [posSearch, setPosSearch] = useState('')
@@ -172,6 +179,9 @@ export default function Quotations() {
     api.get<Customer[]>('/api/customers')
       .then(list => setCustomers((list ?? []).filter(c => c.isActive !== false)))
       .catch(() => {})
+    api.get<{ id: string; name: string }[]>('/api/branches')
+      .then(setBranches)
+      .catch(() => {})
   }, [])
 
   // ── Debounced product search ───────────────────────────────────────────────
@@ -185,7 +195,7 @@ export default function Quotations() {
   async function performSearch(query: string) {
     try {
       const data = await api.get<ProductOption[]>(`/api/products?search=${encodeURIComponent(query)}&isActive=true`)
-      const results = (data ?? []).slice(0, 8)
+      const results = data ?? []
       setSearchResults(results)
       setShowSearchResults(results.length > 0)
     } catch {
@@ -231,16 +241,35 @@ export default function Quotations() {
     }))
   }
 
+  // Lets the cashier type the line's TOTAL directly (e.g. 6 hojas por Q1
+  // aunque 6×0.15 no dé exacto) — the unit price is back-calculated to match,
+  // same pattern as POS's editable line total.
+  function commitItemSubtotal(id: string, rawValue: string) {
+    setItemSubtotalStrings(prev => { const next = { ...prev }; delete next[id]; return next })
+    const newSubtotal = Number(rawValue)
+    if (!rawValue.trim() || isNaN(newSubtotal) || newSubtotal < 0) return
+    setDraftItems(prev => prev.map(item => {
+      if (item.id !== id) return item
+      const qty = item.quantity || 1
+      return { ...item, subtotal: newSubtotal, unitPrice: newSubtotal / qty }
+    }))
+  }
+
   function removeItem(id: string) {
     setDraftItems(prev => prev.filter(i => i.id !== id))
+    setItemSubtotalStrings(prev => { const next = { ...prev }; delete next[id]; return next })
   }
 
   function resetCreateForm() {
+    setSelectedBranchId(defaultBranchId)
     setSelectedCustomerId('')
+    setCustomerSearch('')
+    setShowCustomerDropdown(false)
     setQuotationNotes('')
     setValidUntil('')
     setDiscountPct(0)
     setDraftItems([])
+    setItemSubtotalStrings({})
     setPosSearch('')
     setSearchResults([])
     setShowSearchResults(false)
@@ -254,14 +283,14 @@ export default function Quotations() {
 
   const handleCreateQuotation = (saveAsDraft: boolean) => {
     if (!selectedCustomerId) { toast.error('Selecciona un cliente'); return }
-    if (!branchId) { toast.error('No hay sucursal seleccionada'); return }
+    if (!selectedBranchId) { toast.error('Selecciona una sucursal'); return }
     const validItems = draftItems.filter(i => i.productId)
     if (validItems.length === 0) { toast.error('Agrega al menos un producto del catálogo'); return }
     if (!validUntil) { toast.error('Indica la fecha de validez'); return }
 
     setSaving(true)
     api.post('/api/quotations', {
-      branchId,
+      branchId: selectedBranchId,
       customerId: selectedCustomerId,
       subtotal: itemsSubtotal,
       tax: taxAmount,
@@ -297,6 +326,7 @@ export default function Quotations() {
   const handleSend    = (id: string) => transitionStatus(id, 'send', 'Cotización marcada como enviada')
   const handleAccept  = (id: string) => transitionStatus(id, 'accept', 'Cotización aceptada')
   const handleReject  = (id: string) => transitionStatus(id, 'reject', 'Cotización rechazada')
+  const handleCancel  = (id: string) => transitionStatus(id, 'cancel', 'Cotización cancelada')
 
   // Convert uses POST not PUT
   const handleConvert = (id: string) => {
@@ -319,6 +349,9 @@ export default function Quotations() {
   )
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+
+  const selectedCustomer = customers.find(c => c.id === selectedCustomerId) ?? null
+  const filteredCustomers = customers.filter(c => matchesSearch([c.name, c.nit], customerSearch))
 
   // ── CREATE VIEW ────────────────────────────────────────────────────────────
   if (view === 'create') {
@@ -439,8 +472,19 @@ export default function Quotations() {
                       />
                     </div>
 
-                    {/* Subtotal */}
-                    <p className="text-right text-sm font-semibold text-gray-800">Q{item.subtotal.toFixed(2)}</p>
+                    {/* Subtotal — editable: escribir el total recalcula el precio unitario */}
+                    <div className="flex items-center justify-end">
+                      <span className="text-xs text-gray-400 mr-1">Q</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={itemSubtotalStrings[item.id] ?? item.subtotal.toFixed(2)}
+                        onFocus={e => e.target.select()}
+                        onChange={e => setItemSubtotalStrings(prev => ({ ...prev, [item.id]: e.target.value }))}
+                        onBlur={e => commitItemSubtotal(item.id, e.target.value)}
+                        className="input text-sm text-right w-20 py-1 font-semibold"
+                      />
+                    </div>
 
                     {/* Remove */}
                     <button onClick={() => removeItem(item.id)} className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded">
@@ -461,21 +505,72 @@ export default function Quotations() {
           {/* RIGHT: Form */}
           <div className="w-full md:w-80 flex flex-col gap-3 overflow-y-auto">
 
+            {/* Branch */}
+            <div className="bg-white rounded-lg shadow-sm p-5">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Sucursal</p>
+              <div className="relative">
+                <select
+                  value={selectedBranchId}
+                  onChange={e => setSelectedBranchId(e.target.value)}
+                  className="input w-full appearance-none pr-8"
+                >
+                  <option value="">Seleccionar...</option>
+                  {branches.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
             {/* Customer */}
             <div className="bg-white rounded-lg shadow-sm p-5 space-y-3">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
                 <User size={12} /> Cliente
               </p>
-              <select
-                value={selectedCustomerId}
-                onChange={e => setSelectedCustomerId(e.target.value)}
-                className="input w-full"
-              >
-                <option value="">-- Selecciona un cliente --</option>
-                {customers.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              {selectedCustomer ? (
+                <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{selectedCustomer.name}</p>
+                    {selectedCustomer.nit && <p className="text-xs text-gray-400">NIT: {selectedCustomer.nit}</p>}
+                  </div>
+                  <button
+                    onClick={() => { setSelectedCustomerId(''); setCustomerSearch('') }}
+                    className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Buscar cliente por nombre o NIT..."
+                    value={customerSearch}
+                    onChange={e => setCustomerSearch(e.target.value)}
+                    onFocus={() => setShowCustomerDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 150)}
+                    className="input pl-8 w-full text-sm py-2"
+                  />
+                  {showCustomerDropdown && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto">
+                      {filteredCustomers.length > 0 ? filteredCustomers.map(c => (
+                        <div
+                          key={c.id}
+                          onMouseDown={() => { setSelectedCustomerId(c.id); setCustomerSearch('') }}
+                          className="px-3 py-2 hover:bg-primary-50 cursor-pointer"
+                        >
+                          <p className="text-sm font-medium text-gray-800">{c.name}</p>
+                          {c.nit && <p className="text-xs text-gray-400">NIT: {c.nit}</p>}
+                        </div>
+                      )) : (
+                        <p className="px-3 py-3 text-sm text-gray-500 text-center">Sin resultados</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               {customers.length === 0 && (
                 <p className="text-xs text-orange-600">No hay clientes. Agrégalos en la sección Clientes.</p>
               )}
@@ -547,7 +642,7 @@ export default function Quotations() {
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => handleCreateQuotation(false)}
-                disabled={saving || !selectedCustomerId || draftItems.length === 0 || !validUntil}
+                disabled={saving || !selectedCustomerId || !selectedBranchId || draftItems.length === 0 || !validUntil}
                 className="btn-primary btn-md flex items-center justify-center gap-2 w-full disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving
@@ -557,7 +652,7 @@ export default function Quotations() {
               </button>
               <button
                 onClick={() => handleCreateQuotation(true)}
-                disabled={saving || !selectedCustomerId || draftItems.length === 0 || !validUntil}
+                disabled={saving || !selectedCustomerId || !selectedBranchId || draftItems.length === 0 || !validUntil}
                 className="btn-outline btn-md flex items-center justify-center gap-2 w-full disabled:opacity-50"
               >
                 <FileText size={16} /> Guardar Borrador
@@ -611,7 +706,7 @@ export default function Quotations() {
             { label: 'Borrador', value: stats.draft, color: 'gray', Icon: FileText },
             { label: 'Enviadas', value: stats.sent, color: 'blue', Icon: Send },
             { label: 'Aceptadas', value: stats.accepted, color: 'green', Icon: CheckCircle },
-            { label: 'Rechaz./Venc.', value: stats.rejected, color: 'red', Icon: XCircle },
+            { label: 'Rechaz./Venc./Canc.', value: stats.rejected, color: 'red', Icon: XCircle },
           ].map(({ label, value, color, Icon }) => (
             <motion.div key={label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               className="bg-white rounded-lg shadow-sm p-4">
@@ -714,6 +809,12 @@ export default function Quotations() {
                                 <XCircle size={16} />
                               </button>
                             </>
+                          )}
+                          {canManage && (quotation.status === 'DRAFT' || quotation.status === 'SENT') && (
+                            <button onClick={() => handleCancel(quotation.id)}
+                              className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg" title="Cancelar cotización">
+                              <Ban size={16} />
+                            </button>
                           )}
                           {canConvert && quotation.status === 'ACCEPTED' && (
                             <button onClick={() => handleConvert(quotation.id)}
@@ -822,6 +923,10 @@ export default function Quotations() {
               <button onClick={() => setShowDetailsModal(false)} className="btn-secondary btn-md">Cerrar</button>
               {canManage && selectedQuotation.status === 'DRAFT' && (
                 <>
+                  <button onClick={() => handleCancel(selectedQuotation.id)}
+                    className="btn-outline btn-md flex items-center gap-2 text-gray-500">
+                    <Ban size={16} /> Cancelar Cotización
+                  </button>
                   <button onClick={() => handleSend(selectedQuotation.id)} className="btn-primary btn-md flex items-center gap-2">
                     <Send size={16} /> Enviar al Cliente
                   </button>
@@ -832,6 +937,10 @@ export default function Quotations() {
               )}
               {canManage && selectedQuotation.status === 'SENT' && (
                 <>
+                  <button onClick={() => handleCancel(selectedQuotation.id)}
+                    className="btn-outline btn-md flex items-center gap-2 text-gray-500">
+                    <Ban size={16} /> Cancelar Cotización
+                  </button>
                   <button onClick={() => handleReject(selectedQuotation.id)}
                     className="btn-outline btn-md flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50">
                     <XCircle size={16} /> Rechazada

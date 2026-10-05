@@ -11,7 +11,7 @@ import { api, ApiError } from '../lib/api'
 import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
-import { ThermalCashCloseReport, ThermalReconciliationSlip } from '../components/print/ThermalCashCloseReport'
+import { ThermalCashCloseReport } from '../components/print/ThermalCashCloseReport'
 import {
   queueRegisterOp, setCache, getCache, getRegisterTally, resetRegisterTally, type RegisterSalesTally,
   getPendingRegisterOps, updatePendingRegisterOp,
@@ -105,7 +105,6 @@ export default function CashRegisterPage() {
   const [externalSalesTotalInput, setExternalSalesTotalInput] = useState('')
   const [reconciliationInput, setReconciliationInput] = useState('')
   const [savingReconciliation, setSavingReconciliation] = useState(false)
-  const [printMode, setPrintMode] = useState<'summary' | 'reconciliation' | null>(null)
   const [movementType, setMovementType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE')
   const [movementAmount, setMovementAmount] = useState('')
   const [movementDescription, setMovementDescription] = useState('')
@@ -317,7 +316,6 @@ export default function CashRegisterPage() {
         setInitialAmount(nextOpenAmount)
       }
       setNextOpenAmount('')
-      setPrintMode(null)
       setReconciliationInput(closedReg.externalSalesTotal != null ? String(closedReg.externalSalesTotal) : '')
       setShowReportModal(true)
     }
@@ -417,9 +415,7 @@ export default function CashRegisterPage() {
     }
   }
 
-  const handlePrint = (mode: 'summary' | 'reconciliation') => {
-    setPrintMode(mode)
-    // Let the print-only block render with the new mode before invoking print
+  const handlePrint = () => {
     requestAnimationFrame(() => window.print())
   }
 
@@ -633,7 +629,6 @@ export default function CashRegisterPage() {
                             onClick={() => {
                               setSelectedRegister(register)
                               setReconciliationInput(register.externalSalesTotal != null ? String(register.externalSalesTotal) : '')
-                              setPrintMode(null)
                               setShowReportModal(true)
                             }}
                             className="p-1 hover:bg-gray-100 rounded" title="Imprimir">
@@ -967,7 +962,6 @@ export default function CashRegisterPage() {
                   <button
                     onClick={() => {
                       setReconciliationInput(selectedRegister.externalSalesTotal != null ? String(selectedRegister.externalSalesTotal) : '')
-                      setPrintMode(null)
                       setShowDetailsModal(false)
                       setShowReportModal(true)
                     }}
@@ -1086,14 +1080,9 @@ export default function CashRegisterPage() {
 
               <div className="flex flex-wrap gap-3 pt-4 border-t">
                 <button onClick={() => setShowReportModal(false)} className="flex-1 btn-outline btn-md">Cerrar</button>
-                <button onClick={() => handlePrint('summary')} className="flex-1 btn-primary btn-md flex items-center justify-center gap-2">
+                <button onClick={() => handlePrint()} className="flex-1 btn-primary btn-md flex items-center justify-center gap-2">
                   <Printer size={18} />Imprimir Resumen
                 </button>
-                {currentStore?.salesReconciliationEnabled && selectedRegister.externalSalesTotal != null && (
-                  <button onClick={() => handlePrint('reconciliation')} className="flex-1 btn-secondary btn-md flex items-center justify-center gap-2">
-                    <Printer size={18} />Imprimir Conciliación
-                  </button>
-                )}
               </div>
             </motion.div>
           </motion.div>
@@ -1101,13 +1090,13 @@ export default function CashRegisterPage() {
       </AnimatePresence>
     </div>
 
-    {/* Print-only thermal blocks — one at a time, whichever handlePrint() last
-        set. Kept as a true sibling of the page (not nested inside it) so
-        `print:hidden` on the page above fully collapses it for print instead
-        of leaving its height reserved — see ThermalReceipt.tsx / POS.tsx for
-        the same fix and why it matters (a page taller than one printed sheet
-        pushes out a second, near-blank page otherwise). */}
-    {showReportModal && selectedRegister && selectedRegister.status === 'CLOSED' && printMode === 'summary' && (
+    {/* Print-only thermal block — kept as a true sibling of the page (not
+        nested inside it) so `print:hidden` on the page above fully collapses
+        it for print instead of leaving its height reserved — see
+        ThermalReceipt.tsx / POS.tsx for the same fix and why it matters (a
+        page taller than one printed sheet pushes out a second, near-blank
+        page otherwise). */}
+    {showReportModal && selectedRegister && selectedRegister.status === 'CLOSED' && (
         <ThermalCashCloseReport
           widthMm={currentStore?.receiptWidthMm ?? 55}
           data={{
@@ -1133,21 +1122,6 @@ export default function CashRegisterPage() {
             pendingSync: selectedRegister.pendingSync,
             salesReconciliationEnabled: currentStore?.salesReconciliationEnabled,
             externalSalesTotal: selectedRegister.externalSalesTotal,
-          }}
-        />
-      )}
-      {showReportModal && selectedRegister && selectedRegister.status === 'CLOSED' && printMode === 'reconciliation' && selectedRegister.externalSalesTotal != null && (
-        <ThermalReconciliationSlip
-          widthMm={currentStore?.receiptWidthMm ?? 55}
-          data={{
-            registerLabel: `${selectedRegister.name ?? 'Caja'} #${selectedRegister.registerNumber ?? '–'}`,
-            branchName: currentStore?.name ?? 'Tienda',
-            logo: currentStore?.logo,
-            companyName: currentStore?.companyName,
-            closedAt: selectedRegister.closedAt!,
-            programTotal: selectedRegister.sales?.total ?? 0,
-            externalTotal: selectedRegister.externalSalesTotal,
-            difference: selectedRegister.externalSalesDifference ?? 0,
           }}
         />
       )}

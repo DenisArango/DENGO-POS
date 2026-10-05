@@ -620,7 +620,7 @@ model Quotation {
   tax               Decimal   @default(0) @map("TAX") @db.Decimal(18, 2)
   discount          Decimal   @default(0) @map("DISCOUNT") @db.Decimal(18, 2)
   total             Decimal   @map("TOTAL") @db.Decimal(18, 2)
-  status            String    @default("DRAFT") @map("STATUS") @db.VarChar(20)  // DRAFT | SENT | ACCEPTED | REJECTED | EXPIRED | CONVERTED
+  status            String    @default("DRAFT") @map("STATUS") @db.VarChar(20)  // DRAFT | SENT | ACCEPTED | REJECTED | EXPIRED | CONVERTED | CANCELLED
   validUntil        DateTime  @map("VALID_UNTIL")
   notes             String?   @map("NOTES")
   createdById       String    @map("CREATED_BY_ID") @db.VarChar(36)

@@ -217,12 +217,19 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
         productName: z.string(),
         quantity: z.number().min(0.001),
         unitCost: z.number().min(0),
+        unitPrice: z.number().min(0).optional(),
       })).min(1),
       notes: z.string().optional(),
     }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
     if (!canAccessBranch(request, body.data.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
     if (!hasPermission(request, 'purchases.receive')) return reply.status(403).send({ error: 'Acceso denegado' })
+
+    // Receiving merchandise is also where the cashier already knows this
+    // batch's real cost/sale price — persisting them here to the product
+    // (gated the same as the dedicated price-edit screen) avoids the double
+    // work of entering the intake and then separately editing the product.
+    const canEditPrice = hasPermission(request, 'inventory.editPrice')
 
     // Resolve supplier name for the reason field
     let supplierName = ''
@@ -243,6 +250,28 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
         referenceId,
         reason,
       })
+
+      if (canEditPrice) {
+        const old = await prisma.product.findUnique({ where: { id: item.productId }, select: { cost: true, basePrice: true } })
+        if (old) {
+          const data: { cost?: number; basePrice?: number } = {}
+          if (Number(old.cost) !== item.unitCost) data.cost = item.unitCost
+          if (item.unitPrice !== undefined && Number(old.basePrice) !== item.unitPrice) data.basePrice = item.unitPrice
+          if (Object.keys(data).length > 0) {
+            await prisma.product.update({ where: { id: item.productId }, data })
+            if (data.cost !== undefined) {
+              await prisma.priceHistory.create({
+                data: { productId: item.productId, field: 'Cost', oldValue: old.cost, newValue: data.cost, changedById: request.user.id },
+              })
+            }
+            if (data.basePrice !== undefined) {
+              await prisma.priceHistory.create({
+                data: { productId: item.productId, field: 'BasePrice', oldValue: old.basePrice, newValue: data.basePrice, changedById: request.user.id },
+              })
+            }
+          }
+        }
+      }
     }
 
     return reply.status(201).send({

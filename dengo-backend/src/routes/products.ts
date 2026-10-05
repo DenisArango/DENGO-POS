@@ -97,7 +97,12 @@ export default async function productRoutes(fastify: FastifyInstance) {
       })
     }
 
-    const products = await prisma.product.findMany({ where, include, orderBy: { name: 'asc' } })
+    // This path is only ever hit by the product-search typeaheads (POS/
+    // Purchases/Transfers/Quotations/SaleDetail), always with `search` set —
+    // capped so a broad query (e.g. a single common word) can't pull the
+    // whole catalog over the wire. The dropdowns show a scrollable subset of
+    // this, not a hard top-N cutoff.
+    const products = await prisma.product.findMany({ where, include, orderBy: { name: 'asc' }, take: 50 })
     return reply.send(products.map(p => ({ ...p, stock: stockByProduct.get(p.id) ?? 0 })))
   })
 

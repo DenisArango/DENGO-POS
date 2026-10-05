@@ -180,7 +180,7 @@ export default function StoreTransfers() {
   async function performSearch(query: string) {
     try {
       const data = await api.get<Product[]>(`/api/products?search=${encodeURIComponent(query)}&isActive=true`)
-      const results = (data ?? []).filter(p => p.isActive !== false).slice(0, 8)
+      const results = (data ?? []).filter(p => p.isActive !== false)
       setSearchResults(results)
       setShowSearchResults(results.length > 0)
     } catch {

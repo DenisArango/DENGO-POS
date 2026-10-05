@@ -70,7 +70,7 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
           draft: countByStatus.get('DRAFT') ?? 0,
           sent: countByStatus.get('SENT') ?? 0,
           accepted: countByStatus.get('ACCEPTED') ?? 0,
-          rejected: (countByStatus.get('REJECTED') ?? 0) + (countByStatus.get('EXPIRED') ?? 0),
+          rejected: (countByStatus.get('REJECTED') ?? 0) + (countByStatus.get('EXPIRED') ?? 0) + (countByStatus.get('CANCELLED') ?? 0),
         },
       })
     }
@@ -156,6 +156,16 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
     if (!q || q.status !== 'SENT') return reply.status(400).send({ error: 'Solo se pueden rechazar cotizaciones enviadas' })
     if (!canAccessBranch(request, q.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
     return reply.send(await prisma.quotation.update({ where: { id }, data: { status: 'REJECTED' }, include }))
+  })
+
+  // Cancel — distinct from "reject" (customer declined): this is us pulling
+  // back a quotation that's still ours to withdraw (draft or already sent).
+  fastify.put('/:id/cancel', { preHandler: [fastify.authenticate, requirePermission('quotations.create')] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const q = await prisma.quotation.findUnique({ where: { id } })
+    if (!q || !['DRAFT', 'SENT'].includes(q.status)) return reply.status(400).send({ error: 'Solo se pueden cancelar cotizaciones en borrador o enviadas' })
+    if (!canAccessBranch(request, q.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
+    return reply.send(await prisma.quotation.update({ where: { id }, data: { status: 'CANCELLED' }, include }))
   })
 
   // Convert ACCEPTED quotation → Sale

@@ -114,7 +114,7 @@ export default function SaleDetail() {
       setSearchLoading(true)
       try {
         const data = await api.get<any[]>(`/api/products?search=${encodeURIComponent(productSearch)}&isActive=true`)
-        setProductResults((data ?? []).slice(0, 8))
+        setProductResults(data ?? [])
       } catch { setProductResults([]) }
       finally { setSearchLoading(false) }
     }, 250)

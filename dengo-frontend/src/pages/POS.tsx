@@ -443,7 +443,7 @@ export default function POS() {
       const data = await api.get<ProductRecord[]>(
         `/api/products?search=${encodeURIComponent(query)}&isActive=true`
       )
-      const results = (data ?? []).filter(p => p.isActive !== false).slice(0, 8).map(normaliseProduct)
+      const results = (data ?? []).filter(p => p.isActive !== false).map(normaliseProduct)
       setSearchResults(results)
       setShowSearchResults(results.length > 0 || query.length > 0)
     } catch {
@@ -456,7 +456,7 @@ export default function POS() {
           p.barcode?.toLowerCase().includes(q) ||
           p.sku?.toLowerCase().includes(q)
         ))
-        .slice(0, 8)
+        .slice(0, 50)
         .map(normaliseProduct)
       setSearchResults(results)
       setShowSearchResults(results.length > 0 || query.length > 0)
@@ -1162,7 +1162,7 @@ export default function POS() {
           )}
           {/* Dropdown results */}
           {showSearchResults && searchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-30 overflow-hidden">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-30 max-h-72 overflow-y-auto">
               {searchResults.map(product => {
                 const variations = getVariations(product)
                 return (
@@ -1425,7 +1425,7 @@ export default function POS() {
                     {filteredCustomers.length === 0 ? (
                       <p className="px-3 py-2 text-xs text-gray-400">{customerSearch ? 'Sin resultados' : 'Escribe para buscar...'}</p>
                     ) : (
-                      filteredCustomers.slice(0, 8).map(customer => (
+                      filteredCustomers.slice(0, 50).map(customer => (
                         <button key={customer.id} onMouseDown={() => handleSelectCustomer(customer)}
                           className="w-full text-left px-3 py-2 hover:bg-primary-50 transition-colors border-b border-gray-50 last:border-0">
                           <p className="text-sm font-medium text-gray-800">{getCustomerName(customer)}</p>

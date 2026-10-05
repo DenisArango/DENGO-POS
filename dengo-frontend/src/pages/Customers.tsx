@@ -265,15 +265,17 @@ export default function Customers() {
     }
   }
 
-  const abonoRemaining = (sale: AbonoSale) => Number(sale.total ?? 0) - Number(sale.paidAmount ?? 0)
-  const abonoTotalOutstanding = abonoSales.reduce((s, sale) => s + abonoRemaining(sale), 0)
+  // The real, authoritative balance is the customer's account (creditUsed) —
+  // never the sum of outstanding Sale rows, since imported customers can
+  // carry real debt with zero matching Sale rows in this system.
+  const abonoAccountBalance = Number(abonoCustomer?.creditUsed ?? 0)
 
   const handleSaveAbono = () => {
     if (!abonoCustomer) return
     const amount = parseFloat(abonoAmount)
     if (!amount || amount <= 0) { toast.error('Ingresa un monto válido'); return }
-    if (amount > abonoTotalOutstanding + 0.001) {
-      toast.error(`El abono excede el saldo pendiente (Q${abonoTotalOutstanding.toFixed(2)})`); return
+    if (amount > abonoAccountBalance + 0.001) {
+      toast.error(`El abono excede el saldo pendiente (Q${abonoAccountBalance.toFixed(2)})`); return
     }
     if (abonoMethod === 'CASH' && openRegisters.length > 0 && !abonoRegisterId) {
       toast.error('Selecciona la caja donde se recibe el abono'); return
@@ -285,7 +287,9 @@ export default function Customers() {
       cashRegisterId: abonoMethod === 'CASH' ? (abonoRegisterId || undefined) : undefined,
     })
       .then(res => {
-        toast.success(`Abono registrado — aplicado a ${res.salesAffected} factura${res.salesAffected === 1 ? '' : 's'}`)
+        toast.success(res.salesAffected > 0
+          ? `Abono registrado — aplicado a ${res.salesAffected} factura${res.salesAffected === 1 ? '' : 's'}`
+          : 'Abono registrado a la cuenta del cliente')
         setShowAbonoModal(false)
         fetchCustomers()
       })
@@ -357,7 +361,7 @@ export default function Customers() {
             value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
             className="input pl-10 w-full" />
         </div>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input">
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input flex-none w-full md:w-40">
           <option value="all">Todos</option>
           <option value="active">Activos</option>
           <option value="inactive">Inactivos</option>
@@ -636,20 +640,24 @@ export default function Customers() {
             <div className="p-6 space-y-4">
               {loadingAbonoSales ? (
                 <div className="flex justify-center py-4"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600" /></div>
-              ) : abonoSales.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-4">Este cliente no tiene ventas a crédito pendientes.</p>
+              ) : abonoAccountBalance <= 0 ? (
+                <p className="text-sm text-gray-400 text-center py-4">Este cliente no tiene saldo pendiente.</p>
               ) : (
                 <>
                   <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5">
                     <p className="text-sm text-gray-600">
-                      Saldo pendiente: <span className="font-semibold text-gray-800">Q{abonoTotalOutstanding.toFixed(2)}</span>
-                      {' '}({abonoSales.length} factura{abonoSales.length === 1 ? '' : 's'})
+                      Saldo pendiente: <span className="font-semibold text-gray-800">Q{abonoAccountBalance.toFixed(2)}</span>
+                      {abonoSales.length > 0 && <> ({abonoSales.length} factura{abonoSales.length === 1 ? '' : 's'} en el sistema)</>}
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">El abono se aplica primero a la factura más antigua, luego a la siguiente, hasta agotar el monto.</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {abonoSales.length > 0
+                        ? 'El abono se aplica primero a la factura más antigua, luego a la siguiente, hasta agotar el monto.'
+                        : 'Este saldo no tiene facturas registradas en el sistema (p. ej. crédito importado) — el abono se aplica directamente a la cuenta.'}
+                    </p>
                   </div>
                   <div>
                     <label className="label">Monto del abono (Q) *</label>
-                    <input type="number" min={0.01} max={abonoTotalOutstanding} step={0.01} value={abonoAmount}
+                    <input type="number" min={0.01} max={abonoAccountBalance} step={0.01} value={abonoAmount}
                       onChange={e => setAbonoAmount(e.target.value)} className="input w-full" placeholder="0.00" />
                   </div>
                   <div>
@@ -682,7 +690,7 @@ export default function Customers() {
             </div>
             <div className="flex gap-3 justify-end p-6 border-t">
               <button type="button" onClick={() => setShowAbonoModal(false)} className="btn-secondary btn-md">Cancelar</button>
-              <button type="button" onClick={handleSaveAbono} disabled={savingAbono || abonoSales.length === 0}
+              <button type="button" onClick={handleSaveAbono} disabled={savingAbono || abonoAccountBalance <= 0}
                 className="btn-primary btn-md flex items-center gap-2 disabled:opacity-50">
                 {savingAbono && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
                 Registrar Abono

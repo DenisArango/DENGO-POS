@@ -146,12 +146,16 @@ export default async function customerRoutes(fastify: FastifyInstance) {
   })
 
   // POST /api/customers/:id/credit-payment — a single abono against the
-  // customer's overall credit balance, not against one chosen invoice.
-  // Applied oldest-sale-first (FIFO) across every outstanding CREDIT sale,
-  // splitting across as many as needed (a sale can end up partially paid).
-  // Replaces picking one sale by hand, which was tedious with several
-  // outstanding invoices — see Sale.creditPayments for the per-sale history
-  // this still writes, and GET /api/sales/:id/payments to read it back.
+  // customer's overall credit ACCOUNT balance (customer.creditUsed), not
+  // against any one document. Validated and decremented against that balance
+  // directly — never against the sum of outstanding Sale rows — because
+  // imported customers can carry real creditUsed debt with zero matching
+  // Sale rows (their credit history predates this system). When real
+  // outstanding sales do exist, the abono is still applied oldest-first
+  // (FIFO) across them for bookkeeping (sale.paidAmount/isPaid, and the
+  // per-sale history at GET /api/sales/:id/payments); any amount left over
+  // once those are exhausted — or the full amount, if there are none — is
+  // recorded as a CreditPayment against the account with no saleId at all.
   fastify.post('/:id/credit-payment', { preHandler: [fastify.authenticate, requirePermission('customers.registerPayment')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const body = z.object({
@@ -168,6 +172,11 @@ export default async function customerRoutes(fastify: FastifyInstance) {
 
     const customer = await prisma.customer.findUnique({ where: { id } })
     if (!customer) return reply.status(404).send({ error: 'Cliente no encontrado' })
+
+    const accountBalance = Number(customer.creditUsed ?? 0)
+    if (body.data.amount > accountBalance + 0.001) {
+      return reply.status(400).send({ error: `El abono excede el saldo pendiente (Q${accountBalance.toFixed(2)})` })
+    }
 
     // A customer isn't branch-scoped, but their individual credit sales are —
     // only allocate against sales in branches this user can actually see.
@@ -186,11 +195,6 @@ export default async function customerRoutes(fastify: FastifyInstance) {
       orderBy: { createdAt: 'asc' },
     })
 
-    const totalOutstanding = unpaidSales.reduce((s, sale) => s + (Number(sale.total) - Number(sale.paidAmount ?? 0)), 0)
-    if (body.data.amount > totalOutstanding + 0.001) {
-      return reply.status(400).send({ error: `El abono excede el saldo pendiente (Q${totalOutstanding.toFixed(2)})` })
-    }
-
     const { amount, ...paymentFields } = body.data
     const payments = await prisma.$transaction(async (tx) => {
       let remaining = amount
@@ -203,7 +207,7 @@ export default async function customerRoutes(fastify: FastifyInstance) {
 
         const payment = await tx.creditPayment.create({
           data: Object.fromEntries(Object.entries({
-            saleId: sale.id, paidById: request.user.id, amount: applyAmount, ...paymentFields,
+            saleId: sale.id, customerId: id, paidById: request.user.id, amount: applyAmount, ...paymentFields,
           }).filter(([, v]) => v !== undefined)) as any,
           include: { paidBy: { select: { id: true, name: true } } },
         })
@@ -217,14 +221,28 @@ export default async function customerRoutes(fastify: FastifyInstance) {
         remaining -= applyAmount
       }
 
+      // Leftover beyond what real sales could absorb — a generic abono
+      // against the account itself (saleId omitted), covering historical/
+      // imported debt that has no matching Sale row in this system.
+      if (remaining > 0.001) {
+        const payment = await tx.creditPayment.create({
+          data: Object.fromEntries(Object.entries({
+            customerId: id, paidById: request.user.id, amount: remaining, ...paymentFields,
+          }).filter(([, v]) => v !== undefined)) as any,
+          include: { paidBy: { select: { id: true, name: true } } },
+        })
+        created.push(payment)
+      }
+
       await tx.customer.update({ where: { id }, data: { creditUsed: { decrement: amount } } })
       return created
     })
 
+    const salesAffected = payments.filter(p => p.saleId).length
     await log({
       userId: request.user.id, action: 'CREATE', entity: 'CreditPayment', entityId: id,
-      newValues: { customerId: id, amount, salesAffected: payments.length },
+      newValues: { customerId: id, amount, salesAffected },
     })
-    return reply.status(201).send({ payments, totalApplied: amount, salesAffected: payments.length })
+    return reply.status(201).send({ payments, totalApplied: amount, salesAffected })
   })
 }

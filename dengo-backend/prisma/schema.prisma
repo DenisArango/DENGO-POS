@@ -346,6 +346,7 @@ model Customer {
 
   sales         Sale[]
   quotations    Quotation[]
+  creditPayments CreditPayment[]
   defaultForBranches Branch[] @relation("DefaultCustomer")
 
   @@map("CUSTOMERS")
@@ -541,8 +542,21 @@ model Sale {
 }
 
 model CreditPayment {
-  id                     String   @id @default(cuid()) @map("ID") @db.VarChar(36)
-  saleId                 String   @map("SALE_ID") @db.VarChar(36)
+  id          String   @id @default(cuid()) @map("ID") @db.VarChar(36)
+  // Optional on purpose: an abono is always against the customer's ACCOUNT
+  // (customerId, always set), not against a document. saleId is set only
+  // when this abono happened to be allocated against a real Sale row that
+  // exists in this system — imported customers can carry a real creditUsed
+  // balance with zero matching Sale rows (their history predates this
+  // system), so requiring a sale here made it impossible to ever record
+  // their abonos at all.
+  saleId                 String?  @map("SALE_ID") @db.VarChar(36)
+  // Nullable at the DB level only so `prisma db push` can add this column to
+  // the live table without a backfill step — every row created from here on
+  // always sets it (see customers.ts / sales.ts); only rows written before
+  // this change can have it null, and those all have saleId set, so their
+  // customer is still reachable via sale.customerId.
+  customerId             String?  @map("CUSTOMER_ID") @db.VarChar(36)
   amount                 Decimal  @map("AMOUNT") @db.Decimal(18, 2)
   paymentMethod          String   @map("PAYMENT_METHOD") @db.VarChar(20)  // CASH | CARD | TRANSFER
   transferDocumentNumber String?  @map("TRANSFER_DOCUMENT_NUMBER") @db.VarChar(100)
@@ -552,7 +566,8 @@ model CreditPayment {
   cashRegisterId         String?  @map("CASH_REGISTER_ID") @db.VarChar(36) // register open when this abono was collected, so cash abonos count toward that session's expected cash (see cash-registers.ts computeSales)
   createdAt              DateTime @default(now()) @map("CREATED_AT")
 
-  sale         Sale          @relation(fields: [saleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sale         Sale?         @relation(fields: [saleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customer     Customer?     @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   paidBy       User          @relation(fields: [paidById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   cashRegister CashRegister? @relation(fields: [cashRegisterId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 

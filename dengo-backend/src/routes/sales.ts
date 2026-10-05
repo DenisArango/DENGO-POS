@@ -694,7 +694,7 @@ export default async function salesRoutes(fastify: FastifyInstance) {
 
     const payment = await prisma.$transaction(async (tx) => {
       const p = await tx.creditPayment.create({
-        data: { saleId: id, paidById: request.user.id, ...body.data },
+        data: { saleId: id, customerId: sale.customerId ?? undefined, paidById: request.user.id, ...body.data },
         include: { paidBy: { select: { id: true, name: true } } },
       })
 

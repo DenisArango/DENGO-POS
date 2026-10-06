@@ -149,7 +149,7 @@ export default function ProductModal({
     }))
   }
 
-  const processImageFile = (file: File) => {
+  const processImageFile = (file: Blob) => {
     if (!file.type.startsWith('image/')) {
       toast.error('El archivo debe ser una imagen')
       return
@@ -181,35 +181,81 @@ export default function ProductModal({
     if (file) processImageFile(file)
   }
 
+  // A direct "Pegar imagen" button using the modern Async Clipboard API
+  // (navigator.clipboard.read()) — more reliable for image data than the
+  // passive `paste` event's clipboardData.items below, which in practice
+  // some browser/source combinations (ej. copying from Excel) just don't
+  // populate the same way. This needs a user gesture (the click itself
+  // provides it) and only works on Chromium-based browsers (Chrome, Edge,
+  // Brave) — Firefox doesn't support reading images this way yet.
+  const handlePasteButtonClick = async () => {
+    if (!navigator.clipboard?.read) {
+      toast.error('Tu navegador no soporta pegar imágenes así — usa Ctrl+V sobre el recuadro, o sube el archivo.')
+      return
+    }
+    try {
+      const items = await navigator.clipboard.read()
+      for (const item of items) {
+        const imageType = item.types.find(t => t.startsWith('image/'))
+        if (imageType) {
+          const blob = await item.getType(imageType)
+          processImageFile(blob)
+          return
+        }
+      }
+      toast.error(`No hay una imagen en el portapapeles (tipos: ${items.flatMap(i => i.types).join(', ') || 'ninguno'})`)
+    } catch (err) {
+      toast.error(err instanceof Error && err.name === 'NotAllowedError'
+        ? 'El navegador bloqueó el acceso al portapapeles — vuelve a intentar el clic'
+        : 'No se pudo leer el portapapeles')
+    }
+  }
+
   // Lets the user paste an image (Ctrl+V) straight from the clipboard instead
   // of always needing to pick a file — listens on the whole window while the
   // modal is open so it works regardless of which field currently has focus.
   useEffect(() => {
     if (!isOpen) return
     const handleWindowPaste = (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items
-      if (!items) return
-      for (const item of items) {
-        if (item.type.startsWith('image/')) {
+      const dt = e.clipboardData
+      if (!dt) return
+      const isTextField = document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA'
+
+      // 1. A direct image item — any image/* subtype (png, bmp, jpeg...),
+      // not just the ones a given browser happens to rasterize as PNG.
+      for (const item of Array.from(dt.items)) {
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
           const file = item.getAsFile()
-          if (file) { e.preventDefault(); processImageFile(file) }
-          return
+          if (file) { e.preventDefault(); processImageFile(file); return }
         }
       }
-      // Excel (and other Office apps) copying a cell/picture often doesn't
-      // put a plain image/* item on the clipboard at all — instead it's
-      // embedded as a base64 <img> inside the text/html representation.
-      // Pull that out as a fallback before giving up.
-      const html = e.clipboardData?.getData('text/html')
-      const match = html?.match(/<img[^>]+src=["']?(data:image\/[^"'\s>]+)/i)
-      if (match) {
-        e.preventDefault()
-        processImageDataUrl(match[1])
+
+      const html = dt.getData('text/html')
+      // 2. Embedded as a base64 <img> inside the HTML representation — how
+      // Excel/Office most often carries a copied picture.
+      const dataUrlMatch = html?.match(/<img[^>]+src=["']?(data:image\/[^"'\s>]+)/i)
+      if (dataUrlMatch) { e.preventDefault(); processImageDataUrl(dataUrlMatch[1]); return }
+
+      // Only treat this as a failed image-paste attempt outside a normal
+      // text field — otherwise every plain-text paste into the name/SKU/etc.
+      // fields would trigger this and show a confusing "no image" toast.
+      if (isTextField) return
+
+      // 3. A real src Excel put there that isn't a data: URI (ej. a local
+      // file:// path or an http(s) image reference) — can't be read from
+      // here (the browser blocks it for file://, and fetching an http(s)
+      // one would need its own CORS handling), but at least say so instead
+      // of silently doing nothing.
+      const srcMatch = html?.match(/<img[^>]+src=["']?([^"'\s>]+)/i)
+      if (srcMatch) {
+        toast.error('La imagen copiada no se puede leer directamente (no viene como datos embebidos) — guárdala como archivo y súbela con el botón.')
         return
       }
-      if (html !== undefined && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
-        toast.error('No se encontró una imagen en lo copiado — en Excel, copia la imagen misma (no la celda), o usa "Copiar como imagen"')
-      }
+
+      // 4. Nothing usable found at all — report exactly what WAS on the
+      // clipboard so this is diagnosable instead of a silent no-op.
+      const types = Array.from(dt.items).map(i => `${i.kind}:${i.type}`).join(', ')
+      toast.error(`No se encontró una imagen en lo copiado (tipos: ${types || 'ninguno'}). En Excel, da clic derecho sobre la imagen misma (no la celda) y "Copiar".`)
     }
     window.addEventListener('paste', handleWindowPaste)
     return () => window.removeEventListener('paste', handleWindowPaste)
@@ -632,6 +678,15 @@ export default function ProductModal({
                         </label>
                       )}
                     </div>
+                    {!productImage && (
+                      <button
+                        type="button"
+                        onClick={handlePasteButtonClick}
+                        className="btn-outline btn-sm w-full"
+                      >
+                        Pegar imagen del portapapeles
+                      </button>
+                    )}
 
                     <div className="text-xs text-gray-500 space-y-1">
                       <p>• Imagen cuadrada recomendada</p>

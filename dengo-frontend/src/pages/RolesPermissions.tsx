@@ -66,6 +66,7 @@ const PERMISSION_LABELS: Record<string, string> = {
   'cash.close': 'Cerrar caja',
   'cash.movements': 'Registrar entradas/salidas de caja',
   'purchases.receive': 'Recibir mercadería (ingreso de compras a inventario)',
+  'purchases.edit': 'Editar una compra ya registrada (sucursal, proveedor, productos, precios — puede mover inventario entre sucursales)',
   'transfers.view': 'Ver traslados',
   'transfers.create': 'Crear traslados',
   'transfers.approve': 'Aprobar traslados',

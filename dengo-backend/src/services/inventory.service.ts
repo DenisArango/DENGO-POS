@@ -10,6 +10,9 @@ interface UpdateStockOptions {
   // Only meaningful for an IN movement from Compras — see the schema
   // comment on StockMovement.unitCost.
   unitCost?: number
+  // Same — only meaningful for an IN movement from Compras. See schema
+  // comment on StockMovement.supplierId.
+  supplierId?: string
 }
 
 // Shared by updateStock (relative delta) and setStock (absolute target) so
@@ -77,6 +80,7 @@ async function applyStockChange(
         referenceId: options.referenceId ?? null,
         performedById: options.performedById,
         unitCost: options.unitCost ?? null,
+        supplierId: options.supplierId ?? null,
       },
     })
 

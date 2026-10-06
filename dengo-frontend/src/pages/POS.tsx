@@ -156,6 +156,18 @@ function getVariations(product: ProductRecord): ProductVariation[] {
   return [buildDefaultVariation(product)]
 }
 
+// Whether there's a REAL (admin-defined) variation to pick from, as opposed
+// to just the synthetic "Pieza" getVariations() falls back to. Gating on
+// getVariations(product).length > 1 used to require at least 2 of these —
+// a product with exactly one defined variation (common: a single "Caja de
+// 12" on top of the loose unit) got none of the picker UI at all, since
+// getVariations() returns just that one-item array, same length as "no
+// variations". Scanning the variation's own barcode still worked (that path
+// never goes through this check), which is what made it look selective.
+function hasVariationChoice(product: ProductRecord): boolean {
+  return (product.variations?.length ?? 0) > 0
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function POS() {
@@ -705,8 +717,8 @@ export default function POS() {
   // stays null) so each pick becomes its own new cart line instead of
   // replacing one, letting base + several variations coexist on one sale.
   const openVariationPicker = (product: ProductRecord) => {
+    if (!hasVariationChoice(product)) return
     const variations = getVariations(product)
-    if (variations.length <= 1) return
     setChangingVariationItem(null)
     setSelectedProductForVariation(product)
     const initialQtys: Record<string, number> = {}
@@ -716,8 +728,8 @@ export default function POS() {
   }
 
   const handleChangeVariation = (item: CartItem) => {
+    if (!hasVariationChoice(item.product)) return
     const variations = getVariations(item.product)
-    if (variations.length <= 1) return
     setChangingVariationItem(item)
     setSelectedProductForVariation(item.product)
     const initialQtys: Record<string, number> = {}
@@ -1249,8 +1261,8 @@ export default function POS() {
                     </div>
                     <div className="text-right ml-4 flex-shrink-0">
                       <p className="text-sm font-bold text-primary-600">Q{Number(product.basePrice).toFixed(2)}</p>
-                      {variations.length > 1 && (
-                        <p className="text-xs text-gray-400">{variations.length} variantes</p>
+                      {hasVariationChoice(product) && (
+                        <p className="text-xs text-gray-400">{variations.length} variante{variations.length !== 1 ? 's' : ''}</p>
                       )}
                     </div>
                   </button>
@@ -1329,7 +1341,7 @@ export default function POS() {
                           {item.variation && !item.variation.isDefault ? item.variation.name : item.product.name}
                         </p>
                         <div className="flex items-center gap-1">
-                          {getVariations(item.product).length > 1 && (
+                          {hasVariationChoice(item.product) && (
                             <>
                               <button
                                 onClick={() => handleChangeVariation(item)}

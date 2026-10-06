@@ -333,11 +333,17 @@ model StockMovement {
   // cost once Product.cost had since changed. Null on every other movement
   // type and on intakes made before this field existed.
   unitCost       Decimal? @map("UNIT_COST") @db.Decimal(18, 2)
+  // Same idea as unitCost — only ever set on a Compras IN movement. Storing
+  // the real FK (instead of relying on the "Proveedor: X" text baked into
+  // `reason`) is what lets editing a past purchase change its supplier
+  // reliably instead of text-matching a name back to a Supplier row.
+  supplierId     String?  @map("SUPPLIER_ID") @db.VarChar(36)
   createdAt      DateTime @default(now()) @map("CREATED_AT")
 
-  product     Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  branch      Branch  @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  performedBy User    @relation(fields: [performedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  branch      Branch    @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  performedBy User      @relation(fields: [performedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  supplier    Supplier? @relation(fields: [supplierId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("STOCK_MOVEMENTS")
 }
@@ -389,7 +395,21 @@ model Supplier {
   createdAt    DateTime @default(now()) @map("CREATED_AT")
   updatedAt    DateTime @updatedAt @map("UPDATED_AT")
 
+  stockMovements StockMovement[]
+
   @@map("SUPPLIERS")
+}
+
+// Single-row counter for the short, sequential "número de compra" shown in
+// Purchases.tsx and used as its StockMovement.referenceId prefix (COMPRA-N).
+// A plain per-branch counter (like Branch.receiptNextNumber) would collide
+// across branches, since referenceId groups movements globally, not scoped
+// to one branch — this stays a single global sequence instead.
+model PurchaseCounter {
+  id         String @id @default(cuid()) @map("ID") @db.VarChar(36)
+  nextNumber Int    @default(1) @map("NEXT_NUMBER")
+
+  @@map("PURCHASE_COUNTER")
 }
 
 // Fixed, admin-managed cash register definitions per branch — configured

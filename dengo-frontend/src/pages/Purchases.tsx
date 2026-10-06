@@ -28,14 +28,19 @@ interface StockMovement {
   performedBy: { id: string; name: string }
   createdAt: string
   unitCost?: number | null
+  supplierId?: string | null
+  supplier?: { id: string; name: string } | null
 }
 
 interface IntakeGroup {
   referenceId: string
+  purchaseNumber: string | null // short "número de compra" parsed from COMPRA-N referenceIds; null for legacy INTAKE-* entries
   date: string
   user: string
   branch: string
+  branchId: string
   supplier: string
+  supplierId: string
   itemCount: number
   totalUnits: number
   totalCost: number | null // null = none of these movements have cost data (ej. before this feature existed)
@@ -81,6 +86,7 @@ export default function Purchases() {
   // purchases.receive — the only permission this module has, since receiving
   // is a single direct action with no purchase-order document behind it.
   const canCreatePurchase = hasPermission('purchases.receive')
+  const canEditPurchase = hasPermission('purchases.edit')
   const canCreateSupplier = hasPermission('suppliers.create')
   const canEditSupplier = hasPermission('suppliers.edit')
 
@@ -90,6 +96,7 @@ export default function Purchases() {
   const [movements, setMovements] = useState<StockMovement[]>([])
   const [loading, setLoading] = useState(false)
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
+  const [historySearch, setHistorySearch] = useState('')
 
   // Create form state
   const [intakeItems, setIntakeItems] = useState<IntakeItem[]>([])
@@ -125,11 +132,21 @@ export default function Purchases() {
   const [editPriceVal, setEditPriceVal] = useState('')
   const draftHydratedRef = useRef(false)
 
+  // Editing an already-closed purchase reuses the same create-view form —
+  // set only while correcting an existing one, never for a brand-new intake.
+  const [editingReferenceId, setEditingReferenceId] = useState<string | null>(null)
+  const [editingOriginalBranchId, setEditingOriginalBranchId] = useState<string | null>(null)
+  const [loadingEdit, setLoadingEdit] = useState(false)
+
   // ── Load data ─────────────────────────────────────────────────────────────
   const fetchMovements = () => {
     setLoading(true)
-    api.get<StockMovement[]>('/api/inventory/movements?type=IN')
-      .then(data => setMovements((data ?? []).filter(m => m.referenceId?.startsWith('INTAKE-'))))
+    // ADJUSTMENT is included alongside IN because editing a purchase files
+    // its reversal as ADJUSTMENT (see PUT /intake/:referenceId) — without it
+    // the signed-delta grouping below can't net an edited purchase back to
+    // its true current total.
+    api.get<StockMovement[]>('/api/inventory/movements?type=IN,ADJUSTMENT')
+      .then(data => setMovements((data ?? []).filter(m => m.referenceId?.startsWith('INTAKE-') || m.referenceId?.startsWith('COMPRA-'))))
       .catch(e => toast.error(e.message))
       .finally(() => setLoading(false))
   }
@@ -171,7 +188,9 @@ export default function Purchases() {
   }, [user?.id])
 
   useEffect(() => {
-    if (!draftHydratedRef.current || !user?.id) return
+    // Never persist/restore a draft while editing an already-closed purchase
+    // — that's a separate flow (PUT /intake/:referenceId), not a new intake.
+    if (!draftHydratedRef.current || !user?.id || editingReferenceId) return
     try {
       if (intakeItems.length === 0) {
         localStorage.removeItem(draftKey)
@@ -181,7 +200,7 @@ export default function Purchases() {
     } catch {
       // localStorage lleno o bloqueado — el ingreso sigue funcionando, solo no persiste.
     }
-  }, [intakeItems, selectedBranchId, selectedSupplierId, notes, user?.id])
+  }, [intakeItems, selectedBranchId, selectedSupplierId, notes, user?.id, editingReferenceId])
 
   const selectedSupplier = suppliers.find(s => s.id === selectedSupplierId) ?? null
   const filteredSuppliers = suppliers.filter(s => matchesSearch([s.name, s.code], supplierSearch))
@@ -330,6 +349,67 @@ export default function Purchases() {
     setShowResults(false)
     setEditingCostId(null)
     setEditingPriceId(null)
+    setEditingReferenceId(null)
+    setEditingOriginalBranchId(null)
+  }
+
+  // ── Edit an already-closed purchase ────────────────────────────────────────
+  // Reconstructs the purchase's CURRENT state from its StockMovement group
+  // (group.items, newest-first): nets each product's signed quantity across
+  // every movement under this referenceId (so a purchase already corrected
+  // once still reconstructs correctly) and keeps the most recent unitCost
+  // seen per product. Sale price isn't stored on StockMovement, so it's
+  // filled from the product's current basePrice as a starting point.
+  const openEditGroup = async (group: IntakeGroup) => {
+    setLoadingEdit(true)
+    try {
+      const netByProduct = new Map<string, { name: string; qty: number; cost: number }>()
+      for (const m of group.items) {
+        const delta = Number(m.quantityAfter) - Number(m.quantityBefore)
+        const entry = netByProduct.get(m.productId)
+        if (entry) {
+          entry.qty += delta
+        } else {
+          netByProduct.set(m.productId, { name: m.product?.name ?? '—', qty: delta, cost: Number(m.unitCost ?? 0) })
+        }
+      }
+      const reconstructed = Array.from(netByProduct.entries()).filter(([, v]) => v.qty > 0.0005)
+      if (reconstructed.length === 0) {
+        toast.error('No se pudo reconstruir esta compra (sin unidades netas)')
+        return
+      }
+
+      const prices = await Promise.all(
+        reconstructed.map(([productId]) =>
+          api.get<{ basePrice?: number }>(`/api/products/${productId}`).catch(() => null)
+        )
+      )
+
+      setIntakeItems(reconstructed.map(([productId, v], idx) => ({
+        id: Math.random().toString(36).slice(2),
+        productId,
+        productName: v.name,
+        quantity: v.qty,
+        unitCost: v.cost,
+        unitPrice: Number(prices[idx]?.basePrice ?? 0),
+      })))
+      setSelectedBranchId(group.branchId)
+      setEditingOriginalBranchId(group.branchId)
+      setSelectedSupplierId(group.supplierId)
+      setSupplierSearch('')
+      // Best-effort notes recovery: the backend folds "Proveedor: X" and
+      // notes (or an auto "Ingreso — <producto>" fallback when notes was
+      // empty) into one `reason` string — split it back apart.
+      const firstReason = group.items[0]?.reason ?? ''
+      const notesPart = firstReason.split(' | ').find(p => !p.startsWith('Proveedor:')) ?? ''
+      setNotes(notesPart.startsWith('Ingreso — ') ? '' : notesPart)
+      setEditingReferenceId(group.referenceId)
+      setView('create')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al cargar la compra para editar')
+    } finally {
+      setLoadingEdit(false)
+    }
   }
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -338,19 +418,28 @@ export default function Purchases() {
 
   const intakeGroups = useMemo<IntakeGroup[]>(() => {
     const map = new Map<string, IntakeGroup>()
+    // `movements` comes back newest-first (GET /movements orders by
+    // createdAt desc), so within one referenceId the FIRST row this loop
+    // encounters is always the most recent one — used below to seed each
+    // group's "current" branch/supplier from whatever an edit last set,
+    // not from whenever the purchase was originally created.
     for (const m of movements) {
       const key = m.referenceId ?? m.id
       if (!map.has(key)) {
-        // Extract supplier from reason "Proveedor: X | notes"
+        // Extract supplier from reason "Proveedor: X | notes" — fallback for
+        // movements made before supplierId existed as a real FK.
         const reasonParts = (m.reason ?? '').split(' | ')
         const supplierPart = reasonParts.find(p => p.startsWith('Proveedor:'))
-        const supplierName = supplierPart ? supplierPart.replace('Proveedor: ', '') : ''
+        const supplierName = m.supplier?.name ?? (supplierPart ? supplierPart.replace('Proveedor: ', '') : '')
         map.set(key, {
           referenceId: key,
+          purchaseNumber: key.startsWith('COMPRA-') ? key.slice('COMPRA-'.length) : null,
           date: m.createdAt,
           user: m.performedBy?.name ?? '–',
           branch: m.branch?.name ?? '–',
+          branchId: m.branchId,
           supplier: supplierName,
+          supplierId: m.supplierId ?? '',
           itemCount: 0,
           totalUnits: 0,
           totalCost: null,
@@ -359,26 +448,37 @@ export default function Purchases() {
       }
       const g = map.get(key)!
       g.itemCount++
-      g.totalUnits += Number(m.quantity)
+      // Signed, not the always-positive `quantity` column — an edit reverses
+      // the old movements (RETURN, decreasing) and re-applies the corrected
+      // ones (IN, increasing) under this SAME referenceId, so summing the
+      // raw magnitude would double-count the reversal instead of netting it
+      // out to the purchase's true final total.
+      const delta = Number(m.quantityAfter) - Number(m.quantityBefore)
+      g.totalUnits += delta
       // null stays null until the first movement with real cost data shows
       // up — an intake made before this field existed has none at all, and
       // showing "Q0.00" for that would read as "this cost nothing" instead
       // of "no sabemos".
       if (m.unitCost != null) {
-        g.totalCost = (g.totalCost ?? 0) + Number(m.quantity) * Number(m.unitCost)
+        g.totalCost = (g.totalCost ?? 0) + delta * Number(m.unitCost)
       }
       g.items.push(m)
     }
     return Array.from(map.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [movements])
 
-  // ── Confirm intake ─────────────────────────────────────────────────────────
+  const filteredIntakeGroups = useMemo(() => {
+    if (!historySearch.trim()) return intakeGroups
+    return intakeGroups.filter(g => matchesSearch([g.purchaseNumber ?? '', g.referenceId, g.supplier], historySearch))
+  }, [intakeGroups, historySearch])
+
+  // ── Confirm intake (or save edits to an existing one) ──────────────────────
   const handleConfirm = async () => {
     if (!selectedBranchId) { toast.error('Selecciona una sucursal'); return }
     if (intakeItems.length === 0) { toast.error('Agrega al menos un producto'); return }
     setSaving(true)
     try {
-      await api.post('/api/inventory/intake', {
+      const payload = {
         branchId: selectedBranchId,
         supplierId: selectedSupplierId || undefined,
         notes: notes || undefined,
@@ -389,13 +489,19 @@ export default function Purchases() {
           unitCost: i.unitCost,
           unitPrice: i.unitPrice,
         })),
-      })
-      toast.success(`Ingreso confirmado — ${intakeItems.length} producto(s), ${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(2)} unidades`)
+      }
+      if (editingReferenceId) {
+        await api.put(`/api/inventory/intake/${editingReferenceId}`, payload)
+        toast.success('Compra actualizada')
+      } else {
+        await api.post('/api/inventory/intake', payload)
+        toast.success(`Ingreso confirmado — ${intakeItems.length} producto(s), ${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(2)} unidades`)
+      }
       resetForm()
       setView('list')
       fetchMovements()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Error al confirmar ingreso')
+      toast.error(e instanceof Error ? e.message : (editingReferenceId ? 'Error al actualizar la compra' : 'Error al confirmar ingreso'))
     } finally {
       setSaving(false)
     }
@@ -415,7 +521,11 @@ export default function Purchases() {
             <ArrowLeft size={20} />
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-bold text-gray-800">Nuevo Ingreso de Mercancía</h1>
+            <h1 className="text-lg font-bold text-gray-800">
+              {editingReferenceId
+                ? `Editar Compra${editingReferenceId.startsWith('COMPRA-') ? ` #${editingReferenceId.slice('COMPRA-'.length)}` : ''}`
+                : 'Nuevo Ingreso de Mercancía'}
+            </h1>
             <p className="text-xs text-gray-500">
               {intakeItems.length > 0
                 ? `${intakeItems.length} producto(s) · ${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(2)} unidades totales`
@@ -609,6 +719,11 @@ export default function Purchases() {
                 </select>
                 <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
+              {editingOriginalBranchId && selectedBranchId && selectedBranchId !== editingOriginalBranchId && (
+                <p className="text-xs text-amber-600 mt-2">
+                  Al guardar, el inventario de esta compra se moverá de {branches.find(b => b.id === editingOriginalBranchId)?.name ?? 'la sucursal original'} a {branches.find(b => b.id === selectedBranchId)?.name ?? 'esta sucursal'}.
+                </p>
+              )}
             </div>
 
             {/* Supplier */}
@@ -714,7 +829,7 @@ export default function Purchases() {
                 ) : (
                   <CheckCircle size={18} />
                 )}
-                {saving ? 'Confirmando...' : 'Confirmar ingreso'}
+                {saving ? 'Guardando...' : (editingReferenceId ? 'Guardar cambios' : 'Confirmar ingreso')}
               </button>
             </div>
           </div>
@@ -893,34 +1008,47 @@ export default function Purchases() {
 
       {/* Intake history */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="px-5 py-3 border-b">
-          <h2 className="text-sm font-semibold text-gray-700">Historial de ingresos</h2>
+        <div className="px-5 py-3 border-b flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-gray-700 flex-shrink-0">Historial de ingresos</h2>
+          <div className="relative w-full max-w-xs">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+            <input
+              type="text"
+              placeholder="Buscar por número de compra..."
+              value={historySearch}
+              onChange={e => setHistorySearch(e.target.value)}
+              className="input pl-8 py-1.5 text-sm w-full"
+            />
+          </div>
         </div>
 
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary-400 border-t-transparent" />
           </div>
-        ) : intakeGroups.length === 0 ? (
+        ) : filteredIntakeGroups.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
             <Package size={40} strokeWidth={1.5} />
-            <p className="text-sm">No hay ingresos registrados</p>
+            <p className="text-sm">{historySearch.trim() ? 'Sin resultados para esa búsqueda' : 'No hay ingresos registrados'}</p>
           </div>
         ) : (
           <div className="divide-y">
-            {intakeGroups.map(group => (
+            {filteredIntakeGroups.map(group => (
               <div key={group.referenceId}>
                 {/* Group row */}
-                <button
-                  onClick={() => setExpandedGroup(expandedGroup === group.referenceId ? null : group.referenceId)}
-                  className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 transition-colors text-left"
-                >
-                  <div className="flex items-center gap-4">
+                <div className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 transition-colors">
+                  <button
+                    onClick={() => setExpandedGroup(expandedGroup === group.referenceId ? null : group.referenceId)}
+                    className="flex items-center gap-4 flex-1 min-w-0 text-left"
+                  >
                     <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
                       <Package size={16} className="text-green-600" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-semibold text-gray-800">
+                        {group.purchaseNumber && (
+                          <span className="inline-block bg-gray-100 text-gray-500 rounded px-1.5 py-0.5 text-xs font-mono mr-1.5 align-middle">#{group.purchaseNumber}</span>
+                        )}
                         {group.itemCount} producto{group.itemCount !== 1 ? 's' : ''}
                         {' · '}
                         <span className="font-normal text-gray-600">
@@ -937,11 +1065,28 @@ export default function Purchases() {
                         {group.supplier && <span className="text-blue-500"> · {group.supplier}</span>}
                       </p>
                     </div>
+                  </button>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {canEditPurchase && (
+                      <button
+                        onClick={() => openEditGroup(group)}
+                        disabled={loadingEdit}
+                        title="Editar esta compra"
+                        className="p-2 text-gray-400 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setExpandedGroup(expandedGroup === group.referenceId ? null : group.referenceId)}
+                      className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      {expandedGroup === group.referenceId
+                        ? <ChevronDown size={16} className="text-gray-400 flex-shrink-0" />
+                        : <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />}
+                    </button>
                   </div>
-                  {expandedGroup === group.referenceId
-                    ? <ChevronDown size={16} className="text-gray-400 flex-shrink-0" />
-                    : <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />}
-                </button>
+                </div>
 
                 {/* Expanded detail */}
                 <AnimatePresence>
@@ -964,19 +1109,25 @@ export default function Purchases() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
-                            {group.items.map(item => (
-                              <tr key={item.id}>
-                                <td className="py-1.5 text-gray-700">{item.product?.name}</td>
-                                <td className="py-1.5 text-right font-semibold text-green-600">
-                                  +{Number(item.quantity) % 1 === 0 ? Number(item.quantity) : Number(item.quantity).toFixed(2)}
-                                </td>
-                                <td className="py-1.5 text-right text-gray-500">
-                                  {item.unitCost != null ? `Q${Number(item.unitCost).toFixed(2)}` : '—'}
-                                </td>
-                                <td className="py-1.5 text-right text-gray-400">{Number(item.quantityBefore).toFixed(0)}</td>
-                                <td className="py-1.5 text-right text-gray-700">{Number(item.quantityAfter).toFixed(0)}</td>
-                              </tr>
-                            ))}
+                            {group.items.map(item => {
+                              const delta = Number(item.quantityAfter) - Number(item.quantityBefore)
+                              return (
+                                <tr key={item.id}>
+                                  <td className="py-1.5 text-gray-700">
+                                    {item.product?.name}
+                                    {item.reason?.startsWith('Reverso por edición') && <span className="text-xs text-amber-500 ml-1">(reverso por edición)</span>}
+                                  </td>
+                                  <td className={`py-1.5 text-right font-semibold ${delta < 0 ? 'text-red-500' : 'text-green-600'}`}>
+                                    {delta >= 0 ? '+' : ''}{delta % 1 === 0 ? delta : delta.toFixed(2)}
+                                  </td>
+                                  <td className="py-1.5 text-right text-gray-500">
+                                    {item.unitCost != null ? `Q${Number(item.unitCost).toFixed(2)}` : '—'}
+                                  </td>
+                                  <td className="py-1.5 text-right text-gray-400">{Number(item.quantityBefore).toFixed(0)}</td>
+                                  <td className="py-1.5 text-right text-gray-700">{Number(item.quantityAfter).toFixed(0)}</td>
+                                </tr>
+                              )
+                            })}
                           </tbody>
                         </table>
                         {group.items[0]?.reason && (

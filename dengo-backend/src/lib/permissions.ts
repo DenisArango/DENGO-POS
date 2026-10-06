@@ -14,11 +14,14 @@ export const PERMISSION_CATALOG = {
   customers: ['customers.view', 'customers.create', 'customers.edit', 'customers.delete', 'customers.editCredit', 'customers.registerPayment'],
   suppliers: ['suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete'],
   cash: ['cash.open', 'cash.close', 'cash.movements'],
-  // Just one key: this business receives merchandise directly into stock
-  // (POST /api/inventory/intake), no formal purchase-order document to
+  // This business receives merchandise directly into stock (POST
+  // /api/inventory/intake), no formal purchase-order document to
   // create/view/cancel against — that fuller PurchaseOrder API existed at
   // one point but was never wired to any screen, and was removed.
-  purchases: ['purchases.receive'],
+  // purchases.edit gates PUT /api/inventory/intake/:referenceId — correcting
+  // a closed purchase's branch/supplier/items after the fact, which can move
+  // real inventory between branches, so it's kept separate from receiving.
+  purchases: ['purchases.receive', 'purchases.edit'],
   transfers: ['transfers.view', 'transfers.create', 'transfers.approve', 'transfers.receive', 'transfers.reject'],
   quotations: ['quotations.view', 'quotations.create', 'quotations.convert'],
   reports: ['reports.sales', 'reports.inventory', 'reports.financial', 'reports.audit'],
@@ -54,7 +57,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'customers.view', 'customers.create', 'customers.edit', 'customers.registerPayment',
     'suppliers.view', 'suppliers.create', 'suppliers.edit',
     'cash.open', 'cash.close', 'cash.movements',
-    'purchases.receive',
+    'purchases.receive', 'purchases.edit',
     'transfers.view', 'transfers.create', 'transfers.receive',
     'quotations.view', 'quotations.create', 'quotations.convert',
     'reports.sales', 'reports.inventory', 'reports.financial', 'reports.audit',
@@ -65,7 +68,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'customers.view', 'customers.create', 'customers.edit', 'customers.registerPayment',
     'suppliers.view', 'suppliers.create', 'suppliers.edit',
     'cash.open', 'cash.close', 'cash.movements',
-    'purchases.receive',
+    'purchases.receive', 'purchases.edit',
     'transfers.view', 'transfers.create', 'transfers.receive',
     'quotations.view', 'quotations.create', 'quotations.convert',
     'reports.sales', 'reports.inventory', 'reports.financial',
@@ -76,7 +79,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'customers.view', 'customers.create', 'customers.edit', 'customers.registerPayment',
     'suppliers.view', 'suppliers.create', 'suppliers.edit',
     'cash.open', 'cash.close', 'cash.movements',
-    'purchases.receive',
+    'purchases.receive', 'purchases.edit',
     'transfers.view', 'transfers.create', 'transfers.receive',
     'quotations.view', 'quotations.create', 'quotations.convert',
     'reports.sales', 'reports.inventory', 'reports.financial',

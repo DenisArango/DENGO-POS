@@ -54,7 +54,14 @@ export default function SalesHistoryReport() {
         `/api/reports/sales-history?from=${from}T00:00:00&to=${to}T23:59:59${branchQ}${regQ}${methodQ}${saleTypeQ}${voidQ}`
       )
       setSales(data ?? [])
-    } catch { setSales([]) } finally { setLoading(false) }
+    } catch (e) {
+      // Was a silent catch — any real failure here (a 500 from bad data in
+      // range, a permission issue, anything) just looked like "no sales",
+      // indistinguishable from an actually-empty result. Surfacing it is
+      // what makes this diagnosable at all.
+      setSales([])
+      toast.error(e instanceof Error ? e.message : 'Error al cargar el historial de ventas')
+    } finally { setLoading(false) }
   }
 
   const filtered = sales.filter(s => {

@@ -557,19 +557,19 @@ export default function Stores() {
                       className="input w-full" placeholder="Otro ancho en mm" />
                     <p className="text-xs text-gray-500 mt-1">3nStar RPT001 y similares miden 55mm. Ajusta este valor si usas otra impresora térmica.</p>
                   </div>
-                  <div>
-                    <label className="label">Serie de factura</label>
-                    <input type="text" maxLength={10} value={formData.invoiceSeries ?? 'A'}
-                      onChange={e => setFormData({ ...formData, invoiceSeries: e.target.value.toUpperCase() })}
-                      className="input w-full" placeholder="A" />
-                    <p className="text-xs text-gray-500 mt-1">El número de factura sube solo, en orden, dentro de esta serie — no se puede editar directamente.</p>
-                  </div>
-                  <div>
-                    <label className="label">Serie de recibo</label>
+                  <div className="border border-primary-200 bg-primary-50 rounded-lg p-3">
+                    <label className="label">Serie de recibo — la que se usa ahora</label>
                     <input type="text" maxLength={10} value={formData.receiptSeries ?? ''}
                       onChange={e => setFormData({ ...formData, receiptSeries: e.target.value.toUpperCase() })}
                       className="input w-full" placeholder="Ej: VDC1" />
-                    <p className="text-xs text-gray-500 mt-1">Prefijo del número de recibo de cada venta (distinto de la factura): {formData.receiptSeries || 'VDC1'}-1, {formData.receiptSeries || 'VDC1'}-2... Sube solo, en orden.</p>
+                    <p className="text-xs text-gray-600 mt-1">Prefijo del número de cada venta, el que ves en el recibo impreso: {formData.receiptSeries || 'VDC1'}-1, {formData.receiptSeries || 'VDC1'}-2... Sube solo, en orden.</p>
+                  </div>
+                  <div className="border border-gray-200 rounded-lg p-3 opacity-75">
+                    <label className="label">Serie de factura — para cuando se active la facturación electrónica (FEL)</label>
+                    <input type="text" maxLength={10} value={formData.invoiceSeries ?? 'A'}
+                      onChange={e => setFormData({ ...formData, invoiceSeries: e.target.value.toUpperCase() })}
+                      className="input w-full" placeholder="A" />
+                    <p className="text-xs text-gray-500 mt-1">No es lo mismo que la serie de recibo de arriba — este campo todavía no se usa, es para cuando se active FEL.</p>
                   </div>
                 </div>
               </div>

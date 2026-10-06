@@ -104,6 +104,7 @@ export default function StoreTransfers() {
   const [toStore, setToStore] = useState('')
   const [notes, setNotes] = useState('')
   const [transferItems, setTransferItems] = useState<TransferItem[]>([])
+  const draftHydratedRef = useRef(false)
 
   // Product search
   const [posSearch, setPosSearch] = useState('')
@@ -172,6 +173,45 @@ export default function StoreTransfers() {
   useEffect(() => {
     api.get<Branch[]>('/api/branches').then(setBranches).catch(e => toast.error(e.message))
   }, [])
+
+  // ── Draft: survives a corte de luz/internet o navegar a otra pantalla ──────
+  // Same pattern as Purchases.tsx's intake draft and POS.tsx's in-progress
+  // sale — a traslado being built (origen/destino/productos) lived only in
+  // React state before this, so a power outage mid-entry lost it all.
+  const draftKey = `transfers-draft-${user?.id ?? ''}`
+  useEffect(() => {
+    if (draftHydratedRef.current || !user?.id) return
+    draftHydratedRef.current = true
+    try {
+      const raw = localStorage.getItem(draftKey)
+      if (!raw) return
+      const draft = JSON.parse(raw)
+      if (Array.isArray(draft.transferItems) && draft.transferItems.length > 0) {
+        setTransferItems(draft.transferItems)
+        setFromStore(draft.fromStore ?? '')
+        setToStore(draft.toStore ?? '')
+        setNotes(draft.notes ?? '')
+        setView('create')
+        toast.info('Se restauró el traslado que tenías en curso')
+      }
+    } catch {
+      // Draft corrupto o ilegible — se ignora, no bloquea el uso normal.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!draftHydratedRef.current || !user?.id) return
+    try {
+      if (transferItems.length === 0) {
+        localStorage.removeItem(draftKey)
+      } else {
+        localStorage.setItem(draftKey, JSON.stringify({ transferItems, fromStore, toStore, notes }))
+      }
+    } catch {
+      // localStorage lleno o bloqueado — el traslado sigue funcionando, solo no persiste.
+    }
+  }, [transferItems, fromStore, toStore, notes, user?.id])
 
   // ── Debounced product search ───────────────────────────────────────────────
   useEffect(() => {

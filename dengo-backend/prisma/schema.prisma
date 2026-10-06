@@ -327,6 +327,12 @@ model StockMovement {
   reason         String?  @map("REASON") @db.VarChar(500)
   referenceId    String?  @map("REFERENCE_ID") @db.VarChar(36)
   performedById  String   @map("PERFORMED_BY_ID") @db.VarChar(36)
+  // Only ever set on an IN movement coming from Compras — lets a closed
+  // intake show its real total cost later (Purchases.tsx's history list),
+  // without which there was no way to know what a past intake actually
+  // cost once Product.cost had since changed. Null on every other movement
+  // type and on intakes made before this field existed.
+  unitCost       Decimal? @map("UNIT_COST") @db.Decimal(18, 2)
   createdAt      DateTime @default(now()) @map("CREATED_AT")
 
   product     Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)

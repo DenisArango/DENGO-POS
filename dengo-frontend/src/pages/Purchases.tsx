@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Search, ArrowLeft, Trash2, CheckCircle,
-  Package, TrendingUp, ChevronDown, ChevronRight, Edit2, X, UserPlus,
+  Package, TrendingUp, ChevronDown, ChevronRight, Edit2, X, UserPlus, DollarSign,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -27,6 +27,7 @@ interface StockMovement {
   referenceId?: string
   performedBy: { id: string; name: string }
   createdAt: string
+  unitCost?: number | null
 }
 
 interface IntakeGroup {
@@ -37,6 +38,7 @@ interface IntakeGroup {
   supplier: string
   itemCount: number
   totalUnits: number
+  totalCost: number | null // null = none of these movements have cost data (ej. before this feature existed)
   items: StockMovement[]
 }
 
@@ -351,12 +353,20 @@ export default function Purchases() {
           supplier: supplierName,
           itemCount: 0,
           totalUnits: 0,
+          totalCost: null,
           items: [],
         })
       }
       const g = map.get(key)!
       g.itemCount++
       g.totalUnits += Number(m.quantity)
+      // null stays null until the first movement with real cost data shows
+      // up — an intake made before this field existed has none at all, and
+      // showing "Q0.00" for that would read as "this cost nothing" instead
+      // of "no sabemos".
+      if (m.unitCost != null) {
+        g.totalCost = (g.totalCost ?? 0) + Number(m.quantity) * Number(m.unitCost)
+      }
       g.items.push(m)
     }
     return Array.from(map.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -404,7 +414,7 @@ export default function Purchases() {
           >
             <ArrowLeft size={20} />
           </button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-lg font-bold text-gray-800">Nuevo Ingreso de Mercancía</h1>
             <p className="text-xs text-gray-500">
               {intakeItems.length > 0
@@ -412,6 +422,12 @@ export default function Purchases() {
                 : 'Busca y agrega productos al ingreso'}
             </p>
           </div>
+          {intakeItems.length > 0 && (
+            <div className="text-right">
+              <p className="text-xs text-gray-500">Costo total</p>
+              <p className="text-lg font-bold text-primary-700">Q{totalCost.toFixed(2)}</p>
+            </div>
+          )}
         </div>
 
         {/* Split layout */}
@@ -819,6 +835,7 @@ export default function Purchases() {
   const todayStr = new Date().toDateString()
   const todayGroups = intakeGroups.filter(g => new Date(g.date).toDateString() === todayStr)
   const todayUnits = todayGroups.reduce((s, g) => s + g.totalUnits, 0)
+  const todayCost = todayGroups.reduce((s, g) => s + (g.totalCost ?? 0), 0)
 
   return (
     <div className="space-y-4">
@@ -839,7 +856,7 @@ export default function Purchases() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
           <div className="p-2.5 bg-blue-100 rounded-lg"><Package size={20} className="text-blue-600" /></div>
           <div>
@@ -853,6 +870,15 @@ export default function Purchases() {
             <p className="text-xs text-gray-400">Unidades hoy</p>
             <p className="text-xl font-bold text-gray-800">
               {todayUnits % 1 === 0 ? todayUnits : todayUnits.toFixed(2)}
+            </p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
+          <div className="p-2.5 bg-primary-100 rounded-lg"><DollarSign size={20} className="text-primary-700" /></div>
+          <div>
+            <p className="text-xs text-gray-400">Costo hoy</p>
+            <p className="text-xl font-bold text-gray-800">
+              {todayGroups.some(g => g.totalCost !== null) ? `Q${todayCost.toFixed(2)}` : '—'}
             </p>
           </div>
         </div>
@@ -900,6 +926,9 @@ export default function Purchases() {
                         <span className="font-normal text-gray-600">
                           {group.totalUnits % 1 === 0 ? group.totalUnits : group.totalUnits.toFixed(2)} unidades
                         </span>
+                        {group.totalCost !== null && (
+                          <span className="font-normal text-primary-700"> · Q{group.totalCost.toFixed(2)}</span>
+                        )}
                       </p>
                       <p className="text-xs text-gray-400">
                         {format(new Date(group.date), "d 'de' MMMM, HH:mm", { locale: es })}
@@ -929,6 +958,7 @@ export default function Purchases() {
                             <tr className="text-xs text-gray-400">
                               <th className="text-left py-1.5 font-medium">Producto</th>
                               <th className="text-right py-1.5 font-medium">Cantidad</th>
+                              <th className="text-right py-1.5 font-medium">Costo unit.</th>
                               <th className="text-right py-1.5 font-medium">Antes</th>
                               <th className="text-right py-1.5 font-medium">Después</th>
                             </tr>
@@ -939,6 +969,9 @@ export default function Purchases() {
                                 <td className="py-1.5 text-gray-700">{item.product?.name}</td>
                                 <td className="py-1.5 text-right font-semibold text-green-600">
                                   +{Number(item.quantity) % 1 === 0 ? Number(item.quantity) : Number(item.quantity).toFixed(2)}
+                                </td>
+                                <td className="py-1.5 text-right text-gray-500">
+                                  {item.unitCost != null ? `Q${Number(item.unitCost).toFixed(2)}` : '—'}
                                 </td>
                                 <td className="py-1.5 text-right text-gray-400">{Number(item.quantityBefore).toFixed(0)}</td>
                                 <td className="py-1.5 text-right text-gray-700">{Number(item.quantityAfter).toFixed(0)}</td>

@@ -262,6 +262,7 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
         performedById: request.user.id,
         referenceId,
         reason,
+        unitCost: item.unitCost,
       })
 
       if (canEditPrice) {

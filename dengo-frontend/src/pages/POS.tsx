@@ -238,6 +238,13 @@ export default function POS() {
   const [searchResults, setSearchResults] = useState<ProductRecord[]>([])
   const [showSearchResults, setShowSearchResults] = useState(false)
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // A barcode scan (fast typing + Enter) can add the product and clear the
+  // field before the debounced search fired by an earlier keystroke has
+  // actually returned — that in-flight response then lands after the clear
+  // and reopens the dropdown with the just-added product. performSearch
+  // checks this ref before applying its result so a stale response never
+  // overrides a search term that's already moved on (or been cleared).
+  const latestSearchTermRef = useRef('')
 
   // Customers
   const [customers, setCustomers] = useState<CustomerRecord[]>([])
@@ -434,6 +441,7 @@ export default function POS() {
 
   // ── Live product search (debounced) ───────────────────────────────────────
   useEffect(() => {
+    latestSearchTermRef.current = searchTerm
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
     if (!searchTerm.trim()) {
       setSearchResults([])
@@ -453,12 +461,15 @@ export default function POS() {
       const data = await api.get<ProductRecord[]>(
         `/api/products?search=${encodeURIComponent(query)}&isActive=true`
       )
+      if (latestSearchTermRef.current.trim() !== query) return // stale — searchTerm moved on (or was cleared) while this was in flight
       const results = (data ?? []).filter(p => p.isActive !== false).map(normaliseProduct)
       setSearchResults(results)
       setShowSearchResults(results.length > 0 || query.length > 0)
     } catch {
+      if (latestSearchTermRef.current.trim() !== query) return
       // Server unreachable — search the last cached catalog snapshot instead
       const cached = await getCache<ProductRecord[]>('products')
+      if (latestSearchTermRef.current.trim() !== query) return
       const q = query.toLowerCase()
       const results = (cached ?? [])
         .filter(p => p.isActive !== false && (
@@ -1302,11 +1313,17 @@ export default function POS() {
                     >
                       <span className="text-xs text-gray-400">{idx + 1}</span>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate">{item.product.name}</p>
+                        {/* A real named presentation's own name already is the
+                            full, self-contained description (ej. "Ciento de
+                            hojas bond tamaño carta") — showing the base
+                            product name above it too just repeats/confuses.
+                            Only the synthetic base/"Pieza" variation (not a
+                            real thing in the business) falls back to the
+                            product's own name. */}
+                        <p className="text-sm font-medium text-gray-800 truncate">
+                          {item.variation && !item.variation.isDefault ? item.variation.name : item.product.name}
+                        </p>
                         <div className="flex items-center gap-1">
-                          {item.variation && (
-                            <p className="text-xs text-gray-400">{item.variation.name}</p>
-                          )}
                           {getVariations(item.product).length > 1 && (
                             <>
                               <button

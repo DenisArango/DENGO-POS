@@ -507,20 +507,30 @@ export default function SaleDetail() {
           <div className="px-5 py-4 border-t space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Método de pago</label>
-              {sale.saleType === 'CREDIT' ? (
-                <p className="text-xs text-gray-500">Esta venta es a crédito — su método de pago se gestiona desde los abonos del cliente, no se edita aquí.</p>
+              {(sale.creditPayments?.length ?? 0) > 0 ? (
+                <p className="text-xs text-gray-500">Esta venta ya tiene abonos registrados — no se puede cambiar entre crédito y pagado desde aquí. Contacta a un administrador.</p>
               ) : (
                 <>
-                  <div className="grid grid-cols-3 gap-2 max-w-sm">
-                    {(['CASH', 'CARD', 'TRANSFER'] as const).map(m => (
+                  <div className="grid grid-cols-4 gap-2 max-w-sm">
+                    {(['CASH', 'CARD', 'TRANSFER', 'CREDIT'] as const).map(m => (
                       <button key={m} type="button" onClick={() => setEditPaymentMethod(m)}
-                        className={`py-2 rounded-lg text-xs font-medium transition-colors ${editPaymentMethod === m ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                        disabled={m === 'CREDIT' && !sale.customer}
+                        className={`py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${editPaymentMethod === m ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                         {PM_LABEL[m]}
                       </button>
                     ))}
                   </div>
-                  {sale.paymentMethod === 'MIXED' && (
+                  {sale.paymentMethod === 'MIXED' && editPaymentMethod !== 'MIXED' && (
                     <p className="text-xs text-orange-600 mt-1">Esta venta era de pago mixto — al guardar se reemplaza por el método único seleccionado.</p>
+                  )}
+                  {editPaymentMethod === 'CREDIT' && sale.saleType !== 'CREDIT' && (
+                    <p className="text-xs text-blue-600 mt-1">Se marcará como venta a crédito y se suma al saldo pendiente de {sale.customer?.name ?? 'este cliente'}.</p>
+                  )}
+                  {editPaymentMethod !== 'CREDIT' && sale.saleType === 'CREDIT' && (
+                    <p className="text-xs text-blue-600 mt-1">Se marcará como pagada y se descuenta del saldo pendiente de {sale.customer?.name ?? 'este cliente'}.</p>
+                  )}
+                  {editPaymentMethod === 'CREDIT' && !sale.customer && (
+                    <p className="text-xs text-orange-600 mt-1">Esta venta no tiene cliente asociado — no se puede marcar a crédito.</p>
                   )}
                 </>
               )}

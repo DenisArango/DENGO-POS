@@ -517,11 +517,32 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
 
-    const existing = await prisma.sale.findUnique({ where: { id }, include: { items: true } })
+    const existing = await prisma.sale.findUnique({ where: { id }, include: { items: true, creditPayments: true } })
     if (!existing) return reply.status(404).send({ error: 'Venta no encontrada' })
     if (existing.isVoided) return reply.status(400).send({ error: 'No se puede editar una venta anulada' })
 
     const { items: newItems, ...simpleFields } = body.data
+
+    // Cambiar el método de pago desde/hacia CREDITO es más que una
+    // etiqueta — también mueve saleType y el saldo de crédito del cliente
+    // (ver creditUsed), que es lo que la pantalla de abonos y los reportes
+    // de crédito usan como fuente de verdad. El caso real que esto resuelve:
+    // un cajero marcó "efectivo" cuando en realidad fue al crédito (o
+    // viceversa), y antes esto no se podía corregir desde aquí en absoluto.
+    const newPaymentMethod = body.data.paymentMethod ?? existing.paymentMethod
+    const newSaleType = newPaymentMethod === 'CREDIT' ? 'CREDIT' : 'CASH'
+    const creditConversion = newSaleType !== existing.saleType
+    if (creditConversion) {
+      if (existing.creditPayments.length > 0) {
+        return reply.status(400).send({
+          error: 'Esta venta ya tiene abonos registrados — no se puede cambiar entre crédito y pagado desde aquí. Contacta a un administrador.',
+        })
+      }
+      if (newSaleType === 'CREDIT' && !existing.customerId) {
+        return reply.status(400).send({ error: 'Esta venta no tiene cliente asociado — no se puede marcar como crédito sin uno.' })
+      }
+    }
+    const amountForCreditAdjustment = body.data.total ?? Number(existing.total)
 
     // updateStock opens its own prisma.$transaction internally — calling it inside another
     // transaction causes nested transactions on SQL Server → deadlock. Run inventory updates
@@ -552,7 +573,23 @@ export default async function salesRoutes(fastify: FastifyInstance) {
           })),
         })
       }
-      await tx.sale.update({ where: { id }, data: simpleFields })
+      await tx.sale.update({
+        where: { id },
+        data: {
+          ...simpleFields,
+          ...(creditConversion ? {
+            saleType: newSaleType,
+            isPaid: newSaleType === 'CASH',
+            paidAmount: newSaleType === 'CASH' ? amountForCreditAdjustment : 0,
+          } : {}),
+        },
+      })
+      if (creditConversion && existing.customerId) {
+        await tx.customer.update({
+          where: { id: existing.customerId },
+          data: { creditUsed: { [newSaleType === 'CREDIT' ? 'increment' : 'decrement']: amountForCreditAdjustment } },
+        })
+      }
     })
 
     if (newItems) {

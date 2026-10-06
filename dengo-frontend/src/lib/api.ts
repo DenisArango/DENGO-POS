@@ -54,7 +54,13 @@ async function apiFetch<T = unknown>(
   body?: unknown,
 ): Promise<T> {
   const token = getToken()
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  // Content-Type only when there's actually a body to send — Fastify's
+  // default JSON parser rejects an empty body outright (400
+  // FST_ERR_CTP_EMPTY_JSON_BODY) when the content-type says JSON, which is
+  // exactly what every bodiless call (almost every DELETE in the app, most
+  // of the PUT status-transition endpoints) was sending.
+  const headers: Record<string, string> = {}
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (token) headers['Authorization'] = `Bearer ${token}`
 
   let res: Response

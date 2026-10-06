@@ -164,6 +164,18 @@ export default function ProductModal({
     reader.readAsDataURL(file)
   }
 
+  // Same validation as processImageFile, but for an image that's already a
+  // data: URL (see the HTML-clipboard fallback below) — no FileReader needed,
+  // it's already the string productImage wants.
+  const processImageDataUrl = (dataUrl: string) => {
+    const approxBytes = dataUrl.length * 0.75 // base64 → ~3/4 the decoded size
+    if (approxBytes > 5 * 1024 * 1024) {
+      toast.error('La imagen no debe superar 5MB')
+      return
+    }
+    setProductImage(dataUrl)
+  }
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) processImageFile(file)
@@ -181,8 +193,22 @@ export default function ProductModal({
         if (item.type.startsWith('image/')) {
           const file = item.getAsFile()
           if (file) { e.preventDefault(); processImageFile(file) }
-          break
+          return
         }
+      }
+      // Excel (and other Office apps) copying a cell/picture often doesn't
+      // put a plain image/* item on the clipboard at all — instead it's
+      // embedded as a base64 <img> inside the text/html representation.
+      // Pull that out as a fallback before giving up.
+      const html = e.clipboardData?.getData('text/html')
+      const match = html?.match(/<img[^>]+src=["']?(data:image\/[^"'\s>]+)/i)
+      if (match) {
+        e.preventDefault()
+        processImageDataUrl(match[1])
+        return
+      }
+      if (html !== undefined && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        toast.error('No se encontró una imagen en lo copiado — en Excel, copia la imagen misma (no la celda), o usa "Copiar como imagen"')
       }
     }
     window.addEventListener('paste', handleWindowPaste)

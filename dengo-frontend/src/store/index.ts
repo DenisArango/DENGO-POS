@@ -303,16 +303,22 @@ interface LicenseState {
   posEnabled: boolean
   maestrosEnabled: boolean
   pageEnabled: boolean
+  // Defaults false (unlike the other 3) on purpose — this one hides a
+  // feature (factura/FEL) until the vendor turns it on for this client, so
+  // the safe default while unresolved is hidden, not briefly shown then
+  // yanked away once the real value loads.
+  felEnabled: boolean
   loaded: boolean
-  setLicense: (license: { posEnabled: boolean; maestrosEnabled: boolean; pageEnabled: boolean }) => void
+  setLicense: (license: { posEnabled: boolean; maestrosEnabled: boolean; pageEnabled: boolean; felEnabled?: boolean }) => void
 }
 
 export const useLicenseStore = create<LicenseState>((set) => ({
   posEnabled: true,
   maestrosEnabled: true,
   pageEnabled: true,
+  felEnabled: false,
   loaded: false,
-  setLicense: (license) => set({ ...license, loaded: true }),
+  setLicense: (license) => set({ ...license, felEnabled: license.felEnabled ?? false, loaded: true }),
 }))
 
 // Store de la aplicación (solo UI state)

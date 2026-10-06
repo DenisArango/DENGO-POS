@@ -7,6 +7,7 @@ import {
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../../lib/api'
+import { useLicenseStore } from '../../store'
 import { usePermissions } from '../../hooks/usePermissions'
 import { toast } from 'sonner'
 import ThermalReceipt from '../../components/print/ThermalReceipt'
@@ -51,12 +52,14 @@ export default function SaleDetail() {
   const { hasPermission } = usePermissions()
   const canEdit = hasPermission('sales.edit')
   const canVoid = hasPermission('sales.cancel')
+  const felEnabled = useLicenseStore(s => s.felEnabled)
 
   const [sale, setSale] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
   const [editMode, setEditMode] = useState(false)
   const [editItems, setEditItems] = useState<EditItem[]>([])
   const [editNotes, setEditNotes] = useState('')
+  const [editPaymentMethod, setEditPaymentMethod] = useState<string>('CASH')
   const [saving, setSaving] = useState(false)
 
   // Add product search
@@ -102,6 +105,7 @@ export default function SaleDetail() {
       convFactor: Number(item.variation?.conversionFactor ?? 1),
     })))
     setEditNotes(sale.notes ?? '')
+    setEditPaymentMethod(sale.paymentMethod ?? 'CASH')
     setEditMode(true)
   }
 
@@ -171,7 +175,7 @@ export default function SaleDetail() {
     setSaving(true)
     try {
       const subtotal = items.reduce((s, i) => s + i.total, 0)
-      await api.put(`/api/sales/${id}`, { items, subtotal, total: subtotal, notes: editNotes })
+      await api.put(`/api/sales/${id}`, { items, subtotal, total: subtotal, notes: editNotes, paymentMethod: editPaymentMethod })
       toast.success('Venta actualizada')
       setEditMode(false)
       fetchSale()
@@ -255,7 +259,7 @@ export default function SaleDetail() {
           <button onClick={printSale} className="btn-outline btn-sm flex items-center gap-1.5">
             <Printer size={15} /> Imprimir
           </button>
-          {!sale.isVoided && !editMode && canEdit && !sale.requiresInvoice && (
+          {felEnabled && !sale.isVoided && !editMode && canEdit && !sale.requiresInvoice && (
             <button onClick={openInvoiceForm} className="btn-outline btn-sm flex items-center gap-1.5">
               <Receipt size={15} /> Generar factura
             </button>
@@ -498,17 +502,39 @@ export default function SaleDetail() {
           </table>
         </div>
 
-        {/* Edit notes */}
+        {/* Edit payment method + notes */}
         {editMode && (
-          <div className="px-5 py-4 border-t">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
-            <textarea
-              value={editNotes}
-              onChange={e => setEditNotes(e.target.value)}
-              rows={2}
-              className="input w-full resize-none text-sm"
-              placeholder="Notas adicionales..."
-            />
+          <div className="px-5 py-4 border-t space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Método de pago</label>
+              {sale.saleType === 'CREDIT' ? (
+                <p className="text-xs text-gray-500">Esta venta es a crédito — su método de pago se gestiona desde los abonos del cliente, no se edita aquí.</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-2 max-w-sm">
+                    {(['CASH', 'CARD', 'TRANSFER'] as const).map(m => (
+                      <button key={m} type="button" onClick={() => setEditPaymentMethod(m)}
+                        className={`py-2 rounded-lg text-xs font-medium transition-colors ${editPaymentMethod === m ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                        {PM_LABEL[m]}
+                      </button>
+                    ))}
+                  </div>
+                  {sale.paymentMethod === 'MIXED' && (
+                    <p className="text-xs text-orange-600 mt-1">Esta venta era de pago mixto — al guardar se reemplaza por el método único seleccionado.</p>
+                  )}
+                </>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+              <textarea
+                value={editNotes}
+                onChange={e => setEditNotes(e.target.value)}
+                rows={2}
+                className="input w-full resize-none text-sm"
+                placeholder="Notas adicionales..."
+              />
+            </div>
           </div>
         )}
       </div>

@@ -1,7 +1,7 @@
 import type { FastifyRequest } from 'fastify'
 
 /** A user's home branch plus any additional branches assigned via UserBranch (JWT-embedded, see auth.ts). */
-function allowedBranchIds(request: FastifyRequest): string[] {
+export function allowedBranchIds(request: FastifyRequest): string[] {
   return request.user.branchIds?.length ? request.user.branchIds : [request.user.branchId]
 }
 

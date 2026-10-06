@@ -38,6 +38,10 @@ export default function DailySalesReport() {
   const transactions = sales.length
   const avgTicket = transactions > 0 ? totalSales / transactions : 0
   const itemsSold = sales.reduce((s, x) => s + (x.items?.reduce((a: number, i: any) => a + Number(i.quantity), 0) ?? 0), 0)
+  // Cost/profit already computed per item (totalCost) and per sale (saleProfit)
+  // by the backend — just summing it here, nothing new to calculate.
+  const totalCost = sales.reduce((s, x) => s + (x.items?.reduce((a: number, i: any) => a + Number(i.totalCost ?? 0), 0) ?? 0), 0)
+  const totalProfit = sales.reduce((s, x) => s + Number(x.saleProfit ?? 0), 0)
 
   const hourlyMap: Record<number, number> = {}
   for (let h = 6; h <= 22; h++) hourlyMap[h] = 0
@@ -91,12 +95,14 @@ export default function DailySalesReport() {
         {loading && <span className="text-sm text-gray-400">Cargando...</span>}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
           { label: 'Total ventas', value: `Q${totalSales.toFixed(2)}`, icon: DollarSign, color: 'text-green-600 bg-green-100' },
           { label: 'Transacciones', value: String(transactions), icon: ShoppingCart, color: 'text-blue-600 bg-blue-100' },
           { label: 'Ticket promedio', value: `Q${avgTicket.toFixed(2)}`, icon: TrendingUp, color: 'text-purple-600 bg-purple-100' },
           { label: 'Artículos vendidos', value: String(Math.round(itemsSold)), icon: Package, color: 'text-orange-600 bg-orange-100' },
+          { label: 'Costo total', value: `Q${totalCost.toFixed(2)}`, icon: DollarSign, color: 'text-gray-600 bg-gray-100' },
+          { label: 'Ganancia total', value: `Q${totalProfit.toFixed(2)}`, icon: TrendingUp, color: 'text-emerald-600 bg-emerald-100' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
             <div className={`p-2.5 rounded-lg ${s.color}`}><s.icon size={20} /></div>

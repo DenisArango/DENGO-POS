@@ -29,6 +29,7 @@ interface BranchData {
   defaultCustomerId?: string
   receiptWidthMm?: number
   invoiceSeries?: string
+  receiptSeries?: string
   salesReconciliationEnabled?: boolean
   createdAt?: string
   updatedAt?: string
@@ -46,7 +47,7 @@ const EMPTY_FORM: BranchData = {
   email: '', manager: '', status: 'active', openTime: '08:00', closeTime: '20:00',
   logo: '', companyName: '', companyTaxId: '', companyTagline: '', companyWebsite: '',
   socialMediaName: '',
-  defaultCustomerId: '', receiptWidthMm: 55, invoiceSeries: 'A',
+  defaultCustomerId: '', receiptWidthMm: 55, invoiceSeries: 'A', receiptSeries: '',
   salesReconciliationEnabled: false,
 }
 
@@ -562,6 +563,13 @@ export default function Stores() {
                       onChange={e => setFormData({ ...formData, invoiceSeries: e.target.value.toUpperCase() })}
                       className="input w-full" placeholder="A" />
                     <p className="text-xs text-gray-500 mt-1">El número de factura sube solo, en orden, dentro de esta serie — no se puede editar directamente.</p>
+                  </div>
+                  <div>
+                    <label className="label">Serie de recibo</label>
+                    <input type="text" maxLength={10} value={formData.receiptSeries ?? ''}
+                      onChange={e => setFormData({ ...formData, receiptSeries: e.target.value.toUpperCase() })}
+                      className="input w-full" placeholder="Ej: VDC1" />
+                    <p className="text-xs text-gray-500 mt-1">Prefijo del número de recibo de cada venta (distinto de la factura): {formData.receiptSeries || 'VDC1'}-1, {formData.receiptSeries || 'VDC1'}-2... Sube solo, en orden.</p>
                   </div>
                 </div>
               </div>

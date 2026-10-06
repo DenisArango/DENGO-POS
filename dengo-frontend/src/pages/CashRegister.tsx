@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   TrendingUp, TrendingDown, Wallet,
-  Plus, X, Printer, Eye, Lock, Unlock
+  Plus, X, Printer, Eye, Lock, Unlock, AlertTriangle
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -486,6 +486,25 @@ export default function CashRegisterPage() {
       </div>
 
       {loading && <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" /></div>}
+
+      {/* Normalmente debe haber una sola caja física abierta a la vez — más
+          de una aquí casi siempre significa que hay 2 cajas configuradas
+          (Configuración → Tiendas → Cajas) para lo que en realidad es una
+          sola caja física, y por eso las ventas de cada persona "aparecen
+          separadas" al cerrar en vez de sumarse juntas. */}
+      {!loading && openRegisters.length > 1 && (
+        <div className="border-2 border-orange-300 bg-orange-50 rounded-lg p-4 flex items-start gap-3">
+          <AlertTriangle className="text-orange-500 flex-shrink-0 mt-0.5" size={20} />
+          <div>
+            <p className="text-sm font-semibold text-orange-800">Hay {openRegisters.length} cajas abiertas a la vez en esta sucursal</p>
+            <p className="text-xs text-orange-700 mt-1">
+              Si físicamente es una sola caja, revisa Configuración → Tiendas → Cajas — probablemente hay 2 cajas configuradas
+              para la misma caja física. Mientras eso pase, las ventas se reparten entre las dos en vez de sumarse en una sola,
+              y al cerrar cada una por separado va a parecer que falta dinero (el resto está en la otra, todavía abierta).
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Cajas abiertas */}
       {!loading && openRegisters.map(reg => (

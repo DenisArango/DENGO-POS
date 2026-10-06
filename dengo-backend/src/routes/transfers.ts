@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { updateStock } from '../services/inventory.service.js'
 import { log } from '../services/audit.service.js'
-import { canAccessBranch } from '../lib/branch-scope.js'
+import { canAccessBranch, allowedBranchIds } from '../lib/branch-scope.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
 
 const include = {
@@ -17,11 +17,15 @@ const include = {
 export default async function transferRoutes(fastify: FastifyInstance) {
   fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('transfers.view')] }, async (request, reply) => {
     const q = request.query as { fromBranchId?: string; toBranchId?: string; status?: string; page?: string; limit?: string }
-    // Non-admins only see transfers touching their own branch (either side) —
-    // a transfer has two branches, so it can't be pinned to one like other resources.
-    const own = request.user.role !== 'ADMIN' ? request.user.branchId : undefined
+    // Non-admins only see transfers touching one of THEIR branches (home +
+    // any assigned via UserBranch) on either side — a transfer has two
+    // branches, so it can't be pinned to one like other resources. This used
+    // to hardcode just request.user.branchId (home branch only), silently
+    // hiding transfers for a user's other assigned branches — the exact same
+    // bug class fixed in reports.ts earlier.
+    const own = request.user.role !== 'ADMIN' ? allowedBranchIds(request) : null
     const where = {
-      ...(own ? { OR: [{ fromBranchId: own }, { toBranchId: own }] } : {}),
+      ...(own ? { OR: [{ fromBranchId: { in: own } }, { toBranchId: { in: own } }] } : {}),
       ...(q.fromBranchId ? { fromBranchId: q.fromBranchId } : {}),
       ...(q.toBranchId ? { toBranchId: q.toBranchId } : {}),
       ...(q.status ? { status: q.status as any } : {}),

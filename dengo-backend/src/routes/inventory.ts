@@ -166,6 +166,19 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
     return reply.send({ quantity: Number(inv?.quantity ?? 0), inventory: inv })
   })
 
+  // GET /api/inventory/:productId/all-branches — cross-branch stock lookup
+  // for the POS ("¿tienen esto en otra sucursal?"). Deliberately NOT branch-
+  // scoped like everything else here: the whole point is seeing branches the
+  // cashier doesn't work at, to tell a customer where to go instead — stock
+  // levels aren't sensitive the way sales/financials are.
+  fastify.get('/:productId/all-branches', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
+    const { productId } = request.params as { productId: string }
+    const branches = await prisma.branch.findMany({ where: { status: 'active' }, select: { id: true, name: true }, orderBy: { name: 'asc' } })
+    const stock = await prisma.inventory.findMany({ where: { productId }, select: { branchId: true, quantity: true } })
+    const byBranch = new Map(stock.map(s => [s.branchId, Number(s.quantity)]))
+    return reply.send(branches.map(b => ({ branchId: b.id, branchName: b.name, quantity: byBranch.get(b.id) ?? 0 })))
+  })
+
   // PUT /api/inventory/:productId/:branchId  (manual adjustment)
   fastify.put('/:productId/:branchId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { productId, branchId } = request.params as { productId: string; branchId: string }

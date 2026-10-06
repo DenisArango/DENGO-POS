@@ -121,6 +121,7 @@ export default function Purchases() {
   const [editCostVal, setEditCostVal] = useState('')
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null)
   const [editPriceVal, setEditPriceVal] = useState('')
+  const draftHydratedRef = useRef(false)
 
   // ── Load data ─────────────────────────────────────────────────────────────
   const fetchMovements = () => {
@@ -140,6 +141,45 @@ export default function Purchases() {
       .then(d => setSuppliers(d ?? []))
       .catch(() => {})
   }, [])
+
+  // ── Draft: survives a corte de luz/internet or navegar a otra pantalla ─────
+  // Same pattern as POS.tsx's in-progress-sale draft — keyed per user (not
+  // per branch) since selectedBranchId here is itself a form field, not a
+  // fixed "where this device is" context like POS's BRANCH_ID.
+  const draftKey = `purchases-draft-intake-${user?.id ?? ''}`
+  useEffect(() => {
+    if (draftHydratedRef.current || !user?.id) return
+    draftHydratedRef.current = true
+    try {
+      const raw = localStorage.getItem(draftKey)
+      if (!raw) return
+      const draft = JSON.parse(raw)
+      if (Array.isArray(draft.intakeItems) && draft.intakeItems.length > 0) {
+        setIntakeItems(draft.intakeItems)
+        setSelectedBranchId(draft.selectedBranchId ?? (user?.branchId ?? ''))
+        setSelectedSupplierId(draft.selectedSupplierId ?? '')
+        setNotes(draft.notes ?? '')
+        setView('create')
+        toast.info('Se restauró el ingreso que tenías en curso')
+      }
+    } catch {
+      // Draft corrupto o ilegible — se ignora, no bloquea el uso normal.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!draftHydratedRef.current || !user?.id) return
+    try {
+      if (intakeItems.length === 0) {
+        localStorage.removeItem(draftKey)
+      } else {
+        localStorage.setItem(draftKey, JSON.stringify({ intakeItems, selectedBranchId, selectedSupplierId, notes }))
+      }
+    } catch {
+      // localStorage lleno o bloqueado — el ingreso sigue funcionando, solo no persiste.
+    }
+  }, [intakeItems, selectedBranchId, selectedSupplierId, notes, user?.id])
 
   const selectedSupplier = suppliers.find(s => s.id === selectedSupplierId) ?? null
   const filteredSuppliers = suppliers.filter(s => matchesSearch([s.name, s.code], supplierSearch))

@@ -4,11 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Trash2, X, DollarSign, CreditCard,
   UserPlus, User, Barcode, ShoppingCart, Printer,
-  Calendar, AlertCircle, Receipt, ArrowLeftRight, Edit2, History, ExternalLink, Wallet
+  Calendar, AlertCircle, Receipt, ArrowLeftRight, Edit2, History, ExternalLink, Wallet, Package, Building2, Plus
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { useAuthStore } from '../store'
+import { useAuthStore, useLicenseStore } from '../store'
 import { api, ApiError } from '../lib/api'
 import { toast } from 'sonner'
 import { useStore } from '../contexts/StoreContext'
@@ -161,6 +161,7 @@ function getVariations(product: ProductRecord): ProductVariation[] {
 export default function POS() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const felEnabled = useLicenseStore(s => s.felEnabled)
   const { currentStore } = useStore()
   const BRANCH_ID = currentStore?.id ?? user?.branchId ?? ''
   const { hasPermission } = usePermissions()
@@ -267,6 +268,12 @@ export default function POS() {
   const [variationQuantities, setVariationQuantities] = useState<Record<string, number>>({})
   const [changingVariationItem, setChangingVariationItem] = useState<CartItem | null>(null) // non-null = changing existing item
 
+  // Cross-branch stock lookup — "¿tienen esto en otra sucursal?"
+  const [showOtherBranchesModal, setShowOtherBranchesModal] = useState(false)
+  const [otherBranchesProductName, setOtherBranchesProductName] = useState('')
+  const [otherBranchesStock, setOtherBranchesStock] = useState<{ branchId: string; branchName: string; quantity: number }[]>([])
+  const [loadingOtherBranches, setLoadingOtherBranches] = useState(false)
+
   // Out-of-stock gate at add time — see ensureStockAvailable(). Non-null
   // while the "adjust inventory now?" prompt is open for a cashier with
   // inventory.adjust; resolve(true/false) unblocks whichever add() is waiting.
@@ -296,6 +303,7 @@ export default function POS() {
   const [wantsInvoice, setWantsInvoice] = useState(false)
   const [invoiceBuyerNit, setInvoiceBuyerNit] = useState('')
   const [invoiceBuyerName, setInvoiceBuyerName] = useState('')
+  const [saleNotes, setSaleNotes] = useState('')
 
   // Quantity string display — allows free-text editing (cleared on commit/blur)
   const [itemQtyStrings, setItemQtyStrings] = useState<Record<string, string>>({})
@@ -307,6 +315,7 @@ export default function POS() {
   // unitPrice the client sends, same as the existing discount feature).
   const [itemPriceOverride, setItemPriceOverride] = useState<Record<string, number>>({})
   const [itemTotalStrings, setItemTotalStrings] = useState<Record<string, string>>({})
+  const [itemUnitPriceStrings, setItemUnitPriceStrings] = useState<Record<string, string>>({})
 
   // ── Venta en curso: sobrevive salir y volver a esta pantalla ────────────────
   // React desmonta POS.tsx al navegar a otra sección, perdiendo todo su
@@ -333,6 +342,7 @@ export default function POS() {
         setWantsInvoice(draft.wantsInvoice ?? false)
         setInvoiceBuyerNit(draft.invoiceBuyerNit ?? '')
         setInvoiceBuyerName(draft.invoiceBuyerName ?? '')
+        setSaleNotes(draft.saleNotes ?? '')
         toast.info('Se restauró la venta que tenías en curso')
       }
     } catch {
@@ -348,13 +358,13 @@ export default function POS() {
       } else {
         localStorage.setItem(draftKey, JSON.stringify({
           cartItems, itemDiscounts, itemPriceOverride, selectedCustomer,
-          saleType, wantsInvoice, invoiceBuyerNit, invoiceBuyerName,
+          saleType, wantsInvoice, invoiceBuyerNit, invoiceBuyerName, saleNotes,
         }))
       }
     } catch {
       // localStorage lleno o bloqueado — la venta sigue funcionando, solo no persiste.
     }
-  }, [cartItems, itemDiscounts, itemPriceOverride, selectedCustomer, saleType, wantsInvoice, invoiceBuyerNit, invoiceBuyerName, BRANCH_ID])
+  }, [cartItems, itemDiscounts, itemPriceOverride, selectedCustomer, saleType, wantsInvoice, invoiceBuyerNit, invoiceBuyerName, saleNotes, BRANCH_ID])
 
   // Receipt
   const [showReceiptModal, setShowReceiptModal] = useState(false)
@@ -559,6 +569,7 @@ export default function POS() {
     setItemQtyStrings(prev => { const next = { ...prev }; delete next[key]; return next })
     setItemPriceOverride(prev => { const next = { ...prev }; delete next[key]; return next })
     setItemTotalStrings(prev => { const next = { ...prev }; delete next[key]; return next })
+    setItemUnitPriceStrings(prev => { const next = { ...prev }; delete next[key]; return next })
   }
 
   // Applies one % to every current cart line's own discount field instead of
@@ -583,7 +594,13 @@ export default function POS() {
     setItemQtyStrings({})
     setItemPriceOverride({})
     setItemTotalStrings({})
+    setItemUnitPriceStrings({})
     setBulkDiscountInput('')
+    // Starting a new sale (explicit "Nueva Venta" or right after completing
+    // one) should return to the branch's default customer, not leave
+    // whoever was just served still selected for the next sale.
+    const defaultCustomer = customers.find(c => c.id === currentStore?.defaultCustomerId)
+    setSelectedCustomer(defaultCustomer ?? null)
   }
 
   // Gate on stock BEFORE adding, not just at final checkout — additionalQty
@@ -654,26 +671,32 @@ export default function POS() {
   const handleAddProduct = async (product: ProductRecord) => {
     setSearchTerm('')
     setShowSearchResults(false)
-    const variations = getVariations(product)
-    // A product with real presentations (ej. Coca-Cola 600ml/1L/3L) opens the
-    // picker so the cashier can choose — and can add more than one
-    // presentation of the same product without it just bumping the quantity
-    // of whichever one was added first. Only a single-presentation product
-    // skips straight to the cart. Stock is checked per-variation once one's
-    // actually chosen (see handleAddVariationToCart), not here.
-    if (variations.length > 1) {
-      setChangingVariationItem(null)
-      setSelectedProductForVariation(product)
-      const initialQtys: Record<string, number> = {}
-      variations.forEach(v => { initialQtys[v.id] = 1 })
-      setVariationQuantities(initialQtys)
-      setShowVariationModal(true)
-      return
-    }
-    const variation = variations[0]!
-    if (!(await ensureStockAvailable(product, variation, 1))) return
-    addToCart(product, variation, 1)
+    // Always adds the base unit straight to the cart, even for a product
+    // that also has named presentations (ej. Coca-Cola 600ml/1L/3L) — the
+    // picker used to gate this up front, meaning the base itself could never
+    // be sold once a product had any variation defined. Picking an actual
+    // presentation is now a deliberate extra step from the cart row (see
+    // openVariationPicker) instead of a mandatory first step.
+    const base = buildDefaultVariation(product)
+    if (!(await ensureStockAvailable(product, base, 1))) return
+    addToCart(product, base, 1)
     toast.success(`${product.name} agregado`)
+  }
+
+  // Adds an additional presentation of a product already in the cart — the
+  // base line (added above) stays untouched; this opens the same picker
+  // used elsewhere, but in "adding fresh" mode (changingVariationItem
+  // stays null) so each pick becomes its own new cart line instead of
+  // replacing one, letting base + several variations coexist on one sale.
+  const openVariationPicker = (product: ProductRecord) => {
+    const variations = getVariations(product)
+    if (variations.length <= 1) return
+    setChangingVariationItem(null)
+    setSelectedProductForVariation(product)
+    const initialQtys: Record<string, number> = {}
+    variations.forEach(v => { initialQtys[v.id] = 1 })
+    setVariationQuantities(initialQtys)
+    setShowVariationModal(true)
   }
 
   const handleChangeVariation = (item: CartItem) => {
@@ -687,16 +710,36 @@ export default function POS() {
     setShowVariationModal(true)
   }
 
+  const showOtherBranchesStock = async (product: ProductRecord) => {
+    setOtherBranchesProductName(product.name)
+    setShowOtherBranchesModal(true)
+    setLoadingOtherBranches(true)
+    try {
+      const data = await api.get<{ branchId: string; branchName: string; quantity: number }[]>(
+        `/api/inventory/${product.id}/all-branches`
+      )
+      setOtherBranchesStock(data ?? [])
+    } catch {
+      setOtherBranchesStock([])
+      toast.error('No se pudo consultar el inventario de otras sucursales')
+    } finally {
+      setLoadingOtherBranches(false)
+    }
+  }
+
   const handleBarcodeScan = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || !searchTerm) return
     const barcode = searchTerm.trim()
+    // Case-insensitive: a scanner or manual entry can send different casing
+    // than what's stored, and "no encontrado" on a real scan is confusing.
+    const barcodeEq = (b?: string) => !!b && b.toUpperCase() === barcode.toUpperCase()
 
     // First check already-fetched results
     const exactProduct = searchResults.find(
-      p => p.barcode === barcode || getVariations(p).some(v => v.barcode === barcode)
+      p => barcodeEq(p.barcode) || getVariations(p).some(v => barcodeEq(v.barcode))
     )
     if (exactProduct) {
-      const matchedVariation = getVariations(exactProduct).find(v => v.barcode === barcode)
+      const matchedVariation = getVariations(exactProduct).find(v => barcodeEq(v.barcode))
       if (matchedVariation) {
         if (!(await ensureStockAvailable(exactProduct, matchedVariation, 1))) return
         addToCart(exactProduct, matchedVariation, 1)
@@ -735,11 +778,11 @@ export default function POS() {
       // Server unreachable — try to resolve the barcode from the cached catalog
       const cached = await getCache<ProductRecord[]>('products')
       const match = (cached ?? []).find(p =>
-        p.barcode === barcode || getVariations(p).some(v => v.barcode === barcode)
+        barcodeEq(p.barcode) || getVariations(p).some(v => barcodeEq(v.barcode))
       )
       if (match) {
         const product = normaliseProduct(match)
-        const matchedVariation = getVariations(match).find(v => v.barcode === barcode)
+        const matchedVariation = getVariations(match).find(v => barcodeEq(v.barcode))
         // Already confirmed unreachable above — skip the stock check here
         // instead of firing another doomed request; matches ensureStockAvailable's
         // own fallback of allowing the add when the check itself can't run.
@@ -909,6 +952,7 @@ export default function POS() {
         discount: 0,
         total,
         requiresInvoice: wantsInvoice,
+        notes: saleNotes.trim() || undefined,
       }
       if (wantsInvoice) {
         if (invoiceBuyerNit.trim()) payload.buyerNit = invoiceBuyerNit.trim()
@@ -1023,6 +1067,7 @@ export default function POS() {
         setWantsInvoice(false)
         setInvoiceBuyerNit('')
         setInvoiceBuyerName('')
+        setSaleNotes('')
         toast.success(successMessage)
       }
 
@@ -1171,13 +1216,22 @@ export default function POS() {
                     onMouseDown={() => handleAddProduct(product)}
                     className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-primary-50 text-left border-b border-gray-50 last:border-0 transition-colors"
                   >
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">{product.name}</p>
-                      <p className="text-xs text-gray-400">
-                        {product.barcode ?? product.sku ?? ''} · {product.category?.name ?? product.categoryName ?? ''}
-                      </p>
+                    <div className="flex items-center gap-3 min-w-0">
+                      {product.imageUrl ? (
+                        <img src={product.imageUrl} alt="" className="w-9 h-9 rounded object-cover flex-shrink-0 border border-gray-100" />
+                      ) : (
+                        <div className="w-9 h-9 rounded bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                          <Package size={16} className="text-gray-300" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{product.name}</p>
+                        <p className="text-xs text-gray-400">
+                          {product.barcode ?? product.sku ?? ''} · {product.category?.name ?? product.categoryName ?? ''}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right ml-4">
+                    <div className="text-right ml-4 flex-shrink-0">
                       <p className="text-sm font-bold text-primary-600">Q{Number(product.basePrice).toFixed(2)}</p>
                       {variations.length > 1 && (
                         <p className="text-xs text-gray-400">{variations.length} variantes</p>
@@ -1228,7 +1282,10 @@ export default function POS() {
               </div>
             ) : (
               <AnimatePresence initial={false}>
-                {cartItems.map((item, idx) => {
+                {/* Most recently added on top — the order items were added
+                    in, reversed, so the item just scanned/picked is always
+                    the first thing the cashier sees without scrolling. */}
+                {[...cartItems].reverse().map((item, idx) => {
                   const key = getItemKey(item.product.id, item.variation?.id)
                   const price = getItemPrice(item)
                   const isPriceOverridden = itemPriceOverride[key] !== undefined
@@ -1251,21 +1308,54 @@ export default function POS() {
                             <p className="text-xs text-gray-400">{item.variation.name}</p>
                           )}
                           {getVariations(item.product).length > 1 && (
-                            <button
-                              onClick={() => handleChangeVariation(item)}
-                              title="Cambiar variación"
-                              className="text-primary-400 hover:text-primary-600 transition-colors">
-                              <ArrowLeftRight size={11} />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleChangeVariation(item)}
+                                title="Cambiar variación de esta línea"
+                                className="text-primary-400 hover:text-primary-600 transition-colors">
+                                <ArrowLeftRight size={11} />
+                              </button>
+                              <button
+                                onClick={() => openVariationPicker(item.product)}
+                                title="Agregar otra presentación de este producto"
+                                className="text-primary-400 hover:text-primary-600 transition-colors">
+                                <Plus size={12} />
+                              </button>
+                            </>
                           )}
+                          <button
+                            onClick={() => showOtherBranchesStock(item.product)}
+                            title="Ver inventario en otras sucursales"
+                            className="text-gray-400 hover:text-primary-600 transition-colors">
+                            <Building2 size={11} />
+                          </button>
                         </div>
                       </div>
-                      <p
-                        className={`text-right text-sm ${isPriceOverridden ? 'text-primary-600 font-medium' : 'text-gray-600'}`}
-                        title={isPriceOverridden ? 'Precio ajustado para esta venta — no cambia el precio del producto' : undefined}
-                      >
-                        Q{Number(price).toFixed(2)}
-                      </p>
+                      {/* Unit price editable — ajusta solo esta venta, nunca el
+                          precio guardado del producto (mismo principio que el
+                          total editable de abajo). */}
+                      <div className="flex items-center justify-end" title="Precio ajustado para esta venta — no cambia el precio del producto">
+                        <span className="text-gray-400 text-xs mr-0.5">Q</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={itemUnitPriceStrings[key] ?? Number(price).toFixed(2)}
+                          onChange={e => setItemUnitPriceStrings(prev => ({ ...prev, [key]: e.target.value }))}
+                          onFocus={e => e.target.select()}
+                          onBlur={() => {
+                            const str = itemUnitPriceStrings[key]
+                            if (str !== undefined) {
+                              const n = parseFloat(str)
+                              if (!isNaN(n) && n >= 0) {
+                                setItemPriceOverride(prev => ({ ...prev, [key]: n }))
+                              }
+                              setItemUnitPriceStrings(prev => { const next = { ...prev }; delete next[key]; return next })
+                            }
+                          }}
+                          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                          className={`w-16 text-right text-sm border rounded py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 ${isPriceOverridden ? 'border-primary-300 text-primary-600 font-medium' : 'border-gray-200 text-gray-600'}`}
+                        />
+                      </div>
                       {/* Quantity control — un solo campo, se escribe la cantidad directo */}
                       <div className="flex items-center justify-center">
                         <input
@@ -1384,7 +1474,7 @@ export default function POS() {
                       </p>
                     )}
                     {selectedCustomer.comments && (
-                      <p className="text-xs text-gray-500 italic mt-1 border-t border-primary-100 pt-1">"{selectedCustomer.comments}"</p>
+                      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 italic mt-1">"{selectedCustomer.comments}"</p>
                     )}
                   </div>
                   <div className="flex gap-1 ml-2 flex-shrink-0">
@@ -1530,33 +1620,43 @@ export default function POS() {
             </div>
           </div>
 
-          {/* Factura — discrecional, apagado por defecto */}
+          {/* Factura — oculta hasta que FEL esté activo para este cliente */}
+          {felEnabled && (
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm font-medium text-gray-700">¿Generar factura?</span>
+                <input type="checkbox" checked={wantsInvoice}
+                  onChange={e => {
+                    const checked = e.target.checked
+                    setWantsInvoice(checked)
+                    if (checked) {
+                      setInvoiceBuyerNit(selectedCustomer?.nit && selectedCustomer.nit !== 'C/F' && selectedCustomer.nit !== 'CF' ? selectedCustomer.nit : '')
+                      setInvoiceBuyerName(selectedCustomer ? getCustomerName(selectedCustomer) : '')
+                    }
+                  }}
+                  className="w-5 h-5 text-primary-600 rounded" />
+              </label>
+              {!wantsInvoice && <p className="text-xs text-gray-400 mt-1">Por defecto se imprime solo el recibo.</p>}
+              {wantsInvoice && (
+                <div className="mt-3 space-y-2">
+                  <input type="text" value={invoiceBuyerNit} onChange={e => setInvoiceBuyerNit(e.target.value)}
+                    placeholder="NIT del cliente" className="input w-full text-sm" />
+                  <input type="text" value={invoiceBuyerName} onChange={e => setInvoiceBuyerName(e.target.value)}
+                    placeholder="Nombre para la factura" className="input w-full text-sm" />
+                  {!invoiceBuyerNit.trim() && (
+                    <p className="text-xs text-orange-500">Se necesita un NIT válido — este cliente no tiene uno registrado.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Comentario de la venta — opcional, queda guardado en la venta */}
           <div className="bg-white rounded-lg shadow-sm p-4">
-            <label className="flex items-center justify-between cursor-pointer">
-              <span className="text-sm font-medium text-gray-700">¿Generar factura?</span>
-              <input type="checkbox" checked={wantsInvoice}
-                onChange={e => {
-                  const checked = e.target.checked
-                  setWantsInvoice(checked)
-                  if (checked) {
-                    setInvoiceBuyerNit(selectedCustomer?.nit && selectedCustomer.nit !== 'C/F' && selectedCustomer.nit !== 'CF' ? selectedCustomer.nit : '')
-                    setInvoiceBuyerName(selectedCustomer ? getCustomerName(selectedCustomer) : '')
-                  }
-                }}
-                className="w-5 h-5 text-primary-600 rounded" />
-            </label>
-            {!wantsInvoice && <p className="text-xs text-gray-400 mt-1">Por defecto se imprime solo el recibo.</p>}
-            {wantsInvoice && (
-              <div className="mt-3 space-y-2">
-                <input type="text" value={invoiceBuyerNit} onChange={e => setInvoiceBuyerNit(e.target.value)}
-                  placeholder="NIT del cliente" className="input w-full text-sm" />
-                <input type="text" value={invoiceBuyerName} onChange={e => setInvoiceBuyerName(e.target.value)}
-                  placeholder="Nombre para la factura" className="input w-full text-sm" />
-                {!invoiceBuyerNit.trim() && (
-                  <p className="text-xs text-orange-500">Se necesita un NIT válido — este cliente no tiene uno registrado.</p>
-                )}
-              </div>
-            )}
+            <label className="text-sm font-medium text-gray-700 block mb-2">Comentario (opcional)</label>
+            <textarea value={saleNotes} onChange={e => setSaleNotes(e.target.value)}
+              rows={2} className="input w-full text-sm resize-none"
+              placeholder="Nota sobre esta venta..." />
           </div>
 
           {/* Cash received */}
@@ -1669,6 +1769,45 @@ export default function POS() {
           </button>
         </div>
       </div>
+
+      {/* ── Other branches stock modal ── */}
+      <AnimatePresence>
+        {showOtherBranchesModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            onClick={() => setShowOtherBranchesModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-lg p-6 max-w-sm w-full"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <Building2 size={18} /> Inventario en otras sucursales
+                </h3>
+                <button onClick={() => setShowOtherBranchesModal(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+              </div>
+              <p className="text-xs text-gray-500 mb-3 truncate">{otherBranchesProductName}</p>
+              {loadingOtherBranches ? (
+                <div className="flex justify-center py-6"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600" /></div>
+              ) : otherBranchesStock.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-4">No se pudo obtener el inventario.</p>
+              ) : (
+                <div className="space-y-1.5 max-h-80 overflow-y-auto">
+                  {otherBranchesStock.map(b => (
+                    <div key={b.branchId} className={`flex items-center justify-between px-3 py-2 rounded-lg ${b.branchId === BRANCH_ID ? 'bg-primary-50' : 'bg-gray-50'}`}>
+                      <span className="text-sm text-gray-700">{b.branchName}{b.branchId === BRANCH_ID && <span className="text-xs text-primary-600 ml-1">(esta)</span>}</span>
+                      <span className={`text-sm font-semibold ${b.quantity > 0 ? 'text-gray-800' : 'text-red-400'}`}>{b.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Variation modal ── */}
       <AnimatePresence>
@@ -2024,6 +2163,11 @@ export default function POS() {
                 )}
               </div>
               <p className="text-sm text-gray-500 mb-4">Esta caja quedará asociada a tus ventas por el resto del día.</p>
+              {openRegisters.length > 1 && (
+                <p className="text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded px-3 py-2 mb-3">
+                  Hay más de una caja abierta — si físicamente es una sola caja, selecciona la MISMA que ya está usando tu compañero, no abras una nueva. Avisa a un administrador si no estás seguro cuál es.
+                </p>
+              )}
               <div className="space-y-2">
                 {openRegisters.map(reg => (
                   <button

@@ -23,7 +23,7 @@ const productSchema = z.object({
   description: z.string().optional(),
   basePrice: z.number().min(0),
   cost: z.number().min(0),
-  imageUrl: z.string().max(3_000_000).optional(), // cap a base64 product photo well above what a reasonable image needs
+  imageUrl: z.string().max(3_000_000).nullish(), // cap a base64 product photo well above what a reasonable image needs; nullish so clearing the image (null) round-trips, not just omitting it
   categoryId: z.string(),
   baseUnitId: z.string(),
   minStock: z.number().int().default(0),
@@ -110,23 +110,26 @@ export default async function productRoutes(fastify: FastifyInstance) {
   fastify.get('/barcode/:code', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
     const { code } = request.params as { code: string }
 
+    // Case-insensitive throughout — a scanner/keyboard-wedge or manual entry
+    // can send different casing than what's stored, and "no encontrado" on a
+    // real scan is confusing when the barcode is right there on the label.
     // Try product main barcode
     const product = await prisma.product.findFirst({
-      where: { barcode: code, isActive: true },
+      where: { barcode: { equals: code, mode: 'insensitive' }, isActive: true },
       include,
     })
     if (product) return reply.send({ product, variation: product.variations.find(v => v.isDefault) ?? product.variations[0] })
 
     // Try variation barcode
     const variation = await prisma.productVariation.findFirst({
-      where: { barcode: code },
+      where: { barcode: { equals: code, mode: 'insensitive' } },
       include: { product: { include } },
     })
     if (variation) return reply.send({ product: variation.product, variation })
 
     // Try alternate barcodes
     const altBarcode = await prisma.productBarcode.findFirst({
-      where: { barcode: code },
+      where: { barcode: { equals: code, mode: 'insensitive' } },
       include: { product: { include } },
     })
     if (altBarcode) {
@@ -186,17 +189,48 @@ export default async function productRoutes(fastify: FastifyInstance) {
     try {
       const old = await prisma.product.findUnique({ where: { id }, select: { basePrice: true, cost: true } })
 
+      // Diffed by id instead of delete-everything-and-recreate: the old
+      // deleteMany({}) + create(variations) nuked every variation row on
+      // every save and rebuilt them with fresh ids, which Postgres rejected
+      // outright (FK violation) the moment any one of them had a real
+      // SaleItem/QuotationItem against it — blocking ANY edit to the product
+      // (even unrelated fields) forever after its first sale. Now only
+      // variations actually removed by the user are deleted; edited ones
+      // update in place (keeping their id, so sale history stays valid) and
+      // new ones are created — editing/adding keeps working after sales
+      // exist, and only deleting a variation that's truly been sold against
+      // still correctly fails.
+      if (variations) {
+        const existing = await prisma.productVariation.findMany({ where: { productId: id }, select: { id: true } })
+        const incomingIds = new Set(variations.filter(v => v.id).map(v => v.id as string))
+        const idsToDelete = existing.map(v => v.id).filter(eid => !incomingIds.has(eid))
+        const toUpdate = variations.filter(v => v.id)
+        const toCreate = variations.filter(v => !v.id)
+
+        await prisma.$transaction(async (tx) => {
+          if (idsToDelete.length > 0) {
+            await tx.productVariation.deleteMany({ where: { id: { in: idsToDelete } } })
+          }
+          for (const v of toUpdate) {
+            const { id: variationId, ...vData } = v
+            await tx.productVariation.update({
+              where: { id: variationId! },
+              data: Object.fromEntries(Object.entries(vData).filter(([, val]) => val !== undefined)) as any,
+            })
+          }
+          if (toCreate.length > 0) {
+            await tx.productVariation.createMany({
+              data: toCreate.map(v => Object.fromEntries(
+                Object.entries({ ...v, productId: id }).filter(([, val]) => val !== undefined)
+              )) as any,
+            })
+          }
+        })
+      }
+
       const product = await prisma.product.update({
         where: { id },
-        data: {
-          ...productData,
-          ...(variations ? {
-            variations: {
-              deleteMany: {},
-              create: variations,
-            },
-          } : {}),
-        },
+        data: Object.fromEntries(Object.entries(productData).filter(([, val]) => val !== undefined)) as any,
         include,
       })
 
@@ -215,13 +249,8 @@ export default async function productRoutes(fastify: FastifyInstance) {
       return reply.send(product)
     } catch (err: any) {
       if (err.code === 'P2025') return reply.status(404).send({ error: 'Producto no encontrado' })
-      // Replacing `variations` deletes every existing row and recreates them
-      // (see the `deleteMany`/`create` above) — if one of the deleted rows is
-      // still referenced by a past SaleItem/QuotationItem, Postgres rejects
-      // the delete with a foreign-key violation instead of the 500 this used
-      // to surface as.
       if (err.code === 'P2003') {
-        return reply.status(409).send({ error: 'No se pueden modificar las variantes de este producto porque ya tienen ventas o cotizaciones asociadas' })
+        return reply.status(409).send({ error: 'No se puede eliminar esta variante porque ya tiene ventas o cotizaciones asociadas' })
       }
       throw err
     }

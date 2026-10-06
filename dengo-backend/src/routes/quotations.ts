@@ -181,7 +181,14 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
     if (!quot || quot.status !== 'ACCEPTED') return reply.status(400).send({ error: 'Solo se pueden convertir cotizaciones aceptadas' })
     if (!canAccessBranch(request, quot.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
 
-    const invoiceNumber = `FAC-${Date.now()}`
+    // Same atomic per-branch receipt correlativo as a normal POS sale (see
+    // sales.ts) — this is a real Sale row too, it needs a real number.
+    const receiptBranch = await prisma.branch.update({
+      where: { id: quot.branchId },
+      data: { receiptNextNumber: { increment: 1 } },
+      select: { receiptSeries: true, receiptNextNumber: true },
+    })
+    const invoiceNumber = `${receiptBranch.receiptSeries || 'REC'}-${receiptBranch.receiptNextNumber - 1}`
     const sale = await prisma.sale.create({
       data: {
         invoiceNumber,

@@ -24,6 +24,11 @@ const branchSchema = z.object({
   printerEnabled: z.boolean().default(true),
   receiptWidthMm: z.number().int().min(30).max(120).default(55),
   invoiceSeries: z.string().min(1).max(10).optional(),
+  // Plain receipt correlativo prefix (e.g. "VDC1" → VDC1-1, VDC1-2...) —
+  // independent of invoiceSeries above, which is reserved for FEL. Optional
+  // (not nullish): empty string just means "no prefix yet", same default as
+  // the column, no need to round-trip null.
+  receiptSeries: z.string().max(10).optional(),
   salesReconciliationEnabled: z.boolean().default(false),
   // Company branding — capped well above what a reasonable logo needs (client
   // already caps the source file at 2MB; base64 adds ~37% overhead) so a

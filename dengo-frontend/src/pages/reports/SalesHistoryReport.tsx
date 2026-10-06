@@ -7,7 +7,7 @@ import { format, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { api } from '../../lib/api'
-import { useAuthStore } from '../../store'
+import { useAuthStore, useLicenseStore } from '../../store'
 import { useStore } from '../../contexts/StoreContext'
 import { usePermissions } from '../../hooks/usePermissions'
 import AIRecommendations from '../../components/reports/AIRecommendations'
@@ -21,7 +21,8 @@ export default function SalesHistoryReport() {
   const { user } = useAuthStore()
   const { currentStore } = useStore()
   const { hasPermission } = usePermissions()
-  const canGenerateInvoice = hasPermission('sales.edit')
+  const felEnabled = useLicenseStore(s => s.felEnabled)
+  const canGenerateInvoice = felEnabled && hasPermission('sales.edit')
 
   const [from, setFrom] = useState(format(subDays(new Date(), 6), 'yyyy-MM-dd'))
   const [to, setTo] = useState(format(new Date(), 'yyyy-MM-dd'))

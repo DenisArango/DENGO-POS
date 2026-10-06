@@ -170,6 +170,7 @@ export default function Products() {
       baseUnitId: resolvedBaseUnitId,
       variations: product.variations,
       isActive: product.isActive !== false,
+      imageUrl: product.imageUrl,
     }
 
     if (isEdit) {

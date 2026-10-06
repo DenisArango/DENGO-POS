@@ -50,6 +50,15 @@ model Branch {
   // under concurrent sales. See Sale.requiresInvoice / lib/fel.ts.
   invoiceSeries     String   @default("A") @map("INVOICE_SERIES") @db.VarChar(10)
   invoiceNextNumber Int      @default(1) @map("INVOICE_NEXT_NUMBER")
+  // Plain receipt correlativo (Sale.invoiceNumber) — separate from the FEL
+  // counter above, which is reserved for the formal electronic-invoice
+  // sequence once FEL is actually turned on. This is just "RECIBO-1,
+  // RECIBO-2..." (or the branch's own series prefix) printed on every sale
+  // regardless of FEL status, replacing a `FAC-${Date.now()}` id that was
+  // needlessly long for a plain receipt. Empty series = no prefix configured
+  // yet, falls back to "REC".
+  receiptSeries     String   @default("") @map("RECEIPT_SERIES") @db.VarChar(10)
+  receiptNextNumber Int      @default(1) @map("RECEIPT_NEXT_NUMBER")
   // Onboarding aid: while a client runs DENGO in parallel with their old
   // Excel/external report, this turns on an optional field at cash-register
   // close to enter that report's total and print the gap against DENGO's own
@@ -232,7 +241,11 @@ model Product {
   description String?  @map("DESCRIPTION")
   basePrice   Decimal  @default(0) @map("BASE_PRICE") @db.Decimal(18, 2)
   cost        Decimal  @default(0) @map("COST") @db.Decimal(18, 2)
-  imageUrl    String?  @map("IMAGE_URL") @db.VarChar(500)
+  // Text, not VarChar(500): this stores a base64 data URL of the product
+  // photo directly (no separate file storage/CDN), which for any real photo
+  // is thousands of characters — VarChar(500) silently made every real
+  // upload fail to save (Postgres rejects the write outright).
+  imageUrl    String?  @map("IMAGE_URL") @db.Text
   categoryId  String   @map("CATEGORY_ID") @db.VarChar(36)
   baseUnitId  String   @map("BASE_UNIT_ID") @db.VarChar(36)
   minStock    Int      @default(0) @map("MIN_STOCK")
@@ -1017,6 +1030,7 @@ model LicenseConfig {
   pageEnabled     Boolean  @default(true) @map("PAGE_ENABLED")     // portal público con marca propia (dengo-portal Landing); si es false, /login del portal es un formulario genérico
   maestrosEnabled Boolean  @default(true) @map("MAESTROS_ENABLED") // funcionalidad de pedidos del portal de maestros
   posEnabled      Boolean  @default(true) @map("POS_ENABLED")      // el sistema POS completo
+  felEnabled      Boolean  @default(false) @map("FEL_ENABLED")     // facturación electrónica (Guatemala FEL) — oculta "generar factura" en POS hasta que esté certificada para este cliente
   updatedAt       DateTime @updatedAt @map("UPDATED_AT")
 
   @@map("LICENSE_CONFIG")

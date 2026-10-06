@@ -33,6 +33,7 @@ interface ProductFormData {
   cost: number
   minStock: number
   variations: {
+    id?: string
     name: string
     barcode: string
     conversionFactor: number
@@ -126,6 +127,9 @@ export default function ProductModal({
         variations: (editingProduct.variations || [])
           .filter((v: any) => !v.isDefault)
           .map((v: any) => ({
+            // Only kept in edit mode — duplicate must create brand-new
+            // variation rows, never reuse the original's ids.
+            ...(mode === 'edit' ? { id: v.id } : {}),
             name: v.name ?? '',
             barcode: mode === 'duplicate' ? '' : (v.barcode ?? ''),
             conversionFactor: Number(v.conversionFactor ?? 1),
@@ -145,20 +149,45 @@ export default function ProductModal({
     }))
   }
 
+  const processImageFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('El archivo debe ser una imagen')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('La imagen no debe superar 5MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onloadend = () => setProductImage(reader.result as string)
+    reader.onerror = () => toast.error('Error al leer la imagen — intenta de nuevo')
+    reader.readAsDataURL(file)
+  }
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('La imagen no debe superar 5MB')
-        return
-      }
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setProductImage(reader.result as string)
-      }
-      reader.readAsDataURL(file)
-    }
+    if (file) processImageFile(file)
   }
+
+  // Lets the user paste an image (Ctrl+V) straight from the clipboard instead
+  // of always needing to pick a file — listens on the whole window while the
+  // modal is open so it works regardless of which field currently has focus.
+  useEffect(() => {
+    if (!isOpen) return
+    const handleWindowPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (file) { e.preventDefault(); processImageFile(file) }
+          break
+        }
+      }
+    }
+    window.addEventListener('paste', handleWindowPaste)
+    return () => window.removeEventListener('paste', handleWindowPaste)
+  }, [isOpen])
 
   const handleAddAltBarcode = async () => {
     if (!newBarcode.trim()) return
@@ -565,6 +594,7 @@ export default function ProductModal({
                           <div className="flex flex-col items-center justify-center h-48">
                             <Upload size={48} className="text-gray-400 mb-2" />
                             <p className="text-sm text-gray-600">Click para subir imagen</p>
+                            <p className="text-xs text-gray-500 mt-1">o pega una imagen copiada con Ctrl+V</p>
                             <p className="text-xs text-gray-500 mt-1">JPG, PNG hasta 5MB</p>
                           </div>
                           <input
@@ -644,6 +674,13 @@ export default function ProductModal({
                             onChange={(e) => {
                               const newVars = [...formData.variations]
                               newVars[index].name = e.target.value
+                              // Compose the variation's code from the base SKU
+                              // (SKU-NOMBRE) so it doesn't have to be typed by
+                              // hand — only while the code is still empty, so
+                              // this never overwrites one already set.
+                              if (!newVars[index].barcode.trim() && formData.sku.trim() && e.target.value.trim()) {
+                                newVars[index].barcode = `${formData.sku.trim()}-${e.target.value.trim().toUpperCase().replace(/\s+/g, '')}`
+                              }
                               setFormData(prev => ({ ...prev, variations: newVars }))
                             }}
                             className="input input-sm"
@@ -683,7 +720,7 @@ export default function ProductModal({
                           />
                         </div>
                         <div>
-                          <label className="label text-xs">Código (opcional)</label>
+                          <label className="label text-xs">Código (se compone del SKU)</label>
                           <input
                             type="text"
                             value={variation.barcode}
@@ -693,7 +730,7 @@ export default function ProductModal({
                               setFormData(prev => ({ ...prev, variations: newVars }))
                             }}
                             className="input input-sm"
-                            placeholder="Código único"
+                            placeholder="SKU-NOMBRE"
                           />
                         </div>
                         <div className="flex items-end">

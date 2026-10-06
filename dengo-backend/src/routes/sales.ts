@@ -369,8 +369,6 @@ export default async function salesRoutes(fastify: FastifyInstance) {
       }
     }
 
-    const invoiceNumber = `FAC-${Date.now()}`
-
     const sale = await prisma.$transaction(async (tx) => {
       let invoiceSeries: string | undefined
       let invoiceSeqNumber: number | undefined
@@ -383,6 +381,17 @@ export default async function salesRoutes(fastify: FastifyInstance) {
         invoiceSeries = branch.invoiceSeries
         invoiceSeqNumber = branch.invoiceNextNumber - 1 // the number reserved for *this* sale
       }
+
+      // Plain receipt correlativo — atomic per-branch increment, same
+      // pattern as the FEL counter above but independent of it, so it keeps
+      // numbering every sale (recibo or factura) regardless of FEL status.
+      const receiptBranch = await tx.branch.update({
+        where: { id: data.branchId },
+        data: { receiptNextNumber: { increment: 1 } },
+        select: { receiptSeries: true, receiptNextNumber: true },
+      })
+      const receiptSeqNumber = receiptBranch.receiptNextNumber - 1
+      const invoiceNumber = `${receiptBranch.receiptSeries || 'REC'}-${receiptSeqNumber}`
 
       const created = await tx.sale.create({
         data: {
@@ -444,7 +453,7 @@ export default async function salesRoutes(fastify: FastifyInstance) {
       })
     }
 
-    await log({ userId: request.user.id, action: 'CREATE', entity: 'Sale', entityId: sale.id, newValues: { total: data.total, invoiceNumber } })
+    await log({ userId: request.user.id, action: 'CREATE', entity: 'Sale', entityId: sale.id, newValues: { total: data.total, invoiceNumber: sale.invoiceNumber } })
     if (offlineDiscrepancies.length > 0) {
       await log({
         userId: request.user.id, action: 'DESCUADRE_OFFLINE', entity: 'Sale', entityId: sale.id,

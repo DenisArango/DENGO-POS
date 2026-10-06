@@ -21,6 +21,7 @@ const Purchases = lazy(() => import('./pages/Purchases'))
 const Customers = lazy(() => import('./pages/Customers'))
 const Quotations = lazy(() => import('./pages/Quotations'))
 const SalesHistoryReport = lazy(() => import('./pages/reports/SalesHistoryReport'))
+const ProductSalesHistoryReport = lazy(() => import('./pages/reports/ProductSalesHistoryReport'))
 const SaleDetail = lazy(() => import('./pages/reports/SaleDetail'))
 
 // Portal escolar (Variedades Dayana)
@@ -117,6 +118,7 @@ export default function Router() {
           <Route path="/reports/user-activity" element={<UserActivityReport />} />
           <Route path="/reports/inventory-movements" element={<InventoryMovementsReport />} />
           <Route path="/reports/sales-history" element={<SalesHistoryReport />} />
+          <Route path="/reports/product-sales-history" element={<ProductSalesHistoryReport />} />
           <Route path="/reports/sales/:id" element={<SaleDetail />} />
           <Route path="/reports/custom" element={<CustomReports />} />
           {/* Rutas de configuración */}

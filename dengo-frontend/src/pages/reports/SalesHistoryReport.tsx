@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Search, DollarSign, ShoppingCart, TrendingUp, CreditCard, ExternalLink, Receipt
 } from 'lucide-react'
@@ -23,14 +23,8 @@ export default function SalesHistoryReport() {
   const { hasPermission } = usePermissions()
   const felEnabled = useLicenseStore(s => s.felEnabled)
   const canGenerateInvoice = felEnabled && hasPermission('sales.edit')
-  const [searchParams, setSearchParams] = useSearchParams()
-  // "Ver historial de este producto" arrives from Inventario with these set
-  // — a product can easily have its last sale be months ago, so the usual
-  // 7-day default would just show nothing; widen it for this entry point.
-  const productId = searchParams.get('productId') ?? ''
-  const productName = searchParams.get('productName') ?? ''
 
-  const [from, setFrom] = useState(format(subDays(new Date(), productId ? 364 : 6), 'yyyy-MM-dd'))
+  const [from, setFrom] = useState(format(subDays(new Date(), 6), 'yyyy-MM-dd'))
   const [to, setTo] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [search, setSearch] = useState('')
   const [method, setMethod] = useState('')
@@ -45,8 +39,8 @@ export default function SalesHistoryReport() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [generating, setGenerating] = useState(false)
 
-  useEffect(() => { fetchData() }, [from, to, method, saleTypeFilter, filters, includeVoided, productId])
-  useEffect(() => { setSelected(new Set()) }, [from, to, method, saleTypeFilter, filters, includeVoided, search, productId])
+  useEffect(() => { fetchData() }, [from, to, method, saleTypeFilter, filters, includeVoided])
+  useEffect(() => { setSelected(new Set()) }, [from, to, method, saleTypeFilter, filters, includeVoided, search])
 
   async function fetchData() {
     setLoading(true)
@@ -56,9 +50,8 @@ export default function SalesHistoryReport() {
       const methodQ = method ? `&paymentMethod=${method}` : ''
       const saleTypeQ = saleTypeFilter ? `&saleType=${saleTypeFilter}` : ''
       const voidQ = includeVoided ? `&includeVoided=true` : ''
-      const productQ = productId ? `&productId=${productId}` : ''
       const data = await api.get<any[]>(
-        `/api/reports/sales-history?from=${from}T00:00:00&to=${to}T23:59:59${branchQ}${regQ}${methodQ}${saleTypeQ}${voidQ}${productQ}`
+        `/api/reports/sales-history?from=${from}T00:00:00&to=${to}T23:59:59${branchQ}${regQ}${methodQ}${saleTypeQ}${voidQ}`
       )
       setSales(data ?? [])
     } catch (e) {
@@ -150,20 +143,6 @@ export default function SalesHistoryReport() {
           <p className="text-gray-600 text-sm mt-0.5">Haz clic en una venta para ver el detalle completo, imprimir o editar</p>
         </div>
       </div>
-
-      {productId && (
-        <div className="bg-primary-50 border border-primary-200 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
-          <p className="text-sm text-primary-800">
-            Mostrando solo ventas de: <span className="font-semibold">{productName || 'este producto'}</span>
-          </p>
-          <button
-            onClick={() => setSearchParams(prev => { const next = new URLSearchParams(prev); next.delete('productId'); next.delete('productName'); return next })}
-            className="text-xs text-primary-700 hover:text-primary-900 underline"
-          >
-            Quitar filtro
-          </button>
-        </div>
-      )}
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap gap-3">

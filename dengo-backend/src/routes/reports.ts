@@ -178,7 +178,6 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     const q = request.query as {
       branchId?: string; from?: string; to?: string; paymentMethod?: string
       saleType?: string; search?: string; cashRegisterId?: string; includeVoided?: string
-      productId?: string
     }
     const filter = buildSaleFilter(request, q)
     // Spread the full filter (handles both cashRegisterId and cashRegister: {name,registerNumber})
@@ -188,9 +187,6 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       ...registerAndDateFilter,
       ...(q.paymentMethod ? { paymentMethod: q.paymentMethod as any } : {}),
       ...(q.saleType ? { saleType: q.saleType as any } : {}),
-      // "Ver historial de este producto" from Inventario — at least one item
-      // on the sale matches, not that every item does.
-      ...(q.productId ? { items: { some: { productId: q.productId } } } : {}),
       ...(q.search ? {
         OR: [
           { invoiceNumber: { contains: q.search, mode: 'insensitive' } },
@@ -334,6 +330,87 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       .slice(0, 50)
 
     return reply.send(result)
+  })
+
+  // GET /api/reports/product-sales-history — every individual sale of ONE
+  // product (not the aggregated totals sales-by-product gives), for the
+  // dedicated per-product report linked from Inventario. One row per sale
+  // line, newest first, each carrying its saleId so the UI can jump straight
+  // to that sale's own detail page.
+  fastify.get('/product-sales-history', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const q = request.query as { productId?: string; branchId?: string; from?: string; to?: string }
+    if (!q.productId) return reply.status(400).send({ error: 'Falta productId' })
+    const filter = buildSaleFilter(request, q)
+
+    const [product, items] = await Promise.all([
+      prisma.product.findUnique({
+        where: { id: q.productId },
+        include: { category: true, baseUnit: true },
+      }),
+      prisma.saleItem.findMany({
+        where: { productId: q.productId, sale: filter },
+        include: {
+          variation: { select: { id: true, name: true, conversionFactor: true } },
+          sale: {
+            select: {
+              id: true, invoiceNumber: true, createdAt: true, isVoided: true, saleType: true, paymentMethod: true,
+              branch: { select: { id: true, name: true } },
+              customer: { select: { id: true, name: true } },
+              cashier: { select: { id: true, name: true } },
+            },
+          },
+        },
+        orderBy: { sale: { createdAt: 'desc' } },
+        take: 2000,
+      }),
+    ])
+    if (!product) return reply.status(404).send({ error: 'Producto no encontrado' })
+
+    const cost = Number(product.cost ?? 0)
+    const rows = items.map(item => {
+      const convFactor = Number(item.variation?.conversionFactor ?? 1)
+      const qty = Number(item.quantity)
+      const itemCost = cost * convFactor * qty
+      const revenue = Number(item.total)
+      return {
+        saleId: item.sale.id,
+        invoiceNumber: item.sale.invoiceNumber,
+        date: item.sale.createdAt,
+        isVoided: item.sale.isVoided,
+        saleType: item.sale.saleType,
+        paymentMethod: item.sale.paymentMethod,
+        branch: item.sale.branch,
+        customer: item.sale.customer,
+        cashier: item.sale.cashier,
+        variationName: item.variation?.name ?? null,
+        quantity: qty,
+        unitPrice: Number(item.unitPrice),
+        discount: Number(item.discount ?? 0),
+        total: revenue,
+        cost: itemCost,
+        profit: revenue - itemCost,
+      }
+    })
+
+    const active = rows.filter(r => !r.isVoided)
+    const summary = {
+      transactionCount: active.length,
+      totalQuantity: active.reduce((s, r) => s + r.quantity, 0),
+      totalRevenue: active.reduce((s, r) => s + r.total, 0),
+      totalProfit: active.reduce((s, r) => s + r.profit, 0),
+      avgUnitPrice: active.length > 0 ? active.reduce((s, r) => s + r.unitPrice, 0) / active.length : 0,
+    }
+
+    return reply.send({
+      product: {
+        id: product.id, name: product.name, barcode: product.barcode, sku: product.sku,
+        imageUrl: product.imageUrl, category: product.category?.name ?? null,
+        baseUnit: product.baseUnit?.abbreviation ?? null, basePrice: Number(product.basePrice ?? 0),
+        cost: Number(product.cost ?? 0),
+      },
+      summary,
+      rows,
+    })
   })
 
   // GET /api/reports/daily-sales

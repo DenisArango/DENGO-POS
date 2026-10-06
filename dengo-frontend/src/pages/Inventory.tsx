@@ -567,7 +567,7 @@ export default function Inventory() {
                           <History size={16} className="text-gray-600" />
                         </button>
                         <button
-                          onClick={() => navigate(`/reports/sales-history?productId=${item.productId}&productName=${encodeURIComponent(item.displayName)}`)}
+                          onClick={() => navigate(`/reports/product-sales-history?productId=${item.productId}`)}
                           className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Ver historial de ventas">
                           <Receipt size={16} className="text-gray-600" />
                         </button>

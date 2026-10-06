@@ -4,14 +4,16 @@ import {
   ArrowUpDown, Plus, Search, Filter, Package,
   Building2, Truck, Clock, CheckCircle,
   XCircle, ArrowRight, ChevronDown,
-  Download, Eye, BarChart3, ArrowLeft
+  Download, Eye, BarChart3, ArrowLeft, Printer
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { api } from '../lib/api'
 import { useAuthStore } from '../store'
+import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
+import { ThermalTransferSlip } from '../components/print/ThermalTransferSlip'
 
 interface Branch {
   id: string
@@ -74,6 +76,7 @@ interface Transfer {
 
 export default function StoreTransfers() {
   const { user } = useAuthStore()
+  const { currentStore } = useStore()
   const { hasPermission } = usePermissions()
   const canCreate = hasPermission('transfers.create')
   const canApprove = hasPermission('transfers.approve')
@@ -91,6 +94,7 @@ export default function StoreTransfers() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null)
+  const [printingTransfer, setPrintingTransfer] = useState<Transfer | null>(null)
   const [page, setPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const [stats, setStats] = useState({ total: 0, pending: 0, inTransit: 0, completed: 0, totalValue: 0 })
@@ -361,6 +365,11 @@ export default function StoreTransfers() {
       .catch(e => toast.error(e.message))
   }
 
+  const handlePrintTransfer = (transfer: Transfer) => {
+    setPrintingTransfer(transfer)
+    requestAnimationFrame(() => window.print())
+  }
+
   // Búsqueda por código/sucursal sigue siendo del lado del cliente, aplicada
   // solo sobre la página actual — estado y paginación ya van al servidor.
   const filteredTransfers = transfers.filter(transfer => {
@@ -611,7 +620,8 @@ export default function StoreTransfers() {
 
   // ── Render: LIST VIEW ─────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
+    <>
+    <div className="space-y-6 print:hidden">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -955,6 +965,9 @@ export default function StoreTransfers() {
 
             <div className="flex gap-3 pt-4 mt-4 border-t">
               <button onClick={() => setShowDetailsModal(false)} className="btn-outline btn-md flex-1">Cerrar</button>
+              <button onClick={() => handlePrintTransfer(selectedTransfer)} className="btn-outline btn-md flex items-center gap-2">
+                <Printer size={16} /> Imprimir
+              </button>
               {selectedTransfer.status === 'pending' && (
                 <>
                   {canReject && (
@@ -979,5 +992,31 @@ export default function StoreTransfers() {
         </div>
       )}
     </div>
+
+    {/* Print-only checklist — a true sibling of the page (not nested inside
+        it) so print:hidden on the page above fully collapses it for print
+        instead of leaving its height reserved — same fix as ThermalReceipt/
+        ThermalCashCloseReport. */}
+    {printingTransfer && (
+      <ThermalTransferSlip
+        widthMm={currentStore?.receiptWidthMm ?? 55}
+        data={{
+          code: printingTransfer.code ?? printingTransfer.id.slice(0, 8),
+          fromBranchName: displayName(printingTransfer, 'from'),
+          toBranchName: displayName(printingTransfer, 'to'),
+          createdAt: printingTransfer.createdAt,
+          requestedByName: printingTransfer.requestedBy?.name ?? printingTransfer.createdBy,
+          notes: printingTransfer.notes,
+          logo: currentStore?.logo,
+          companyName: currentStore?.companyName,
+          items: printingTransfer.items.map(item => ({
+            productName: item.productName,
+            productCode: item.productCode,
+            quantity: item.quantity,
+          })),
+        }}
+      />
+    )}
+    </>
   )
 }

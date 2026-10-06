@@ -178,6 +178,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     const q = request.query as {
       branchId?: string; from?: string; to?: string; paymentMethod?: string
       saleType?: string; search?: string; cashRegisterId?: string; includeVoided?: string
+      productId?: string
     }
     const filter = buildSaleFilter(request, q)
     // Spread the full filter (handles both cashRegisterId and cashRegister: {name,registerNumber})
@@ -187,6 +188,9 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       ...registerAndDateFilter,
       ...(q.paymentMethod ? { paymentMethod: q.paymentMethod as any } : {}),
       ...(q.saleType ? { saleType: q.saleType as any } : {}),
+      // "Ver historial de este producto" from Inventario — at least one item
+      // on the sale matches, not that every item does.
+      ...(q.productId ? { items: { some: { productId: q.productId } } } : {}),
       ...(q.search ? {
         OR: [
           { invoiceNumber: { contains: q.search, mode: 'insensitive' } },

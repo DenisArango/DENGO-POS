@@ -69,7 +69,7 @@ interface Transfer {
   totalValue?: number
   notes?: string
   receivedAt?: string
-  receivedBy?: string
+  receivedBy?: { id: string; name: string }
 }
 
 export default function StoreTransfers() {
@@ -898,7 +898,7 @@ export default function StoreTransfers() {
                 {selectedTransfer.receivedBy && (
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Recibido por</p>
-                    <p className="font-medium">{selectedTransfer.receivedBy}</p>
+                    <p className="font-medium">{selectedTransfer.receivedBy.name}</p>
                     {selectedTransfer.receivedAt && (
                       <p className="text-xs text-gray-500">
                         {format(new Date(selectedTransfer.receivedAt), "d 'de' MMMM, HH:mm", { locale: es })}

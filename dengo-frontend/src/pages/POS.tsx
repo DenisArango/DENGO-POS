@@ -429,6 +429,11 @@ export default function POS() {
       const data = await api.get<CustomerRecord[]>('/api/customers')
       setCustomers(data ?? [])
       setCache('customers', data ?? [])
+      // selectedCustomer is a snapshot from whenever it was picked — if their
+      // credit settings changed since (ej. an admin just turned off "Con
+      // límite" for them in another tab), keep it in sync too, not just the
+      // list new picks come from.
+      setSelectedCustomer(prev => prev ? (data ?? []).find(c => c.id === prev.id) ?? prev : prev)
     } catch {
       // Offline or server down — fall back to the last successful load so
       // checkout can still pick a customer.
@@ -1522,7 +1527,7 @@ export default function POS() {
                   type="text"
                   value={customerSearch}
                   onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDropdown(true) }}
-                  onFocus={() => setShowCustomerDropdown(true)}
+                  onFocus={() => { setShowCustomerDropdown(true); fetchCustomers() }}
                   onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 150)}
                   placeholder="Buscar cliente por nombre o NIT..."
                   className="input w-full pl-8 text-sm py-2"
@@ -2180,11 +2185,6 @@ export default function POS() {
                 )}
               </div>
               <p className="text-sm text-gray-500 mb-4">Esta caja quedará asociada a tus ventas por el resto del día.</p>
-              {openRegisters.length > 1 && (
-                <p className="text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded px-3 py-2 mb-3">
-                  Hay más de una caja abierta — si físicamente es una sola caja, selecciona la MISMA que ya está usando tu compañero, no abras una nueva. Avisa a un administrador si no estás seguro cuál es.
-                </p>
-              )}
               <div className="space-y-2">
                 {openRegisters.map(reg => (
                   <button

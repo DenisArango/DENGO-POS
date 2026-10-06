@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Warehouse, Search, Edit2, Package,
   TrendingDown, TrendingUp, Download,
   Filter, ChevronDown, Plus, Minus,
   History, CheckCircle, XCircle, AlertCircle,
-  BarChart3, ArrowUpDown, X
+  BarChart3, ArrowUpDown, X, Receipt
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -134,6 +135,7 @@ function getMovementTypeLabel(type: string, reason?: string) {
 }
 
 export default function Inventory() {
+  const navigate = useNavigate()
   const { user } = useAuthStore()
   const { currentStore } = useStore()
   const branchId = currentStore?.id ?? user?.branchId ?? ''
@@ -563,6 +565,11 @@ export default function Inventory() {
                         <button onClick={() => handleViewHistory(item)}
                           className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Ver historial SKU">
                           <History size={16} className="text-gray-600" />
+                        </button>
+                        <button
+                          onClick={() => navigate(`/reports/sales-history?productId=${item.productId}&productName=${encodeURIComponent(item.displayName)}`)}
+                          className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Ver historial de ventas">
+                          <Receipt size={16} className="text-gray-600" />
                         </button>
                       </div>
                     </td>

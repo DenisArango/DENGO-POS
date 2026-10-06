@@ -175,6 +175,20 @@ export default function CashRegisterPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [BRANCH_ID])
 
+  // Now that an open register's totals come from the server (shared across
+  // every cashier/device selling into it, see getDisplaySales above) instead
+  // of a per-device tally, this page needs to actually re-ask the server
+  // periodically to stay current — a cashier who leaves this tab open all
+  // day would otherwise keep seeing whatever totals were on screen at the
+  // last manual reload, same staleness problem that originally motivated
+  // the (wrongly single-device) tally.
+  useEffect(() => {
+    if (openRegisters.length === 0) return
+    const interval = setInterval(fetchRegisters, 20_000)
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [BRANCH_ID, openRegisters.length])
+
   const availableDefinitions = registerDefinitions.filter(
     d => !openRegisters.some(r => r.registerNumber === d.registerNumber)
   )
@@ -242,16 +256,22 @@ export default function CashRegisterPage() {
     }
   }
 
-  // reg.sales (server-computed) is only ever as fresh as the last time this
-  // page happened to fetch it — nothing re-fetches it as sales happen on
-  // POS.tsx, online or offline, so a cashier who doesn't come back to Caja
-  // between sales sees a number from whenever they last loaded this page,
-  // not what actually happened since (this was the real bug: not an
-  // online/offline mismatch, but this page's data going stale the moment
-  // you leave it). registerTallies is POS.tsx's own live running count
-  // (see lib/offlineDb.ts's addSaleToRegisterTally, incremented the instant
-  // each sale completes) — the sole source of truth here, not added on top
-  // of reg.sales, which would double-count once both agree.
+  // registerTallies is POS.tsx's own per-DEVICE running count (see
+  // lib/offlineDb.ts's addSaleToRegisterTally) — it used to be treated as
+  // the sole source of truth for an OPEN register's displayed sales, which
+  // broke the second a register is actually shared by more than one cashier
+  // on separate devices: each device only ever knows about the sales IT
+  // personally made, so "Gerencia VD #3" showed a different total to Luis
+  // than to Diego even though both were looking at the exact same register
+  // — and the close-confirmation screen's "Efectivo Esperado" preview was
+  // wrong by the same amount, right before the cashier types in what they
+  // counted. reg.sales (server-computed via computeSales, scoped by
+  // cashRegisterId only — never by who's viewing) is correct across every
+  // device sharing a register, and is what the backend's own /close
+  // endpoint actually uses — so it's the base everywhere below now. The
+  // tally is only still consulted inside handleCloseRegister's genuine
+  // offline-failure branch, as a same-device estimate while there's no
+  // connection to ask the server at all.
   const [registerTallies, setRegisterTallies] = useState<Record<string, RegisterSalesTally>>({})
 
   const refreshRegisterTallies = async (registerIds: string[]) => {
@@ -268,21 +288,23 @@ export default function CashRegisterPage() {
   const calcBalance = (reg: CashRegisterRecord) => {
     const incomes = (reg.movements ?? []).filter(m => m.type === 'INCOME').reduce((s, m) => s + m.amount, 0)
     const expenses = (reg.movements ?? []).filter(m => m.type === 'EXPENSE').reduce((s, m) => s + m.amount, 0)
-    const cash = registerTallies[reg.id]?.cash ?? 0
+    const cash = getDisplaySales(reg).cash
     return cash + incomes - expenses
   }
 
-  // A register being viewed (Detalles de Caja) can be still-OPEN (reg.sales
-  // is the same stale snapshot calcBalance stopped trusting) or a genuinely
-  // CLOSED-and-synced one (reg.sales is the server's real, final number —
-  // trust it, the tally isn't tracking a session that's already over).
+  // reg.sales is the server's real, shared total (every cashier/device that
+  // sold against this same register, not just this one) — the only
+  // exception is a register whose CLOSE is still sitting in this device's
+  // offline queue (pendingSync), where there's no connection to have asked
+  // the server at all; there, fall back to this device's own tally as a
+  // best-effort local estimate until it syncs.
   const getDisplaySales = (reg: CashRegisterRecord): CashSales => {
-    if (reg.status === 'OPEN' || reg.pendingSync) {
+    if (reg.pendingSync && !reg.sales) {
       const t = registerTallies[reg.id]
       return {
         total: t?.total ?? 0, count: t?.count ?? 0, cash: t?.cash ?? 0,
         card: t?.card ?? 0, transfer: t?.transfer ?? 0, credit: t?.credit ?? 0,
-        creditPaymentsCash: reg.sales?.creditPaymentsCash ?? 0,
+        creditPaymentsCash: 0,
       }
     }
     return reg.sales ?? { total: 0, count: 0, cash: 0, card: 0, transfer: 0, credit: 0, creditPaymentsCash: 0 }
@@ -347,8 +369,15 @@ export default function CashRegisterPage() {
       if (isRetryable) {
         await queueRegisterOp('close', reg.id, payload)
         await refreshPendingCount()
-        const estimatedExpected = calcBalance(reg)
+        // Deliberately the local tally here, not calcBalance(reg) — `reg`
+        // isn't marked pendingSync yet (that only happens on the object
+        // built below), so calcBalance would fall through to reg.sales,
+        // which is exactly the stale/unreachable server snapshot this
+        // estimate exists to work around in the first place.
         const tally = registerTallies[reg.id]
+        const incomes = (reg.movements ?? []).filter(m => m.type === 'INCOME').reduce((s, m) => s + m.amount, 0)
+        const expenses = (reg.movements ?? []).filter(m => m.type === 'EXPENSE').reduce((s, m) => s + m.amount, 0)
+        const estimatedExpected = (tally?.cash ?? 0) + incomes - expenses
         applyClosedLocally({
           ...reg, status: 'CLOSED', finalAmount: payload.finalAmount,
           expectedAmount: estimatedExpected, difference: payload.finalAmount - estimatedExpected,
@@ -549,16 +578,16 @@ export default function CashRegisterPage() {
             </div>
             <div className="bg-white bg-opacity-10 rounded-lg p-4">
               <p className="text-sm opacity-90 mb-1">Ventas del Día</p>
-              <p className="text-2xl font-bold">Q{(registerTallies[reg.id]?.total ?? 0).toFixed(2)}</p>
-              <p className="text-xs opacity-75">{registerTallies[reg.id]?.count ?? 0} transacciones</p>
+              <p className="text-2xl font-bold">Q{getDisplaySales(reg).total.toFixed(2)}</p>
+              <p className="text-xs opacity-75">{getDisplaySales(reg).count} transacciones</p>
             </div>
             <div className="bg-white bg-opacity-10 rounded-lg p-4">
               <p className="text-sm opacity-90 mb-2">Por Método</p>
               <div className="space-y-0.5 text-xs">
-                <div className="flex justify-between"><span className="opacity-75">Efectivo:</span><span className="font-semibold">Q{(registerTallies[reg.id]?.cash ?? 0).toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="opacity-75">Tarjeta:</span><span className="font-semibold">Q{(registerTallies[reg.id]?.card ?? 0).toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="opacity-75">Transfer.:</span><span className="font-semibold">Q{(registerTallies[reg.id]?.transfer ?? 0).toFixed(2)}</span></div>
-                {(registerTallies[reg.id]?.credit ?? 0) > 0 && <div className="flex justify-between"><span className="opacity-75">Crédito:</span><span className="font-semibold">Q{registerTallies[reg.id]!.credit.toFixed(2)}</span></div>}
+                <div className="flex justify-between"><span className="opacity-75">Efectivo:</span><span className="font-semibold">Q{getDisplaySales(reg).cash.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="opacity-75">Tarjeta:</span><span className="font-semibold">Q{getDisplaySales(reg).card.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="opacity-75">Transfer.:</span><span className="font-semibold">Q{getDisplaySales(reg).transfer.toFixed(2)}</span></div>
+                {getDisplaySales(reg).credit > 0 && <div className="flex justify-between"><span className="opacity-75">Crédito:</span><span className="font-semibold">Q{getDisplaySales(reg).credit.toFixed(2)}</span></div>}
               </div>
             </div>
             <div className="bg-white bg-opacity-10 rounded-lg p-4">
@@ -754,7 +783,7 @@ export default function CashRegisterPage() {
               <div className="mb-4 p-4 bg-gray-50 rounded-lg text-sm">
                 <div className="grid grid-cols-2 gap-2 mb-3">
                   <div><p className="text-gray-600">Monto Inicial:</p><p className="font-bold">Q{registerToClose.initialAmount.toFixed(2)}</p></div>
-                  <div><p className="text-gray-600">Ventas Efectivo:</p><p className="font-bold text-green-600">+Q{(registerTallies[registerToClose.id]?.cash ?? 0).toFixed(2)}</p></div>
+                  <div><p className="text-gray-600">Ventas Efectivo:</p><p className="font-bold text-green-600">+Q{getDisplaySales(registerToClose).cash.toFixed(2)}</p></div>
                   <div>
                     <p className="text-gray-600">Entradas:</p>
                     <p className="font-bold text-green-600">+Q{(registerToClose.movements ?? []).filter(m => m.type === 'INCOME').reduce((s, m) => s + m.amount, 0).toFixed(2)}</p>
@@ -770,10 +799,10 @@ export default function CashRegisterPage() {
                       <p className="text-[10px] text-gray-400">ya incluido en Ventas Efectivo</p>
                     </div>
                   )}
-                  {(registerTallies[registerToClose.id]?.credit ?? 0) > 0 && (
+                  {getDisplaySales(registerToClose).credit > 0 && (
                     <div>
                       <p className="text-gray-600">Ventas a Crédito:</p>
-                      <p className="font-bold text-blue-600">Q{registerTallies[registerToClose.id]!.credit.toFixed(2)}</p>
+                      <p className="font-bold text-blue-600">Q{getDisplaySales(registerToClose).credit.toFixed(2)}</p>
                       <p className="text-[10px] text-gray-400">no suma al efectivo esperado</p>
                     </div>
                   )}

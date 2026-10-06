@@ -50,6 +50,7 @@ interface TransferItem {
   quantity: number
   unitCost: number
   totalCost: number
+  basePrice?: number
   availableStock?: number
 }
 
@@ -136,6 +137,7 @@ export default function StoreTransfers() {
       // unitCost: prefer stored value, fall back to product.cost (cost field from Products table)
       const unitCost = Number(item.unitCost ?? item.product?.cost ?? 0)
       const totalCost = Number(item.totalCost ?? 0) || qty * unitCost
+      const basePrice = Number(item.product?.basePrice ?? 0)
       return {
         productId: item.productId ?? item.product?.id ?? '',
         productName: item.product?.name ?? item.productName ?? '',
@@ -143,6 +145,7 @@ export default function StoreTransfers() {
         quantity: qty,
         unitCost,
         totalCost,
+        basePrice,
       }
     }),
   })
@@ -1053,6 +1056,8 @@ export default function StoreTransfers() {
             productName: item.productName,
             productCode: item.productCode,
             quantity: item.quantity,
+            cost: item.unitCost,
+            basePrice: item.basePrice,
           })),
         }}
       />

@@ -12,7 +12,7 @@ export interface ThermalTransferData {
   notes?: string
   logo?: string
   companyName?: string
-  items: { productName: string; productCode?: string; quantity: number }[]
+  items: { productName: string; productCode?: string; quantity: number; cost?: number; basePrice?: number }[]
 }
 
 export function ThermalTransferSlip({ data, widthMm }: { data: ThermalTransferData; widthMm: number }) {
@@ -49,6 +49,12 @@ export function ThermalTransferSlip({ data, widthMm }: { data: ThermalTransferDa
           <div style={{ flex: 1 }}>
             <div>{item.productName}</div>
             {item.productCode && <div style={{ fontSize: '12px', color: '#444' }}>{item.productCode}</div>}
+            {/* Para etiquetar el producto al llegar */}
+            <div style={{ fontSize: '13px', marginTop: '1px' }}>
+              {item.cost != null && <span>Costo: Q{item.cost.toFixed(2)}</span>}
+              {item.cost != null && item.basePrice != null && <span>  ·  </span>}
+              {item.basePrice != null && <span style={{ fontWeight: 'bold' }}>Venta: Q{item.basePrice.toFixed(2)}</span>}
+            </div>
           </div>
           <div style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>x{item.quantity}</div>
         </div>

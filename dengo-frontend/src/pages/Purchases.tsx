@@ -280,12 +280,16 @@ export default function Purchases() {
   function handleSelectProduct(product: ProductOption) {
     setPosSearch('')
     setShowResults(false)
-    const variations = product.variations?.length ? product.variations : null
-    if (variations && variations.length > 1) {
+    // Used to require 2+ variations before asking — with exactly one defined,
+    // this silently picked that one variation (never the base), with no way
+    // to receive the product as a loose piece via search at all. Now any
+    // real variation (even just one) opens the picker, which always offers
+    // the base ("Pieza") alongside it — see the modal below.
+    if (product.variations && product.variations.length > 0) {
       setSelectedForVariation(product)
       setShowVariationModal(true)
     } else {
-      addItem(product, variations?.[0] ?? null)
+      addItem(product, null)
     }
   }
 
@@ -572,8 +576,8 @@ export default function Purchases() {
                       </div>
                       <div className="text-right flex-shrink-0 ml-3">
                         <p className="text-sm font-semibold text-gray-700">Q{Number(p.cost ?? 0).toFixed(2)}</p>
-                        {p.variations && p.variations.length > 1 && (
-                          <p className="text-xs text-blue-500">{p.variations.length} variantes</p>
+                        {p.variations && p.variations.length > 0 && (
+                          <p className="text-xs text-blue-500">{p.variations.length} variante{p.variations.length !== 1 ? 's' : ''}</p>
                         )}
                       </div>
                     </div>
@@ -922,8 +926,21 @@ export default function Purchases() {
                 onClick={e => e.stopPropagation()}
               >
                 <h3 className="font-semibold text-gray-800 mb-1">{selectedForVariation.fullName ?? selectedForVariation.name}</h3>
-                <p className="text-xs text-gray-400 mb-4">Selecciona una variante</p>
+                <p className="text-xs text-gray-400 mb-4">Selecciona una presentación</p>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {/* La base ("Pieza") siempre es una opción, aunque el
+                      producto ya tenga variantes definidas — recibir la
+                      mercadería suelta sigue siendo válido. */}
+                  <button
+                    onMouseDown={() => addItem(selectedForVariation, null)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-gray-200 hover:border-primary-400 hover:bg-primary-50 transition-colors text-left"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">Pieza</p>
+                      <p className="text-xs text-gray-400">Unidad base</p>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700">Q{Number(selectedForVariation.cost ?? 0).toFixed(2)}</span>
+                  </button>
                   {selectedForVariation.variations?.map(v => (
                     <button
                       key={v.id}

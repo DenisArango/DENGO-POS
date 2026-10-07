@@ -419,12 +419,25 @@ export default function POS() {
   // Auto-select the branch's default customer so a sale never starts with no
   // customer chosen. Only applies while nothing has been picked yet — it
   // never overrides a customer the cashier already selected.
+  //
+  // Decided ONCE per branch (tracked in this ref), not every time `customers`
+  // changes — fetchCustomers() refetches on the search box's onFocus (to
+  // catch credit-setting changes), which produces a new `customers` array
+  // reference each time. Re-running on every such refetch used to re-apply
+  // the default customer even right after the cashier deliberately cleared
+  // it (the "Quitar cliente" button) to pick someone else — the moment they
+  // focused the search input to type a different name, this effect fired
+  // again and silently put the default customer right back.
+  const defaultAppliedForBranchRef = useRef<string | null>(null)
   useEffect(() => {
-    if (selectedCustomer || !currentStore?.defaultCustomerId || customers.length === 0) return
+    const branchKey = currentStore?.id ?? ''
+    if (defaultAppliedForBranchRef.current === branchKey) return
+    if (customers.length === 0) return
+    defaultAppliedForBranchRef.current = branchKey
+    if (selectedCustomer || !currentStore?.defaultCustomerId) return
     const defaultCustomer = customers.find(c => c.id === currentStore.defaultCustomerId)
     if (defaultCustomer) setSelectedCustomer(defaultCustomer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customers, currentStore?.defaultCustomerId])
+  }, [customers, currentStore?.id, currentStore?.defaultCustomerId, selectedCustomer])
 
   async function fetchEnabledPaymentMethods() {
     try {
@@ -629,6 +642,13 @@ export default function POS() {
     // whoever was just served still selected for the next sale.
     const defaultCustomer = customers.find(c => c.id === currentStore?.defaultCustomerId)
     setSelectedCustomer(defaultCustomer ?? null)
+    // Also the natural moment to refresh credit eligibility — a customer
+    // selected (default or otherwise) through most of the previous sale can
+    // go stale if their credit settings changed elsewhere meanwhile, and
+    // without this refetch the only other trigger is refocusing the
+    // customer search box, which a cashier has no reason to do when the
+    // customer is already showing as selected.
+    fetchCustomers()
   }
 
   // Gate on stock BEFORE adding, not just at final checkout — additionalQty

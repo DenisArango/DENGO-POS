@@ -7,6 +7,7 @@ import { canAccessBranch } from '../lib/branch-scope.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
 import { certifyInvoice } from '../lib/fel.js'
 import { looksLikeRealNit } from '../lib/nit.js'
+import { parseBusinessDateParam } from '../lib/timezone.js'
 
 const saleItemSchema = z.object({
   productId: z.string(),
@@ -216,8 +217,8 @@ export default async function salesRoutes(fastify: FastifyInstance) {
         ...(q.saleType ? { saleType: q.saleType as any } : {}),
         ...(q.from || q.to ? {
           createdAt: {
-            ...(q.from ? { gte: new Date(q.from) } : {}),
-            ...(q.to ? { lte: new Date(q.to) } : {}),
+            ...(q.from ? { gte: parseBusinessDateParam(q.from) } : {}),
+            ...(q.to ? { lte: parseBusinessDateParam(q.to) } : {}),
           },
         } : {}),
         ...(q.search ? {

@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { prisma } from '../lib/prisma.js'
-import { getBusinessDayBounds, toBusinessDateKey, getBusinessHour } from '../lib/timezone.js'
+import { getBusinessDayBounds, toBusinessDateKey, getBusinessHour, parseBusinessDateParam } from '../lib/timezone.js'
 import { computeSales } from './cash-registers.js'
 import { resolveBranchScope } from '../lib/branch-scope.js'
 
@@ -52,8 +52,8 @@ function buildSaleFilter(
     ...registerFilter,
     ...(q.from || q.to ? {
       createdAt: {
-        ...(q.from ? { gte: new Date(q.from) } : {}),
-        ...(q.to ? { lte: new Date(q.to) } : {}),
+        ...(q.from ? { gte: parseBusinessDateParam(q.from) } : {}),
+        ...(q.to ? { lte: parseBusinessDateParam(q.to) } : {}),
       },
     } : {}),
   }
@@ -526,8 +526,8 @@ export default async function reportRoutes(fastify: FastifyInstance) {
         ...(q.type ? { type: q.type as any } : {}),
         ...(q.from || q.to ? {
           createdAt: {
-            ...(q.from ? { gte: new Date(q.from) } : {}),
-            ...(q.to ? { lte: new Date(q.to) } : {}),
+            ...(q.from ? { gte: parseBusinessDateParam(q.from) } : {}),
+            ...(q.to ? { lte: parseBusinessDateParam(q.to) } : {}),
           },
         } : {}),
       },
@@ -602,8 +602,8 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       ...(branchId ? { branchId } : {}),
       ...(q.from || q.to ? {
         openedAt: {
-          ...(q.from ? { gte: new Date(q.from) } : {}),
-          ...(q.to ? { lte: new Date(q.to) } : {}),
+          ...(q.from ? { gte: parseBusinessDateParam(q.from) } : {}),
+          ...(q.to ? { lte: parseBusinessDateParam(q.to) } : {}),
         },
       } : {}),
     }

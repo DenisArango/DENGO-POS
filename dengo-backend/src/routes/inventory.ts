@@ -6,6 +6,7 @@ import { updateStock, setStock } from '../services/inventory.service.js'
 import { resolveBranchScope, canAccessBranch } from '../lib/branch-scope.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
 import { multiWordSearch } from '../lib/search.js'
+import { parseBusinessDateParam } from '../lib/timezone.js'
 
 // Same thresholds as the frontend's computeStatus() — duplicated here because
 // 'low'/'critical'/'overstock' compares two columns from different tables
@@ -146,8 +147,8 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
         ...(types && types.length > 1 ? { type: { in: types } } : {}),
         ...(q.from || q.to ? {
           createdAt: {
-            ...(q.from ? { gte: new Date(q.from) } : {}),
-            ...(q.to ? { lte: new Date(q.to) } : {}),
+            ...(q.from ? { gte: parseBusinessDateParam(q.from) } : {}),
+            ...(q.to ? { lte: parseBusinessDateParam(q.to) } : {}),
           },
         } : {}),
       },

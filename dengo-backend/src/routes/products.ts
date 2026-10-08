@@ -113,29 +113,35 @@ export default async function productRoutes(fastify: FastifyInstance) {
     // Case-insensitive throughout — a scanner/keyboard-wedge or manual entry
     // can send different casing than what's stored, and "no encontrado" on a
     // real scan is confusing when the barcode is right there on the label.
-    // Try product main barcode
+    // Try product main barcode — this code is the BASE unit's own, so the
+    // response always means "the base", never a guessed variation. This used
+    // to fall back to `?? product.variations[0]` whenever nothing was marked
+    // isDefault (which in practice is every product — nothing in the UI ever
+    // sets isDefault true), so scanning a product's own barcode silently sold
+    // whichever variation happened to be created first instead of the base,
+    // with no way to scan back to the base at all once that started.
     const product = await prisma.product.findFirst({
       where: { barcode: { equals: code, mode: 'insensitive' }, isActive: true },
       include,
     })
-    if (product) return reply.send({ product, variation: product.variations.find(v => v.isDefault) ?? product.variations[0] })
+    if (product) return reply.send({ product, variation: undefined })
 
-    // Try variation barcode
+    // Try variation barcode — here the scanned code unambiguously IS that
+    // one variation's own, so (unlike above) resolving to it is correct.
     const variation = await prisma.productVariation.findFirst({
       where: { barcode: { equals: code, mode: 'insensitive' } },
       include: { product: { include } },
     })
     if (variation) return reply.send({ product: variation.product, variation })
 
-    // Try alternate barcodes
+    // Try alternate barcodes — same as the main barcode: these belong to the
+    // product itself (ProductBarcode has no variationId), not to any one
+    // variation, so this also always means "the base".
     const altBarcode = await prisma.productBarcode.findFirst({
       where: { barcode: { equals: code, mode: 'insensitive' } },
       include: { product: { include } },
     })
-    if (altBarcode) {
-      const p = altBarcode.product
-      return reply.send({ product: p, variation: p.variations.find(v => v.isDefault) ?? p.variations[0] })
-    }
+    if (altBarcode) return reply.send({ product: altBarcode.product, variation: undefined })
 
     return reply.status(404).send({ error: 'Producto no encontrado' })
   })

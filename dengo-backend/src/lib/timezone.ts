@@ -12,6 +12,23 @@
  */
 const BUSINESS_UTC_OFFSET_HOURS = -6
 
+/**
+ * Parses a report's `from`/`to` query param the same way the person who
+ * typed it meant it: as Guatemala local time, not whatever timezone the
+ * Node process happens to be running in. Every report page sends a plain
+ * "YYYY-MM-DDTHH:mm:ss" with no offset (ej. "2026-10-07T00:00:00"), and
+ * `new Date(...)` on a string like that is parsed in the PROCESS's own
+ * local timezone per the JS spec — correct by luck on a dev machine set to
+ * Guatemala time, silently off by up to 6h once deployed to a cloud VM
+ * running UTC (exactly the class of bug getBusinessDayBounds above already
+ * solved for "today" — this is the same fix for an explicit date range).
+ * A value that already carries its own offset ('Z' or ±HH:MM) is left alone.
+ */
+export function parseBusinessDateParam(value: string): Date {
+  if (/Z$|[+-]\d{2}:\d{2}$/.test(value)) return new Date(value)
+  return new Date(`${value}-06:00`)
+}
+
 /** [startOfDay, endOfDay] in UTC instants that correspond to the business's local calendar day containing `at` (defaults to now). */
 export function getBusinessDayBounds(at: Date = new Date()): { start: Date; end: Date } {
   const shifted = new Date(at.getTime() + BUSINESS_UTC_OFFSET_HOURS * 3_600_000)

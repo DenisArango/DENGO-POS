@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma.js'
 import { requirePermission } from '../lib/permissions.js'
+import { parseBusinessDateParam } from '../lib/timezone.js'
 
 function requireAuditor(fastify: FastifyInstance) {
   return [fastify.authenticate, requirePermission('reports.audit')]
@@ -16,8 +17,8 @@ export default async function auditRoutes(fastify: FastifyInstance) {
         ...(q.entity ? { entity: q.entity } : {}),
         ...(q.from || q.to ? {
           createdAt: {
-            ...(q.from ? { gte: new Date(q.from) } : {}),
-            ...(q.to ? { lte: new Date(q.to) } : {}),
+            ...(q.from ? { gte: parseBusinessDateParam(q.from) } : {}),
+            ...(q.to ? { lte: parseBusinessDateParam(q.to) } : {}),
           },
         } : {}),
       },
@@ -33,8 +34,8 @@ export default async function auditRoutes(fastify: FastifyInstance) {
       where: {
         ...(q.from || q.to ? {
           createdAt: {
-            ...(q.from ? { gte: new Date(q.from) } : {}),
-            ...(q.to ? { lte: new Date(q.to) } : {}),
+            ...(q.from ? { gte: parseBusinessDateParam(q.from) } : {}),
+            ...(q.to ? { lte: parseBusinessDateParam(q.to) } : {}),
           },
         } : {}),
       },

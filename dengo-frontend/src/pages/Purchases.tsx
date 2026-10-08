@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Search, ArrowLeft, Trash2, CheckCircle,
   Package, TrendingUp, ChevronDown, ChevronRight, Edit2, X, UserPlus, DollarSign,
+  ArrowLeftRight,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -76,6 +77,38 @@ interface IntakeItem {
   quantity: number
   unitCost: number
   unitPrice: number
+  // Carried along so the row can offer "cambiar variación"/"agregar otra
+  // presentación" without re-fetching the product — undefined/empty means
+  // this product has no real variations defined at all.
+  productVariations?: ProductVariation[]
+}
+
+// Same model as POS.tsx/Transfers.tsx: a product with no real variations
+// sells as a synthetic "Pieza" (the base); clicking/scanning by default
+// always resolves to the base, and getVariations() is only consulted once
+// something already confirmed there's a real variation to offer.
+function buildDefaultVariation(product: ProductOption): ProductVariation {
+  return {
+    id: `${product.id}-default`,
+    productId: product.id,
+    name: 'Pieza',
+    conversionFactor: 1,
+    price: Number(product.basePrice ?? 0),
+    isDefault: true,
+  }
+}
+
+function getVariations(product: ProductOption): ProductVariation[] {
+  if (product.variations && product.variations.length > 0) return product.variations
+  return [buildDefaultVariation(product)]
+}
+
+// Whether there's a REAL (admin-defined) variation to pick from — see the
+// matching comment in POS.tsx. getVariations() alone can't answer this: it
+// always returns at least one entry (the synthetic base when there are no
+// real variations), so "length > 0" on its result is never useful here.
+function hasVariationChoice(product: ProductOption): boolean {
+  return (product.variations?.length ?? 0) > 0
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -121,15 +154,29 @@ export default function Purchases() {
   const [showResults, setShowResults] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Variation modal
+  // Variation modal — used both to add a fresh presentation line and (when
+  // changingItem is set) to switch an existing line's variation, same
+  // dual-purpose modal as POS.tsx's showVariationModal/changingVariationItem.
   const [showVariationModal, setShowVariationModal] = useState(false)
   const [selectedForVariation, setSelectedForVariation] = useState<ProductOption | null>(null)
+  const [changingItem, setChangingItem] = useState<{ key: string; quantity: number } | null>(null)
+
+  // Guards against a double "Confirmar ingreso" — disabled={saving} alone
+  // doesn't close the window between two rapid clicks/Enters and React
+  // actually re-rendering the disabled button (the exact mechanism that
+  // duplicated a traslado — see Transfers.tsx's matching ref).
+  const confirmingIntakeRef = useRef(false)
 
   // Inline cost/price edit
   const [editingCostId, setEditingCostId] = useState<string | null>(null)
   const [editCostVal, setEditCostVal] = useState('')
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null)
   const [editPriceVal, setEditPriceVal] = useState('')
+  // Draft text for the quantity input while being edited — same pattern as
+  // POS.tsx: a plain text input (not type="number") so there's no native
+  // spinner and no forced "01" when overtyping a starting "1"; the typed
+  // value only commits to intakeItems on blur/Enter.
+  const [itemQtyStrings, setItemQtyStrings] = useState<Record<string, string>>({})
   const draftHydratedRef = useRef(false)
 
   // Editing an already-closed purchase reuses the same create-view form —
@@ -277,25 +324,59 @@ export default function Purchases() {
   }
 
   // ── Product add ────────────────────────────────────────────────────────────
+  // Always adds the base unit straight to the intake, same as POS's
+  // handleAddProduct — even for a product that also has named presentations.
+  // Picking an actual presentation is a deliberate extra step from the item
+  // row (see openVariationPicker) instead of a mandatory first step, so the
+  // base itself stays reachable even once a product has variations.
   function handleSelectProduct(product: ProductOption) {
     setPosSearch('')
     setShowResults(false)
-    // Used to require 2+ variations before asking — with exactly one defined,
-    // this silently picked that one variation (never the base), with no way
-    // to receive the product as a loose piece via search at all. Now any
-    // real variation (even just one) opens the picker, which always offers
-    // the base ("Pieza") alongside it — see the modal below.
-    if (product.variations && product.variations.length > 0) {
-      setSelectedForVariation(product)
-      setShowVariationModal(true)
-    } else {
-      addItem(product, null)
+    addItem(product, null)
+  }
+
+  // Adds an additional presentation of a product already in the list — the
+  // base line (added above) stays untouched; each pick becomes its own new
+  // row instead of replacing one.
+  function openVariationPicker(product: ProductOption) {
+    if (!hasVariationChoice(product)) return
+    setChangingItem(null)
+    setSelectedForVariation(product)
+    setShowVariationModal(true)
+  }
+
+  // An existing row only carries flat fields, not the full ProductOption it
+  // came from — rebuilds just enough of one (id + variations) for the modal
+  // to work, for both "agregar otra presentación" and "cambiar variación".
+  function productFromItem(item: IntakeItem): ProductOption {
+    return {
+      id: item.productId.includes('__') ? item.productId.split('__')[0]! : item.productId,
+      name: item.productName,
+      cost: item.unitCost,
+      basePrice: item.unitPrice,
+      variations: item.productVariations,
     }
   }
 
+  function openVariationPickerForItem(item: IntakeItem) {
+    openVariationPicker(productFromItem(item))
+  }
+
+  // Switches an EXISTING line's variation (or back to the base) — unlike
+  // openVariationPicker, this replaces the one row instead of adding another.
+  function handleChangeItemVariation(item: IntakeItem) {
+    if (!item.productVariations?.length) return
+    setChangingItem({ key: item.productId, quantity: item.quantity })
+    setSelectedForVariation(productFromItem(item))
+    setShowVariationModal(true)
+  }
+
   function addItem(product: ProductOption, variation: ProductVariation | null) {
-    // Inventory is tracked per Product (not per variation) — always use product.id
-    const productId = product.id
+    // Inventory is tracked per Product (not per variation), but the dedup
+    // key still needs to tell them apart — otherwise adding the base and
+    // then a real variation of the SAME product silently merged into one
+    // line, losing which batch was received as loose pieces vs boxed.
+    const productId = variation && !variation.isDefault ? `${product.id}__${variation.id}` : product.id
     const name = variation && !variation.isDefault
       ? `${product.fullName ?? product.name} (${variation.name})`
       : (product.fullName ?? product.name)
@@ -306,10 +387,60 @@ export default function Purchases() {
       if (existing) {
         return prev.map(i => i.productId === productId ? { ...i, quantity: i.quantity + 1 } : i)
       }
-      return [...prev, { id: Math.random().toString(36).slice(2), productId, productName: name, quantity: 1, unitCost: cost, unitPrice: price }]
+      return [...prev, {
+        id: Math.random().toString(36).slice(2), productId, productName: name, quantity: 1,
+        unitCost: cost, unitPrice: price, productVariations: product.variations,
+      }]
     })
     setShowVariationModal(false)
     setSelectedForVariation(null)
+  }
+
+  // Replaces one line's variation (keeping its quantity) — removes the old
+  // row, then reuses addItem so landing on an already-existing variation
+  // line merges quantities the same way adding fresh does.
+  function switchItemVariation(oldKey: string, product: ProductOption, variation: ProductVariation | null) {
+    setIntakeItems(prev => prev.filter(i => i.productId !== oldKey))
+    addItem(product, variation)
+  }
+
+  // ── Barcode scan (Enter) ───────────────────────────────────────────────────
+  // Mirrors POS.tsx's handleBarcodeScan: scanning the BASE's own barcode adds
+  // the base; scanning a specific variation's own barcode adds that variation
+  // directly — neither used to work here at all (no Enter handling), so
+  // every add had to go through the dropdown by hand.
+  async function handleBarcodeScan(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== 'Enter' || !posSearch.trim()) return
+    const barcode = posSearch.trim()
+    const barcodeEq = (b?: string) => !!b && b.toUpperCase() === barcode.toUpperCase()
+
+    const exactProduct = posResults.find(
+      p => barcodeEq(p.barcode) || getVariations(p).some(v => barcodeEq(v.barcode))
+    )
+    if (exactProduct) {
+      const matchedVariation = getVariations(exactProduct).find(v => barcodeEq(v.barcode))
+      addItem(exactProduct, matchedVariation ?? null)
+      setPosSearch('')
+      setShowResults(false)
+      toast.success(matchedVariation ? `${exactProduct.name} (${matchedVariation.name}) agregado` : `${exactProduct.name} agregado`)
+      return
+    }
+
+    try {
+      const data = await api.get<{ product: ProductOption; variation?: ProductVariation }>(
+        `/api/products/barcode/${encodeURIComponent(barcode)}`
+      )
+      if (data?.product) {
+        addItem(data.product, data.variation ?? null)
+        setPosSearch('')
+        setShowResults(false)
+        toast.success(data.variation ? `${data.product.name} (${data.variation.name}) agregado` : `${data.product.name} agregado`)
+      } else {
+        toast.error('Producto no encontrado')
+      }
+    } catch {
+      toast.error('Producto no encontrado')
+    }
   }
 
   // ── Item helpers ───────────────────────────────────────────────────────────
@@ -355,6 +486,9 @@ export default function Purchases() {
     setEditingPriceId(null)
     setEditingReferenceId(null)
     setEditingOriginalBranchId(null)
+    setShowVariationModal(false)
+    setSelectedForVariation(null)
+    setChangingItem(null)
   }
 
   // ── Edit an already-closed purchase ────────────────────────────────────────
@@ -383,9 +517,9 @@ export default function Purchases() {
         return
       }
 
-      const prices = await Promise.all(
+      const products = await Promise.all(
         reconstructed.map(([productId]) =>
-          api.get<{ basePrice?: number }>(`/api/products/${productId}`).catch(() => null)
+          api.get<{ basePrice?: number; variations?: ProductVariation[] }>(`/api/products/${productId}`).catch(() => null)
         )
       )
 
@@ -395,7 +529,8 @@ export default function Purchases() {
         productName: v.name,
         quantity: v.qty,
         unitCost: v.cost,
-        unitPrice: Number(prices[idx]?.basePrice ?? 0),
+        unitPrice: Number(products[idx]?.basePrice ?? 0),
+        productVariations: products[idx]?.variations,
       })))
       setSelectedBranchId(group.branchId)
       setEditingOriginalBranchId(group.branchId)
@@ -478,8 +613,15 @@ export default function Purchases() {
 
   // ── Confirm intake (or save edits to an existing one) ──────────────────────
   const handleConfirm = async () => {
+    // confirmingIntakeRef (checked+set synchronously, before any state
+    // update) is what actually stops a double-submit — disabled={saving}
+    // alone leaves a window between a second click/Enter and React
+    // re-rendering the button (see Transfers.tsx's matching ref, added
+    // after a double-Enter there created a duplicate traslado).
+    if (confirmingIntakeRef.current) return
     if (!selectedBranchId) { toast.error('Selecciona una sucursal'); return }
     if (intakeItems.length === 0) { toast.error('Agrega al menos un producto'); return }
+    confirmingIntakeRef.current = true
     setSaving(true)
     try {
       const payload = {
@@ -487,7 +629,9 @@ export default function Purchases() {
         supplierId: selectedSupplierId || undefined,
         notes: notes || undefined,
         items: intakeItems.map(i => ({
-          productId: i.productId,
+          // Strip the dedup suffix (__variationId) — the backend tracks
+          // stock per real product, not per presentation.
+          productId: i.productId.includes('__') ? i.productId.split('__')[0]! : i.productId,
           productName: i.productName,
           quantity: i.quantity,
           unitCost: i.unitCost,
@@ -508,6 +652,7 @@ export default function Purchases() {
       toast.error(e instanceof Error ? e.message : (editingReferenceId ? 'Error al actualizar la compra' : 'Error al confirmar ingreso'))
     } finally {
       setSaving(false)
+      confirmingIntakeRef.current = false
     }
   }
 
@@ -555,9 +700,10 @@ export default function Purchases() {
               <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="text"
-                placeholder="Buscar producto por nombre o código..."
+                placeholder="Escanear código de barras o buscar producto por nombre..."
                 value={posSearch}
                 onChange={e => setPosSearch(e.target.value)}
+                onKeyDown={handleBarcodeScan}
                 onFocus={() => posSearch.trim() && setShowResults(true)}
                 onBlur={() => setTimeout(() => setShowResults(false), 150)}
                 className="input pl-10 w-full"
@@ -615,18 +761,46 @@ export default function Purchases() {
                         animate={{ opacity: 1, y: 0 }}
                         className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}
                       >
-                        <td className="px-4 py-2.5 font-medium text-gray-800">{item.productName}</td>
+                        <td className="px-4 py-2.5 font-medium text-gray-800">
+                          <div className="flex items-center gap-1.5">
+                            <span>{item.productName}</span>
+                            {(item.productVariations?.length ?? 0) > 0 && (
+                              <>
+                                <button
+                                  onClick={() => handleChangeItemVariation(item)}
+                                  title="Cambiar variación de esta línea"
+                                  className="text-primary-400 hover:text-primary-600 transition-colors">
+                                  <ArrowLeftRight size={11} />
+                                </button>
+                                <button
+                                  onClick={() => openVariationPickerForItem(item)}
+                                  title="Agregar otra presentación de este producto"
+                                  className="text-primary-400 hover:text-primary-600 transition-colors">
+                                  <Plus size={12} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
 
                         {/* Qty controls */}
                         <td className="px-3 py-2 text-center">
                           <div className="flex items-center justify-center">
                             <input
-                              type="number"
-                              value={item.quantity}
-                              onChange={e => setQtyDirect(item.id, e.target.value)}
-                              className="w-16 text-center border border-gray-200 rounded px-1 py-1 text-sm focus:outline-none focus:border-primary-400"
-                              min="0.001"
-                              step="1"
+                              type="text"
+                              inputMode="decimal"
+                              value={itemQtyStrings[item.id] ?? String(item.quantity)}
+                              onChange={e => setItemQtyStrings(prev => ({ ...prev, [item.id]: e.target.value }))}
+                              onFocus={e => e.target.select()}
+                              onBlur={() => {
+                                const str = itemQtyStrings[item.id]
+                                if (str !== undefined) {
+                                  setQtyDirect(item.id, str)
+                                  setItemQtyStrings(prev => { const next = { ...prev }; delete next[item.id]; return next })
+                                }
+                              }}
+                              onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                              className="w-16 text-center border border-gray-200 rounded px-1 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                             />
                           </div>
                         </td>
@@ -916,7 +1090,7 @@ export default function Purchases() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-              onClick={() => { setShowVariationModal(false); setSelectedForVariation(null) }}
+              onClick={() => { setShowVariationModal(false); setSelectedForVariation(null); setChangingItem(null) }}
             >
               <motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
@@ -925,26 +1099,40 @@ export default function Purchases() {
                 className="bg-white rounded-xl shadow-2xl p-5 w-80"
                 onClick={e => e.stopPropagation()}
               >
-                <h3 className="font-semibold text-gray-800 mb-1">{selectedForVariation.fullName ?? selectedForVariation.name}</h3>
-                <p className="text-xs text-gray-400 mb-4">Selecciona una presentación</p>
+                <h3 className="font-semibold text-gray-800 mb-1">
+                  {changingItem ? 'Cambiar presentación' : 'Agregar presentación'}
+                </h3>
+                <p className="text-xs text-gray-400 mb-4">{selectedForVariation.fullName ?? selectedForVariation.name}</p>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {/* La base ("Pieza") siempre es una opción, aunque el
-                      producto ya tenga variantes definidas — recibir la
-                      mercadería suelta sigue siendo válido. */}
-                  <button
-                    onMouseDown={() => addItem(selectedForVariation, null)}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-gray-200 hover:border-primary-400 hover:bg-primary-50 transition-colors text-left"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">Pieza</p>
-                      <p className="text-xs text-gray-400">Unidad base</p>
-                    </div>
-                    <span className="text-sm font-semibold text-gray-700">Q{Number(selectedForVariation.cost ?? 0).toFixed(2)}</span>
-                  </button>
+                  {/* Adding fresh only lists real variations (the base is
+                      already its own line); switching an existing line also
+                      offers "Pieza" so you can go back to the base. */}
+                  {changingItem && (
+                    <button
+                      onMouseDown={() => {
+                        switchItemVariation(changingItem.key, selectedForVariation, null)
+                        setChangingItem(null)
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-gray-200 hover:border-primary-400 hover:bg-primary-50 transition-colors text-left"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">Pieza</p>
+                        <p className="text-xs text-gray-400">Unidad base</p>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700">Q{Number(selectedForVariation.cost ?? 0).toFixed(2)}</span>
+                    </button>
+                  )}
                   {selectedForVariation.variations?.map(v => (
                     <button
                       key={v.id}
-                      onMouseDown={() => addItem(selectedForVariation, v)}
+                      onMouseDown={() => {
+                        if (changingItem) {
+                          switchItemVariation(changingItem.key, selectedForVariation, v)
+                          setChangingItem(null)
+                        } else {
+                          addItem(selectedForVariation, v)
+                        }
+                      }}
                       className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-gray-200 hover:border-primary-400 hover:bg-primary-50 transition-colors text-left"
                     >
                       <div>

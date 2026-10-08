@@ -4,7 +4,8 @@ import {
   ArrowUpDown, Plus, Search, Filter, Package,
   Building2, Truck, Clock, CheckCircle,
   XCircle, ArrowRight, ChevronDown,
-  Download, Eye, BarChart3, ArrowLeft, Printer
+  Download, Eye, BarChart3, ArrowLeft, Printer,
+  ArrowLeftRight, Ban
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -52,6 +53,10 @@ interface TransferItem {
   totalCost: number
   basePrice?: number
   availableStock?: number
+  // Carried along so the row can offer "cambiar variación"/"agregar otra
+  // presentación" without re-fetching the product — undefined/empty means
+  // this product has no real variations defined at all.
+  productVariations?: ProductVariation[]
 }
 
 interface Transfer {
@@ -73,6 +78,34 @@ interface Transfer {
   notes?: string
   receivedAt?: string
   receivedBy?: { id: string; name: string }
+}
+
+// Same model as POS.tsx: a product with no real variations sells as a
+// synthetic "Pieza" (the base); scanning/clicking by default always resolves
+// to the base, and getVariations() is only consulted once something already
+// confirmed there's a real variation to offer.
+function buildDefaultVariation(product: Product): ProductVariation {
+  return {
+    id: `${product.id}-default`,
+    productId: product.id,
+    name: 'Pieza',
+    conversionFactor: 1,
+    price: Number(product.basePrice ?? 0),
+    isDefault: true,
+  }
+}
+
+function getVariations(product: Product): ProductVariation[] {
+  if (product.variations && product.variations.length > 0) return product.variations
+  return [buildDefaultVariation(product)]
+}
+
+// Whether there's a REAL (admin-defined) variation to pick from — see the
+// matching comment in POS.tsx. getVariations() alone can't answer this: it
+// always returns at least one entry (the synthetic base when there are no
+// real variations), so "length > 0" on its result is never useful here.
+function hasVariationChoice(product: Product): boolean {
+  return (product.variations?.length ?? 0) > 0
 }
 
 export default function StoreTransfers() {
@@ -106,6 +139,11 @@ export default function StoreTransfers() {
   const [notes, setNotes] = useState('')
   const [transferItems, setTransferItems] = useState<TransferItem[]>([])
   const draftHydratedRef = useRef(false)
+  // Draft text for the quantity input while being edited — same pattern as
+  // POS.tsx: a plain text input (not type="number") so there's no native
+  // spinner and no forced "01" when overtyping a starting "1"; the typed
+  // value only commits to transferItems on blur/Enter.
+  const [itemQtyStrings, setItemQtyStrings] = useState<Record<string, string>>({})
 
   // Product search
   const [posSearch, setPosSearch] = useState('')
@@ -113,9 +151,18 @@ export default function StoreTransfers() {
   const [showSearchResults, setShowSearchResults] = useState(false)
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Variation modal
+  // Variation modal — used both to add a fresh presentation line and (when
+  // changingItem is set) to switch an existing line's variation, same
+  // dual-purpose modal as POS.tsx's showVariationModal/changingVariationItem.
   const [showVariationModal, setShowVariationModal] = useState(false)
   const [selectedProductForVariation, setSelectedProductForVariation] = useState<Product | null>(null)
+  const [changingItem, setChangingItem] = useState<{ key: string; quantity: number } | null>(null)
+
+  // Guards against a double "Crear Transferencia" — disabled={saving} alone
+  // doesn't close the window between two rapid clicks/Enters and React
+  // actually re-rendering the disabled button, which is exactly how a
+  // cashier ended up with two identical transfers from one double-press.
+  const creatingTransferRef = useRef(false)
 
   // ── Normalizers ────────────────────────────────────────────────────────────
   const normalizeTransferStatus = (s: string): Transfer['status'] => {
@@ -237,16 +284,52 @@ export default function StoreTransfers() {
   }
 
   // ── Create view helpers ────────────────────────────────────────────────────
+  // Always adds the base unit straight to the transfer, same as POS's
+  // handleAddProduct — even for a product that also has named presentations.
+  // Picking an actual presentation is a deliberate extra step from the item
+  // row (see openVariationPicker) instead of a mandatory first step, so the
+  // base itself stays reachable even once a product has variations.
   function handleSelectProduct(product: Product) {
     setPosSearch('')
     setShowSearchResults(false)
-    const variations = product.variations?.length ? product.variations : null
-    if (variations && variations.length > 1) {
-      setSelectedProductForVariation(product)
-      setShowVariationModal(true)
-    } else {
-      addTransferItem(product, variations?.[0] ?? null, 1)
+    addTransferItem(product, null, 1)
+  }
+
+  // Adds an additional presentation of a product already in the list — the
+  // base line (added above) stays untouched; each pick becomes its own new
+  // row instead of replacing one.
+  function openVariationPicker(product: Product) {
+    if (!hasVariationChoice(product)) return
+    setChangingItem(null)
+    setSelectedProductForVariation(product)
+    setShowVariationModal(true)
+  }
+
+  // An existing row only carries flat fields, not the full Product it came
+  // from — rebuilds just enough of one (id + variations) for the modal to
+  // work, for both "agregar otra presentación" and "cambiar variación" below.
+  function productFromItem(item: TransferItem): Product {
+    return {
+      id: item.productId.includes('__') ? item.productId.split('__')[0]! : item.productId,
+      name: item.productName,
+      barcode: item.productCode,
+      cost: item.unitCost,
+      basePrice: item.basePrice,
+      variations: item.productVariations,
     }
+  }
+
+  function openVariationPickerForItem(item: TransferItem) {
+    openVariationPicker(productFromItem(item))
+  }
+
+  // Switches an EXISTING line's variation (or back to the base) — unlike
+  // openVariationPicker, this replaces the one row instead of adding another.
+  function handleChangeItemVariation(item: TransferItem) {
+    if (!item.productVariations?.length) return
+    setChangingItem({ key: item.productId, quantity: item.quantity })
+    setSelectedProductForVariation(productFromItem(item))
+    setShowVariationModal(true)
   }
 
   async function addTransferItem(product: Product, variation: ProductVariation | null, qty: number) {
@@ -278,8 +361,58 @@ export default function StoreTransfers() {
           : i
         )
       }
-      return [...prev, { productId: dedupKey, productName: name, productCode: code, quantity: qty, unitCost: cost, totalCost: qty * cost, availableStock }]
+      return [...prev, {
+        productId: dedupKey, productName: name, productCode: code, quantity: qty,
+        unitCost: cost, totalCost: qty * cost, availableStock, productVariations: product.variations,
+      }]
     })
+  }
+
+  // Replaces one line's variation (keeping its quantity) — removes the old
+  // row, then reuses addTransferItem so landing on an already-existing
+  // variation line merges quantities the same way adding fresh does.
+  function switchItemVariation(oldKey: string, product: Product, variation: ProductVariation | null, qty: number) {
+    setTransferItems(prev => prev.filter(i => i.productId !== oldKey))
+    addTransferItem(product, variation, qty)
+  }
+
+  // ── Barcode scan (Enter) ───────────────────────────────────────────────────
+  // Mirrors POS.tsx's handleBarcodeScan exactly: scanning the BASE's own
+  // barcode adds the base; scanning a specific variation's own barcode adds
+  // that variation directly — neither used to work here at all (no Enter
+  // handling), so every add had to go through the dropdown by hand.
+  async function handleBarcodeScan(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== 'Enter' || !posSearch.trim()) return
+    const barcode = posSearch.trim()
+    const barcodeEq = (b?: string) => !!b && b.toUpperCase() === barcode.toUpperCase()
+
+    const exactProduct = searchResults.find(
+      p => barcodeEq(p.barcode) || getVariations(p).some(v => barcodeEq(v.barcode))
+    )
+    if (exactProduct) {
+      const matchedVariation = getVariations(exactProduct).find(v => barcodeEq(v.barcode))
+      await addTransferItem(exactProduct, matchedVariation ?? null, 1)
+      setPosSearch('')
+      setShowSearchResults(false)
+      toast.success(matchedVariation ? `${exactProduct.name} (${matchedVariation.name}) agregado` : `${exactProduct.name} agregado`)
+      return
+    }
+
+    try {
+      const data = await api.get<{ product: Product; variation?: ProductVariation }>(
+        `/api/products/barcode/${encodeURIComponent(barcode)}`
+      )
+      if (data?.product) {
+        await addTransferItem(data.product, data.variation ?? null, 1)
+        setPosSearch('')
+        setShowSearchResults(false)
+        toast.success(data.variation ? `${data.product.name} (${data.variation.name}) agregado` : `${data.product.name} agregado`)
+      } else {
+        toast.error('Producto no encontrado')
+      }
+    } catch {
+      toast.error('Producto no encontrado')
+    }
   }
 
   function setItemQty(productId: string, quantity: number) {
@@ -315,6 +448,12 @@ export default function StoreTransfers() {
   }, [fromStore])
 
   const handleCreateTransfer = () => {
+    // creatingTransferRef (checked+set synchronously, before any state
+    // update) is what actually stops a double-submit — disabled={saving}
+    // alone leaves a window between a second click/Enter and React
+    // re-rendering the button, which is exactly how a cashier ended up with
+    // two identical transfers from one double-press.
+    if (creatingTransferRef.current) return
     if (!fromStore || !toStore) { toast.error('Debes seleccionar tienda de origen y destino'); return }
     if (fromStore === toStore) { toast.error('La tienda de origen y destino no pueden ser la misma'); return }
     if (transferItems.length === 0) { toast.error('Debes agregar al menos un producto'); return }
@@ -326,6 +465,7 @@ export default function StoreTransfers() {
       toast.warning(`Stock bajo en origen: ${names}. El traslado se creará de todas formas.`, { duration: 4000 })
     }
 
+    creatingTransferRef.current = true
     setSaving(true)
     api.post('/api/transfers', {
       fromBranchId: fromStore,
@@ -345,7 +485,7 @@ export default function StoreTransfers() {
         fetchTransfers()
       })
       .catch(e => toast.error(e.message))
-      .finally(() => setSaving(false))
+      .finally(() => { setSaving(false); creatingTransferRef.current = false })
   }
 
   // ── List view helpers ──────────────────────────────────────────────────────
@@ -458,9 +598,10 @@ export default function StoreTransfers() {
               <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="text"
-                placeholder="Buscar producto por nombre o código..."
+                placeholder="Escanear código de barras o buscar producto por nombre..."
                 value={posSearch}
                 onChange={e => setPosSearch(e.target.value)}
+                onKeyDown={handleBarcodeScan}
                 onFocus={() => posSearch.trim() && setShowSearchResults(true)}
                 onBlur={() => setTimeout(() => setShowSearchResults(false), 150)}
                 className="input pl-10 w-full"
@@ -478,8 +619,8 @@ export default function StoreTransfers() {
                         <p className="text-sm font-medium text-gray-800">{p.fullName ?? p.name}</p>
                         <p className="text-xs text-gray-400">{p.barcode ?? p.sku ?? p.id}</p>
                       </div>
-                      {p.variations && p.variations.length > 1 && (
-                        <span className="text-xs text-blue-500 ml-3 flex-shrink-0">{p.variations.length} variantes</span>
+                      {hasVariationChoice(p) && (
+                        <span className="text-xs text-blue-500 ml-3 flex-shrink-0">{p.variations!.length} variante{p.variations!.length !== 1 ? 's' : ''}</span>
                       )}
                     </div>
                   )) : (
@@ -525,6 +666,22 @@ export default function StoreTransfers() {
                               · Disponible: {item.availableStock}
                             </span>
                           )}
+                          {(item.productVariations?.length ?? 0) > 0 && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleChangeItemVariation(item)}
+                                title="Cambiar variación de esta línea"
+                                className="text-primary-400 hover:text-primary-600 transition-colors">
+                                <ArrowLeftRight size={11} />
+                              </button>
+                              <button
+                                onClick={() => openVariationPickerForItem(item)}
+                                title="Agregar otra presentación de este producto"
+                                className="text-primary-400 hover:text-primary-600 transition-colors">
+                                <Plus size={12} />
+                              </button>
+                            </div>
+                          )}
                         </div>
                         {overStock && (
                           <p className="text-xs text-red-600 mt-0.5">⚠ Cantidad supera el stock disponible</p>
@@ -532,11 +689,21 @@ export default function StoreTransfers() {
                       </div>
                       <div className="flex items-center justify-center">
                         <input
-                          type="number"
-                          value={item.quantity}
-                          onChange={e => setItemQty(item.productId, parseFloat(e.target.value) || 1)}
-                          className={`w-14 text-center border rounded py-1 text-sm font-semibold focus:outline-none ${overStock ? 'text-red-600 border-red-300' : 'text-gray-800 border-gray-200'}`}
-                          min="1"
+                          type="text"
+                          inputMode="decimal"
+                          value={itemQtyStrings[item.productId] ?? String(item.quantity)}
+                          onChange={e => setItemQtyStrings(prev => ({ ...prev, [item.productId]: e.target.value }))}
+                          onFocus={e => e.target.select()}
+                          onBlur={() => {
+                            const str = itemQtyStrings[item.productId]
+                            if (str !== undefined) {
+                              const n = parseFloat(str)
+                              if (!isNaN(n) && n > 0) setItemQty(item.productId, n)
+                              setItemQtyStrings(prev => { const next = { ...prev }; delete next[item.productId]; return next })
+                            }
+                          }}
+                          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                          className={`w-14 text-center border rounded py-1 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-primary-500 ${overStock ? 'text-red-600 border-red-300' : 'text-gray-800 border-gray-200'}`}
                         />
                       </div>
                       <button onClick={() => removeTransferItem(item.productId)} className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded">
@@ -626,20 +793,43 @@ export default function StoreTransfers() {
           </div>
         </div>
 
-        {/* Variation modal */}
+        {/* Variation modal — adding fresh (changingItem null) only lists real
+            variations (the base is already its own line); switching an
+            existing line also offers "Pieza" so you can go back to the base. */}
         {showVariationModal && selectedProductForVariation && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full">
-              <h3 className="text-lg font-bold text-gray-800 mb-1">Seleccionar Variante</h3>
+              <h3 className="text-lg font-bold text-gray-800 mb-1">
+                {changingItem ? 'Cambiar presentación' : 'Agregar presentación'}
+              </h3>
               <p className="text-sm text-gray-500 mb-4">{selectedProductForVariation.fullName ?? selectedProductForVariation.name}</p>
               <div className="space-y-2">
+                {changingItem && (
+                  <button
+                    onMouseDown={() => {
+                      switchItemVariation(changingItem.key, selectedProductForVariation, null, changingItem.quantity)
+                      setShowVariationModal(false)
+                      setSelectedProductForVariation(null)
+                      setChangingItem(null)
+                    }}
+                    className="w-full flex items-center justify-between p-3 border rounded-lg hover:bg-primary-50 hover:border-primary-300 transition-colors text-left"
+                  >
+                    <span className="font-medium text-gray-800">Pieza</span>
+                    <span className="text-xs text-gray-400">Unidad base</span>
+                  </button>
+                )}
                 {(selectedProductForVariation.variations ?? []).map(v => (
                   <button
                     key={v.id}
                     onMouseDown={() => {
-                      addTransferItem(selectedProductForVariation, v, 1)
+                      if (changingItem) {
+                        switchItemVariation(changingItem.key, selectedProductForVariation, v, changingItem.quantity)
+                      } else {
+                        addTransferItem(selectedProductForVariation, v, 1)
+                      }
                       setShowVariationModal(false)
                       setSelectedProductForVariation(null)
+                      setChangingItem(null)
                     }}
                     className="w-full flex items-center justify-between p-3 border rounded-lg hover:bg-primary-50 hover:border-primary-300 transition-colors text-left"
                   >
@@ -649,7 +839,7 @@ export default function StoreTransfers() {
                 ))}
               </div>
               <button
-                onClick={() => { setShowVariationModal(false); setSelectedProductForVariation(null) }}
+                onClick={() => { setShowVariationModal(false); setSelectedProductForVariation(null); setChangingItem(null) }}
                 className="mt-4 w-full btn-outline btn-md"
               >
                 Cancelar
@@ -869,6 +1059,17 @@ export default function StoreTransfers() {
                               <CheckCircle size={18} className="text-green-600" />
                             </button>
                           )}
+                          {canReject && (transfer.status === 'pending' || transfer.status === 'in_transit' || transfer.status === 'approved') && (
+                            <button
+                              onClick={() => {
+                                if (confirm('¿Anular este traslado? Esto no se puede deshacer.')) handleRejectTransfer(transfer)
+                              }}
+                              className="p-1 hover:bg-red-50 rounded transition-colors"
+                              title="Anular traslado"
+                            >
+                              <Ban size={18} className="text-red-500" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1011,19 +1212,20 @@ export default function StoreTransfers() {
               <button onClick={() => handlePrintTransfer(selectedTransfer)} className="btn-outline btn-md flex items-center gap-2">
                 <Printer size={16} /> Imprimir
               </button>
-              {selectedTransfer.status === 'pending' && (
-                <>
-                  {canReject && (
-                    <button onClick={() => handleRejectTransfer(selectedTransfer)} className="btn-danger btn-md">
-                      Rechazar
-                    </button>
-                  )}
-                  {canApprove && (
-                    <button onClick={() => handleApproveTransfer(selectedTransfer)} className="btn-primary btn-md flex-1">
-                      Aprobar Transferencia
-                    </button>
-                  )}
-                </>
+              {canReject && (selectedTransfer.status === 'pending' || selectedTransfer.status === 'in_transit' || selectedTransfer.status === 'approved') && (
+                <button
+                  onClick={() => {
+                    if (confirm('¿Anular este traslado? Esto no se puede deshacer.')) handleRejectTransfer(selectedTransfer)
+                  }}
+                  className="btn-danger btn-md"
+                >
+                  Anular
+                </button>
+              )}
+              {selectedTransfer.status === 'pending' && canApprove && (
+                <button onClick={() => handleApproveTransfer(selectedTransfer)} className="btn-primary btn-md flex-1">
+                  Aprobar Transferencia
+                </button>
               )}
               {canReceive && (selectedTransfer.status === 'in_transit' || selectedTransfer.status === 'approved') && (
                 <button onClick={() => handleReceiveTransfer(selectedTransfer)} className="btn-primary btn-md flex-1">

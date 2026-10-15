@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '../../lib/api'
+import { compressImageDataUrl } from '../../lib/imageCompress'
 
 interface ProductModalProps {
   isOpen: boolean
@@ -74,6 +75,21 @@ export default function ProductModal({
     variations: []
   })
   const [productImage, setProductImage] = useState<string | null>(null)
+  // Draft text for the numeric fields below (stock mínimo, precio, costo,
+  // factor/precio de cada variación) while being edited — same pattern as
+  // POS.tsx/Purchases.tsx/Transfers.tsx: plain text inputs (not
+  // type="number"), so there's no native spinner and no forced "01" when
+  // overtyping a starting value; committed to formData only on blur/Enter.
+  // Keyed 'minStock' | 'basePrice' | 'cost' | `v${index}-factor` | `v${index}-price`.
+  const [numDrafts, setNumDrafts] = useState<Record<string, string>>({})
+  const commitNumDraft = (key: string, onValid: (n: number) => void) => {
+    const str = numDrafts[key]
+    if (str !== undefined) {
+      const n = parseFloat(str)
+      if (!isNaN(n)) onValid(n)
+      setNumDrafts(prev => { const next = { ...prev }; delete next[key]; return next })
+    }
+  }
   // Category autocomplete — catInputValue is always what's shown in the text input
   const [catInputValue, setCatInputValue] = useState('')
   const [catSearch, setCatSearch] = useState('')
@@ -159,21 +175,31 @@ export default function ProductModal({
       return
     }
     const reader = new FileReader()
-    reader.onloadend = () => setProductImage(reader.result as string)
+    reader.onloadend = async () => {
+      try {
+        setProductImage(await compressImageDataUrl(reader.result as string))
+      } catch {
+        toast.error('Error al procesar la imagen — intenta con otra')
+      }
+    }
     reader.onerror = () => toast.error('Error al leer la imagen — intenta de nuevo')
     reader.readAsDataURL(file)
   }
 
   // Same validation as processImageFile, but for an image that's already a
   // data: URL (see the HTML-clipboard fallback below) — no FileReader needed,
-  // it's already the string productImage wants.
-  const processImageDataUrl = (dataUrl: string) => {
+  // it's already the string productImage wants, just still needs compressing.
+  const processImageDataUrl = async (dataUrl: string) => {
     const approxBytes = dataUrl.length * 0.75 // base64 → ~3/4 the decoded size
     if (approxBytes > 5 * 1024 * 1024) {
       toast.error('La imagen no debe superar 5MB')
       return
     }
-    setProductImage(dataUrl)
+    try {
+      setProductImage(await compressImageDataUrl(dataUrl))
+    } catch {
+      toast.error('Error al procesar la imagen — intenta con otra')
+    }
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -259,6 +285,7 @@ export default function ProductModal({
     }
     window.addEventListener('paste', handleWindowPaste)
     return () => window.removeEventListener('paste', handleWindowPaste)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
   const handleAddAltBarcode = async () => {
@@ -578,9 +605,13 @@ export default function ProductModal({
                       <div>
                         <label className="label">Stock Mínimo</label>
                         <input
-                          type="number"
-                          value={formData.minStock === 0 ? '' : formData.minStock}
-                          onChange={(e) => setFormData(prev => ({ ...prev, minStock: parseInt(e.target.value) || 0 }))}
+                          type="text"
+                          inputMode="numeric"
+                          value={numDrafts.minStock ?? (formData.minStock === 0 ? '' : String(formData.minStock))}
+                          onChange={(e) => setNumDrafts(prev => ({ ...prev, minStock: e.target.value }))}
+                          onFocus={(e) => e.target.select()}
+                          onBlur={() => commitNumDraft('minStock', n => setFormData(prev => ({ ...prev, minStock: Math.max(0, Math.round(n)) })))}
+                          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                           className="input"
                           placeholder="10"
                         />
@@ -589,12 +620,15 @@ export default function ProductModal({
                       <div>
                         <label className="label">Precio Base *</label>
                         <input
-                          type="number"
-                          value={formData.basePrice === 0 ? '' : formData.basePrice}
-                          onChange={(e) => setFormData(prev => ({ ...prev, basePrice: parseFloat(e.target.value) || 0 }))}
+                          type="text"
+                          inputMode="decimal"
+                          value={numDrafts.basePrice ?? (formData.basePrice === 0 ? '' : String(formData.basePrice))}
+                          onChange={(e) => setNumDrafts(prev => ({ ...prev, basePrice: e.target.value }))}
+                          onFocus={(e) => e.target.select()}
+                          onBlur={() => commitNumDraft('basePrice', n => setFormData(prev => ({ ...prev, basePrice: Math.max(0, n) })))}
+                          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                           className="input disabled:bg-gray-50 disabled:text-gray-400"
                           placeholder="0.00"
-                          step="0.01"
                           disabled={!canEditPrice}
                         />
                       </div>
@@ -602,12 +636,15 @@ export default function ProductModal({
                       <div>
                         <label className="label">Costo *</label>
                         <input
-                          type="number"
-                          value={formData.cost === 0 ? '' : formData.cost}
-                          onChange={(e) => setFormData(prev => ({ ...prev, cost: parseFloat(e.target.value) || 0 }))}
+                          type="text"
+                          inputMode="decimal"
+                          value={numDrafts.cost ?? (formData.cost === 0 ? '' : String(formData.cost))}
+                          onChange={(e) => setNumDrafts(prev => ({ ...prev, cost: e.target.value }))}
+                          onFocus={(e) => e.target.select()}
+                          onBlur={() => commitNumDraft('cost', n => setFormData(prev => ({ ...prev, cost: Math.max(0, n) })))}
+                          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                           className="input disabled:bg-gray-50 disabled:text-gray-400"
                           placeholder="0.00"
-                          step="0.01"
                           disabled={!canEditPrice}
                         />
                       </div>
@@ -771,32 +808,38 @@ export default function ProductModal({
                         <div>
                           <label className="label text-xs">Factor conversión</label>
                           <input
-                            type="number"
-                            value={variation.conversionFactor}
-                            onChange={(e) => {
+                            type="text"
+                            inputMode="decimal"
+                            value={numDrafts[`v${index}-factor`] ?? String(variation.conversionFactor)}
+                            onChange={(e) => setNumDrafts(prev => ({ ...prev, [`v${index}-factor`]: e.target.value }))}
+                            onFocus={(e) => e.target.select()}
+                            onBlur={() => commitNumDraft(`v${index}-factor`, n => {
                               const newVars = [...formData.variations]
-                              newVars[index].conversionFactor = parseFloat(e.target.value) || 0
+                              newVars[index].conversionFactor = Math.max(0, n)
                               newVars[index].price = formData.basePrice * newVars[index].conversionFactor
                               setFormData(prev => ({ ...prev, variations: newVars }))
-                            }}
+                            })}
+                            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                             className="input input-sm"
                             placeholder="24"
-                            step="0.0001"
                           />
                         </div>
                         <div>
                           <label className="label text-xs">Precio</label>
                           <input
-                            type="number"
-                            value={variation.price === 0 ? '' : variation.price}
-                            onChange={(e) => {
+                            type="text"
+                            inputMode="decimal"
+                            value={numDrafts[`v${index}-price`] ?? (variation.price === 0 ? '' : String(variation.price))}
+                            onChange={(e) => setNumDrafts(prev => ({ ...prev, [`v${index}-price`]: e.target.value }))}
+                            onFocus={(e) => e.target.select()}
+                            onBlur={() => commitNumDraft(`v${index}-price`, n => {
                               const newVars = [...formData.variations]
-                              newVars[index].price = parseFloat(e.target.value) || 0
+                              newVars[index].price = Math.max(0, n)
                               setFormData(prev => ({ ...prev, variations: newVars }))
-                            }}
+                            })}
+                            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                             className="input input-sm disabled:bg-gray-50 disabled:text-gray-400"
                             placeholder="0.00"
-                            step="0.01"
                             disabled={!canEditPrice}
                           />
                         </div>

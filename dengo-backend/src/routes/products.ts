@@ -5,6 +5,7 @@ import { log } from '../services/audit.service.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
 import { resolveBranchScope } from '../lib/branch-scope.js'
 import { multiWordSearch } from '../lib/search.js'
+import { setStock } from '../services/inventory.service.js'
 
 const variationSchema = z.object({
   id: z.string().optional(),
@@ -173,6 +174,23 @@ export default async function productRoutes(fastify: FastifyInstance) {
         },
         include,
       })
+
+      // A product with literally no Inventory row anywhere (as opposed to
+      // one sitting at quantity 0) used to be invisible on the Inventario
+      // page — that page's list query is driven FROM the Inventory table
+      // (a JOIN, for pagination/stats reasons), so with zero rows there was
+      // nothing to join against. Seeding a 0-quantity row per active branch
+      // up front means every product "exists" everywhere from the moment
+      // it's created, same as it already behaves everywhere else in the app
+      // (POS, reports, etc. all already fall back missing rows to 0).
+      const branches = await prisma.branch.findMany({ where: { status: 'active' }, select: { id: true } })
+      if (branches.length > 0) {
+        await prisma.inventory.createMany({
+          data: branches.map(b => ({ productId: product.id, branchId: b.id, quantity: 0 })),
+          skipDuplicates: true,
+        })
+      }
+
       await log({ userId: request.user.id, action: 'CREATE', entity: 'Product', entityId: product.id, newValues: productData })
       return reply.status(201).send(product)
     } catch (err: any) {
@@ -262,12 +280,31 @@ export default async function productRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // DELETE /api/products/:id
+  // DELETE /api/products/:id — always a soft delete (isActive: false), never
+  // touches Inventory on its own: a deactivated product just stops being
+  // orderable/sellable, but its stock history and quantities elsewhere stay
+  // intact for audit purposes. ?clearInventory=true additionally zeroes the
+  // product's stock in every branch that has any (asked explicitly — the
+  // frontend confirms this with the user first, since it's a real,
+  // branch-wide inventory change, not just hiding the product).
   fastify.delete('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string }
+    const { clearInventory } = request.query as { clearInventory?: string }
     if (!hasPermission(request, 'inventory.delete')) return reply.status(403).send({ error: 'Acceso denegado' })
     try {
       await prisma.product.update({ where: { id }, data: { isActive: false } })
+
+      if (clearInventory === 'true') {
+        const rows = await prisma.inventory.findMany({ where: { productId: id, quantity: { gt: 0 } } })
+        for (const row of rows) {
+          await setStock(id, row.branchId, 0, {
+            type: 'ADJUSTMENT',
+            reason: 'Inventario puesto en 0 al eliminar el producto',
+            performedById: request.user.id,
+          })
+        }
+      }
+
       await log({ userId: request.user.id, action: 'DELETE', entity: 'Product', entityId: id })
       return reply.send({ message: 'Producto desactivado' })
     } catch {

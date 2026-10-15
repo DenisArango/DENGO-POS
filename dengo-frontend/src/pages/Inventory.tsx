@@ -620,7 +620,7 @@ export default function Inventory() {
             onClick={() => setShowAdjustmentModal(false)}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+              className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <ArrowUpDown size={24} /> Ajustar Inventario
               </h2>

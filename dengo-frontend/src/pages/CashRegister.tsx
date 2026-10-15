@@ -671,7 +671,7 @@ export default function CashRegisterPage() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
             onClick={() => setShowOpenModal(false)}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+              className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Unlock size={22} className="text-primary-600" />Abrir Caja</h3>
                 <button onClick={() => setShowOpenModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
@@ -739,7 +739,7 @@ export default function CashRegisterPage() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
             onClick={() => setShowCloseModal(false)}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+              className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                   <Lock size={22} className="text-gray-600" />
@@ -828,7 +828,7 @@ export default function CashRegisterPage() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
             onClick={() => { setShowMovementModal(false); setRegisterForMovement(null) }}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+              className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-bold text-gray-800">Registrar Movimiento</h3>

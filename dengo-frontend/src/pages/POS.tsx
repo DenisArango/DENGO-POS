@@ -1834,7 +1834,7 @@ export default function POS() {
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg p-6 max-w-sm w-full"
+              className="bg-white rounded-lg p-6 max-w-sm w-full max-h-[90vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
@@ -1873,7 +1873,7 @@ export default function POS() {
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg p-6 max-w-md w-full"
+              className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
@@ -1942,7 +1942,7 @@ export default function POS() {
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg p-6 max-w-md w-full"
+              className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center gap-2 mb-2">
@@ -2117,7 +2117,7 @@ export default function POS() {
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg p-6 max-w-sm w-full"
+              className="bg-white rounded-lg p-6 max-w-sm w-full max-h-[90vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
@@ -2203,7 +2203,7 @@ export default function POS() {
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg p-6 max-w-sm w-full"
+              className="bg-white rounded-lg p-6 max-w-sm w-full max-h-[90vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-1">

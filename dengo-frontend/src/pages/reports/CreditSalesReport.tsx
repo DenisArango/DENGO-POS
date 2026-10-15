@@ -303,7 +303,7 @@ export default function CreditSalesReport() {
       {/* Payment modal */}
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b">
               <div>
                 <h2 className="font-semibold text-gray-800">Registrar Abono</h2>
@@ -385,7 +385,7 @@ export default function CreditSalesReport() {
       {/* Sale detail / payment history */}
       {showDetail && detailSale && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowDetail(false)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-800">Abonos — {detailSale.invoiceNumber}</h3>
               <button onClick={() => setShowDetail(false)}><X size={18} /></button>

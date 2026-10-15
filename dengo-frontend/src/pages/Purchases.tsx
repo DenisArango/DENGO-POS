@@ -1023,7 +1023,7 @@ export default function Purchases() {
             >
               <motion.div
                 initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full"
+                className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full max-h-[90vh] overflow-y-auto"
                 onClick={e => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-4">
@@ -1096,7 +1096,7 @@ export default function Purchases() {
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-white rounded-xl shadow-2xl p-5 w-80"
+                className="bg-white rounded-xl shadow-2xl p-5 w-80 max-h-[90vh] overflow-y-auto"
                 onClick={e => e.stopPropagation()}
               >
                 <h3 className="font-semibold text-gray-800 mb-1">

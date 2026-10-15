@@ -792,7 +792,7 @@ export default function Suppliers() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full"
+            className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-start gap-4">
               <div className="p-3 bg-red-100 rounded-full">

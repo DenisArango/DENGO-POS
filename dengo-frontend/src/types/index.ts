@@ -30,6 +30,7 @@ export interface Store {
   closeTime: string
   defaultCustomerId?: string
   logo?: string
+  quotationLetterhead?: string
   companyName?: string
   companyTaxId?: string
   companyTagline?: string

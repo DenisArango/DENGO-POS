@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { usePermissions } from '../../hooks/usePermissions'
 import { useStore } from '../../contexts/StoreContext'
+import { readAndCompressImageFile } from '../../lib/imageCompress'
 
 interface BranchData {
   id?: string
@@ -21,6 +22,7 @@ interface BranchData {
   openTime: string
   closeTime: string
   logo?: string
+  quotationLetterhead?: string
   companyName?: string
   companyTaxId?: string
   companyTagline?: string
@@ -45,7 +47,7 @@ interface CustomerOption {
 const EMPTY_FORM: BranchData = {
   name: '', code: '', type: 'branch', address: '', city: '', phone: '',
   email: '', manager: '', status: 'active', openTime: '08:00', closeTime: '20:00',
-  logo: '', companyName: '', companyTaxId: '', companyTagline: '', companyWebsite: '',
+  logo: '', quotationLetterhead: '', companyName: '', companyTaxId: '', companyTagline: '', companyWebsite: '',
   socialMediaName: '',
   defaultCustomerId: '', receiptWidthMm: 55, invoiceSeries: 'A', receiptSeries: '',
   salesReconciliationEnabled: false,
@@ -142,13 +144,32 @@ export default function Stores() {
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Error al actualizar') }
   }
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) { toast.error('Logo no debe superar 2MB'); return }
-    const reader = new FileReader()
-    reader.onloadend = () => setFormData(prev => ({ ...prev, logo: reader.result as string }))
-    reader.readAsDataURL(file)
+    if (file.size > 5 * 1024 * 1024) { toast.error('La imagen no debe superar 5MB'); return }
+    try {
+      const compressed = await readAndCompressImageFile(file)
+      setFormData(prev => ({ ...prev, logo: compressed }))
+    } catch {
+      toast.error('Error al procesar el logo — intenta con otra imagen')
+    }
+  }
+
+  // Wide banner image, printed across the top of a cotización instead of
+  // the small square `logo` — a letterhead is typically landscape, so it
+  // gets a taller cap (logo stays 1280px square-ish) to keep it legible at
+  // full page width without needlessly bloating the saved size.
+  const handleLetterheadUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) { toast.error('La imagen no debe superar 5MB'); return }
+    try {
+      const compressed = await readAndCompressImageFile(file, 1600)
+      setFormData(prev => ({ ...prev, quotationLetterhead: compressed }))
+    } catch {
+      toast.error('Error al procesar el membrete — intenta con otra imagen')
+    }
   }
 
   const handleOpenModal = (store?: BranchData) => {
@@ -532,7 +553,31 @@ export default function Stores() {
                       <Upload size={14} /> Subir logo
                       <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                     </label>
-                    <span className="text-xs text-gray-400">Máx. 2MB. PNG/JPG recomendado.</span>
+                    <span className="text-xs text-gray-400">Máx. 5MB. PNG/JPG recomendado.</span>
+                  </div>
+                </div>
+                {/* Quotation letterhead */}
+                <div className="mt-4">
+                  <label className="label">Membrete para cotizaciones</label>
+                  <p className="text-xs text-gray-500 mb-2">Imagen ancha que sale hasta arriba al imprimir una cotización, encima del logo — para que se vea personalizada en vez de un formato genérico.</p>
+                  <div className="flex items-center gap-4">
+                    {formData.quotationLetterhead ? (
+                      <div className="relative">
+                        <img src={formData.quotationLetterhead} alt="Membrete" className="h-16 w-40 object-contain border border-gray-200 rounded-lg bg-gray-50" />
+                        <button onClick={() => setFormData({ ...formData, quotationLetterhead: '' })} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5">
+                          <X size={10} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="h-16 w-40 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                        <Image size={20} className="text-gray-300" />
+                      </div>
+                    )}
+                    <label className="btn-outline btn-sm cursor-pointer flex items-center gap-1">
+                      <Upload size={14} /> Subir membrete
+                      <input type="file" accept="image/*" onChange={handleLetterheadUpload} className="hidden" />
+                    </label>
+                    <span className="text-xs text-gray-400">Máx. 5MB. Formato ancho recomendado.</span>
                   </div>
                 </div>
               </div>

@@ -427,7 +427,7 @@ export default function RolesPermissions() {
       {/* Modal crear rol */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Nuevo Rol</h2>
             <form onSubmit={handleCreateRole} className="space-y-4">
               <div>

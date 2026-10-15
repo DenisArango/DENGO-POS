@@ -587,7 +587,7 @@ export default function SaleDetail() {
       {/* Generate invoice */}
       {showInvoiceForm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-purple-100 rounded-lg"><Receipt size={22} className="text-purple-600" /></div>
               <div>
@@ -618,7 +618,7 @@ export default function SaleDetail() {
       {/* Void confirm */}
       {showVoidConfirm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-red-100 rounded-lg"><AlertTriangle size={22} className="text-red-600" /></div>
               <div>

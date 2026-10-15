@@ -630,7 +630,7 @@ export default function Customers() {
       {showAbonoModal && abonoCustomer && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b">
               <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                 <DollarSign size={20} className="text-green-600" /> Registrar Abono
@@ -872,7 +872,7 @@ export default function Customers() {
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
+            className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-start gap-4">
               <div className="p-3 bg-red-100 rounded-full">
                 <AlertCircle className="text-red-600" size={24} />

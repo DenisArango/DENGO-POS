@@ -194,15 +194,38 @@ export default function Products() {
     }
   }
 
-  const handleDeleteProduct = (product: any) => {
-    if (confirm(`¿Está seguro de eliminar el producto "${product.fullName ?? product.name}"?`)) {
-      api.delete(`/api/products/${product.id}`)
-        .then(() => {
-          toast.success('Producto eliminado exitosamente')
-          fetchProducts()
-        })
-        .catch(e => toast.error(e.message))
+  const handleDeleteProduct = async (product: any) => {
+    const name = product.fullName ?? product.name
+    if (!confirm(`¿Está seguro de eliminar el producto "${name}"? Se desactivará y ya no aparecerá en ventas ni búsquedas.`)) return
+
+    // Deleting only deactivates the product — it never touches Inventory on
+    // its own, so stock stays sitting there (correct for audit history, but
+    // easy to forget about). If this product actually has stock somewhere,
+    // ask explicitly whether to also zero it out everywhere, rather than
+    // silently leaving it or silently clearing it.
+    let clearInventory = false
+    try {
+      const stockByBranch = await api.get<{ branchName: string; quantity: number }[]>(`/api/inventory/${product.id}/all-branches`)
+      const withStock = (stockByBranch ?? []).filter(b => b.quantity > 0)
+      if (withStock.length > 0) {
+        const total = withStock.reduce((s, b) => s + b.quantity, 0)
+        const detail = withStock.map(b => `${b.branchName}: ${b.quantity}`).join(', ')
+        clearInventory = confirm(
+          `Este producto tiene ${total} unidades en inventario (${detail}).\n\n` +
+          `¿También quieres poner el inventario en 0 en todas las sucursales?\n\n` +
+          `Aceptar = sí, poner en 0. Cancelar = dejar el inventario como está (solo referencia, ya no se podrá vender).`
+        )
+      }
+    } catch {
+      // Couldn't check stock — proceed with a plain deactivation rather than blocking the delete entirely.
     }
+
+    api.delete(`/api/products/${product.id}${clearInventory ? '?clearInventory=true' : ''}`)
+      .then(() => {
+        toast.success('Producto eliminado exitosamente')
+        fetchProducts()
+      })
+      .catch(e => toast.error(e.message))
   }
 
   if (loading && !hasLoadedOnce) return (

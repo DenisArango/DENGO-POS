@@ -4,7 +4,7 @@ import {
   Plus, Search, Eye, Trash2, Send, CheckCircle, XCircle,
   FileText, AlertCircle, X, ClipboardList,
   RefreshCw, Clock, DollarSign, ArrowLeft, Package,
-  User, ChevronDown, Ban
+  User, ChevronDown, Ban, Printer
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -14,6 +14,7 @@ import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
 import { matchesSearch } from '../lib/search'
+import { QuotationPrint, type QuotationPrintData } from '../components/print/QuotationPrint'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type QuotationStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'CONVERTED' | 'CANCELLED'
@@ -32,6 +33,9 @@ interface QuotationItem {
   productId?: string
   productName?: string
   product?: { id: string; name: string }
+  // A one-off line typed directly into this quotation, not from the
+  // catalog — only set when product/productId are absent.
+  customName?: string
   quantity: number
   unitPrice: number
   discount?: number
@@ -133,6 +137,7 @@ export default function Quotations() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [printingQuotation, setPrintingQuotation] = useState<Quotation | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null)
   const [page, setPage] = useState(1)
@@ -231,6 +236,23 @@ export default function Quotations() {
     })
   }
 
+  // Adds a one-off line not from the catalog (ej. algo que normalmente no
+  // venden pero quieren incluir solo en esta cotización) — no productId, so
+  // it never touches/creates a real Product. Starts blank and editable;
+  // updateItemField('productName', ...) is what keeps productId cleared as
+  // the cashier types a name for it.
+  function addCustomItem() {
+    setDraftItems(prev => [...prev, {
+      id: Math.random().toString(36).slice(2),
+      productId: undefined,
+      productName: '',
+      quantity: 1,
+      unitPrice: 0,
+      discount: 0,
+      subtotal: 0,
+    }])
+  }
+
   function updateItemField(id: string, field: keyof DraftItem, value: string | number) {
     setDraftItems(prev => prev.map(item => {
       if (item.id !== id) return item
@@ -284,8 +306,13 @@ export default function Quotations() {
   const handleCreateQuotation = (saveAsDraft: boolean) => {
     if (!selectedCustomerId) { toast.error('Selecciona un cliente'); return }
     if (!selectedBranchId) { toast.error('Selecciona una sucursal'); return }
-    const validItems = draftItems.filter(i => i.productId)
-    if (validItems.length === 0) { toast.error('Agrega al menos un producto del catálogo'); return }
+    // A catalog pick always has productId; a custom line needs a real name
+    // typed in instead — an item that's neither (ej. a custom row just
+    // added, still blank) isn't ready to submit yet.
+    const validItems = draftItems.filter(i => i.productId || i.productName.trim())
+    if (validItems.length === 0) { toast.error('Agrega al menos un producto'); return }
+    const blankCustom = validItems.find(i => !i.productId && !i.productName.trim())
+    if (blankCustom) { toast.error('Hay un producto personalizado sin nombre'); return }
     if (!validUntil) { toast.error('Indica la fecha de validez'); return }
 
     setSaving(true)
@@ -299,7 +326,7 @@ export default function Quotations() {
       validUntil,
       notes: quotationNotes || undefined,
       items: validItems.map(i => ({
-        productId: i.productId!,
+        ...(i.productId ? { productId: i.productId } : { customName: i.productName.trim() }),
         quantity: i.quantity,
         unitPrice: i.unitPrice,
         discount: 0,
@@ -322,6 +349,40 @@ export default function Quotations() {
       .then(() => { toast.success(successMsg); setShowDetailsModal(false); fetchQuotations() })
       .catch(e => toast.error(e.message))
   }
+
+  const handlePrintQuotation = (q: Quotation) => {
+    setPrintingQuotation(q)
+    requestAnimationFrame(() => window.print())
+  }
+
+  const buildQuotationPrintData = (q: Quotation): QuotationPrintData => ({
+    quotationNumber: q.quotationNumber,
+    createdAt: q.createdAt,
+    validUntil: q.validUntil,
+    customerName: q.customer?.name ?? '—',
+    customerNit: q.customer?.nit,
+    customerPhone: q.customer?.phone,
+    customerEmail: q.customer?.email,
+    items: (q.items ?? []).map(item => ({
+      productName: item.product?.name ?? item.customName ?? item.productName ?? '—',
+      quantity: Number(item.quantity ?? 0),
+      unitPrice: Number(item.unitPrice ?? 0),
+      discount: Number(item.discount ?? 0),
+      total: Number(item.total ?? 0),
+    })),
+    subtotal: Number(q.subtotal ?? 0),
+    discount: Number(q.discount ?? 0),
+    tax: Number(q.tax ?? 0),
+    total: Number(q.total ?? 0),
+    notes: q.notes,
+    letterhead: currentStore?.quotationLetterhead,
+    logo: currentStore?.logo,
+    companyName: currentStore?.companyName,
+    companyTaxId: currentStore?.companyTaxId,
+    companyTagline: currentStore?.companyTagline,
+    branchAddress: currentStore?.address,
+    branchPhone: currentStore?.phone,
+  })
 
   const handleSend    = (id: string) => transitionStatus(id, 'send', 'Cotización marcada como enviada')
   const handleAccept  = (id: string) => transitionStatus(id, 'accept', 'Cotización aceptada')
@@ -383,18 +444,28 @@ export default function Quotations() {
           <div className="flex-1 bg-white rounded-lg shadow-sm flex flex-col min-h-[280px] md:min-h-0">
 
             {/* Search bar */}
-            <div className="p-3 border-b relative">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input
-                type="text"
-                placeholder="Buscar producto por nombre, código o SKU..."
-                value={posSearch}
-                onChange={e => setPosSearch(e.target.value)}
-                onFocus={() => posSearch.trim() && setShowSearchResults(true)}
-                onBlur={() => setTimeout(() => setShowSearchResults(false), 150)}
-                className="input pl-10 w-full"
-                autoFocus
-              />
+            <div className="p-3 border-b relative flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="Buscar producto por nombre, código o SKU..."
+                  value={posSearch}
+                  onChange={e => setPosSearch(e.target.value)}
+                  onFocus={() => posSearch.trim() && setShowSearchResults(true)}
+                  onBlur={() => setTimeout(() => setShowSearchResults(false), 150)}
+                  className="input pl-10 w-full"
+                  autoFocus
+                />
+              </div>
+              <button
+                type="button"
+                onClick={addCustomItem}
+                title="Agregar un producto que no está en el catálogo, solo para esta cotización"
+                className="btn-outline btn-md flex items-center gap-1.5 whitespace-nowrap flex-shrink-0"
+              >
+                <Plus size={16} /> Personalizado
+              </button>
               {showSearchResults && (
                 <div className="absolute left-3 right-3 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto">
                   {searchResults.length > 0 ? searchResults.map(p => (
@@ -433,7 +504,7 @@ export default function Quotations() {
               {draftItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400 py-16">
                   <Package size={48} className="mb-3 opacity-30" />
-                  <p className="text-sm text-center">Busca un producto por nombre o código de barras<br/>para agregarlo a la cotización</p>
+                  <p className="text-sm text-center">Busca un producto por nombre o código de barras<br/>o agrega uno personalizado con el botón de arriba</p>
                 </div>
               ) : (
                 draftItems.map(item => (
@@ -442,9 +513,20 @@ export default function Quotations() {
                     className="grid items-center px-4 py-3 border-b hover:bg-gray-50"
                     style={{ gridTemplateColumns: '1fr 110px 100px 80px 28px' }}
                   >
-                    {/* Product name */}
+                    {/* Product name — editable only for a custom (non-catalog) line */}
                     <div>
-                      <p className="text-sm font-medium text-gray-800 truncate">{item.productName}</p>
+                      {item.productId ? (
+                        <p className="text-sm font-medium text-gray-800 truncate">{item.productName}</p>
+                      ) : (
+                        <input
+                          type="text"
+                          value={item.productName}
+                          onChange={e => updateItemField(item.id, 'productName', e.target.value)}
+                          placeholder="Nombre del producto personalizado..."
+                          className="input text-sm py-1 w-full border-primary-200"
+                        />
+                      )}
+                      {!item.productId && <span className="text-[10px] text-primary-500">Personalizado — no está en el catálogo</span>}
                     </div>
 
                     {/* Quantity */}
@@ -673,7 +755,8 @@ export default function Quotations() {
 
   // ── LIST VIEW ──────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
+    <>
+    <div className="space-y-6 print:hidden">
 
       {/* Header */}
       <div className="flex justify-between items-center">
@@ -817,10 +900,17 @@ export default function Quotations() {
                             </button>
                           )}
                           {canConvert && quotation.status === 'ACCEPTED' && (
-                            <button onClick={() => handleConvert(quotation.id)}
-                              className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg" title="Convertir a venta">
-                              <DollarSign size={16} />
-                            </button>
+                            (quotation.items ?? []).some(item => !item.product) ? (
+                              <button disabled className="p-2 text-gray-300 rounded-lg cursor-not-allowed"
+                                title="Tiene productos personalizados — no se puede convertir directamente a venta">
+                                <DollarSign size={16} />
+                              </button>
+                            ) : (
+                              <button onClick={() => handleConvert(quotation.id)}
+                                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg" title="Convertir a venta">
+                                <DollarSign size={16} />
+                              </button>
+                            )
                           )}
                           {canManage && (
                             <button onClick={() => setShowDeleteConfirm(quotation.id)}
@@ -892,7 +982,10 @@ export default function Quotations() {
                 <tbody className="divide-y divide-gray-100">
                   {(selectedQuotation.items ?? []).map(item => (
                     <tr key={item.id}>
-                      <td className="p-3">{item.product?.name ?? item.productName ?? '—'}</td>
+                      <td className="p-3">
+                        {item.product?.name ?? item.customName ?? item.productName ?? '—'}
+                        {!item.product && <span className="ml-1.5 text-[10px] text-primary-500 align-middle">Personalizado</span>}
+                      </td>
                       <td className="p-3 text-right">{Number(item.quantity ?? 0)}</td>
                       <td className="p-3 text-right">Q{Number(item.unitPrice ?? 0).toFixed(2)}</td>
                       <td className="p-3 text-right font-semibold">Q{Number(item.total ?? 0).toFixed(2)}</td>
@@ -921,6 +1014,9 @@ export default function Quotations() {
 
             <div className="p-6 border-t flex gap-3 justify-end flex-wrap">
               <button onClick={() => setShowDetailsModal(false)} className="btn-secondary btn-md">Cerrar</button>
+              <button onClick={() => handlePrintQuotation(selectedQuotation)} className="btn-outline btn-md flex items-center gap-2">
+                <Printer size={16} /> Imprimir
+              </button>
               {canManage && selectedQuotation.status === 'DRAFT' && (
                 <>
                   <button onClick={() => handleCancel(selectedQuotation.id)}
@@ -950,11 +1046,19 @@ export default function Quotations() {
                   </button>
                 </>
               )}
-              {canConvert && selectedQuotation.status === 'ACCEPTED' && (
-                <button onClick={() => handleConvert(selectedQuotation.id)} className="btn-primary btn-md flex items-center gap-2">
-                  <DollarSign size={16} /> Convertir a Venta
-                </button>
-              )}
+              {canConvert && selectedQuotation.status === 'ACCEPTED' && (() => {
+                const hasCustomItems = (selectedQuotation.items ?? []).some(item => !item.product)
+                return (
+                  <button
+                    onClick={() => !hasCustomItems && handleConvert(selectedQuotation.id)}
+                    disabled={hasCustomItems}
+                    title={hasCustomItems ? 'Esta cotización tiene productos personalizados (fuera del catálogo) que no se pueden convertir directamente a venta' : undefined}
+                    className="btn-primary btn-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <DollarSign size={16} /> Convertir a Venta
+                  </button>
+                )
+              })()}
             </div>
           </motion.div>
         </div>
@@ -964,7 +1068,7 @@ export default function Quotations() {
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
+            className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-start gap-4">
               <div className="p-3 bg-red-100 rounded-full"><AlertCircle className="text-red-600" size={24} /></div>
               <div className="flex-1">
@@ -980,5 +1084,11 @@ export default function Quotations() {
         </div>
       )}
     </div>
+
+    {/* Print-only — a true sibling of the page (not nested inside it) so
+        print:hidden on the page above fully collapses it for print instead
+        of leaving its height reserved — same pattern as ThermalReceipt. */}
+    {printingQuotation && <QuotationPrint data={buildQuotationPrintData(printingQuotation)} />}
+    </>
   )
 }

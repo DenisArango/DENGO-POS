@@ -6,12 +6,19 @@ import { resolveBranchScope, canAccessBranch } from '../lib/branch-scope.js'
 import { requirePermission } from '../lib/permissions.js'
 
 const itemSchema = z.object({
-  productId: z.string(),
+  productId: z.string().optional(),
   variationId: z.string().optional(),
+  // A one-off line not from the catalog (ej. something not normally sold,
+  // included just this one time) — see the schema comment on
+  // QuotationItem.customName. Exactly one of productId/customName must be
+  // set, enforced by the .refine() below.
+  customName: z.string().min(1).max(200).optional(),
   quantity: z.number().min(0.001),
   unitPrice: z.number().min(0),
   discount: z.number().min(0).max(1).default(0),
   total: z.number().min(0),
+}).refine(item => !!item.productId || !!item.customName, {
+  message: 'Cada línea necesita un producto del catálogo o un nombre personalizado',
 })
 
 const createSchema = z.object({
@@ -180,6 +187,13 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
     const quot = await prisma.quotation.findUnique({ where: { id }, include: { items: true } })
     if (!quot || quot.status !== 'ACCEPTED') return reply.status(400).send({ error: 'Solo se pueden convertir cotizaciones aceptadas' })
     if (!canAccessBranch(request, quot.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
+    // A custom (non-catalog) line has no real Product to hang a SaleItem off
+    // of — rather than silently dropping it (undercharging) or inventing a
+    // throwaway Product (exactly what the client asked this feature NOT to
+    // do), block the conversion and say why.
+    if (quot.items.some(item => !item.productId)) {
+      return reply.status(400).send({ error: 'Esta cotización tiene productos personalizados (fuera del catálogo) que no se pueden convertir directamente a venta. Quítalos de la cotización o factura esa parte por separado.' })
+    }
 
     // Same atomic per-branch receipt correlativo as a normal POS sale (see
     // sales.ts) — this is a real Sale row too, it needs a real number.
@@ -203,8 +217,10 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
         paymentMethod: body.data.paymentMethod,
         saleType: 'CASH',
         items: {
+          // item.productId! — guaranteed non-null by the guard above (any
+          // custom/null-productId item already blocked the conversion).
           create: quot.items.map(item => ({
-            productId: item.productId,
+            productId: item.productId!,
             variationId: item.variationId,
             quantity: item.quantity,
             unitPrice: item.unitPrice,

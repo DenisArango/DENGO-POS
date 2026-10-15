@@ -508,7 +508,7 @@ export default function CustomReports() {
           >
             <motion.div
               initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-              className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl"
+              className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl max-h-[90vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center gap-2 mb-4">

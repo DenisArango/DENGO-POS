@@ -42,6 +42,7 @@ function branchToStore(b: any): Store {
     closeTime: b.closeTime ?? '20:00',
     defaultCustomerId: b.defaultCustomerId ?? undefined,
     logo: b.logo ?? undefined,
+    quotationLetterhead: b.quotationLetterhead ?? undefined,
     companyName: b.companyName ?? undefined,
     companyTaxId: b.companyTaxId ?? undefined,
     companyTagline: b.companyTagline ?? undefined,

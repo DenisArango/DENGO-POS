@@ -37,6 +37,7 @@ const branchSchema = z.object({
   // with none set comes back as `null` — the frontend round-trips that
   // straight into the save payload, and .optional() alone rejects `null`.
   logo: z.string().max(3_000_000).nullish(),
+  quotationLetterhead: z.string().max(3_000_000).nullish(),
   companyName: z.string().nullish(),
   companyTaxId: z.string().nullish(),
   companyTagline: z.string().nullish(),

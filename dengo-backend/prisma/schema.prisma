@@ -66,6 +66,12 @@ model Branch {
   salesReconciliationEnabled Boolean @default(false) @map("SALES_RECONCILIATION_ENABLED")
   // Company / branding per branch
   logo           String?  @map("LOGO")
+  // A full-width header image (membrete) printed across the top of a
+  // Cotización PDF/print, above the logo+company-info block — separate from
+  // `logo` since a letterhead is typically a wide banner graphic (often
+  // already including the company name/contact info baked in), not the
+  // square/round icon `logo` is used as elsewhere (receipts, the sidebar).
+  quotationLetterhead String? @map("QUOTATION_LETTERHEAD")
   companyName    String?  @map("COMPANY_NAME") @db.VarChar(150)
   companyTaxId   String?  @map("COMPANY_TAX_ID") @db.VarChar(30)
   companyTagline String?  @map("COMPANY_TAGLINE") @db.VarChar(200)
@@ -695,15 +701,23 @@ model Quotation {
 model QuotationItem {
   id          String   @id @default(cuid()) @map("ID") @db.VarChar(36)
   quotationId String   @map("QUOTATION_ID") @db.VarChar(36)
-  productId   String   @map("PRODUCT_ID") @db.VarChar(36)
+  // Nullable: a line can instead be a one-off item typed directly into this
+  // quotation (ej. something the business doesn't normally sell, but wants
+  // included just this once) — see customName below. Deliberately NOT
+  // backed by a real Product row (even a hidden/inactive one): the client
+  // asked specifically that this never show up as a catalog/POS product.
+  productId   String?  @map("PRODUCT_ID") @db.VarChar(36)
   variationId String?  @map("VARIATION_ID") @db.VarChar(36)
+  // Only set when productId is null — the display name for a custom line,
+  // since there's no Product to read a name from.
+  customName  String?  @map("CUSTOM_NAME") @db.VarChar(200)
   quantity    Decimal  @map("QUANTITY") @db.Decimal(18, 4)
   unitPrice   Decimal  @map("UNIT_PRICE") @db.Decimal(18, 2)
   discount    Decimal  @default(0) @map("DISCOUNT") @db.Decimal(5, 4)
   total       Decimal  @map("TOTAL") @db.Decimal(18, 2)
 
   quotation Quotation         @relation(fields: [quotationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  product   Product           @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product   Product?          @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   variation ProductVariation? @relation(fields: [variationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("QUOTATION_ITEMS")

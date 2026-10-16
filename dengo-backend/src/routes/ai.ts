@@ -108,8 +108,8 @@ Ejemplos (aprende el patrón, no los copies literalmente — combina libremente)
 - GET /reports/product-rotation?branchId=&cashRegisterId=  → qué tan rápido rota cada producto en los últimos 30 días (fijo, no acepta rango de fechas) — usa para "productos sin movimiento", "productos muertos", "rotación de inventario"
 - GET /customers?search=&sortBy=  → directorio de clientes con su perfil (NIT, crédito) y estadísticas de compra. sortBy acepta "purchasesCount" (más frecuentes), "totalPurchases" (que más han gastado), "lastPurchase" (compra más reciente) o "name"
 - GET /transfers?fromBranchId=&toBranchId=&status=  → traslados de inventario entre sucursales
-- GET /goals?branchId=&year=&month=  → meta de ventas de la sucursal propia del usuario en un mes (si no se pasa year/month, usa el mes actual)
-- GET /goals/compliance-report?branchId=&months=N  → meta y cumplimiento de TODAS las sucursales accesibles, mes a mes de los últimos N meses. NO pases branchId si quieres todas las sucursales.
+- GET /goals?branchId=&year=&month=  → meta de ventas de la sucursal propia del usuario en un mes (si no se pasa year/month, usa el mes actual). Ya incluye cuánto debe venderse POR DÍA en lo que resta del mes para alcanzar la meta — NUNCA intentes calcular tú ese número, ya viene en la respuesta (solo para el mes actual; en meses pasados no aplica).
+- GET /goals/compliance-report?branchId=&months=N  → meta y cumplimiento de TODAS las sucursales accesibles, mes a mes de los últimos N meses. NO pases branchId si quieres todas las sucursales. También incluye, por cada sucursal/mes, cuánto falta vender por día para llegar a la meta (solo calculado para el mes actual).
 
 Para CUALQUIER pregunta sobre "meta", "meta de ventas" u "objetivo de ventas": usa /goals si es solo sobre la sucursal propia; usa /goals/compliance-report (months=1 si no piden historial) si menciona otras sucursales, "todas las sucursales", o comparar sucursales. NUNCA uses /reports/query para esto — las metas no son una métrica de ventas, son un objetivo distinto que se compara contra las ventas.
 `
@@ -236,6 +236,33 @@ Reglas:
 - Si la pregunta hace referencia a la conversación previa, resuélvela usando ese contexto
 - Si no hay combinación exacta que responda la pregunta, elige la más cercana — nunca respondas con un endpoint que no está en la lista
 - visualization: "bar" para comparaciones entre categorías/productos/sucursales, "line" para tendencias en el tiempo (day/week/month), "pie" para distribuciones de una parte del total, "table" para listas detalladas o cuando hay más de una métrica relevante a la vez`
+}
+
+// The second half of "actually analyze this, don't just show a table": the
+// model gets handed back the real rows it just caused to be fetched and has
+// to answer the user's actual question from them — including doing any
+// arithmetic the question calls for (a difference, a per-day/per-unit split,
+// an average, a projection, a comparison between rows). Capped to the first
+// 40 rows so a big report still stays well within a cheap token budget.
+function buildAnalysisFromDataPrompt(question: string, columns: { key: string; label: string; type: string }[], rows: Record<string, unknown>[], today: string): string {
+  const colDesc = columns.map(c => `${c.key} = ${c.label} (${c.type})`).join(', ')
+  const sample = JSON.stringify(rows.slice(0, 40))
+  const truncated = rows.length > 40 ? `\n(mostrando 40 de ${rows.length} filas — para tu análisis asume que el resto sigue un patrón similar salvo que algo en la pregunta sugiera lo contrario)` : ''
+
+  return `Eres un analista de negocio de un POS en Guatemala respondiendo la pregunta de un usuario, usando SOLO los datos reales de abajo — ya se obtuvieron para esta pregunta.
+
+Pregunta del usuario: "${question}"
+Fecha de hoy: ${today}
+
+Columnas: ${colDesc}
+Datos:
+${sample}${truncated}
+
+Responde la pregunta directamente, en español, en 2-4 oraciones, como lo haría un analista con calculadora en mano:
+- Si la pregunta pide un cálculo (cuánto falta, promedio, diferencia, por día, por hora, proyección, comparación entre filas, porcentaje, etc.), HAZLO tú mismo con los números reales de arriba. Nunca digas que no puedes calcularlo ni inventes una cifra — si un dato que necesitas no está en la tabla, dilo explícitamente en vez de adivinar.
+- Menciona cifras concretas en Quetzales (Q) cuando aplique, redondeadas a 2 decimales.
+- No repitas la tabla completa (ya se muestra aparte) — da la respuesta/análisis, no una transcripción de los datos.
+- Si hay algo accionable u obvio en los datos (un valor atípico, una fila muy por debajo o encima del resto), puedes mencionarlo brevemente, pero prioriza responder exactamente lo que se preguntó.`
 }
 
 // A dimension-aware, metric-aware keyword fallback — used when there's no
@@ -399,6 +426,7 @@ function normalizeForReport(endpoint: string, data: unknown): NormalizedReport {
         { key: 'targetAmount', label: 'Meta (Q)', type: 'currency' },
         { key: 'currentAmount', label: 'Vendido (Q)', type: 'currency' },
         { key: 'percent', label: 'Cumplimiento (%)', type: 'percent' },
+        { key: 'dailyTargetToReachGoal', label: 'Venta Diaria Necesaria (Q)', type: 'currency' },
       ],
       rows: d ? [d] : [],
     }
@@ -412,6 +440,7 @@ function normalizeForReport(endpoint: string, data: unknown): NormalizedReport {
         { key: 'targetAmount', label: 'Meta (Q)', type: 'currency' },
         { key: 'currentAmount', label: 'Vendido (Q)', type: 'currency' },
         { key: 'percent', label: 'Cumplimiento (%)', type: 'percent' },
+        { key: 'dailyTargetToReachGoal', label: 'Venta Diaria Necesaria (Q)', type: 'currency' },
       ],
       rows,
     }
@@ -557,7 +586,31 @@ export default async function aiRoutes(fastify: FastifyInstance) {
       const data = JSON.parse(req.body)
       const { columns, rows } = normalizeForReport(config.endpoint, data)
       const title = (config.title && config.title !== 'Reporte') ? config.title : autoQueryTitle(config.endpoint, config.params)
-      const description = config.description || `Aquí está tu reporte: ${title.toLowerCase()}.`
+      let description = config.description || `Aquí está tu reporte: ${title.toLowerCase()}.`
+
+      // Reasoning pass: hands the model the REAL numbers it just fetched and
+      // has it actually answer the question — including any arithmetic the
+      // question asks for (a difference, a per-day split, an average, a
+      // projection) — instead of just handing back a table. This is the
+      // difference between "a chart appeared" and the AI genuinely analyzing
+      // the data, and it's why a follow-up like "¿y cuánto debo vender por
+      // día para llegar?" works without a bespoke backend field for every
+      // possible derived question — the model computes it from the rows
+      // itself, the same way a person would with a calculator in hand.
+      if (client && rows.length > 0) {
+        try {
+          const analysisMsg = await client.messages.create({
+            model: AI_MODEL,
+            max_tokens: 350,
+            messages: [{ role: 'user', content: buildAnalysisFromDataPrompt(question, columns, rows, today) }],
+          })
+          const analysisText = analysisMsg.content[0]?.type === 'text' ? analysisMsg.content[0].text.trim() : ''
+          if (analysisText) description = analysisText
+        } catch (err) {
+          fastify.log.warn(err, 'AI query-report: analysis pass failed, using generic description')
+        }
+      }
+
       return reply.send({ config: { title, description, visualization: config.visualization, intent: config.intent }, columns, rows })
     } catch (err) {
       fastify.log.error(err, 'Failed to fetch report data')

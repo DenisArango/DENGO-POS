@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma.js'
 import { log } from '../services/audit.service.js'
 import { allowedBranchIds, canAccessBranch, resolveBranchScope } from '../lib/branch-scope.js'
 import { requirePermission } from '../lib/permissions.js'
-import { getBusinessMonthBounds, getCurrentBusinessYearMonth } from '../lib/timezone.js'
+import { getBusinessMonthBounds, getCurrentBusinessYearMonth, toBusinessDateKey } from '../lib/timezone.js'
 
 type GoalRow = { id: string; label: string | null; targetAmount: unknown; registerNumbers: string[] }
 
@@ -23,7 +23,26 @@ async function computeCurrentAmount(branchId: string, year: number, month: numbe
   return Number(sales._sum.total ?? 0)
 }
 
-function toGoalProgress(goal: GoalRow, currentAmount: number) {
+// How much needs to sell, per remaining day, to still hit the target this
+// month — only meaningful for the CURRENT business month (a past month's
+// "remaining days" is zero/nonsensical, a future month hasn't started). This
+// is deliberately computed here, not left for the AI to work out itself —
+// the model has no reliable way to know "today" relative to the business
+// calendar or how many days are left, so asking it to compute this inline
+// produced wrong or missing answers. Baking it into the data the tool
+// already returns means the question just works instead of needing the
+// model to get date arithmetic right on its own.
+function computeDailyTarget(year: number, month: number, targetAmount: number, currentAmount: number): number | null {
+  const { year: curYear, month: curMonth } = getCurrentBusinessYearMonth()
+  if (year !== curYear || month !== curMonth) return null
+  const remaining = Math.max(0, targetAmount - currentAmount)
+  const todayDay = Number(toBusinessDateKey(new Date()).slice(8, 10))
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  const remainingDays = Math.max(1, daysInMonth - todayDay + 1)
+  return remaining / remainingDays
+}
+
+function toGoalProgress(goal: GoalRow, currentAmount: number, year: number, month: number) {
   const targetAmount = Number(goal.targetAmount)
   return {
     id: goal.id,
@@ -32,6 +51,7 @@ function toGoalProgress(goal: GoalRow, currentAmount: number) {
     targetAmount,
     currentAmount,
     percent: targetAmount > 0 ? Math.min(100, (currentAmount / targetAmount) * 100) : null,
+    dailyTargetToReachGoal: computeDailyTarget(year, month, targetAmount, currentAmount),
   }
 }
 
@@ -59,7 +79,7 @@ export default async function goalsRoutes(fastify: FastifyInstance) {
     }
 
     const progresses = await Promise.all(
-      goals.map(async g => toGoalProgress(g, await computeCurrentAmount(branchId, year, month, g.registerNumbers))),
+      goals.map(async g => toGoalProgress(g, await computeCurrentAmount(branchId, year, month, g.registerNumbers), year, month)),
     )
     const targetAmount = progresses.reduce((s, p) => s + p.targetAmount, 0)
     const currentAmount = progresses.reduce((s, p) => s + p.currentAmount, 0)
@@ -71,6 +91,7 @@ export default async function goalsRoutes(fastify: FastifyInstance) {
       targetAmount,
       currentAmount,
       percent: targetAmount > 0 ? Math.min(100, (currentAmount / targetAmount) * 100) : null,
+      dailyTargetToReachGoal: computeDailyTarget(year, month, targetAmount, currentAmount),
       // Only present when the branch actually has more than one goal this
       // month — existing callers that don't know about splitting can ignore it.
       ...(goals.length > 1 ? { goals: progresses } : {}),
@@ -91,7 +112,7 @@ export default async function goalsRoutes(fastify: FastifyInstance) {
 
     const goals = await prisma.salesGoal.findMany({ where: { branchId, year, month }, orderBy: { createdAt: 'asc' } })
     const progresses = await Promise.all(
-      goals.map(async g => toGoalProgress(g, await computeCurrentAmount(branchId, year, month, g.registerNumbers))),
+      goals.map(async g => toGoalProgress(g, await computeCurrentAmount(branchId, year, month, g.registerNumbers), year, month)),
     )
     return reply.send(progresses)
   })
@@ -222,11 +243,11 @@ export default async function goalsRoutes(fastify: FastifyInstance) {
       for (const period of periods) {
         const goals = await prisma.salesGoal.findMany({ where: { branchId: branch.id, ...period } })
         if (goals.length === 0) {
-          result.push({ branchId: branch.id, branchName: branch.name, year: period.year, month: period.month, targetAmount: null, currentAmount: null, percent: null, goals: [] })
+          result.push({ branchId: branch.id, branchName: branch.name, year: period.year, month: period.month, targetAmount: null, currentAmount: null, percent: null, dailyTargetToReachGoal: null, goals: [] })
           continue
         }
         const progresses = await Promise.all(
-          goals.map(async g => toGoalProgress(g, await computeCurrentAmount(branch.id, period.year, period.month, g.registerNumbers))),
+          goals.map(async g => toGoalProgress(g, await computeCurrentAmount(branch.id, period.year, period.month, g.registerNumbers), period.year, period.month)),
         )
         const targetAmount = progresses.reduce((s, p) => s + p.targetAmount, 0)
         const currentAmount = progresses.reduce((s, p) => s + p.currentAmount, 0)
@@ -238,6 +259,7 @@ export default async function goalsRoutes(fastify: FastifyInstance) {
           targetAmount,
           currentAmount,
           percent: targetAmount > 0 ? Math.min(100, (currentAmount / targetAmount) * 100) : null,
+          dailyTargetToReachGoal: computeDailyTarget(period.year, period.month, targetAmount, currentAmount),
           goals: progresses,
         })
       }

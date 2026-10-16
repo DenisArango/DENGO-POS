@@ -26,7 +26,15 @@ const BUSINESS_UTC_OFFSET_HOURS = -6
  */
 export function parseBusinessDateParam(value: string): Date {
   if (/Z$|[+-]\d{2}:\d{2}$/.test(value)) return new Date(value)
-  return new Date(`${value}-06:00`)
+  // A bare "YYYY-MM-DD" (ej. Dashboard.tsx's weekly chart, which sends only
+  // `from` with no time part at all) needs a time component before the
+  // offset can be appended — "2026-10-09-06:00" isn't a valid ISO string
+  // (silently parses as Invalid Date, which made every query using it match
+  // nothing — this exact bug emptied the Dashboard right after this
+  // function first shipped). Midnight is the only sensible default for a
+  // date with no time given.
+  const withTime = value.includes('T') ? value : `${value}T00:00:00`
+  return new Date(`${withTime}-06:00`)
 }
 
 /** [startOfDay, endOfDay] in UTC instants that correspond to the business's local calendar day containing `at` (defaults to now). */

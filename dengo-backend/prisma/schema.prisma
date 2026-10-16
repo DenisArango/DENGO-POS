@@ -95,6 +95,7 @@ model Branch {
   quotations     Quotation[]
   stockMovements StockMovement[]
   salesGoals     SalesGoal[]
+  inventoryCounts InventoryCount[]
   defaultCustomer Customer? @relation("DefaultCustomer", fields: [defaultCustomerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("BRANCHES")
@@ -138,6 +139,7 @@ model User {
   sentMessages            InternalMessage[]         @relation("SentMessages")
   receivedMessages        InternalMessage[]         @relation("ReceivedMessages")
   salesGoalsSet           SalesGoal[]
+  inventoryCounts         InventoryCount[]
 
   @@map("USERS")
 }
@@ -274,6 +276,7 @@ model Product {
   portalOrderItems    PortalOrderItem[]
   programOptionItems  ProgramOptionItem[]
   purchaseTracking    PortalPurchaseTracking[]
+  inventoryCountItems InventoryCountItem[]
 
   @@map("PRODUCTS")
 }
@@ -352,6 +355,56 @@ model StockMovement {
   supplier    Supplier? @relation(fields: [supplierId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("STOCK_MOVEMENTS")
+}
+
+// A physical inventory count ("tarea de conteo") for one branch: a session
+// where staff pick a set of SKUs (however many — the business counts ~20 at
+// a time, but it varies), enter what they actually counted next to what the
+// system says, and from there apply adjustments (with a reason) for any
+// line that's off. Each applied adjustment is a normal ADJUSTMENT
+// StockMovement (via setStock, same as the existing manual-adjustment
+// screen) tagged with this count's id as referenceId, so it already shows
+// up in the existing Ajustes de Inventario report without any changes
+// there — this model's own job is tracking the COUNT SESSION itself
+// (which SKUs were checked, what was counted vs expected, by whom) for its
+// own report, since a line that matched exactly never creates a movement
+// at all and would otherwise leave no trace that it was even checked.
+model InventoryCount {
+  id          String    @id @default(cuid()) @map("ID") @db.VarChar(36)
+  branchId    String    @map("BRANCH_ID") @db.VarChar(36)
+  status      String    @default("IN_PROGRESS") @map("STATUS") @db.VarChar(20) // IN_PROGRESS | COMPLETED
+  notes       String?   @map("NOTES")
+  createdById String    @map("CREATED_BY_ID") @db.VarChar(36)
+  createdAt   DateTime  @default(now()) @map("CREATED_AT")
+  completedAt DateTime? @map("COMPLETED_AT")
+
+  branch    Branch               @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy User                 @relation(fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  items     InventoryCountItem[]
+
+  @@map("INVENTORY_COUNTS")
+}
+
+model InventoryCountItem {
+  id              String    @id @default(cuid()) @map("ID") @db.VarChar(36)
+  countId         String    @map("COUNT_ID") @db.VarChar(36)
+  productId       String    @map("PRODUCT_ID") @db.VarChar(36)
+  // What Inventory.quantity said at the moment this SKU was added to the
+  // count — snapshotted so the comparison stays meaningful even if stock
+  // keeps moving (sales, other adjustments) while the count is still open.
+  systemQuantity  Decimal   @map("SYSTEM_QUANTITY") @db.Decimal(18, 4)
+  countedQuantity Decimal?  @map("COUNTED_QUANTITY") @db.Decimal(18, 4)
+  adjusted        Boolean   @default(false) @map("ADJUSTED")
+  reason          String?   @map("REASON") @db.VarChar(200)
+  notes           String?   @map("NOTES")
+  countedAt       DateTime? @map("COUNTED_AT")
+  createdAt       DateTime  @default(now()) @map("CREATED_AT")
+
+  count   InventoryCount @relation(fields: [countId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product Product        @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([countId, productId])
+  @@map("INVENTORY_COUNT_ITEMS")
 }
 
 model Customer {

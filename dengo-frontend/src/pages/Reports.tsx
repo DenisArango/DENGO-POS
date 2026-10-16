@@ -6,7 +6,7 @@ import {
   ShoppingCart, Calendar, Clock,
   AlertTriangle, BarChart3, LineChart,
   FileText, ArrowRight, Warehouse,
-  CreditCard, UserCheck, History, ArrowUpDown, Sparkles
+  CreditCard, UserCheck, History, ArrowUpDown, Sparkles, ClipboardCheck
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -109,6 +109,15 @@ const reportCards: ReportCard[] = [
     icon: History,
     path: '/reports/inventory-adjustments',
     color: 'bg-red-500',
+    category: 'audit'
+  },
+  {
+    id: 'inventory-counts',
+    title: 'Conteos de Inventario',
+    description: 'Tareas de conteo físico por sucursal, diferencias encontradas y ajustes aplicados',
+    icon: ClipboardCheck,
+    path: '/reports/inventory-counts',
+    color: 'bg-emerald-500',
     category: 'audit'
   },
   {

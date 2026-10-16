@@ -15,6 +15,7 @@ import categoryRoutes from './routes/categories.js'
 import productRoutes from './routes/products.js'
 import inventoryRoutes from './routes/inventory.js'
 import inventoryReasonsRoutes from './routes/inventory-reasons.js'
+import inventoryCountRoutes from './routes/inventory-counts.js'
 import customerRoutes from './routes/customers.js'
 import supplierRoutes from './routes/suppliers.js'
 import salesRoutes from './routes/sales.js'
@@ -76,6 +77,7 @@ async function bootstrap() {
   await fastify.register(productRoutes,      { prefix: '/api/products' })
   await fastify.register(inventoryRoutes,    { prefix: '/api/inventory' })
   await fastify.register(inventoryReasonsRoutes, { prefix: '/api/inventory-reasons' })
+  await fastify.register(inventoryCountRoutes,  { prefix: '/api/inventory-counts' })
   await fastify.register(customerRoutes,     { prefix: '/api/customers' })
   await fastify.register(supplierRoutes,     { prefix: '/api/suppliers' })
   await fastify.register(salesRoutes,        { prefix: '/api/sales' })

@@ -6,7 +6,7 @@ import {
   TrendingDown, TrendingUp, Download,
   Filter, ChevronDown, Plus, Minus,
   History, CheckCircle, XCircle, AlertCircle,
-  BarChart3, ArrowUpDown, X, Receipt
+  BarChart3, ArrowUpDown, X, Receipt, ClipboardCheck
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -391,6 +391,23 @@ export default function Inventory() {
           Control de Inventario
         </h1>
         <div className="flex gap-3">
+          <button
+            onClick={() => navigate('/inventory/counts')}
+            className="btn-outline btn-md flex items-center gap-2"
+            title="Ver tareas de conteo anteriores"
+          >
+            <ClipboardCheck size={18} />
+            Conteos
+          </button>
+          {canAdjustStock && (
+            <button
+              onClick={() => navigate('/inventory/counts?new=1')}
+              className="btn-primary btn-md flex items-center gap-2"
+            >
+              <ClipboardCheck size={18} />
+              Nueva Tarea de Conteo
+            </button>
+          )}
           <button
             onClick={handleExportCsv}
             disabled={totalCount === 0}

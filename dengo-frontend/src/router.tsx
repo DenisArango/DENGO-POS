@@ -12,6 +12,7 @@ const Login = lazy(() => import('./pages/Login'))
 const POS = lazy(() => import('./pages/POS'))
 const Products = lazy(() => import('./pages/Products'))
 const Inventory = lazy(() => import('./pages/Inventory'))
+const InventoryCounts = lazy(() => import('./pages/InventoryCounts'))
 const Reports = lazy(() => import('./pages/Reports'))
 const CashRegister = lazy(() => import('./pages/CashRegister'))
 const Transfers = lazy(() => import('./pages/Transfers'))
@@ -52,6 +53,7 @@ const SecuritySettings = lazy(() => import('./pages/settings/Security'))
 // Páginas de reportes
 const DailySalesReport = lazy(() => import('./pages/reports/DailySalesReport'))
 const InventoryAdjustmentsReport = lazy(() => import('./pages/reports/InventoryAdjustmentsReport'))
+const InventoryCountsReport = lazy(() => import('./pages/reports/InventoryCountsReport'))
 const TopProductsReport = lazy(() => import('./pages/reports/TopProductsReport'))
 const InventoryStatusReport = lazy(() => import('./pages/reports/InventoryStatusReport'))
 const CashFlowReport = lazy(() => import('./pages/reports/CashFlowReport'))
@@ -80,6 +82,7 @@ export default function Router() {
           <Route path="/pos" element={<POS />} />
           <Route path="/products" element={<Products />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/inventory/counts" element={<InventoryCounts />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/cash-register" element={<CashRegister />} />
           <Route path="/transfers" element={<Transfers />} />
@@ -107,6 +110,7 @@ export default function Router() {
           {/* Rutas de reportes */}
           <Route path="/reports/daily-sales" element={<DailySalesReport />} />
           <Route path="/reports/inventory-adjustments" element={<InventoryAdjustmentsReport />} />
+          <Route path="/reports/inventory-counts" element={<InventoryCountsReport />} />
           <Route path="/reports/top-products" element={<TopProductsReport />} />
           <Route path="/reports/inventory-status" element={<InventoryStatusReport />} />
           <Route path="/reports/cash-flow" element={<CashFlowReport />} />

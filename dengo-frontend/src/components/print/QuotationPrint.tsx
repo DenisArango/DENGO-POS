@@ -45,10 +45,31 @@ function formatDate(iso: string): string {
   }
 }
 
-export function QuotationPrint({ data }: { data: QuotationPrintData }) {
+// `variant="print"` (default) stays invisible except to the browser's print
+// engine, exactly as before. `variant="export"` is for html2canvas (used to
+// build the WhatsApp PDF) — html2canvas needs the element actually laid out
+// on screen to capture it, so it renders off-screen instead of display:none.
+export function QuotationPrint({ data, variant = 'print' }: { data: QuotationPrintData; variant?: 'print' | 'export' }) {
+  const id = variant === 'export' ? 'quotation-export-content' : 'quotation-print-content'
   return (
-    <div id="quotation-print-content" className="hidden print:block" style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'Arial, Helvetica, sans-serif', color: '#1f2937', fontSize: '13px' }}>
-      <style>{'@page { size: letter; margin: 14mm; } @media print { body { margin: 0; } }'}</style>
+    <div
+      id={id}
+      className={variant === 'print' ? 'hidden print:block' : undefined}
+      style={{
+        // 8.5in letter width at 96dpi for export, so html2canvas measures it
+        // like a real page — the print variant stays 100% as before, since
+        // the browser's own print engine (not html2canvas) lays that one out.
+        width: variant === 'export' ? '816px' : '100%',
+        boxSizing: 'border-box',
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        color: '#1f2937',
+        fontSize: '13px',
+        background: '#ffffff',
+        padding: variant === 'export' ? '40px' : undefined,
+        ...(variant === 'export' ? { position: 'fixed', left: '-9999px', top: 0 } : {}),
+      }}
+    >
+      {variant === 'print' && <style>{'@page { size: letter; margin: 14mm; } @media print { body { margin: 0; } }'}</style>}
 
       {data.letterhead && (
         <img src={data.letterhead} alt="" style={{ width: '100%', maxHeight: '140px', objectFit: 'contain', marginBottom: '14px' }} />

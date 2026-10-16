@@ -4,7 +4,7 @@ import {
   Plus, Search, Eye, Trash2, Send, CheckCircle, XCircle,
   FileText, AlertCircle, X, ClipboardList,
   RefreshCw, Clock, DollarSign, ArrowLeft, Package,
-  User, ChevronDown, Ban, Printer
+  User, ChevronDown, Ban, Printer, MessageCircle
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -15,6 +15,7 @@ import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
 import { matchesSearch } from '../lib/search'
 import { QuotationPrint, type QuotationPrintData } from '../components/print/QuotationPrint'
+import { elementToPdfBlob, downloadBlob } from '../lib/pdfExport'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type QuotationStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'CONVERTED' | 'CANCELLED'
@@ -138,6 +139,7 @@ export default function Quotations() {
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [printingQuotation, setPrintingQuotation] = useState<Quotation | null>(null)
+  const [exportingQuotation, setExportingQuotation] = useState<Quotation | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null)
   const [page, setPage] = useState(1)
@@ -155,6 +157,9 @@ export default function Quotations() {
   const [discountPct, setDiscountPct] = useState(0)
   const [draftItems, setDraftItems] = useState<DraftItem[]>([])
   const [itemSubtotalStrings, setItemSubtotalStrings] = useState<Record<string, string>>({})
+  const [qtyDraftStrings, setQtyDraftStrings] = useState<Record<string, string>>({})
+  const [priceDraftStrings, setPriceDraftStrings] = useState<Record<string, string>>({})
+  const [discountPctStr, setDiscountPctStr] = useState<string | null>(null)
 
   // Product search state
   const [posSearch, setPosSearch] = useState('')
@@ -352,8 +357,89 @@ export default function Quotations() {
 
   const handlePrintQuotation = (q: Quotation) => {
     setPrintingQuotation(q)
-    requestAnimationFrame(() => window.print())
   }
+
+  // WhatsApp has no public API for "attach this PDF" without a paid Business
+  // API + approved message templates — wa.me can only pre-fill text, never
+  // an attachment. So instead: generate the same PDF the print button would
+  // produce, auto-download it, then open wa.me with a short greeting asking
+  // the customer to see the attached PDF. The person sending still has to
+  // attach the just-downloaded file in the chat themselves (one extra click)
+  // — no web technique can skip that without the paid Business API. Guatemala
+  // numbers are stored without a country code, so wa.me (which needs full
+  // international format) gets "502" prepended when the number doesn't
+  // already look like it has one.
+  function buildWhatsAppGreeting(q: Quotation): string {
+    const firstName = q.customer?.name?.trim().split(/\s+/)[0]
+    const company = currentStore?.companyName ? ` de ${currentStore.companyName}` : ''
+    return [
+      `Hola${firstName ? ` ${firstName}` : ''}, un gusto saludarte.`,
+      `Te compartimos tu cotización ${q.quotationNumber}${company} por un total de Q${Number(q.total ?? 0).toFixed(2)}, válida hasta ${safeDate(q.validUntil)}.`,
+      'Adjuntamos el PDF con el detalle completo. Cualquier duda, con gusto te ayudamos.',
+    ].join('\n\n')
+  }
+
+  async function handleSendWhatsApp(q: Quotation) {
+    if (!q.customer?.phone) {
+      toast.info('Este cliente no tiene teléfono registrado — se abrirá WhatsApp para elegir el contacto manualmente')
+    }
+    setExportingQuotation(q)
+  }
+
+  // Mirrors the print useEffect below: waits for the off-screen export
+  // container's images (letterhead/logo) to actually finish loading before
+  // html2canvas captures it — otherwise the PDF can come out with those
+  // images blank, same root cause as the print-preview bug.
+  useEffect(() => {
+    if (!exportingQuotation) return
+    const q = exportingQuotation
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const container = document.getElementById('quotation-export-content')
+        const imgs = container ? Array.from(container.querySelectorAll('img')) : []
+        await Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise<void>(res => {
+          img.onload = () => res()
+          img.onerror = () => res()
+        })))
+        const blob = await elementToPdfBlob('quotation-export-content')
+        if (cancelled) return
+        downloadBlob(blob, `Cotizacion-${q.quotationNumber}.pdf`)
+
+        const rawPhone = (q.customer?.phone ?? '').replace(/\D/g, '')
+        const phone = rawPhone ? (rawPhone.length <= 8 ? `502${rawPhone}` : rawPhone) : ''
+        const text = encodeURIComponent(buildWhatsAppGreeting(q))
+        window.open(`https://wa.me/${phone}?text=${text}`, '_blank')
+        toast.success('Se descargó el PDF — adjúntalo en el chat de WhatsApp que se abrió')
+      } catch (e) {
+        if (!cancelled) toast.error(e instanceof Error ? e.message : 'No se pudo generar el PDF')
+      } finally {
+        if (!cancelled) setExportingQuotation(null)
+      }
+    }, 30)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [exportingQuotation])
+
+  // Waits for the print markup's own images (letterhead + logo — both
+  // base64, and the letterhead in particular can be a few hundred KB after
+  // compression) to actually finish decoding before opening the print
+  // dialog. A single requestAnimationFrame used to fire print() right after
+  // React committed the DOM, which is enough for plain text/thermal receipts
+  // but not for a full-width letterhead image — the print preview opened
+  // before the image had painted, showing blank where it should be (and, on
+  // some browsers, blanking the whole preview rather than just the image).
+  useEffect(() => {
+    if (!printingQuotation) return
+    const timer = setTimeout(() => {
+      const container = document.getElementById('quotation-print-content')
+      const imgs = container ? Array.from(container.querySelectorAll('img')) : []
+      Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise<void>(res => {
+        img.onload = () => res()
+        img.onerror = () => res()
+      }))).then(() => window.print())
+    }, 30) // one tick so React has committed printingQuotation's DOM first
+    return () => clearTimeout(timer)
+  }, [printingQuotation])
 
   const buildQuotationPrintData = (q: Quotation): QuotationPrintData => ({
     quotationNumber: q.quotationNumber,
@@ -390,10 +476,22 @@ export default function Quotations() {
   const handleCancel  = (id: string) => transitionStatus(id, 'cancel', 'Cotización cancelada')
 
   // Convert uses POST not PUT
-  const handleConvert = (id: string) => {
-    api.post(`/api/quotations/${id}/convert`, { paymentMethod: 'CASH' })
-      .then(() => { toast.success('Cotización convertida a venta exitosamente'); setShowDetailsModal(false); fetchQuotations() })
+  const handleConvert = (id: string, partial = false) => {
+    api.post<{ message: string }>(`/api/quotations/${id}/convert`, { paymentMethod: 'CASH', ...(partial ? { partial: true } : {}) })
+      .then(res => { toast.success(res.message ?? 'Cotización convertida a venta exitosamente'); setShowDetailsModal(false); fetchQuotations() })
       .catch(e => toast.error(e.message))
+  }
+
+  // Custom (non-catalog) lines can't become SaleItems — offers converting
+  // just the catalog lines instead of blocking the whole sale outright.
+  function handleConvertClick(q: Quotation) {
+    const customCount = (q.items ?? []).filter(item => !item.product).length
+    if (customCount === 0) { handleConvert(q.id); return }
+    const catalogCount = q.items.length - customCount
+    if (catalogCount === 0) { toast.error('Esta cotización solo tiene productos personalizados — no hay nada que vender del catálogo'); return }
+    if (confirm(`Esta cotización tiene ${customCount} producto(s) personalizado(s) que no se pueden vender directamente.\n\n¿Convertir la venta solo con los ${catalogCount} producto(s) de catálogo?`)) {
+      handleConvert(q.id, true)
+    }
   }
 
   const handleDelete = (id: string) => {
@@ -532,12 +630,18 @@ export default function Quotations() {
                     {/* Quantity */}
                     <div className="flex items-center justify-center">
                       <input
-                        type="number"
-                        min={1}
-                        step={1}
-                        value={item.quantity}
-                        onChange={e => updateItemField(item.id, 'quantity', Math.max(1, Number(e.target.value)))}
-                        className="w-16 text-center font-semibold text-sm border border-gray-200 rounded px-1 py-1"
+                        type="text"
+                        inputMode="decimal"
+                        value={qtyDraftStrings[item.id] ?? String(item.quantity)}
+                        onChange={e => setQtyDraftStrings(prev => ({ ...prev, [item.id]: e.target.value }))}
+                        onFocus={e => e.target.select()}
+                        onBlur={e => {
+                          setQtyDraftStrings(prev => { const next = { ...prev }; delete next[item.id]; return next })
+                          const n = parseFloat(e.target.value)
+                          if (!isNaN(n) && n > 0) updateItemField(item.id, 'quantity', Math.max(1, n))
+                        }}
+                        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                        className="w-16 text-center font-semibold text-sm border border-gray-200 rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500"
                       />
                     </div>
 
@@ -545,11 +649,17 @@ export default function Quotations() {
                     <div className="flex items-center justify-end">
                       <span className="text-xs text-gray-400 mr-1">Q</span>
                       <input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={item.unitPrice === 0 ? '' : item.unitPrice}
-                        onChange={e => updateItemField(item.id, 'unitPrice', Number(e.target.value))}
+                        type="text"
+                        inputMode="decimal"
+                        value={priceDraftStrings[item.id] ?? (item.unitPrice === 0 ? '' : String(item.unitPrice))}
+                        onChange={e => setPriceDraftStrings(prev => ({ ...prev, [item.id]: e.target.value }))}
+                        onFocus={e => e.target.select()}
+                        onBlur={e => {
+                          setPriceDraftStrings(prev => { const next = { ...prev }; delete next[item.id]; return next })
+                          const n = parseFloat(e.target.value)
+                          if (!isNaN(n) && n >= 0) updateItemField(item.id, 'unitPrice', n)
+                        }}
+                        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                         className="input text-sm text-right w-20 py-1"
                       />
                     </div>
@@ -673,12 +783,17 @@ export default function Quotations() {
               <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">Descuento global (%)</label>
                 <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.5}
-                  value={discountPct}
-                  onChange={e => setDiscountPct(Number(e.target.value))}
+                  type="text"
+                  inputMode="decimal"
+                  value={discountPctStr ?? (discountPct === 0 ? '' : String(discountPct))}
+                  onChange={e => setDiscountPctStr(e.target.value)}
+                  onFocus={e => e.target.select()}
+                  onBlur={e => {
+                    setDiscountPctStr(null)
+                    const n = parseFloat(e.target.value)
+                    if (!isNaN(n)) setDiscountPct(Math.min(100, Math.max(0, n)))
+                  }}
+                  onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                   className="input w-full"
                 />
               </div>
@@ -900,17 +1015,10 @@ export default function Quotations() {
                             </button>
                           )}
                           {canConvert && quotation.status === 'ACCEPTED' && (
-                            (quotation.items ?? []).some(item => !item.product) ? (
-                              <button disabled className="p-2 text-gray-300 rounded-lg cursor-not-allowed"
-                                title="Tiene productos personalizados — no se puede convertir directamente a venta">
-                                <DollarSign size={16} />
-                              </button>
-                            ) : (
-                              <button onClick={() => handleConvert(quotation.id)}
-                                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg" title="Convertir a venta">
-                                <DollarSign size={16} />
-                              </button>
-                            )
+                            <button onClick={() => handleConvertClick(quotation)}
+                              className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg" title="Convertir a venta">
+                              <DollarSign size={16} />
+                            </button>
                           )}
                           {canManage && (
                             <button onClick={() => setShowDeleteConfirm(quotation.id)}
@@ -1017,6 +1125,9 @@ export default function Quotations() {
               <button onClick={() => handlePrintQuotation(selectedQuotation)} className="btn-outline btn-md flex items-center gap-2">
                 <Printer size={16} /> Imprimir
               </button>
+              <button onClick={() => handleSendWhatsApp(selectedQuotation)} className="btn-outline btn-md flex items-center gap-2 text-green-700 border-green-300 hover:bg-green-50">
+                <MessageCircle size={16} /> Enviar por WhatsApp
+              </button>
               {canManage && selectedQuotation.status === 'DRAFT' && (
                 <>
                   <button onClick={() => handleCancel(selectedQuotation.id)}
@@ -1046,19 +1157,14 @@ export default function Quotations() {
                   </button>
                 </>
               )}
-              {canConvert && selectedQuotation.status === 'ACCEPTED' && (() => {
-                const hasCustomItems = (selectedQuotation.items ?? []).some(item => !item.product)
-                return (
-                  <button
-                    onClick={() => !hasCustomItems && handleConvert(selectedQuotation.id)}
-                    disabled={hasCustomItems}
-                    title={hasCustomItems ? 'Esta cotización tiene productos personalizados (fuera del catálogo) que no se pueden convertir directamente a venta' : undefined}
-                    className="btn-primary btn-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <DollarSign size={16} /> Convertir a Venta
-                  </button>
-                )
-              })()}
+              {canConvert && selectedQuotation.status === 'ACCEPTED' && (
+                <button
+                  onClick={() => handleConvertClick(selectedQuotation)}
+                  className="btn-primary btn-md flex items-center gap-2"
+                >
+                  <DollarSign size={16} /> Convertir a Venta
+                </button>
+              )}
             </div>
           </motion.div>
         </div>
@@ -1089,6 +1195,7 @@ export default function Quotations() {
         print:hidden on the page above fully collapses it for print instead
         of leaving its height reserved — same pattern as ThermalReceipt. */}
     {printingQuotation && <QuotationPrint data={buildQuotationPrintData(printingQuotation)} />}
+    {exportingQuotation && <QuotationPrint data={buildQuotationPrintData(exportingQuotation)} variant="export" />}
     </>
   )
 }

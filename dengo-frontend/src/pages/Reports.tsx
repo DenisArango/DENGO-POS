@@ -6,7 +6,7 @@ import {
   ShoppingCart, Calendar, Clock,
   AlertTriangle, BarChart3, LineChart,
   FileText, ArrowRight, Warehouse,
-  CreditCard, UserCheck, History, ArrowUpDown, Sparkles, ClipboardCheck
+  CreditCard, UserCheck, History, ArrowUpDown, Sparkles, ClipboardCheck, Target
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -155,6 +155,15 @@ const reportCards: ReportCard[] = [
     path: '/reports/credit-sales',
     color: 'bg-rose-500',
     category: 'financial'
+  },
+  {
+    id: 'goals-compliance',
+    title: 'Cumplimiento de Metas',
+    description: 'Metas de ventas de todas las sucursales y qué tanto se cumplieron mes a mes',
+    icon: Target,
+    path: '/reports/goals-compliance',
+    color: 'bg-fuchsia-500',
+    category: 'sales'
   },
   {
     id: 'user-activity',

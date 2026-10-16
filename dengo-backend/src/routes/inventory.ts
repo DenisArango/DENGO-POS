@@ -25,18 +25,20 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
   fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
     const q = request.query as { branchId?: string; search?: string; category?: string; status?: string; page?: string; limit?: string }
     const branchId = resolveBranchScope(request, q.branchId)
+    // product.isActive always applies (not just when search/category are
+    // set) — a deleted (soft-deactivated) product's Inventory row otherwise
+    // still showed up here forever, with no way to ever remove it from view.
     const where = {
       ...(branchId ? { branchId } : {}),
-      ...((q.search || q.category) ? {
-        product: {
-          ...(q.search ? multiWordSearch(q.search, word => [
-            { name: { contains: word, mode: 'insensitive' as const } },
-            { barcode: { contains: word, mode: 'insensitive' as const } },
-            { sku: { contains: word, mode: 'insensitive' as const } },
-          ]) : {}),
-          ...(q.category ? { category: { name: q.category } } : {}),
-        },
-      } : {}),
+      product: {
+        isActive: true,
+        ...(q.search ? multiWordSearch(q.search, word => [
+          { name: { contains: word, mode: 'insensitive' as const } },
+          { barcode: { contains: word, mode: 'insensitive' as const } },
+          { sku: { contains: word, mode: 'insensitive' as const } },
+        ]) : {}),
+        ...(q.category ? { category: { name: q.category } } : {}),
+      },
     }
 
     // Paginated path — opt-in via `page`, used by the Inventory management
@@ -49,7 +51,7 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
       const page = Math.max(1, parseInt(q.page, 10) || 1)
       const limit = Math.min(200, Math.max(1, parseInt(q.limit ?? '50', 10) || 50))
 
-      const conditions: Prisma.Sql[] = []
+      const conditions: Prisma.Sql[] = [Prisma.sql`p."IS_ACTIVE" = true`]
       if (branchId) conditions.push(Prisma.sql`i."BRANCH_ID" = ${branchId}`)
       if (q.search) {
         // Same multi-word AND-of-OR as multiWordSearch() — "hojas bond"
@@ -82,7 +84,7 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
           ${whereSql}
         `),
         prisma.inventory.findMany({
-          where: branchId ? { branchId } : {},
+          where: { ...(branchId ? { branchId } : {}), product: { isActive: true } },
           select: { quantity: true, product: { select: { minStock: true, basePrice: true, cost: true } } },
         }),
       ])

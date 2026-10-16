@@ -12,7 +12,11 @@
  *
  * Uses `sharp` (server-side; there's no browser/canvas here) — same target
  * sizes as the client: product photos & logos capped at 1280px, the wider
- * quotation letterhead at 1600px, both JPEG quality 82.
+ * quotation letterhead at 1600px. Product photos (real photographs) go to
+ * JPEG quality 82. Logos/letterheads are flat-color graphics and text, not
+ * photos — JPEG's chroma subsampling blurs their edges and muddies colors
+ * (the "washed out" look on a printed logo), so those two re-encode as
+ * lossless PNG instead, matching imageCompress.ts on the client.
  *
  * Only rewrites a row when the recompressed version is at least 10% smaller
  * — skips images that are already small/optimized instead of needlessly
@@ -35,18 +39,21 @@ function dataUrlToBuffer(dataUrl: string): Buffer | null {
   return Buffer.from(match[1]!, 'base64')
 }
 
-async function recompress(dataUrl: string, maxDimension: number): Promise<{ dataUrl: string; before: number; after: number } | null> {
+async function recompress(dataUrl: string, maxDimension: number, format: 'jpeg' | 'png' = 'jpeg'): Promise<{ dataUrl: string; before: number; after: number } | null> {
   const buf = dataUrlToBuffer(dataUrl)
   if (!buf) return null // not a data: URL we recognize (ej. an external http(s) URL) — leave alone
   const before = buf.length
   try {
-    const out = await sharp(buf)
-      .resize({ width: maxDimension, height: maxDimension, fit: 'inside', withoutEnlargement: true })
-      .flatten({ background: '#ffffff' }) // JPEG has no alpha — matches the client's white-fill for transparent PNGs
-      .jpeg({ quality: JPEG_QUALITY })
-      .toBuffer()
+    let pipeline = sharp(buf).resize({ width: maxDimension, height: maxDimension, fit: 'inside', withoutEnlargement: true })
+    if (format === 'jpeg') {
+      // JPEG has no alpha — matches the client's white-fill for transparent PNGs
+      pipeline = pipeline.flatten({ background: '#ffffff' }).jpeg({ quality: JPEG_QUALITY })
+    } else {
+      pipeline = pipeline.png()
+    }
+    const out = await pipeline.toBuffer()
     const after = out.length
-    return { dataUrl: `data:image/jpeg;base64,${out.toString('base64')}`, before, after }
+    return { dataUrl: `data:image/${format};base64,${out.toString('base64')}`, before, after }
   } catch (e) {
     console.log(`  (no se pudo procesar — se deja igual: ${e instanceof Error ? e.message : e})`)
     return null
@@ -62,18 +69,28 @@ async function processField<T extends { id: string; name?: string }>(
   rows: (T & { value: string | null })[],
   maxDimension: number,
   applyUpdate: (id: string, newValue: string) => Promise<void>,
+  format: 'jpeg' | 'png' = 'jpeg',
 ) {
   let touched = 0, skippedSmallGain = 0, skippedUnrecognized = 0
   let totalBefore = 0, totalAfter = 0
 
   for (const row of rows) {
     if (!row.value) continue
-    const result = await recompress(row.value, maxDimension)
+    const result = await recompress(row.value, maxDimension, format)
     if (!result) { skippedUnrecognized++; continue }
     const { dataUrl, before, after } = result
     const savingsPct = before > 0 ? ((before - after) / before) * 100 : 0
 
-    if (savingsPct < MIN_SAVINGS_PCT) {
+    // The size-savings gate only makes sense for the JPEG path — PNG is
+    // lossless and re-encoding to it is about quality, not size, so an
+    // already-undersized logo still gets switched to PNG even if that
+    // comes out a little bigger.
+    const alreadyPng = row.value.startsWith('data:image/png')
+    if (format === 'jpeg' && savingsPct < MIN_SAVINGS_PCT) {
+      skippedSmallGain++
+      continue
+    }
+    if (format === 'png' && alreadyPng) {
       skippedSmallGain++
       continue
     }
@@ -112,6 +129,7 @@ async function main() {
     branches.map(b => ({ id: b.id, name: b.name, value: b.logo })),
     1280,
     (id, dataUrl) => prisma.branch.update({ where: { id }, data: { logo: dataUrl } }).then(() => {}),
+    'png',
   )
 
   console.log()
@@ -120,6 +138,7 @@ async function main() {
     branches.map(b => ({ id: b.id, name: b.name, value: b.quotationLetterhead })),
     1600,
     (id, dataUrl) => prisma.branch.update({ where: { id }, data: { quotationLetterhead: dataUrl } }).then(() => {}),
+    'png',
   )
 
   const totalBefore = r1.totalBefore + r2.totalBefore + r3.totalBefore

@@ -19,6 +19,7 @@ export default function Header() {
     type: s.type as 'main' | 'branch',
     city: s.city || s.name,
     status: s.status as 'active' | 'inactive' | 'maintenance',
+    logo: s.logo,
   }))
 
   const renderStoreSelector = () => {

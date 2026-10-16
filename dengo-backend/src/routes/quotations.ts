@@ -181,19 +181,47 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
     const body = z.object({
       cashRegisterId: z.string().optional(),
       paymentMethod: z.enum(['CASH', 'CARD', 'TRANSFER', 'MIXED', 'CREDIT']).default('CASH'),
+      // Explicit opt-in: convert only the catalog lines, skipping any
+      // custom (non-catalog) ones instead of blocking the whole sale. Kept
+      // as an explicit flag rather than the default behavior so a plain
+      // convert() call never silently sells less than the full quotation.
+      partial: z.boolean().optional(),
     }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
 
     const quot = await prisma.quotation.findUnique({ where: { id }, include: { items: true } })
     if (!quot || quot.status !== 'ACCEPTED') return reply.status(400).send({ error: 'Solo se pueden convertir cotizaciones aceptadas' })
     if (!canAccessBranch(request, quot.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
+
+    const customItems = quot.items.filter(item => !item.productId)
     // A custom (non-catalog) line has no real Product to hang a SaleItem off
     // of — rather than silently dropping it (undercharging) or inventing a
     // throwaway Product (exactly what the client asked this feature NOT to
-    // do), block the conversion and say why.
-    if (quot.items.some(item => !item.productId)) {
-      return reply.status(400).send({ error: 'Esta cotización tiene productos personalizados (fuera del catálogo) que no se pueden convertir directamente a venta. Quítalos de la cotización o factura esa parte por separado.' })
+    // do), block a plain conversion and say why. `partial: true` is the
+    // explicit way around this: sell just the catalog lines.
+    if (customItems.length > 0 && !body.data.partial) {
+      return reply.status(400).send({
+        error: 'Esta cotización tiene productos personalizados (fuera del catálogo) que no se pueden convertir directamente a venta. Quítalos de la cotización, factura esa parte por separado, o convierte solo los productos de catálogo.',
+        customItemCount: customItems.length,
+      })
     }
+
+    const itemsToConvert = body.data.partial ? quot.items.filter(item => !!item.productId) : quot.items
+    if (itemsToConvert.length === 0) {
+      return reply.status(400).send({ error: 'No hay productos de catálogo en esta cotización para convertir' })
+    }
+
+    // Recompute totals from only the included lines when converting
+    // partially — quot.subtotal/tax/total reflect EVERY line, custom ones
+    // included, so reusing them here would overcharge (or just be wrong)
+    // once some lines are left out. The original discount % is preserved
+    // proportionally rather than reapplying the original flat amount.
+    const subtotal = itemsToConvert.reduce((s, item) => s + Number(item.total), 0)
+    const discountRatio = Number(quot.subtotal) > 0 ? Number(quot.discount) / Number(quot.subtotal) : 0
+    const discount = subtotal * discountRatio
+    const afterDiscount = subtotal - discount
+    const tax = afterDiscount * 0.12
+    const total = afterDiscount + tax
 
     // Same atomic per-branch receipt correlativo as a normal POS sale (see
     // sales.ts) — this is a real Sale row too, it needs a real number.
@@ -210,16 +238,17 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
         cashierId: request.user.id,
         customerId: quot.customerId,
         cashRegisterId: body.data.cashRegisterId,
-        subtotal: quot.subtotal,
-        tax: quot.tax,
-        discount: quot.discount,
-        total: quot.total,
+        subtotal,
+        tax,
+        discount,
+        total,
         paymentMethod: body.data.paymentMethod,
         saleType: 'CASH',
         items: {
-          // item.productId! — guaranteed non-null by the guard above (any
-          // custom/null-productId item already blocked the conversion).
-          create: quot.items.map(item => ({
+          // item.productId! — guaranteed non-null: itemsToConvert either IS
+          // every item (full conversion, already confirmed none are custom)
+          // or is pre-filtered to just the catalog ones (partial).
+          create: itemsToConvert.map(item => ({
             productId: item.productId!,
             variationId: item.variationId,
             quantity: item.quantity,
@@ -236,8 +265,14 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
       data: { status: 'CONVERTED', convertedToSaleId: sale.id },
     })
 
-    await log({ userId: request.user.id, action: 'CONVERT', entity: 'Quotation', entityId: id, newValues: { saleId: sale.id } })
-    return reply.status(201).send({ sale, message: 'Cotización convertida a venta' })
+    await log({ userId: request.user.id, action: 'CONVERT', entity: 'Quotation', entityId: id, newValues: { saleId: sale.id, partial: !!body.data.partial } })
+    return reply.status(201).send({
+      sale,
+      message: customItems.length > 0
+        ? `Venta creada solo con los ${itemsToConvert.length} producto(s) de catálogo — se dejaron fuera ${customItems.length} producto(s) personalizado(s)`
+        : 'Cotización convertida a venta',
+      skippedCustomItems: customItems.length,
+    })
   })
 
   fastify.delete('/:id', { preHandler: [fastify.authenticate, requirePermission('quotations.create')] }, async (request, reply) => {

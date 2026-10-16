@@ -67,6 +67,7 @@ const ALLOWED_ENDPOINTS: Record<string, readonly string[]> = {
   '/reports/product-rotation': ['branchId', 'cashRegisterId'],
   '/customers': ['search'],
   '/transfers': ['fromBranchId', 'toBranchId', 'status'],
+  '/goals': ['branchId', 'year', 'month'],
 }
 
 const AVAILABLE_ENDPOINTS = `
@@ -81,6 +82,7 @@ Endpoints disponibles (todos prefijados con /api, SOLO puedes usar estos y SOLO 
 - GET /reports/cash-registers-history?branchId=&from=ISO&to=ISO  → historial de cajas (usa openedAt para el rango, no acepta cashRegisterId)
 - GET /customers?search=  → clientes (id, name, nit, creditLimit, creditUsed, totalPurchases, purchasesCount, lastPurchase)
 - GET /transfers?fromBranchId=&toBranchId=&status=  → traslados
+- GET /goals?branchId=&year=&month=  → meta de ventas de un mes (si no se pasa year/month, usa el mes actual) (targetAmount, currentAmount, percent). Usa este endpoint para CUALQUIER pregunta sobre "meta", "meta de ventas", "objetivo de ventas" o cuánto se ha vendido en comparación con una meta — NUNCA uses top-products/sales-by-product para esto, aunque la pregunta también mencione ventas o productos.
 `
 
 const queryConfigSchema = z.object({
@@ -212,6 +214,11 @@ function fallbackQueryConfig(question: string, branchId: string, today: string):
   const from30 = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10) + 'T00:00:00'
   const to = today + 'T23:59:59'
 
+  if (q.includes('meta') || q.includes('objetivo de venta')) {
+    return { intent: 'Meta de ventas', endpoint: '/goals', params: { branchId }, visualization: 'table',
+      title: 'Meta de Ventas', description: 'Meta de ventas del mes actual y el total vendido hasta el momento',
+      xKey: 'month', yKey: 'currentAmount', columns: ['targetAmount', 'currentAmount', 'percent'] }
+  }
   if (q.includes('cliente') || q.includes('comprador')) {
     return { intent: 'Análisis de clientes', endpoint: '/customers', params: {}, visualization: 'table',
       title: 'Reporte de Clientes', description: 'Lista de clientes con historial de compras',

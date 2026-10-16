@@ -7,6 +7,7 @@ import {
 import { toast } from 'sonner'
 import { api } from '../../lib/api'
 import { compressImageDataUrl } from '../../lib/imageCompress'
+import { useAuthStore } from '../../store'
 
 interface ProductModalProps {
   isOpen: boolean
@@ -61,6 +62,11 @@ export default function ProductModal({
   units = [],
   canEditPrice = true,
 }: ProductModalProps) {
+  // Categories are structural (every product hangs off one) — creating a
+  // new one is admin-only regardless of a custom role's granted
+  // permissions, matching the backend's own hardcoded check on POST
+  // /api/categories.
+  const isAdmin = useAuthStore(s => s.user?.role === 'ADMIN')
   const [formData, setFormData] = useState<ProductFormData>({
     barcode: '',
     sku: '',
@@ -285,7 +291,6 @@ export default function ProductModal({
     }
     window.addEventListener('paste', handleWindowPaste)
     return () => window.removeEventListener('paste', handleWindowPaste)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
   const handleAddAltBarcode = async () => {
@@ -489,9 +494,18 @@ export default function ProductModal({
                         <input
                           type="text"
                           value={catInputValue}
-                          onChange={e => { setCatInputValue(e.target.value); setShowCatDropdown(true) }}
+                          onChange={e => { setCatInputValue(e.target.value); setCatSearch(e.target.value); setShowCatDropdown(true) }}
                           onFocus={() => setShowCatDropdown(true)}
                           onBlur={() => setTimeout(() => setShowCatDropdown(false), 150)}
+                          onKeyDown={e => {
+                            if (e.key !== 'Enter') return
+                            e.preventDefault()
+                            const typed = catInputValue.trim()
+                            if (!typed) return
+                            const exact = filteredCategories.find(c => c.name.toLowerCase() === typed.toLowerCase())
+                            if (exact) handleSelectCategory(exact.name)
+                            else if (isAdmin && !creatingCat) handleCreateCategory()
+                          }}
                           className="input w-full"
                           placeholder="Buscar o crear categoría..."
                           autoComplete="off"
@@ -504,7 +518,7 @@ export default function ProductModal({
                                 {cat.name}
                               </button>
                             ))}
-                            {catSearch.trim() && !filteredCategories.find(c => c.name.toLowerCase() === catSearch.toLowerCase()) && (
+                            {isAdmin && catSearch.trim() && !filteredCategories.find(c => c.name.toLowerCase() === catSearch.toLowerCase()) && (
                               <button type="button" onMouseDown={handleCreateCategory} disabled={creatingCat}
                                 className="w-full text-left px-3 py-2 text-sm text-primary-600 hover:bg-primary-50 font-medium border-t border-gray-100 flex items-center gap-2 disabled:opacity-50">
                                 <Plus size={14} /> {creatingCat ? 'Creando...' : `Crear "${catSearch.trim()}"`}

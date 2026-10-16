@@ -68,6 +68,11 @@ export default function Products() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [showProductModal, setShowProductModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<any>(null)
+  // Bulk category reassignment — select several products (list view) and
+  // move them all to one category at once, instead of opening each one.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkCategoryId, setBulkCategoryId] = useState('')
+  const [bulkSaving, setBulkSaving] = useState(false)
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'duplicate'>('create')
   const [showFilters, setShowFilters] = useState(false)
   const [page, setPage] = useState(1)
@@ -228,6 +233,38 @@ export default function Products() {
       .catch(e => toast.error(e.message))
   }
 
+  function toggleSelected(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds(prev => prev.size === products.length ? new Set() : new Set(products.map(p => p.id)))
+  }
+
+  async function handleBulkReassign() {
+    if (!bulkCategoryId || selectedIds.size === 0) return
+    setBulkSaving(true)
+    try {
+      const res = await api.put<{ count: number }>('/api/products/bulk-category', {
+        productIds: Array.from(selectedIds),
+        categoryId: bulkCategoryId,
+      })
+      toast.success(`${res.count} producto(s) reasignado(s)`)
+      setSelectedIds(new Set())
+      setBulkCategoryId('')
+      fetchProducts()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al reasignar categoría')
+    } finally {
+      setBulkSaving(false)
+    }
+  }
+
   if (loading && !hasLoadedOnce) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
@@ -378,6 +415,21 @@ export default function Products() {
         </AnimatePresence>
       </div>
 
+      {/* Barra de reasignación masiva de categoría — solo aplica a la vista de lista, donde hay checkboxes por fila */}
+      {canEdit && viewMode === 'list' && selectedIds.size > 0 && (
+        <div className="bg-primary-50 border border-primary-200 rounded-lg p-3 flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-primary-800">{selectedIds.size} producto(s) seleccionado(s)</span>
+          <select value={bulkCategoryId} onChange={e => setBulkCategoryId(e.target.value)} className="input text-sm py-1.5">
+            <option value="">Reasignar a categoría...</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <button onClick={handleBulkReassign} disabled={!bulkCategoryId || bulkSaving} className="btn-primary btn-sm disabled:opacity-50">
+            {bulkSaving ? 'Reasignando...' : 'Reasignar'}
+          </button>
+          <button onClick={() => setSelectedIds(new Set())} className="text-sm text-gray-500 hover:text-gray-700">Cancelar selección</button>
+        </div>
+      )}
+
       {/* Lista de productos */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         {viewMode === 'grid' ? (
@@ -450,6 +502,12 @@ export default function Products() {
             <table className="w-full">
               <thead>
                 <tr className="border-b">
+                  {canEdit && (
+                    <th className="w-10 py-3 px-4">
+                      <input type="checkbox" checked={selectedIds.size > 0 && selectedIds.size === products.length}
+                        onChange={toggleSelectAll} className="rounded border-gray-300" />
+                    </th>
+                  )}
                   <th className="text-left py-3 px-4 font-medium text-gray-700">Producto</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">SKU</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">Categoría</th>
@@ -461,7 +519,13 @@ export default function Products() {
               </thead>
               <tbody>
                 {products.map((product) => (
-                  <tr key={product.id} className="border-b hover:bg-gray-50">
+                  <tr key={product.id} className={`border-b hover:bg-gray-50 ${selectedIds.has(product.id) ? 'bg-primary-50/40' : ''}`}>
+                    {canEdit && (
+                      <td className="py-3 px-4">
+                        <input type="checkbox" checked={selectedIds.has(product.id)}
+                          onChange={() => toggleSelected(product.id)} className="rounded border-gray-300" />
+                      </td>
+                    )}
                     <td className="py-3 px-4">
                       <div>
                         <p className="font-medium text-gray-800">{product.fullName ?? product.name}</p>

@@ -560,14 +560,25 @@ model SalesGoal {
   year         Int      @map("YEAR")
   month        Int      @map("MONTH") // 1-12, business-local (America/Guatemala)
   targetAmount Decimal  @map("TARGET_AMOUNT") @db.Decimal(18, 2)
-  createdById  String   @map("CREATED_BY_ID") @db.VarChar(36) // who last set this month's target
+  // Optional name shown only when a branch has more than one goal for the
+  // same month (split by caja) — e.g. "Mostrador" vs "Mayoreo". Null for the
+  // ordinary single branch-wide goal.
+  label        String?  @map("LABEL") @db.VarChar(60)
+  // Which cash registers (CashRegisterDefinition.registerNumber) this goal's
+  // sales are measured against. Empty = the whole branch — splitting by caja
+  // is opt-in, so a branch keeps exactly one goal row per month (today's
+  // behavior) unless someone deliberately adds a second, register-scoped one.
+  // No DB-level uniqueness on [branchId, year, month] anymore since a split
+  // branch legitimately has several rows for the same month; the API layer
+  // enforces at most one empty-registerNumbers ("general") row per month.
+  registerNumbers String[] @default([]) @map("REGISTER_NUMBERS")
+  createdById  String   @map("CREATED_BY_ID") @db.VarChar(36) // who last set this target
   createdAt    DateTime @default(now()) @map("CREATED_AT")
   updatedAt    DateTime @updatedAt @map("UPDATED_AT")
 
   branch    Branch @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   createdBy User   @relation(fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@unique([branchId, year, month])
   @@map("SALES_GOALS")
 }
 

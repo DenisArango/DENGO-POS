@@ -149,7 +149,7 @@ export default function Stores() {
     if (!file) return
     if (file.size > 5 * 1024 * 1024) { toast.error('La imagen no debe superar 5MB'); return }
     try {
-      const compressed = await readAndCompressImageFile(file)
+      const compressed = await readAndCompressImageFile(file, undefined, undefined, 'png')
       setFormData(prev => ({ ...prev, logo: compressed }))
     } catch {
       toast.error('Error al procesar el logo — intenta con otra imagen')
@@ -165,7 +165,7 @@ export default function Stores() {
     if (!file) return
     if (file.size > 5 * 1024 * 1024) { toast.error('La imagen no debe superar 5MB'); return }
     try {
-      const compressed = await readAndCompressImageFile(file, 1600)
+      const compressed = await readAndCompressImageFile(file, 1600, undefined, 'png')
       setFormData(prev => ({ ...prev, quotationLetterhead: compressed }))
     } catch {
       toast.error('Error al procesar el membrete — intenta con otra imagen')

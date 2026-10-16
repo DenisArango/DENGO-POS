@@ -12,6 +12,7 @@ interface StoreOption {
   type: 'main' | 'branch'
   city: string
   status: 'active' | 'inactive' | 'maintenance'
+  logo?: string
   stats?: {
     dailySales: number
     employees: number
@@ -111,13 +112,17 @@ export default function StoreSelector({
         aria-haspopup="listbox"
       >
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${
-            currentStore.type === 'main' ? 'bg-blue-100' : 'bg-gray-100'
-          }`}>
-            <Building2 size={20} className={
-              currentStore.type === 'main' ? 'text-blue-600' : 'text-gray-600'
-            } />
-          </div>
+          {currentStore.logo ? (
+            <img src={currentStore.logo} alt="" className="w-9 h-9 rounded-lg object-contain border border-gray-100 bg-white flex-shrink-0" />
+          ) : (
+            <div className={`p-2 rounded-lg ${
+              currentStore.type === 'main' ? 'bg-blue-100' : 'bg-gray-100'
+            }`}>
+              <Building2 size={20} className={
+                currentStore.type === 'main' ? 'text-blue-600' : 'text-gray-600'
+              } />
+            </div>
+          )}
           <div className="text-left">
             <p className="font-medium text-gray-800">{currentStore.name}</p>
             <p className="text-xs text-gray-500">{currentStore.city}</p>
@@ -167,7 +172,15 @@ export default function StoreSelector({
                     }
                   }}
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    {store.logo ? (
+                      <img src={store.logo} alt="" className="w-8 h-8 rounded-lg object-contain border border-gray-100 bg-white flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Building2 size={16} className="text-gray-400" />
+                      </div>
+                    )}
+                  <div className="flex items-start justify-between flex-1">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-medium text-gray-800">{store.name}</h4>
@@ -223,7 +236,8 @@ export default function StoreSelector({
                       <Check size={20} className="text-primary-600 mt-1" />
                     )}
                   </div>
-                  
+                  </div>
+
                   {store.status === 'inactive' && (
                     <div className="mt-2 p-2 bg-gray-100 rounded text-xs text-gray-600">
                       Esta tienda está temporalmente inactiva

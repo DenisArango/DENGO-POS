@@ -14,7 +14,12 @@ export default async function categoryRoutes(fastify: FastifyInstance) {
     return reply.send(await prisma.category.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }))
   })
 
-  fastify.post('/', { preHandler: [fastify.authenticate, requirePermission('inventory.create')] }, async (request, reply) => {
+  // Admin-only, not just inventory.create: categories are structural (every
+  // product hangs off one), so unlike editing/deleting them — still gated
+  // by the regular granular permissions below — creating a new one is kept
+  // out of reach of a custom role regardless of what it's been granted.
+  fastify.post('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    if (request.user.role !== 'ADMIN') return reply.status(403).send({ error: 'Solo un administrador puede crear categorías' })
     const body = schema.safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
     return reply.status(201).send(await prisma.category.create({ data: body.data }))

@@ -199,6 +199,30 @@ export default async function productRoutes(fastify: FastifyInstance) {
     }
   })
 
+  // PUT /api/products/bulk-category — reassigns many products to one
+  // category in a single request, for the "select several, pick a new
+  // category" flow in Products.tsx (ahead of /:id so this exact path wins
+  // over the param route). A straight reassign, not an unassign-then-assign
+  // — a product always keeps a categoryId (it's required on the model), so
+  // there's no intermediate "uncategorized" state to pass through.
+  fastify.put('/bulk-category', { preHandler: [fastify.authenticate, requirePermission('inventory.edit')] }, async (request, reply) => {
+    const body = z.object({
+      productIds: z.array(z.string()).min(1),
+      categoryId: z.string(),
+    }).safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+
+    const category = await prisma.category.findUnique({ where: { id: body.data.categoryId } })
+    if (!category) return reply.status(404).send({ error: 'Categoría no encontrada' })
+
+    const result = await prisma.product.updateMany({
+      where: { id: { in: body.data.productIds } },
+      data: { categoryId: body.data.categoryId },
+    })
+    await log({ userId: request.user.id, action: 'BULK_UPDATE', entity: 'Product', entityId: body.data.categoryId, newValues: { categoryId: body.data.categoryId, productIds: body.data.productIds } })
+    return reply.send({ message: `${result.count} producto(s) reasignado(s)`, count: result.count })
+  })
+
   // PUT /api/products/:id
   fastify.put('/:id', { preHandler: [fastify.authenticate, requirePermission('inventory.edit')] }, async (request, reply) => {
     const { id } = request.params as { id: string }

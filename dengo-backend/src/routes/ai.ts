@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { hasPermission } from '../lib/permissions.js'
 import { SALES_DIMENSIONS, SALES_METRICS, INVENTORY_DIMENSIONS, INVENTORY_METRICS, CASH_DIMENSIONS, CASH_METRICS, DIMENSION_LABELS } from '../lib/reportQuery.js'
-import { toBusinessDateKey } from '../lib/timezone.js'
+import { toBusinessDateKey, toBusinessDateTimeLabel } from '../lib/timezone.js'
 
 // AI calls cost real money per request — require at least one reports.*
 // permission so a role deliberately created without any reporting access
@@ -84,6 +84,7 @@ Herramientas disponibles (todas prefijadas con /api, SOLO puedes usar estas y SO
 - entity="inventory": groupBy uno de [${INVENTORY_DIMENSIONS.join(', ')}] · metrics uno o más de [${INVENTORY_METRICS.join(', ')}]
 - entity="cashRegisters": groupBy uno de [${CASH_DIMENSIONS.join(', ')}] · metrics uno o más de [${CASH_METRICS.join(', ')}]
 - groupBy="none" (o ausente) = un solo total, sin desglose — para preguntas tipo "¿cuánto he vendido en total?"
+- groupBy="recent" (solo entity="sales") = NO agrupa ni suma nada — devuelve los eventos de venta individuales más recientes primero (producto, cantidad, Q, fecha/hora, factura, cliente). Úsalo para CUALQUIER pregunta sobre "los últimos N productos/ventas", "qué se vendió hace un momento", "qué se acaba de vender" — nunca uses groupBy="product" para esto, eso suma todo el período en una sola fila por producto y pierde el orden cronológico que se está pidiendo. Combínalo con el parámetro limit (ej. limit:"5" para "los últimos 5").
 - categoryName/productName/customerName: el NOMBRE tal como lo escribió el usuario (ej. "Coca Cola", "Cuadernos") — el servidor lo busca, TÚ nunca inventes un id
 - branchId: NO lo pases casi nunca (el servidor ya limita a la sucursal del usuario automáticamente). La ÚNICA excepción es cuando groupBy="branch" — ahí SÍ puedes omitirlo para comparar TODAS las sucursales, es el único caso que compara sucursales.
 - sortBy: el nombre de una métrica pedida, o "group" para ordenar por la dimensión (útil en series de tiempo). sortDir default: descendente por la primera métrica, excepto day/week/month que por defecto van ascendente (cronológico).
@@ -98,6 +99,7 @@ Ejemplos (aprende el patrón, no los copies literalmente — combina libremente)
 - "ventas por método de pago" → entity:sales, groupBy:paymentMethod, metrics:"revenue"
 - "qué cajero ha vendido más" → entity:sales, groupBy:cashier, metrics:"revenue,salesCount"
 - "ventas del producto X" → entity:sales, groupBy:day (o none), productName:"X"
+- "cuáles fueron los últimos 5 productos vendidos ayer" → entity:sales, groupBy:recent, limit:"5", from:<ayer 00:00>, to:<ayer 23:59>
 - "¿cuánto he vendido hoy en total?" → entity:sales, groupBy:none, metrics:"revenue,salesCount", from:<hoy 00:00>, to:<hoy 23:59>
 - "estado de mi inventario por categoría" → entity:inventory, groupBy:category, metrics:"quantity,value"
 - "qué sucursal tiene más stock" → entity:inventory, groupBy:branch, metrics:"quantity,value" (sin branchId)
@@ -246,17 +248,51 @@ Reglas:
 // 40 rows so a big report still stays well within a cheap token budget.
 function buildAnalysisFromDataPrompt(question: string, columns: { key: string; label: string; type: string }[], rows: Record<string, unknown>[], today: string): string {
   const colDesc = columns.map(c => `${c.key} = ${c.label} (${c.type})`).join(', ')
-  const sample = JSON.stringify(rows.slice(0, 40))
+  // Reformat any 'date' column to a business-local "YYYY-MM-DD HH:mm" string
+  // before the model ever sees it — a raw UTC ISO timestamp has caused the
+  // model to misjudge which calendar day an event falls on near the day
+  // boundary (18:00-00:00 Guatemala time is already "tomorrow" in UTC).
+  const dateKeys = columns.filter(c => c.type === 'date').map(c => c.key)
+  const localizedRows = dateKeys.length === 0 ? rows : rows.map(row => {
+    const copy = { ...row }
+    for (const key of dateKeys) {
+      const v = copy[key]
+      if (typeof v === 'string' || v instanceof Date) {
+        const d = v instanceof Date ? v : new Date(v)
+        if (!isNaN(d.getTime())) copy[key] = toBusinessDateTimeLabel(d)
+      }
+    }
+    return copy
+  })
+  const sample = JSON.stringify(localizedRows.slice(0, 40))
   const truncated = rows.length > 40 ? `\n(mostrando 40 de ${rows.length} filas — para tu análisis asume que el resto sigue un patrón similar salvo que algo en la pregunta sugiera lo contrario)` : ''
+
+  // Pre-summed totals for every numeric/currency column, computed exactly in
+  // code rather than left for the model to re-add across many rows — adding
+  // ~5-40 decimal numbers by eye is exactly where a model's arithmetic
+  // quietly drifts by a little (seen in testing: summed 5 rows to Q43 when
+  // the real total was Q44). Over this many rows it should cite these, not
+  // re-derive them — still free to compute anything ELSE from the raw rows
+  // (an average, a per-row comparison, a per-day split) that isn't already
+  // summed here.
+  const sumKeys = columns.filter(c => c.type === 'currency' || c.type === 'number').map(c => c.key)
+  const totals = sumKeys.length > 0 && rows.length > 1
+    ? sumKeys.map(key => {
+        const sum = rows.reduce((s, r) => s + (Number(r[key]) || 0), 0)
+        const col = columns.find(c => c.key === key)!
+        return `${col.label} total = ${Math.round(sum * 100) / 100}`
+      }).join(', ')
+    : null
 
   return `Eres un analista de negocio de un POS en Guatemala respondiendo la pregunta de un usuario, usando SOLO los datos reales de abajo — ya se obtuvieron para esta pregunta.
 
 Pregunta del usuario: "${question}"
-Fecha de hoy: ${today}
+Fecha de hoy: ${today} (hora de Guatemala — cualquier columna de fecha/hora en los datos de abajo YA está en esta misma zona horaria, no le apliques ningún ajuste adicional)
 
 Columnas: ${colDesc}
 Datos:
 ${sample}${truncated}
+${totals ? `\nTotales YA sumados sobre las ${rows.length} fila(s) completas (cítalos tal cual para cualquier "total"/"suma" — no vuelvas a sumar columna por columna a mano, así es como se cuelan pequeños errores de redondeo): ${totals}` : ''}
 
 Responde la pregunta directamente, en español, en 2-4 oraciones, como lo haría un analista con calculadora en mano:
 - Si la pregunta pide un cálculo (cuánto falta, promedio, diferencia, por día, por hora, proyección, comparación entre filas, porcentaje, etc.), HAZLO tú mismo con los números reales de arriba. Nunca digas que no puedes calcularlo ni inventes una cifra — si un dato que necesitas no está en la tabla, dilo explícitamente en vez de adivinar.
@@ -320,6 +356,16 @@ function fallbackQueryConfig(question: string, branchId: string, today: string):
   if (q.includes('historial de venta') || q.includes('busca la venta') || q.includes('factura')) {
     return { intent: 'Historial de ventas', endpoint: '/reports/sales-history', params: { branchId, from: from30, to }, visualization: 'table',
       title: 'Historial de Ventas', description: 'Ventas individuales del período' }
+  }
+  // "Últimos N productos/ventas" is a chronological list, not a sum — checked
+  // before the generic dimension-keyword loop below, since a phrase like
+  // "últimos 5 productos vendidos" would otherwise match 'product' first and
+  // silently turn into a sum of the whole period instead of a recent list.
+  if (/[uú]ltim|reci[eé]n|hace un momento|se acaba de vender/.test(q)) {
+    const limitMatch = q.match(/\d+/)
+    return { intent: 'Productos vendidos recientemente', endpoint: '/reports/query',
+      params: { entity: 'sales', groupBy: 'recent', branchId, from: from30, to, limit: limitMatch ? limitMatch[0] : '10' },
+      visualization: 'table', title: 'Ventas Recientes', description: 'Las ventas más recientes, de más nueva a más vieja' }
   }
 
   // Everything else funnels through the flexible query engine — pick the

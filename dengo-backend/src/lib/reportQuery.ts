@@ -20,7 +20,11 @@ import { prisma } from './prisma.js'
 import { resolveBranchScope } from './branch-scope.js'
 import { parseBusinessDateParam, toBusinessDateKey, toBusinessWeekKey, toBusinessMonthKey } from './timezone.js'
 
-export const SALES_DIMENSIONS = ['none', 'day', 'week', 'month', 'product', 'category', 'customer', 'branch', 'paymentMethod', 'saleType', 'cashier', 'cashRegister'] as const
+// 'recent' is not an aggregation like the others — it's "list the individual
+// sale items themselves, most recent first", for questions like "¿cuáles
+// fueron los últimos 5 productos vendidos?" where grouping/summing would
+// throw away exactly the thing being asked for (the individual events).
+export const SALES_DIMENSIONS = ['none', 'day', 'week', 'month', 'product', 'category', 'customer', 'branch', 'paymentMethod', 'saleType', 'cashier', 'cashRegister', 'recent'] as const
 export const SALES_METRICS = ['revenue', 'quantity', 'salesCount', 'profit', 'cost', 'marginPercent', 'avgTicket'] as const
 export const INVENTORY_DIMENSIONS = ['none', 'category', 'product', 'branch'] as const
 export const INVENTORY_METRICS = ['quantity', 'value', 'cost', 'lowStockCount', 'productCount'] as const
@@ -74,7 +78,7 @@ export const DIMENSION_LABELS: Record<string, string> = {
   none: 'Total', day: 'Fecha', week: 'Semana', month: 'Mes',
   product: 'Producto', category: 'Categoría', customer: 'Cliente',
   branch: 'Sucursal', paymentMethod: 'Método de Pago', saleType: 'Tipo de Venta',
-  cashier: 'Cajero', cashRegister: 'Caja', status: 'Estado',
+  cashier: 'Cajero', cashRegister: 'Caja', status: 'Estado', recent: 'Producto',
 }
 const METRIC_META: Record<string, { label: string; type: ReportColumn['type'] }> = {
   revenue: { label: 'Ingresos (Q)', type: 'currency' },
@@ -173,6 +177,46 @@ async function runSalesQuery(request: FastifyRequest, q: ReportQueryInput): Prom
     ...(q.cashRegisterId ? { cashRegisterId: q.cashRegisterId } : {}),
     ...(productId ? { items: { some: { productId } } } : {}),
     ...(categoryId ? { items: { some: { product: { categoryId } } } } : {}),
+  }
+
+  // "Últimos N productos vendidos" etc. — a chronological list of individual
+  // sale-item events, not a sum. No bucketing, no finalize(): the order IS
+  // the answer, so it's built and returned directly.
+  if (dimension === 'recent') {
+    const limit = Math.min(100, Math.max(1, q.limit ?? 10))
+    const items = await prisma.saleItem.findMany({
+      where: {
+        sale: saleWhere,
+        ...(productId ? { productId } : {}),
+        ...(categoryId ? { product: { categoryId } } : {}),
+      },
+      include: {
+        product: true,
+        variation: { select: { name: true } },
+        sale: { select: { createdAt: true, invoiceNumber: true, customer: { select: { name: true } } } },
+      },
+      orderBy: { sale: { createdAt: 'desc' } },
+      take: limit,
+    })
+    const rows = items.map(item => ({
+      group: item.product.name + (item.variation ? ` (${item.variation.name})` : ''),
+      quantity: Math.round(Number(item.quantity) * 100) / 100,
+      revenue: Math.round(Number(item.total) * 100) / 100,
+      soldAt: item.sale.createdAt,
+      invoiceNumber: item.sale.invoiceNumber,
+      customer: item.sale.customer?.name ?? 'Consumidor Final',
+    }))
+    return {
+      columns: [
+        { key: 'group', label: 'Producto', type: 'string' },
+        { key: 'quantity', label: 'Cantidad', type: 'number' },
+        { key: 'revenue', label: 'Ingresos (Q)', type: 'currency' },
+        { key: 'soldAt', label: 'Fecha/Hora', type: 'date' },
+        { key: 'invoiceNumber', label: 'Factura', type: 'string' },
+        { key: 'customer', label: 'Cliente', type: 'string' },
+      ],
+      rows,
+    }
   }
 
   const isItemDimension = dimension === 'product' || dimension === 'category'

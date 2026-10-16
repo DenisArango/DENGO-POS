@@ -72,6 +72,21 @@ export function toBusinessMonthKey(at: Date): string {
   return toBusinessDateKey(at).slice(0, 7)
 }
 
+/**
+ * "YYYY-MM-DD HH:mm" in business-local time — for handing a timestamp to the
+ * AI's reasoning pass (routes/ai.ts). A raw UTC ISO string there is a trap:
+ * the model has no way to know it needs to shift by -6h before judging which
+ * calendar day an event falls on, and gets it wrong near the UTC day
+ * boundary (exactly the bug this app's own code hit more than once before
+ * these helpers existed) — never hand the model an unshifted timestamp.
+ */
+export function toBusinessDateTimeLabel(at: Date): string {
+  const shifted = new Date(at.getTime() + BUSINESS_UTC_OFFSET_HOURS * 3_600_000)
+  const date = shifted.toISOString().slice(0, 10)
+  const time = shifted.toISOString().slice(11, 16)
+  return `${date} ${time}`
+}
+
 /** The business's local minutes-since-midnight (0-1439) for a given instant — used to compare against an "HH:mm" role login-schedule window. */
 export function getBusinessTimeMinutes(at: Date = new Date()): number {
   const shifted = new Date(at.getTime() + BUSINESS_UTC_OFFSET_HOURS * 3_600_000)

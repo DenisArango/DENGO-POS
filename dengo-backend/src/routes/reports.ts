@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js'
 import { getBusinessDayBounds, toBusinessDateKey, getBusinessHour, parseBusinessDateParam } from '../lib/timezone.js'
 import { computeSales } from './cash-registers.js'
 import { resolveBranchScope } from '../lib/branch-scope.js'
+import { runReportQuery, type ReportQueryInput } from '../lib/reportQuery.js'
 
 // Expected cash currently sitting in a branch's open register(s): opening
 // float + cash sales (incl. cash abonos, via computeSales) + income
@@ -60,6 +61,41 @@ function buildSaleFilter(
 }
 
 export default async function reportRoutes(fastify: FastifyInstance) {
+  // GET /api/reports/query — the flexible "group sales/inventory/cash by X,
+  // show me Y" engine behind the AI reporting chat (see lib/reportQuery.ts
+  // and routes/ai.ts for the full rationale). Not meant to be hand-built by
+  // a human caller — it's the one tool the AI composes for almost any
+  // business question instead of needing a bespoke endpoint per question.
+  fastify.get('/query', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const q = request.query as Record<string, string>
+    if (!q.entity || !['sales', 'inventory', 'cashRegisters'].includes(q.entity)) {
+      return reply.status(400).send({ error: 'entity debe ser sales, inventory o cashRegisters' })
+    }
+    const input: ReportQueryInput = {
+      entity: q.entity as ReportQueryInput['entity'],
+      groupBy: q.groupBy,
+      metrics: q.metrics ? q.metrics.split(',').map(m => m.trim()).filter(Boolean) : undefined,
+      branchId: q.branchId,
+      from: q.from,
+      to: q.to,
+      categoryName: q.categoryName,
+      productName: q.productName,
+      customerName: q.customerName,
+      paymentMethod: q.paymentMethod,
+      saleType: q.saleType,
+      cashRegisterId: q.cashRegisterId,
+      sortBy: q.sortBy,
+      sortDir: q.sortDir === 'asc' ? 'asc' : q.sortDir === 'desc' ? 'desc' : undefined,
+      limit: q.limit ? Math.min(200, Math.max(1, parseInt(q.limit, 10) || 50)) : undefined,
+    }
+    try {
+      return reply.send(await runReportQuery(request, input))
+    } catch (err) {
+      fastify.log.error(err, 'reports/query failed')
+      return reply.status(500).send({ error: 'No se pudo generar el reporte' })
+    }
+  })
+
   // GET /api/reports/dashboard
   fastify.get('/dashboard', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const q = request.query as { branchId?: string }

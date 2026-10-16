@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import {
   Settings as SettingsIcon, Users, Shield, Building2,
   CreditCard, Bell, Database, Palette, Globe,
-  ChevronRight, Lock, Store, Target, PackagePlus
+  ChevronRight, Lock, Store, Target, PackagePlus, Tag
 } from 'lucide-react'
 import { useAuthStore } from '../store'
 import { usePermissions } from '../hooks/usePermissions'
@@ -74,6 +74,16 @@ const settingCards: SettingCard[] = [
     color: 'bg-cyan-500',
     category: 'general',
     requiredPermission: 'goals.manage'
+  },
+  {
+    id: 'categories',
+    title: 'Categorías',
+    description: 'Crear, renombrar, fusionar y eliminar categorías de productos',
+    icon: Tag,
+    path: '/settings/categories',
+    color: 'bg-amber-500',
+    category: 'general',
+    requiredPermission: 'inventory.edit'
   },
   {
     id: 'inventory-reasons',

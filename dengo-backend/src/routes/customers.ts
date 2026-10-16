@@ -41,6 +41,46 @@ function stripRestrictedFields<T extends RestrictedFields>(data: T, canEditCredi
   return rest as T
 }
 
+// Real purchase history per customer (total spent, # of sales, most recent
+// sale) — one grouped aggregate query for the whole batch, not N+1. These
+// fields used to be in every customer response's TypeScript shape on the
+// frontend with nothing ever actually computing them (always undefined, so
+// every report/column reading them silently showed "—"/blank).
+async function attachPurchaseStats<T extends { id: string }>(customers: T[]) {
+  if (customers.length === 0) return customers as (T & { totalPurchases: number; purchasesCount: number; lastPurchase: Date | null })[]
+  const agg = await prisma.sale.groupBy({
+    by: ['customerId'],
+    where: { customerId: { in: customers.map(c => c.id) }, isVoided: false },
+    _sum: { total: true },
+    _count: { _all: true },
+    _max: { createdAt: true },
+  })
+  const statsMap = new Map(agg.filter(a => a.customerId).map(a => [a.customerId as string, {
+    totalPurchases: Number(a._sum.total ?? 0),
+    purchasesCount: a._count._all,
+    lastPurchase: a._max.createdAt,
+  }]))
+  return customers.map(c => ({
+    ...c,
+    totalPurchases: statsMap.get(c.id)?.totalPurchases ?? 0,
+    purchasesCount: statsMap.get(c.id)?.purchasesCount ?? 0,
+    lastPurchase: statsMap.get(c.id)?.lastPurchase ?? null,
+  }))
+}
+
+const CUSTOMER_SORT_FIELDS = ['name', 'totalPurchases', 'purchasesCount', 'lastPurchase'] as const
+type CustomerSortField = typeof CUSTOMER_SORT_FIELDS[number]
+function sortCustomers<T extends { name: string; totalPurchases: number; purchasesCount: number; lastPurchase: Date | null }>(customers: T[], sortBy?: string) {
+  if (!sortBy || !CUSTOMER_SORT_FIELDS.includes(sortBy as CustomerSortField)) return customers
+  const field = sortBy as CustomerSortField
+  if (field === 'name') return customers // already alphabetical from the query
+  return [...customers].sort((a, b) => {
+    const av = field === 'lastPurchase' ? (a.lastPurchase?.getTime() ?? 0) : a[field]
+    const bv = field === 'lastPurchase' ? (b.lastPurchase?.getTime() ?? 0) : b[field]
+    return bv - av // descending — "most frequent/highest spending/most recent" is always what's wanted, never ascending
+  })
+}
+
 // Single source of truth for the 3 credit states a customer can be in:
 // no credit, credit with a cap, or credit with no ceiling.
 function withCreditFields<T extends { creditEnabled: boolean; creditLimitEnabled: boolean; creditLimit: unknown; creditUsed: unknown }>(c: T) {
@@ -59,7 +99,7 @@ function withCreditFields<T extends { creditEnabled: boolean; creditLimitEnabled
 
 export default async function customerRoutes(fastify: FastifyInstance) {
   fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('customers.view')] }, async (request, reply) => {
-    const q = request.query as { search?: string; isActive?: string; hasCredit?: string; page?: string; limit?: string }
+    const q = request.query as { search?: string; isActive?: string; hasCredit?: string; page?: string; limit?: string; sortBy?: string }
     // Default (param absent) stays active-only, same opt-in pattern as
     // suppliers — 'all'/'false' are explicit choices, not the old hardcoded
     // isActive:true that made the page's own "Inactivos"/"Todos" filters a no-op.
@@ -90,7 +130,7 @@ export default async function customerRoutes(fastify: FastifyInstance) {
         prisma.customer.aggregate({ where: statusWhere, _sum: { creditUsed: true } }),
       ])
       return reply.send({
-        data: customers.map(withCreditFields),
+        data: sortCustomers(await attachPurchaseStats(customers.map(withCreditFields)), q.sortBy),
         total,
         page,
         limit,
@@ -99,14 +139,16 @@ export default async function customerRoutes(fastify: FastifyInstance) {
     }
 
     const customers = await prisma.customer.findMany({ where, orderBy: { name: 'asc' } })
-    return reply.send(customers.map(withCreditFields))
+    const withStats = await attachPurchaseStats(customers.map(withCreditFields))
+    return reply.send(sortCustomers(withStats, q.sortBy))
   })
 
   fastify.get('/:id', { preHandler: [fastify.authenticate, requirePermission('customers.view')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const c = await prisma.customer.findUnique({ where: { id } })
     if (!c) return reply.status(404).send({ error: 'Cliente no encontrado' })
-    return reply.send(withCreditFields(c))
+    const [withStats] = await attachPurchaseStats([withCreditFields(c)])
+    return reply.send(withStats)
   })
 
   fastify.post('/', { preHandler: [fastify.authenticate, requirePermission('customers.create')] }, async (request, reply) => {

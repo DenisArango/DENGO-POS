@@ -44,6 +44,7 @@ const StoresSettings = lazy(() => import('./pages/settings/Stores'))
 const PaymentMethodsSettings = lazy(() => import('./pages/settings/PaymentMethods'))
 const SalesGoalsSettings = lazy(() => import('./pages/settings/SalesGoals'))
 const InventoryReasonsSettings = lazy(() => import('./pages/settings/InventoryReasons'))
+const CategoriesSettings = lazy(() => import('./pages/settings/Categories'))
 const NotificationsSettings = lazy(() => import('./pages/settings/Notifications'))
 const BackupSettings = lazy(() => import('./pages/settings/Backup'))
 const AppearanceSettings = lazy(() => import('./pages/settings/Appearance'))
@@ -135,6 +136,7 @@ export default function Router() {
           <Route path="/settings/payment-methods" element={<PaymentMethodsSettings />} />
           <Route path="/settings/sales-goals" element={<SalesGoalsSettings />} />
           <Route path="/settings/inventory-reasons" element={<InventoryReasonsSettings />} />
+          <Route path="/settings/categories" element={<CategoriesSettings />} />
           <Route path="/settings/notifications" element={<NotificationsSettings />} />
           <Route path="/settings/backup" element={<BackupSettings />} />
           <Route path="/settings/appearance" element={<AppearanceSettings />} />

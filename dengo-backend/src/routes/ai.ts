@@ -1,6 +1,8 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { hasPermission } from '../lib/permissions.js'
+import { SALES_DIMENSIONS, SALES_METRICS, INVENTORY_DIMENSIONS, INVENTORY_METRICS, CASH_DIMENSIONS, CASH_METRICS, DIMENSION_LABELS } from '../lib/reportQuery.js'
+import { toBusinessDateKey } from '../lib/timezone.js'
 
 // AI calls cost real money per request — require at least one reports.*
 // permission so a role deliberately created without any reporting access
@@ -50,51 +52,82 @@ async function getAnthropicClient() {
   return anthropicClient
 }
 
-// Endpoints the AI-driven report chat is allowed to fetch, and which query
-// params it may forward for each one. This is the security boundary: the
-// model's output (or the keyword fallback) can never reach an endpoint or
-// param outside this list, even if the user's question tries to steer it
-// there (prompt injection) or the model hallucinates a path.
+// ---------------------------------------------------------------------------
+// Tool surface exposed to the AI. `/reports/query` is the main workhorse — a
+// flexible "group X by Y, show me Z" engine (see lib/reportQuery.ts) that
+// covers the overwhelming majority of sales/inventory/cash-flow questions
+// through composition (groupBy + metrics + filters) instead of one bespoke
+// endpoint per question. The rest are genuinely different shapes that don't
+// fit a fact-table aggregation: a raw transaction list, a customer directory,
+// goals (target vs actual, not a summable fact), and transfers (a workflow
+// list). Keeping this list short and composable is the whole point — a new
+// phrasing of an already-supported combination (say, "ventas por cajero la
+// semana pasada") needs ZERO new code because groupBy/metrics already compose.
+// ---------------------------------------------------------------------------
 const ALLOWED_ENDPOINTS: Record<string, readonly string[]> = {
-  '/reports/dashboard': ['branchId'],
+  '/reports/query': ['entity', 'groupBy', 'metrics', 'branchId', 'from', 'to', 'categoryName', 'productName', 'customerName', 'paymentMethod', 'saleType', 'cashRegisterId', 'sortBy', 'sortDir', 'limit'],
   '/reports/sales-history': ['branchId', 'from', 'to', 'saleType', 'paymentMethod', 'search', 'cashRegisterId', 'includeVoided'],
-  '/reports/inventory-status': ['branchId'],
-  '/reports/top-products': ['branchId', 'cashRegisterId', 'from', 'to'],
-  '/reports/daily-sales': ['branchId', 'cashRegisterId', 'from', 'to'],
-  '/reports/stock-movements': ['branchId', 'from', 'to', 'type'],
-  '/reports/sales-by-product': ['branchId', 'cashRegisterId', 'from', 'to', 'limit'],
-  '/reports/cash-registers-history': ['branchId', 'from', 'to'],
   '/reports/product-rotation': ['branchId', 'cashRegisterId'],
-  '/customers': ['search'],
+  '/customers': ['search', 'sortBy'],
   '/transfers': ['fromBranchId', 'toBranchId', 'status'],
   '/goals': ['branchId', 'year', 'month'],
+  '/goals/compliance-report': ['branchId', 'months'],
 }
 
 const AVAILABLE_ENDPOINTS = `
-Endpoints disponibles (todos prefijados con /api, SOLO puedes usar estos y SOLO con estos parámetros):
-- GET /reports/sales-history?from=ISO&to=ISO&branchId=&cashRegisterId=&paymentMethod=&saleType=&search=&includeVoided=  → lista de ventas (id, total, paymentMethod, saleType, createdAt, customer{name}, items[{quantity,total,product{name,category{name}}}])
-- GET /reports/sales-by-product?from=ISO&to=ISO&branchId=&cashRegisterId=&limit=N  → productos más vendidos (productId, name, quantitySold, revenue, cost, profit, marginPercent)
-- GET /reports/top-products?from=ISO&to=ISO&branchId=&cashRegisterId=  → top 50 productos por ingresos (rank, productId, name, category, quantity, revenue)
-- GET /reports/daily-sales?from=ISO&to=ISO&branchId=&cashRegisterId=  → ventas agrupadas por día (date, count, total, cash, card, transfer, credit)
-- GET /reports/inventory-status?branchId=  → estado del inventario (productId, name, quantity, minStock, cost, value, status)
-- GET /reports/product-rotation?branchId=&cashRegisterId=  → rotación de productos en los últimos 30 días (fijo, no acepta rango de fechas)
-- GET /reports/stock-movements?branchId=&from=ISO&to=ISO&type=IN|OUT|ADJUSTMENT|TRANSFER|SALE|RETURN  → movimientos de stock
-- GET /reports/cash-registers-history?branchId=&from=ISO&to=ISO  → historial de cajas (usa openedAt para el rango, no acepta cashRegisterId)
-- GET /customers?search=  → clientes (id, name, nit, creditLimit, creditUsed, totalPurchases, purchasesCount, lastPurchase)
-- GET /transfers?fromBranchId=&toBranchId=&status=  → traslados
-- GET /goals?branchId=&year=&month=  → meta de ventas de un mes (si no se pasa year/month, usa el mes actual) (targetAmount, currentAmount, percent). Usa este endpoint para CUALQUIER pregunta sobre "meta", "meta de ventas", "objetivo de ventas" o cuánto se ha vendido en comparación con una meta — NUNCA uses top-products/sales-by-product para esto, aunque la pregunta también mencione ventas o productos.
+Herramientas disponibles (todas prefijadas con /api, SOLO puedes usar estas y SOLO con estos parámetros):
+
+### /reports/query — tu herramienta PRINCIPAL para casi cualquier pregunta de ventas, inventario o caja
+{ "endpoint": "/reports/query", "params": { "entity": "...", "groupBy": "...", "metrics": "m1,m2", "from": "ISO", "to": "ISO", "branchId": "", "categoryName": "", "productName": "", "customerName": "", "paymentMethod": "", "saleType": "", "cashRegisterId": "", "sortBy": "", "sortDir": "asc|desc", "limit": "N" } }
+
+- entity="sales": groupBy uno de [${SALES_DIMENSIONS.join(', ')}] · metrics (separadas por coma) uno o más de [${SALES_METRICS.join(', ')}]
+- entity="inventory": groupBy uno de [${INVENTORY_DIMENSIONS.join(', ')}] · metrics uno o más de [${INVENTORY_METRICS.join(', ')}]
+- entity="cashRegisters": groupBy uno de [${CASH_DIMENSIONS.join(', ')}] · metrics uno o más de [${CASH_METRICS.join(', ')}]
+- groupBy="none" (o ausente) = un solo total, sin desglose — para preguntas tipo "¿cuánto he vendido en total?"
+- categoryName/productName/customerName: el NOMBRE tal como lo escribió el usuario (ej. "Coca Cola", "Cuadernos") — el servidor lo busca, TÚ nunca inventes un id
+- branchId: NO lo pases casi nunca (el servidor ya limita a la sucursal del usuario automáticamente). La ÚNICA excepción es cuando groupBy="branch" — ahí SÍ puedes omitirlo para comparar TODAS las sucursales, es el único caso que compara sucursales.
+- sortBy: el nombre de una métrica pedida, o "group" para ordenar por la dimensión (útil en series de tiempo). sortDir default: descendente por la primera métrica, excepto day/week/month que por defecto van ascendente (cronológico).
+- limit: cuántas filas devolver (default 50, o 1 si groupBy="none")
+
+Ejemplos (aprende el patrón, no los copies literalmente — combina libremente):
+- "productos más vendidos este mes" → entity:sales, groupBy:product, metrics:"revenue,quantity", from:<inicio de mes>, to:<hoy>
+- "mis categorías con más ganancia" → entity:sales, groupBy:category, metrics:"profit,marginPercent"
+- "ventas por día de la última semana" → entity:sales, groupBy:day, metrics:"revenue,salesCount", from:<hace 7 días>
+- "ventas por semana del último mes" → entity:sales, groupBy:week, metrics:"revenue"
+- "compara mis sucursales este mes" → entity:sales, groupBy:branch, metrics:"revenue,salesCount" (sin branchId)
+- "ventas por método de pago" → entity:sales, groupBy:paymentMethod, metrics:"revenue"
+- "qué cajero ha vendido más" → entity:sales, groupBy:cashier, metrics:"revenue,salesCount"
+- "ventas del producto X" → entity:sales, groupBy:day (o none), productName:"X"
+- "¿cuánto he vendido hoy en total?" → entity:sales, groupBy:none, metrics:"revenue,salesCount", from:<hoy 00:00>, to:<hoy 23:59>
+- "estado de mi inventario por categoría" → entity:inventory, groupBy:category, metrics:"quantity,value"
+- "qué sucursal tiene más stock" → entity:inventory, groupBy:branch, metrics:"quantity,value" (sin branchId)
+- "flujo de caja de esta semana" → entity:cashRegisters, groupBy:day, metrics:"totalSales,cashSales,cardSales,transferSales"
+
+### Otras herramientas (para lo que /reports/query no cubre):
+- GET /reports/sales-history?from=&to=&branchId=&cashRegisterId=&paymentMethod=&saleType=&search=&includeVoided=  → LISTA de ventas individuales (no agregada) — usa esto para "muéstrame las ventas de hoy", "busca la venta con factura X", "ventas con descuento aplicado"
+- GET /reports/product-rotation?branchId=&cashRegisterId=  → qué tan rápido rota cada producto en los últimos 30 días (fijo, no acepta rango de fechas) — usa para "productos sin movimiento", "productos muertos", "rotación de inventario"
+- GET /customers?search=&sortBy=  → directorio de clientes con su perfil (NIT, crédito) y estadísticas de compra. sortBy acepta "purchasesCount" (más frecuentes), "totalPurchases" (que más han gastado), "lastPurchase" (compra más reciente) o "name"
+- GET /transfers?fromBranchId=&toBranchId=&status=  → traslados de inventario entre sucursales
+- GET /goals?branchId=&year=&month=  → meta de ventas de la sucursal propia del usuario en un mes (si no se pasa year/month, usa el mes actual)
+- GET /goals/compliance-report?branchId=&months=N  → meta y cumplimiento de TODAS las sucursales accesibles, mes a mes de los últimos N meses. NO pases branchId si quieres todas las sucursales.
+
+Para CUALQUIER pregunta sobre "meta", "meta de ventas" u "objetivo de ventas": usa /goals si es solo sobre la sucursal propia; usa /goals/compliance-report (months=1 si no piden historial) si menciona otras sucursales, "todas las sucursales", o comparar sucursales. NUNCA uses /reports/query para esto — las metas no son una métrica de ventas, son un objetivo distinto que se compara contra las ventas.
 `
 
 const queryConfigSchema = z.object({
   intent: z.string().default(''),
   endpoint: z.string(),
-  params: z.record(z.string()).default({}),
+  // The model naturally emits a numeric-feeling param (limit, months, year)
+  // as a real JSON number, not a quoted string, however literally the prompt
+  // example shows it — a strict z.record(z.string()) rejected the ENTIRE
+  // response over this alone, silently losing an otherwise perfectly good
+  // answer to the keyword fallback. Accept string/number/boolean and coerce.
+  params: z.record(z.union([z.string(), z.number(), z.boolean()]))
+    .transform(obj => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, String(v)])))
+    .default({}),
   visualization: z.enum(['bar', 'line', 'pie', 'table']).default('table'),
   title: z.string().default('Reporte'),
   description: z.string().default(''),
-  xKey: z.string().optional(),
-  yKey: z.string().optional(),
-  columns: z.array(z.string()).optional(),
 })
 
 type QueryConfig = z.infer<typeof queryConfigSchema>
@@ -104,7 +137,7 @@ const historyTurnSchema = z.object({
   intent: z.string().optional(),
 })
 
-function buildAnalyzePrompt(reportType: string, data: any, context?: string): string {
+function buildAnalyzePrompt(reportType: string, data: unknown, context?: string): string {
   const label = REPORT_TYPE_LABELS[reportType] ?? reportType
   return `Eres un experto consultor de retail y punto de venta (POS) en Guatemala. Analiza los datos del reporte "${label}" y entrega 3 recomendaciones ESPECÍFICAS y ACCIONABLES para el personal de la tienda.
 
@@ -126,27 +159,27 @@ Responde SOLO con JSON válido, sin texto antes ni después:
 Reglas: español · basado en datos reales · sin inventar cifras · accionable hoy`
 }
 
-function parseRecommendations(text: string): any[] {
+function parseRecommendations(text: string): Record<string, unknown>[] {
   try {
     const match = text.match(/\[[\s\S]*\]/)
     if (match) {
       const parsed = JSON.parse(match[0])
       return Array.isArray(parsed)
-        ? parsed.slice(0, 4).map((r: any) => ({ ...r, actionable: true }))
+        ? parsed.slice(0, 4).map((r: Record<string, unknown>) => ({ ...r, actionable: true }))
         : []
     }
     return []
   } catch { return [] }
 }
 
-function localRules(reportType: string, data: any): any[] {
-  const recs: any[] = []
+function localRules(reportType: string, data: Record<string, unknown>): Record<string, unknown>[] {
+  const recs: Record<string, unknown>[] = []
 
   if (['inventory', 'inventory_status'].includes(reportType)) {
-    if ((data?.lowStock ?? 0) > 0) {
+    if (Number(data?.lowStock ?? 0) > 0) {
       recs.push({ title: 'Productos con Stock Crítico', description: `Hay ${data.lowStock} producto(s) con stock bajo. Realiza un pedido urgente para evitar perder ventas.`, priority: 'high', category: 'inventory', actionable: true })
     }
-    if ((data?.overstock ?? 0) > 0) {
+    if (Number(data?.overstock ?? 0) > 0) {
       recs.push({ title: 'Reducir Inventario Excesivo', description: `${data.overstock} producto(s) tienen sobrestock. Crea promociones para aumentar su rotación y liberar capital.`, priority: 'medium', category: 'pricing', actionable: true })
     }
   }
@@ -156,7 +189,7 @@ function localRules(reportType: string, data: any): any[] {
     if (avg > 0 && avg < 50) {
       recs.push({ title: 'Aumentar Ticket Promedio', description: `El ticket promedio es Q${avg.toFixed(2)}. Implementa combos y venta cruzada para incrementarlo.`, priority: 'medium', category: 'marketing', actionable: true })
     }
-    if ((data?.transactions ?? 0) < 10) {
+    if (Number(data?.transactions ?? 0) < 10) {
       recs.push({ title: 'Incrementar Tráfico de Clientes', description: 'Las transacciones del período son bajas. Considera promociones de hora feliz o descuentos por cantidad para atraer más clientes.', priority: 'high', category: 'marketing', actionable: true })
     }
   }
@@ -179,35 +212,56 @@ function buildQueryPrompt(question: string, branchId: string, today: string, his
         .join('\n')}\n`
     : ''
 
-  return `Eres un asistente de inteligencia de negocios para un POS en Guatemala. El usuario pregunta:
+  return `Eres el motor de inteligencia de negocio de un POS en Guatemala — esta función es el diferenciador principal del producto, así que cada respuesta debe ser precisa y realmente útil, no una aproximación genérica. El usuario pregunta:
 
 "${question}"
 
-Contexto: branchId="${branchId}", fecha actual="${today}"
+Contexto: branchId="${branchId}" (la sucursal propia del usuario — ver abajo cuándo usarla), fecha actual="${today}"
 ${historyBlock}
 ${AVAILABLE_ENDPOINTS}
 
-Determina qué datos necesita el usuario y responde SOLO con JSON válido, sin texto adicional:
+Determina qué herramienta y parámetros responden mejor la pregunta y responde SOLO con JSON válido, sin texto adicional:
 {
   "intent": "descripción corta de lo que el usuario quiere ver",
-  "endpoint": "/reports/sales-by-product",
-  "params": { "from": "2026-05-01T00:00:00", "to": "2026-05-29T23:59:59", "branchId": "${branchId}", "limit": "20" },
+  "endpoint": "/reports/query",
+  "params": { "entity": "sales", "groupBy": "product", "metrics": "revenue,quantity", "from": "2026-05-01T00:00:00", "to": "2026-05-29T23:59:59" },
   "visualization": "bar|line|pie|table",
   "title": "Título del reporte",
-  "description": "Qué muestra este reporte en 1-2 oraciones",
-  "xKey": "campo del eje X o columna principal",
-  "yKey": "campo numérico principal para graficar",
-  "columns": ["campo1","campo2","campo3"]
+  "description": "Qué muestra este reporte en 1-2 oraciones"
 }
 
 Reglas:
 - endpoint debe ser EXACTAMENTE uno de los listados arriba, nada más
-- params siempre debe incluir branchId si el endpoint lo acepta
-- Si la pregunta es sobre un período, calcúlalo desde "${today}"
+- Si la pregunta es sobre un período, calcúlalo desde "${today}" (ej. "este mes" = desde el día 1 de este mes hasta hoy)
 - Si la pregunta hace referencia a la conversación previa, resuélvela usando ese contexto
-- Si no hay endpoint que responda exactamente, elige el más cercano de la lista
-- visualization: "bar" para comparaciones, "line" para tendencias, "pie" para distribuciones, "table" para listas detalladas`
+- Si no hay combinación exacta que responda la pregunta, elige la más cercana — nunca respondas con un endpoint que no está en la lista
+- visualization: "bar" para comparaciones entre categorías/productos/sucursales, "line" para tendencias en el tiempo (day/week/month), "pie" para distribuciones de una parte del total, "table" para listas detalladas o cuando hay más de una métrica relevante a la vez`
 }
+
+// A dimension-aware, metric-aware keyword fallback — used when there's no
+// ANTHROPIC_API_KEY configured, or the live call fails/times out. Unlike a
+// single hardcoded endpoint per keyword, this composes a /reports/query
+// request from whatever dimension + metric words it recognizes, so it stays
+// reasonably capable (not just "top products, always") even without the
+// model in the loop.
+const DIMENSION_KEYWORDS: [RegExp, string][] = [
+  [/producto/i, 'product'],
+  [/categor[ií]a/i, 'category'],
+  [/client/i, 'customer'],
+  [/sucursal|tienda/i, 'branch'],
+  [/m[eé]todo de pago|efectivo|tarjeta|transferencia/i, 'paymentMethod'],
+  [/cajer[oa]/i, 'cashier'],
+  [/caja\b/i, 'cashRegister'],
+  [/d[ií]a\b/i, 'day'],
+  [/semana/i, 'week'],
+  [/mes\b|mensual/i, 'month'],
+]
+const METRIC_KEYWORDS: [RegExp, string][] = [
+  [/ganancia|utilidad|margen/i, 'profit'],
+  [/cantidad|unidades/i, 'quantity'],
+  [/ticket promedio/i, 'avgTicket'],
+  [/costo/i, 'cost'],
+]
 
 function fallbackQueryConfig(question: string, branchId: string, today: string): QueryConfig {
   const q = question.toLowerCase()
@@ -215,49 +269,61 @@ function fallbackQueryConfig(question: string, branchId: string, today: string):
   const to = today + 'T23:59:59'
 
   if (q.includes('meta') || q.includes('objetivo de venta')) {
+    const mentionsOtherBranches = /sucursal|tienda|demas|demás/.test(q)
+    if (mentionsOtherBranches) {
+      return { intent: 'Cumplimiento de metas de todas las sucursales', endpoint: '/goals/compliance-report', params: { months: '1' }, visualization: 'table',
+        title: 'Cumplimiento de Metas', description: 'Meta de ventas y cuánto se ha cumplido en cada sucursal este mes' }
+    }
     return { intent: 'Meta de ventas', endpoint: '/goals', params: { branchId }, visualization: 'table',
-      title: 'Meta de Ventas', description: 'Meta de ventas del mes actual y el total vendido hasta el momento',
-      xKey: 'month', yKey: 'currentAmount', columns: ['targetAmount', 'currentAmount', 'percent'] }
+      title: 'Meta de Ventas', description: 'Meta de ventas del mes actual y el total vendido hasta el momento' }
   }
   if (q.includes('cliente') || q.includes('comprador')) {
-    return { intent: 'Análisis de clientes', endpoint: '/customers', params: {}, visualization: 'table',
-      title: 'Reporte de Clientes', description: 'Lista de clientes con historial de compras',
-      xKey: 'name', yKey: 'totalPurchases', columns: ['name', 'nit', 'totalPurchases', 'purchasesCount', 'lastPurchase'] }
+    const sortBy = /frecuen/.test(q) ? 'purchasesCount' : /gast|compr[oó]|total/.test(q) ? 'totalPurchases' : /reciente|última|ultima/.test(q) ? 'lastPurchase' : 'purchasesCount'
+    return { intent: 'Análisis de clientes', endpoint: '/customers', params: { sortBy }, visualization: 'table',
+      title: 'Reporte de Clientes', description: 'Clientes con su historial de compras' }
   }
   if (q.includes('rotaci') || q.includes('muerto') || q.includes('sin movimiento')) {
-    return { intent: 'Rotación de productos', endpoint: '/reports/product-rotation',
-      params: { branchId }, visualization: 'bar',
-      title: 'Rotación de Productos (últimos 30 días)', description: 'Análisis de qué tan rápido se venden los productos',
-      xKey: 'name', yKey: 'sold', columns: ['name', 'sold', 'stock', 'rotationDays'] }
-  }
-  if (q.includes('inventario') || q.includes('stock')) {
-    return { intent: 'Estado del inventario', endpoint: '/reports/inventory-status',
-      params: { branchId }, visualization: 'table',
-      title: 'Estado del Inventario', description: 'Niveles actuales de stock por producto',
-      xKey: 'name', yKey: 'quantity', columns: ['name', 'quantity', 'minStock', 'cost', 'value', 'status'] }
-  }
-  if (q.includes('ganancia') || q.includes('margen') || q.includes('utilidad')) {
-    return { intent: 'Márgenes de ganancia', endpoint: '/reports/sales-by-product',
-      params: { from: from30, to, branchId, limit: '20' }, visualization: 'bar',
-      title: 'Márgenes por Producto', description: 'Rentabilidad de productos en los últimos 30 días',
-      xKey: 'name', yKey: 'profit', columns: ['name', 'revenue', 'cost', 'profit', 'marginPercent'] }
+    return { intent: 'Rotación de productos', endpoint: '/reports/product-rotation', params: { branchId }, visualization: 'bar',
+      title: 'Rotación de Productos (últimos 30 días)', description: 'Análisis de qué tan rápido se venden los productos' }
   }
   if (q.includes('traslado')) {
     return { intent: 'Traslados entre sucursales', endpoint: '/transfers', params: {}, visualization: 'table',
-      title: 'Traslados', description: 'Traslados de stock entre sucursales',
-      xKey: 'id', yKey: undefined, columns: ['id', 'fromBranchId', 'toBranchId', 'status'] }
+      title: 'Traslados', description: 'Traslados de stock entre sucursales' }
   }
-  if (q.includes('caja') || q.includes('efectivo') || q.includes('flujo')) {
-    return { intent: 'Historial de caja', endpoint: '/reports/cash-registers-history',
-      params: { branchId, from: from30, to }, visualization: 'table',
-      title: 'Historial de Caja', description: 'Aperturas y cierres de caja en los últimos 30 días',
-      xKey: 'openedAt', yKey: undefined, columns: ['name', 'registerNumber', 'openedAt', 'closedAt', 'status'] }
+  if (q.includes('historial de venta') || q.includes('busca la venta') || q.includes('factura')) {
+    return { intent: 'Historial de ventas', endpoint: '/reports/sales-history', params: { branchId, from: from30, to }, visualization: 'table',
+      title: 'Historial de Ventas', description: 'Ventas individuales del período' }
   }
-  // Default: top products
-  return { intent: 'Productos más vendidos', endpoint: '/reports/sales-by-product',
-    params: { from: from30, to, branchId, limit: '15' }, visualization: 'bar',
-    title: 'Top Productos (últimos 30 días)', description: 'Los productos con mayor volumen de ventas',
-    xKey: 'name', yKey: 'revenue', columns: ['name', 'quantitySold', 'revenue', 'marginPercent'] }
+
+  // Everything else funnels through the flexible query engine — pick the
+  // entity from keywords, the dimension from DIMENSION_KEYWORDS, and sensible
+  // metrics (revenue/salesCount by default, or whatever metric keywords matched).
+  const entity = /inventario|stock/.test(q) ? 'inventory' : /caja\b|flujo de caja|efectivo en caja/.test(q) ? 'cashRegisters' : 'sales'
+  const dimensionMatch = DIMENSION_KEYWORDS.find(([re]) => re.test(q))
+  const groupBy = dimensionMatch?.[1] ?? (entity === 'sales' ? 'product' : 'category')
+  const matchedMetrics = METRIC_KEYWORDS.filter(([re]) => re.test(q)).map(([, m]) => m)
+  const metrics = entity === 'inventory'
+    ? (matchedMetrics.length ? matchedMetrics.filter(m => (INVENTORY_METRICS as readonly string[]).includes(m)) : ['quantity', 'value'])
+    : entity === 'cashRegisters'
+      ? ['totalSales', 'sessionCount']
+      : (matchedMetrics.length ? [...new Set(['revenue', ...matchedMetrics])] : ['revenue', 'quantity'])
+
+  return {
+    intent: 'Reporte de ventas', endpoint: '/reports/query',
+    params: { entity, groupBy, metrics: metrics.join(','), from: from30, to, branchId },
+    visualization: groupBy === 'day' || groupBy === 'week' || groupBy === 'month' ? 'line' : 'bar',
+    title: 'Reporte', description: 'Reporte generado automáticamente a partir de tu pregunta',
+  }
+}
+
+// /reports/query is the only endpoint that compares branches (groupBy:
+// 'branch'); every other tool — and /reports/query itself for any other
+// groupBy — is always pinned to the asking user's own branch server-side,
+// never trusting the model's choice of branchId.
+function isBranchOptional(endpoint: string, params: Record<string, string>): boolean {
+  if (endpoint === '/goals/compliance-report') return true
+  if (endpoint === '/reports/query' && params.groupBy === 'branch') return true
+  return false
 }
 
 /** Clamps an AI- or fallback-produced config to the allowlist before it is ever used to build a request. */
@@ -272,10 +338,140 @@ function sanitizeConfig(config: QueryConfig, branchId: string): QueryConfig | nu
       params[key] = String(value)
     }
   }
-  // branchId is always server-enforced, never trusted from the model output.
-  if (allowedParams.includes('branchId')) params.branchId = branchId
+  if (allowedParams.includes('branchId') && !isBranchOptional(config.endpoint, params)) {
+    params.branchId = branchId
+  }
 
   return { ...config, params }
+}
+
+// ---------------------------------------------------------------------------
+// Response normalization — turns whatever shape each endpoint actually
+// returns into one uniform {columns, rows} contract, computed HERE from the
+// real response (never guessed client-side from field names). /reports/query
+// already returns this shape natively; everything else gets a small,
+// hand-authored, correct column map (these are OUR endpoints' real fields,
+// not the model's guess) so the frontend never has to infer what a column
+// means from its key name.
+// ---------------------------------------------------------------------------
+interface NormalizedReport { columns: { key: string; label: string; type: string }[]; rows: Record<string, unknown>[] }
+
+const ENTITY_LABELS: Record<string, string> = { sales: 'Ventas', inventory: 'Inventario', cashRegisters: 'Flujo de Caja' }
+
+// A small, fast model (haiku) sometimes leaves an optional-feeling field like
+// "title" out of its JSON entirely — zod's schema default then silently
+// fills in the generic "Reporte", which looks unfinished in the chat. For
+// /reports/query specifically we can always do better from the params
+// themselves (we know exactly what was asked), so a generic/missing title
+// never reaches the user even when the model was terse about it.
+function autoQueryTitle(endpoint: string, params: Record<string, string>): string {
+  if (endpoint !== '/reports/query') return 'Reporte'
+  const entityLabel = ENTITY_LABELS[params.entity ?? 'sales'] ?? 'Reporte'
+  const dim = params.groupBy && params.groupBy !== 'none' ? DIMENSION_LABELS[params.groupBy] : undefined
+  return dim ? `${entityLabel} por ${dim}` : entityLabel
+}
+
+function normalizeForReport(endpoint: string, data: unknown): NormalizedReport {
+  if (endpoint === '/reports/query') {
+    const d = data as { columns?: NormalizedReport['columns']; rows?: Record<string, unknown>[] } | null
+    return { columns: d?.columns ?? [], rows: d?.rows ?? [] }
+  }
+
+  if (endpoint === '/customers') {
+    const rows = Array.isArray(data) ? data as Record<string, unknown>[] : []
+    return {
+      columns: [
+        { key: 'name', label: 'Cliente', type: 'string' },
+        { key: 'nit', label: 'NIT', type: 'string' },
+        { key: 'purchasesCount', label: 'Compras', type: 'number' },
+        { key: 'totalPurchases', label: 'Total Comprado (Q)', type: 'currency' },
+        { key: 'lastPurchase', label: 'Última Compra', type: 'date' },
+        { key: 'creditUsed', label: 'Crédito Usado (Q)', type: 'currency' },
+      ],
+      rows,
+    }
+  }
+
+  if (endpoint === '/goals') {
+    const d = data as Record<string, unknown> | null
+    return {
+      columns: [
+        { key: 'targetAmount', label: 'Meta (Q)', type: 'currency' },
+        { key: 'currentAmount', label: 'Vendido (Q)', type: 'currency' },
+        { key: 'percent', label: 'Cumplimiento (%)', type: 'percent' },
+      ],
+      rows: d ? [d] : [],
+    }
+  }
+
+  if (endpoint === '/goals/compliance-report') {
+    const rows = Array.isArray(data) ? data as Record<string, unknown>[] : []
+    return {
+      columns: [
+        { key: 'branchName', label: 'Sucursal', type: 'string' },
+        { key: 'targetAmount', label: 'Meta (Q)', type: 'currency' },
+        { key: 'currentAmount', label: 'Vendido (Q)', type: 'currency' },
+        { key: 'percent', label: 'Cumplimiento (%)', type: 'percent' },
+      ],
+      rows,
+    }
+  }
+
+  if (endpoint === '/transfers') {
+    const rows = Array.isArray(data) ? data as Record<string, unknown>[] : []
+    return {
+      columns: [
+        { key: 'id', label: 'ID', type: 'string' },
+        { key: 'fromBranchId', label: 'Desde', type: 'string' },
+        { key: 'toBranchId', label: 'Hacia', type: 'string' },
+        { key: 'status', label: 'Estado', type: 'string' },
+      ],
+      rows,
+    }
+  }
+
+  if (endpoint === '/reports/product-rotation') {
+    const rows = Array.isArray(data) ? data as Record<string, unknown>[] : []
+    return {
+      columns: [
+        { key: 'name', label: 'Producto', type: 'string' },
+        { key: 'category', label: 'Categoría', type: 'string' },
+        { key: 'currentStock', label: 'Stock Actual', type: 'number' },
+        { key: 'salesLast30Days', label: 'Vendido (30 días)', type: 'number' },
+        { key: 'rotationIndex', label: 'Índice de Rotación', type: 'number' },
+        { key: 'daysOfInventory', label: 'Días de Inventario', type: 'number' },
+        { key: 'status', label: 'Estado', type: 'string' },
+      ],
+      rows,
+    }
+  }
+
+  if (endpoint === '/reports/sales-history') {
+    const rows = (Array.isArray(data) ? data : []).map((s: Record<string, unknown>) => ({
+      invoiceNumber: s.invoiceNumber,
+      createdAt: s.createdAt,
+      customer: (s.customer as { name?: string } | null)?.name ?? 'Consumidor Final',
+      total: Number(s.total ?? 0),
+      paymentMethod: s.paymentMethod,
+      saleType: s.saleType,
+    }))
+    return {
+      columns: [
+        { key: 'invoiceNumber', label: 'Factura', type: 'string' },
+        { key: 'createdAt', label: 'Fecha', type: 'date' },
+        { key: 'customer', label: 'Cliente', type: 'string' },
+        { key: 'total', label: 'Total (Q)', type: 'currency' },
+        { key: 'paymentMethod', label: 'Método de Pago', type: 'string' },
+        { key: 'saleType', label: 'Tipo', type: 'string' },
+      ],
+      rows,
+    }
+  }
+
+  // Unknown shape (shouldn't happen given the allowlist) — show it as a
+  // single row rather than silently nothing, so a gap here is visible.
+  if (Array.isArray(data)) return { columns: [], rows: data as Record<string, unknown>[] }
+  return { columns: [], rows: data && typeof data === 'object' ? [data as Record<string, unknown>] : [] }
 }
 
 export default async function aiRoutes(fastify: FastifyInstance) {
@@ -283,7 +479,10 @@ export default async function aiRoutes(fastify: FastifyInstance) {
   // than the general API rate limit.
   const aiRateLimit = { config: { rateLimit: { max: 20, timeWindow: 60_000 } } }
 
-  // POST /api/ai/query-report — AI interprets question, fetches data, returns visualization config + data
+  // POST /api/ai/query-report — AI interprets question, fetches data, returns
+  // { config, columns, rows } — a single uniform contract regardless of which
+  // internal tool answered the question, so the frontend never has to guess
+  // what a field means from its name.
   fastify.post('/query-report', { ...aiRateLimit, preHandler: [fastify.authenticate] }, async (request, reply) => {
     if (!hasAnyReportsPermission(request)) return reply.status(403).send({ error: 'No tienes permiso para esta acción' })
     const parsed = z.object({
@@ -296,7 +495,10 @@ export default async function aiRoutes(fastify: FastifyInstance) {
     const { question, branchId: reqBranchId, history = [] } = parsed.data
     // Non-admins can only ever query their own branch, regardless of what the client sends.
     const branchId = request.user.role === 'ADMIN' ? (reqBranchId ?? request.user.branchId ?? '') : request.user.branchId
-    const today = new Date().toISOString().slice(0, 10)
+    // Business-local date, not raw UTC — during the ~6h window where it's
+    // already a new UTC day but still "yesterday" evening in Guatemala, a
+    // plain UTC date made "ventas de hoy" silently look at the wrong day.
+    const today = toBusinessDateKey(new Date())
 
     let config: QueryConfig | null = null
     const client = await getAnthropicClient()
@@ -305,22 +507,31 @@ export default async function aiRoutes(fastify: FastifyInstance) {
       try {
         const msg = await client.messages.create({
           model: AI_MODEL,
-          max_tokens: 600,
+          max_tokens: 700,
           messages: [{ role: 'user', content: buildQueryPrompt(question, branchId, today, history) }],
         })
         const text = msg.content[0]?.type === 'text' ? msg.content[0].text : ''
         const match = text.match(/\{[\s\S]*\}/)
-        if (match) {
+        if (!match) {
+          fastify.log.warn({ question, text }, 'AI query-report: no JSON object in model response, using fallback')
+        } else {
           const raw = queryConfigSchema.safeParse(JSON.parse(match[0]))
-          if (raw.success) config = sanitizeConfig(raw.data, branchId)
+          if (!raw.success) {
+            fastify.log.warn({ question, text, issues: raw.error.flatten() }, 'AI query-report: model JSON failed schema validation, using fallback')
+          } else {
+            config = sanitizeConfig(raw.data, branchId)
+            if (!config) {
+              fastify.log.warn({ question, endpoint: raw.data.endpoint }, 'AI query-report: model picked a non-allowlisted endpoint, using fallback')
+            }
+          }
         }
       } catch (err) {
-        fastify.log.warn(err, 'AI query-report error, using fallback')
+        fastify.log.warn(err, 'AI query-report: live call threw, using fallback')
       }
     }
 
-    // Fallback: simple keyword matching (also used when the AI picks a
-    // non-allowlisted endpoint, so the request never silently fails).
+    // Fallback: keyword-driven /reports/query composition (also used when the
+    // AI picks a non-allowlisted endpoint, so the request never silently fails).
     if (!config) {
       config = sanitizeConfig(fallbackQueryConfig(question, branchId, today), branchId)
     }
@@ -338,8 +549,16 @@ export default async function aiRoutes(fastify: FastifyInstance) {
         headers: { authorization: request.headers.authorization ?? '' },
       })
 
+      if (req.statusCode >= 400) {
+        const body = JSON.parse(req.body || '{}')
+        return reply.status(req.statusCode).send({ error: body.error ?? 'Error al obtener los datos del reporte' })
+      }
+
       const data = JSON.parse(req.body)
-      return reply.send({ config, data })
+      const { columns, rows } = normalizeForReport(config.endpoint, data)
+      const title = (config.title && config.title !== 'Reporte') ? config.title : autoQueryTitle(config.endpoint, config.params)
+      const description = config.description || `Aquí está tu reporte: ${title.toLowerCase()}.`
+      return reply.send({ config: { title, description, visualization: config.visualization, intent: config.intent }, columns, rows })
     } catch (err) {
       fastify.log.error(err, 'Failed to fetch report data')
       return reply.status(500).send({ error: 'Error al obtener los datos del reporte' })
@@ -350,7 +569,7 @@ export default async function aiRoutes(fastify: FastifyInstance) {
     if (!hasAnyReportsPermission(request)) return reply.status(403).send({ error: 'No tienes permiso para esta acción' })
     const parsed = z.object({
       reportType: z.string(),
-      data: z.any(),
+      data: z.unknown(),
       context: z.string().optional(),
     }).safeParse(request.body)
 
@@ -360,7 +579,7 @@ export default async function aiRoutes(fastify: FastifyInstance) {
     const client = await getAnthropicClient()
 
     if (!client) {
-      return reply.send({ recommendations: localRules(reportType, data) })
+      return reply.send({ recommendations: localRules(reportType, data as Record<string, unknown>) })
     }
 
     try {
@@ -373,10 +592,10 @@ export default async function aiRoutes(fastify: FastifyInstance) {
       const text = msg.content[0]?.type === 'text' ? msg.content[0].text : ''
       const recommendations = parseRecommendations(text)
 
-      return reply.send({ recommendations: recommendations.length > 0 ? recommendations : localRules(reportType, data) })
+      return reply.send({ recommendations: recommendations.length > 0 ? recommendations : localRules(reportType, data as Record<string, unknown>) })
     } catch (err) {
       fastify.log.error(err, 'AI analyze error')
-      return reply.send({ recommendations: localRules(reportType, data) })
+      return reply.send({ recommendations: localRules(reportType, data as Record<string, unknown>) })
     }
   })
 }

@@ -16,14 +16,21 @@ import { useStore } from '../../contexts/StoreContext'
 
 interface ReportConfig {
   intent: string
-  endpoint: string
-  params: Record<string, string>
   visualization: 'bar' | 'line' | 'pie' | 'table'
   title: string
   description: string
-  xKey?: string
-  yKey?: string
-  columns?: string[]
+}
+
+// Columns always come from the server with an explicit label and type — the
+// backend knows exactly what each field means (it built the query), so the
+// frontend never has to guess a display name or a number format from a raw
+// key name the way it used to (that's what caused "Producto" showing up as
+// a customer-report column header, and currency/percent values rendering as
+// plain numbers).
+interface ReportColumn {
+  key: string
+  label: string
+  type: 'string' | 'number' | 'currency' | 'percent' | 'date'
 }
 
 interface SavedReport {
@@ -41,6 +48,7 @@ interface Message {
   content: string
   question?: string
   config?: ReportConfig
+  columns?: ReportColumn[]
   data?: ReportRow[]
   loading?: boolean
   error?: boolean
@@ -55,14 +63,14 @@ function timeLabel(ts: number): string {
 }
 
 /** Client-side CSV export — no backend round-trip needed, works for any report shape. */
-function downloadCsv(config: ReportConfig, data: ReportRow[]) {
-  const columns = config.columns ?? Object.keys(data[0] ?? {}).slice(0, 6)
+function downloadCsv(config: ReportConfig, columns: ReportColumn[], data: ReportRow[]) {
+  const cols = columns.length ? columns : Object.keys(data[0] ?? {}).slice(0, 6).map(key => ({ key, label: key, type: 'string' as const }))
   const escape = (v: unknown) => {
     const s = v === null || v === undefined ? '' : String(v)
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
   }
-  const header = columns.map(c => escape(formatKey(c))).join(',')
-  const rows = data.map(row => columns.map(c => escape(row[c])).join(','))
+  const header = cols.map(c => escape(c.label)).join(',')
+  const rows = data.map(row => cols.map(c => escape(row[c.key])).join(','))
   const csv = '﻿' + [header, ...rows].join('\n') // BOM so Excel opens UTF-8 (tildes, Q) correctly
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
@@ -84,53 +92,48 @@ const SUGGESTIONS = [
   '¿Cuánta ganancia generamos los últimos 30 días?',
 ]
 
-function formatKey(key: string): string {
-  const map: Record<string, string> = {
-    name: 'Producto', productName: 'Producto', quantitySold: 'Cant. Vendida',
-    revenue: 'Ingresos (Q)', cost: 'Costo (Q)', profit: 'Ganancia (Q)',
-    marginPercent: 'Margen (%)', stock: 'Stock', rotationDays: 'Días Rotación',
-    sold: 'Vendidos', quantity: 'Cantidad', minStock: 'Stock Mín.',
-    value: 'Valor (Q)', status: 'Estado', totalPurchases: 'Total Compras',
-    purchasesCount: 'Compras', lastPurchase: 'Última Compra', nit: 'NIT',
+// Formats a cell by the column's explicit server-provided type — no more
+// guessing a format from the field's name (the old formatValue keyed off
+// strings like 'revenue'/'marginPercent', which broke silently for any field
+// name it hadn't been taught). The server already knows exactly what each
+// column is because it built the query that produced it.
+function formatByType(type: ReportColumn['type'], value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—'
+  switch (type) {
+    case 'currency': return `Q${Number(value).toFixed(2)}`
+    case 'percent': return `${Number(value).toFixed(1)}%`
+    case 'number': return typeof value === 'number' ? (value % 1 === 0 ? String(value) : value.toFixed(2)) : String(value)
+    case 'date':
+      try { return new Date(value as string).toLocaleDateString('es-GT') } catch { return String(value) }
+    default: return String(value)
   }
-  return map[key] ?? key.replace(/([A-Z])/g, ' $1').trim()
 }
 
-function formatValue(key: string, value: unknown): string {
-  if (value === null || value === undefined) return '—'
-  if (typeof value === 'number') {
-    if (['revenue','cost','profit','totalPurchases','value'].includes(key))
-      return `Q${Number(value).toFixed(2)}`
-    if (key === 'marginPercent') return `${Number(value).toFixed(1)}%`
-    return Number(value) % 1 === 0 ? String(value) : Number(value).toFixed(2)
-  }
-  if (key === 'lastPurchase' && typeof value === 'string') {
-    try { return new Date(value).toLocaleDateString('es-GT') } catch { return value }
-  }
-  return String(value)
-}
-
-function ReportVisualizer({ config, data }: { config: ReportConfig; data: ReportRow[] }) {
-  if (!data || data.length === 0) {
+function ReportVisualizer({ config, columns, data }: { config: ReportConfig; columns: ReportColumn[]; data: ReportRow[] }) {
+  if (!data || data.length === 0 || columns.length === 0) {
     return <div className="text-center py-12 text-gray-400 text-sm">Sin datos para mostrar</div>
   }
 
-  const xKey = config.xKey ?? Object.keys(data[0])[0]
-  const yKey = config.yKey ?? Object.keys(data[0]).find(k => typeof data[0][k] === 'number') ?? Object.keys(data[0])[1]
-  const columns = config.columns ?? Object.keys(data[0]).slice(0, 6)
+  // First column is always the dimension/label (e.g. "group" from
+  // /reports/query, or "name" from /customers) — first numeric-ish column
+  // after it is what gets charted. Both come straight from the server's own
+  // column metadata, never inferred from the data itself.
+  const labelCol = columns[0]!
+  const valueCol = columns.find((c, i) => i > 0 && (c.type === 'currency' || c.type === 'number' || c.type === 'percent')) ?? columns[1] ?? labelCol
+  const tooltipFormat = (v: number | string) => [formatByType(valueCol.type, Number(v))]
 
   if (config.visualization === 'table' || data.length > 20) {
     return (
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
-            <tr>{columns.map(c => <th key={c} className="text-left px-3 py-2 font-medium text-gray-600">{formatKey(c)}</th>)}</tr>
+            <tr>{columns.map(c => <th key={c.key} className="text-left px-3 py-2 font-medium text-gray-600">{c.label}</th>)}</tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {data.slice(0, 50).map((row, i) => (
               <tr key={i} className="hover:bg-gray-50">
                 {columns.map(c => (
-                  <td key={c} className="px-3 py-2 text-gray-700">{formatValue(c, row[c])}</td>
+                  <td key={c.key} className="px-3 py-2 text-gray-700">{formatByType(c.type, row[c.key])}</td>
                 ))}
               </tr>
             ))}
@@ -143,8 +146,8 @@ function ReportVisualizer({ config, data }: { config: ReportConfig; data: Report
 
   if (config.visualization === 'pie') {
     const pieData = data.slice(0, 8).map(row => ({
-      name: String(row[xKey] ?? '').slice(0, 25),
-      value: Number(row[yKey] ?? 0),
+      name: String(row[labelCol.key] ?? '').slice(0, 25),
+      value: Number(row[valueCol.key] ?? 0),
     }))
     return (
       <ResponsiveContainer width="100%" height={280}>
@@ -152,15 +155,15 @@ function ReportVisualizer({ config, data }: { config: ReportConfig; data: Report
           <Pie data={pieData} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
             {pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
           </Pie>
-          <Tooltip formatter={(v: number | string) => [`Q${Number(v).toFixed(2)}`]} />
+          <Tooltip formatter={tooltipFormat} />
         </PieChart>
       </ResponsiveContainer>
     )
   }
 
   const chartData = data.slice(0, 15).map(row => ({
-    name: String(row[xKey] ?? '').slice(0, 20),
-    value: Number(row[yKey] ?? 0),
+    name: String(row[labelCol.key] ?? '').slice(0, 20),
+    value: Number(row[valueCol.key] ?? 0),
   }))
 
   if (config.visualization === 'line') {
@@ -170,7 +173,7 @@ function ReportVisualizer({ config, data }: { config: ReportConfig; data: Report
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis dataKey="name" tick={{ fontSize: 11 }} />
           <YAxis tick={{ fontSize: 11 }} />
-          <Tooltip formatter={(v: number | string) => [`Q${Number(v).toFixed(2)}`]} />
+          <Tooltip formatter={tooltipFormat} />
           <Line type="monotone" dataKey="value" stroke="#6366F1" strokeWidth={2} dot={false} />
         </LineChart>
       </ResponsiveContainer>
@@ -183,7 +186,7 @@ function ReportVisualizer({ config, data }: { config: ReportConfig; data: Report
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
         <XAxis type="number" tick={{ fontSize: 11 }} />
         <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 11 }} />
-        <Tooltip formatter={(v: number | string) => [`Q${Number(v).toFixed(2)}`]} />
+        <Tooltip formatter={tooltipFormat} />
         <Bar dataKey="value" radius={[0, 4, 4, 0]}>
           {chartData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
         </Bar>
@@ -234,21 +237,22 @@ export default function CustomReports() {
     setLoading(true)
 
     try {
-      const result = await api.post<{ config: ReportConfig; data: unknown }>('/api/ai/query-report', {
+      // The backend already returns one uniform shape no matter which
+      // internal tool answered the question — {config, columns, rows} — so
+      // there's no guessing/unwrapping left to do here at all.
+      const result = await api.post<{ config: ReportConfig; columns: ReportColumn[]; rows: ReportRow[] }>('/api/ai/query-report', {
         question,
         branchId,
         history,
       })
-
-      const rawData = result.data as ReportRow[] | Record<string, ReportRow[]> | null | undefined
-      const rows = Array.isArray(rawData) ? rawData : (rawData?.items ?? rawData?.products ?? rawData?.customers ?? [])
 
       const assistantMsg: Message = {
         role: 'assistant',
         content: result.config.description,
         question,
         config: result.config,
-        data: rows,
+        columns: result.columns ?? [],
+        data: result.rows ?? [],
         timestamp: Date.now(),
       }
 
@@ -385,7 +389,7 @@ export default function CustomReports() {
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <button
-                            onClick={() => downloadCsv(msg.config!, msg.data!)}
+                            onClick={() => downloadCsv(msg.config!, msg.columns ?? [], msg.data!)}
                             disabled={msg.data.length === 0}
                             className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             title="Exportar a CSV"
@@ -401,7 +405,7 @@ export default function CustomReports() {
                         </div>
                       </div>
                       <div className="p-4">
-                        <ReportVisualizer config={msg.config} data={msg.data} />
+                        <ReportVisualizer config={msg.config} columns={msg.columns ?? []} data={msg.data} />
                       </div>
                     </motion.div>
                   )}

@@ -58,6 +58,20 @@ export function getBusinessHour(at: Date): number {
   return shifted.getUTCHours()
 }
 
+/** The Monday (YYYY-MM-DD, business-local) of the week containing `at` — use for grouping sales by week. */
+export function toBusinessWeekKey(at: Date): string {
+  const dayKey = toBusinessDateKey(at)
+  const d = new Date(`${dayKey}T00:00:00Z`)
+  const dow = d.getUTCDay() // 0=Sun..6=Sat
+  d.setUTCDate(d.getUTCDate() - (dow === 0 ? 6 : dow - 1))
+  return d.toISOString().slice(0, 10)
+}
+
+/** The business-local YYYY-MM for a given instant — use for grouping sales by month. */
+export function toBusinessMonthKey(at: Date): string {
+  return toBusinessDateKey(at).slice(0, 7)
+}
+
 /** The business's local minutes-since-midnight (0-1439) for a given instant — used to compare against an "HH:mm" role login-schedule window. */
 export function getBusinessTimeMinutes(at: Date = new Date()): number {
   const shifted = new Date(at.getTime() + BUSINESS_UTC_OFFSET_HOURS * 3_600_000)

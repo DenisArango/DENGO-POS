@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import ProductModal from '../components/products/ProductModal'
 import { api } from '../lib/api'
 import { usePermissions } from '../hooks/usePermissions'
+import { useAuthStore } from '../store'
 
 interface Category {
   id: string
@@ -48,6 +49,7 @@ interface Product {
 
 export default function Products() {
   const { hasPermission } = usePermissions()
+  const isAdmin = useAuthStore(s => s.user?.role === 'ADMIN')
   const canCreate = hasPermission('inventory.create')
   const canEdit = hasPermission('inventory.edit')
   const canDelete = hasPermission('inventory.delete')
@@ -73,6 +75,9 @@ export default function Products() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkCategoryId, setBulkCategoryId] = useState('')
   const [bulkSaving, setBulkSaving] = useState(false)
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [creatingCategory, setCreatingCategory] = useState(false)
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'duplicate'>('create')
   const [showFilters, setShowFilters] = useState(false)
   const [page, setPage] = useState(1)
@@ -265,6 +270,23 @@ export default function Products() {
     }
   }
 
+  async function handleCreateCategoryInline() {
+    if (!newCategoryName.trim()) return
+    setCreatingCategory(true)
+    try {
+      const created = await api.post<Category>('/api/categories', { name: newCategoryName.trim() })
+      setCategories(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
+      setBulkCategoryId(created.id)
+      setShowNewCategoryInput(false)
+      setNewCategoryName('')
+      toast.success('Categoría creada')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al crear categoría')
+    } finally {
+      setCreatingCategory(false)
+    }
+  }
+
   if (loading && !hasLoadedOnce) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
@@ -419,14 +441,38 @@ export default function Products() {
       {canEdit && viewMode === 'list' && selectedIds.size > 0 && (
         <div className="bg-primary-50 border border-primary-200 rounded-lg p-3 flex flex-wrap items-center gap-3">
           <span className="text-sm font-medium text-primary-800">{selectedIds.size} producto(s) seleccionado(s)</span>
-          <select value={bulkCategoryId} onChange={e => setBulkCategoryId(e.target.value)} className="input text-sm py-1.5">
-            <option value="">Reasignar a categoría...</option>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <button onClick={handleBulkReassign} disabled={!bulkCategoryId || bulkSaving} className="btn-primary btn-sm disabled:opacity-50">
-            {bulkSaving ? 'Reasignando...' : 'Reasignar'}
-          </button>
-          <button onClick={() => setSelectedIds(new Set())} className="text-sm text-gray-500 hover:text-gray-700">Cancelar selección</button>
+          {showNewCategoryInput ? (
+            <>
+              <input
+                value={newCategoryName}
+                onChange={e => setNewCategoryName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleCreateCategoryInline()}
+                placeholder="Nombre de la nueva categoría"
+                className="input text-sm py-1.5"
+                autoFocus
+              />
+              <button onClick={handleCreateCategoryInline} disabled={!newCategoryName.trim() || creatingCategory} className="btn-primary btn-sm disabled:opacity-50">
+                {creatingCategory ? 'Creando...' : 'Crear'}
+              </button>
+              <button onClick={() => { setShowNewCategoryInput(false); setNewCategoryName('') }} className="text-sm text-gray-500 hover:text-gray-700">Cancelar</button>
+            </>
+          ) : (
+            <>
+              <select
+                value={bulkCategoryId}
+                onChange={e => e.target.value === '__new__' ? setShowNewCategoryInput(true) : setBulkCategoryId(e.target.value)}
+                className="input text-sm py-1.5"
+              >
+                <option value="">Reasignar a categoría...</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {isAdmin && <option value="__new__">+ Crear nueva categoría...</option>}
+              </select>
+              <button onClick={handleBulkReassign} disabled={!bulkCategoryId || bulkSaving} className="btn-primary btn-sm disabled:opacity-50">
+                {bulkSaving ? 'Reasignando...' : 'Reasignar'}
+              </button>
+              <button onClick={() => setSelectedIds(new Set())} className="text-sm text-gray-500 hover:text-gray-700">Cancelar selección</button>
+            </>
+          )}
         </div>
       )}
 

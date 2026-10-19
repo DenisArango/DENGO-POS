@@ -42,6 +42,7 @@ interface Product {
   cost?: number
   isActive?: boolean
   variations?: ProductVariation[]
+  imageUrl?: string
 }
 
 interface TransferItem {
@@ -615,9 +616,18 @@ export default function StoreTransfers() {
                       onMouseDown={() => handleSelectProduct(p)}
                       className="px-3 py-2.5 hover:bg-primary-50 cursor-pointer flex items-center justify-between"
                     >
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">{p.fullName ?? p.name}</p>
-                        <p className="text-xs text-gray-400">{p.barcode ?? p.sku ?? p.id}</p>
+                      <div className="flex items-center gap-3 min-w-0">
+                        {p.imageUrl ? (
+                          <img src={p.imageUrl} alt="" className="w-9 h-9 rounded object-cover flex-shrink-0 border border-gray-100" />
+                        ) : (
+                          <div className="w-9 h-9 rounded bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                            <Package size={16} className="text-gray-300" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{p.fullName ?? p.name}</p>
+                          <p className="text-xs text-gray-400">{p.barcode ?? p.sku ?? p.id}</p>
+                        </div>
                       </div>
                       {hasVariationChoice(p) && (
                         <span className="text-xs text-blue-500 ml-3 flex-shrink-0">{p.variations!.length} variante{p.variations!.length !== 1 ? 's' : ''}</span>

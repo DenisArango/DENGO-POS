@@ -68,6 +68,7 @@ interface ProductOption {
   basePrice?: number
   isActive?: boolean
   variations?: ProductVariation[]
+  imageUrl?: string
 }
 
 interface IntakeItem {
@@ -716,9 +717,18 @@ export default function Purchases() {
                       onMouseDown={() => handleSelectProduct(p)}
                       className="px-3 py-2.5 hover:bg-primary-50 cursor-pointer flex items-center justify-between"
                     >
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">{p.fullName ?? p.name}</p>
-                        <p className="text-xs text-gray-400">{p.barcode ?? p.sku}</p>
+                      <div className="flex items-center gap-3 min-w-0">
+                        {p.imageUrl ? (
+                          <img src={p.imageUrl} alt="" className="w-9 h-9 rounded object-cover flex-shrink-0 border border-gray-100" />
+                        ) : (
+                          <div className="w-9 h-9 rounded bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                            <Package size={16} className="text-gray-300" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{p.fullName ?? p.name}</p>
+                          <p className="text-xs text-gray-400">{p.barcode ?? p.sku}</p>
+                        </div>
                       </div>
                       <div className="text-right flex-shrink-0 ml-3">
                         <p className="text-sm font-semibold text-gray-700">Q{Number(p.cost ?? 0).toFixed(2)}</p>

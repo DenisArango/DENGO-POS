@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Printer, Trash2, Save, Search, X,
-  CheckCircle, AlertTriangle, Receipt
+  CheckCircle, AlertTriangle, Receipt, Package
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -375,12 +375,30 @@ export default function SaleDetail() {
                       {vars.length <= 1 ? (
                         <button onMouseDown={() => addProduct(p, vars[0])}
                           className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-primary-50 text-left text-sm">
-                          <span className="font-medium text-gray-800">{p.name}</span>
-                          <span className="text-primary-600 font-bold ml-4">Q{Number(p.basePrice).toFixed(2)}</span>
+                          <span className="flex items-center gap-3 min-w-0">
+                            {p.imageUrl ? (
+                              <img src={p.imageUrl} alt="" className="w-9 h-9 rounded object-cover flex-shrink-0 border border-gray-100" />
+                            ) : (
+                              <span className="w-9 h-9 rounded bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                                <Package size={16} className="text-gray-300" />
+                              </span>
+                            )}
+                            <span className="font-medium text-gray-800 truncate">{p.name}</span>
+                          </span>
+                          <span className="text-primary-600 font-bold ml-4 flex-shrink-0">Q{Number(p.basePrice).toFixed(2)}</span>
                         </button>
                       ) : (
                         <div className="px-4 py-2">
-                          <p className="text-xs font-semibold text-gray-500 mb-1">{p.name}</p>
+                          <p className="text-xs font-semibold text-gray-500 mb-1 flex items-center gap-2">
+                            {p.imageUrl ? (
+                              <img src={p.imageUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0 border border-gray-100" />
+                            ) : (
+                              <span className="w-6 h-6 rounded bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                                <Package size={12} className="text-gray-300" />
+                              </span>
+                            )}
+                            {p.name}
+                          </p>
                           <div className="grid grid-cols-2 gap-1">
                             {vars.map((v: any) => (
                               <button key={v.id} onMouseDown={() => addProduct(p, v)}

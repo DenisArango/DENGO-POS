@@ -52,11 +52,35 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   })
 
-  // Rate limiting
+  // Rate limiting — keyed by the bearer token (one bucket per logged-in
+  // session), not by IP. Several cashier devices in the same store normally
+  // share one router/public IP (NAT), so the default IP-based key lumped
+  // ALL of them into a single shared bucket: background polling alone
+  // (unread messages, portal orders, notifications, offline-sync — each
+  // every 30-60s) plus a few people navigating between pages around the
+  // same time was enough to exhaust it, after which EVERY device at that
+  // store got 429s simultaneously, for everything, until the window reset —
+  // this is what the client saw as a sudden wave of unrelated endpoints all
+  // failing at once. Falls back to IP only for unauthenticated requests
+  // (login, the public /api/license check) where there's no token yet.
   await fastify.register(rateLimit, {
     max: config.rateLimit.max,
     timeWindow: config.rateLimit.windowMs,
-    errorResponseBuilder: () => ({ error: 'Demasiadas solicitudes. Intenta más tarde.' }),
+    keyGenerator: (request) => request.headers.authorization ?? request.ip,
+    // Must return a real Error with .statusCode set (429, matching the
+    // library's own default — see its defaultErrorResponse) — the previous
+    // version returned a plain {error: string} object, which has no
+    // .statusCode. The global error handler below then fell through to its
+    // `?? 500` fallback for EVERY rate-limited request, so a client hitting
+    // the limit got a genuine HTTP 500 (and this handler's 500 branch
+    // discards the real message too) instead of 429 — indistinguishable
+    // from an actual server crash, both to the browser console and to
+    // anyone debugging from it.
+    errorResponseBuilder: (_request, context) => {
+      const err = new Error('Demasiadas solicitudes. Intenta más tarde.')
+      ;(err as Error & { statusCode: number }).statusCode = context.statusCode
+      return err
+    },
   })
 
   // Auth (JWT + authenticate decorator)

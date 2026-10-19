@@ -55,6 +55,19 @@ const createSaleSchema = z.object({
   { message: 'La suma de cashAmount + cardAmount + transferAmount debe ser igual al total en una venta mixta', path: ['paymentMethod'] },
 )
 
+// A sale item's quantity is in the VARIATION's own unit ("1 caja"), but stock
+// is tracked in the product's base unit — every item's actual stock impact is
+// quantity * variation.conversionFactor (e.g. 1 caja of 6 = 6 base units).
+// The request body only carries variationId (never a client-sent
+// conversionFactor — that would be trivially spoofable), so it has to be
+// looked up here before touching Inventory.
+async function getConversionFactors(variationIds: (string | undefined)[]): Promise<Map<string, number>> {
+  const ids = [...new Set(variationIds.filter((id): id is string => !!id))]
+  if (ids.length === 0) return new Map()
+  const variations = await prisma.productVariation.findMany({ where: { id: { in: ids } }, select: { id: true, conversionFactor: true } })
+  return new Map(variations.map(v => [v.id, Number(v.conversionFactor)]))
+}
+
 // Base include — uses only columns guaranteed to exist (pre-migration).
 // Fields added in migration_v2 (cashRegister.name/registerNumber, creditPayments)
 // are fetched separately to avoid crashing when Prisma client hasn't been regenerated yet.
@@ -299,16 +312,20 @@ export default async function salesRoutes(fastify: FastifyInstance) {
       include: { product: { select: { name: true } } },
     })
     const stockByProduct = new Map(inventoryRows.map(inv => [inv.productId, { qty: Number(inv.quantity), name: inv.product.name }]))
+    const checkConvFactors = await getConversionFactors(data.items.map(i => i.variationId))
     for (const item of data.items) {
+      const convFactor = item.variationId ? (checkConvFactors.get(item.variationId) ?? 1) : 1
+      const effectiveQty = item.quantity * convFactor
+      const qtyLabel = convFactor !== 1 ? `${item.quantity} (${effectiveQty} unidades base)` : String(item.quantity)
       const stock = stockByProduct.get(item.productId)
       const available = stock?.qty ?? 0
-      if (available < item.quantity) {
+      if (available < effectiveQty) {
         if (!isOfflineReplay) {
           return reply.status(400).send({
-            error: `Stock insuficiente de "${stock?.name ?? item.productId}": disponible ${available}, solicitado ${item.quantity}`,
+            error: `Stock insuficiente de "${stock?.name ?? item.productId}": disponible ${available}, solicitado ${qtyLabel}`,
           })
         }
-        offlineDiscrepancies.push(`Stock de "${stock?.name ?? item.productId}" quedó en descubierto (disponible ${available}, vendido ${item.quantity})`)
+        offlineDiscrepancies.push(`Stock de "${stock?.name ?? item.productId}" quedó en descubierto (disponible ${available}, vendido ${qtyLabel})`)
       }
     }
 
@@ -446,8 +463,14 @@ export default async function salesRoutes(fastify: FastifyInstance) {
       return created
     })
 
-    for (const item of data.items) {
-      await updateStock(item.productId, data.branchId, -item.quantity, {
+    // tx.sale.create's return type doesn't carry the `include: saleInclude`
+    // shape through strict-mode inference (a pre-existing Prisma/TS friction
+    // point in this file, same as the Exact<...> baseline errors around it)
+    // — cast here rather than fight that, consistent with enrichSale's own
+    // `any` usage elsewhere in this file for the same underlying issue.
+    for (const item of (sale as any).items) {
+      const convFactor = Number(item.variation?.conversionFactor ?? 1)
+      await updateStock(item.productId, data.branchId, -(Number(item.quantity) * convFactor), {
         type: 'SALE',
         performedById: request.user.id,
         referenceId: sale.id,
@@ -518,7 +541,10 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
 
-    const existing = await prisma.sale.findUnique({ where: { id }, include: { items: true, creditPayments: true } })
+    const existing = await prisma.sale.findUnique({
+      where: { id },
+      include: { items: { include: { variation: { select: { conversionFactor: true } } } }, creditPayments: true },
+    })
     if (!existing) return reply.status(404).send({ error: 'Venta no encontrada' })
     if (existing.isVoided) return reply.status(400).send({ error: 'No se puede editar una venta anulada' })
 
@@ -550,7 +576,8 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     // before and after the DB transaction instead.
     if (newItems) {
       for (const oldItem of existing.items) {
-        await updateStock(oldItem.productId, existing.branchId, Number(oldItem.quantity), {
+        const convFactor = Number(oldItem.variation?.conversionFactor ?? 1)
+        await updateStock(oldItem.productId, existing.branchId, Number(oldItem.quantity) * convFactor, {
           type: 'RETURN',
           performedById: request.user.id,
           referenceId: id,
@@ -594,8 +621,10 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     })
 
     if (newItems) {
+      const editConvFactors = await getConversionFactors(newItems.map(i => i.variationId))
       for (const item of newItems) {
-        await updateStock(item.productId, existing.branchId, -item.quantity, {
+        const convFactor = item.variationId ? (editConvFactors.get(item.variationId) ?? 1) : 1
+        await updateStock(item.productId, existing.branchId, -(item.quantity * convFactor), {
           type: 'SALE',
           performedById: request.user.id,
           referenceId: id,
@@ -657,7 +686,10 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     const body = z.object({ reason: z.string().optional() }).safeParse(request.body ?? {})
     const reason = body.success ? body.data.reason : undefined
 
-    const sale = await prisma.sale.findUnique({ where: { id }, include: { items: true } })
+    const sale = await prisma.sale.findUnique({
+      where: { id },
+      include: { items: { include: { variation: { select: { conversionFactor: true } } } } },
+    })
     if (!sale) return reply.status(404).send({ error: 'Venta no encontrada' })
     if (sale.isVoided) return reply.status(400).send({ error: 'La venta ya fue anulada' })
 
@@ -672,7 +704,8 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     })
 
     for (const item of sale.items) {
-      await updateStock(item.productId, sale.branchId, Number(item.quantity), {
+      const convFactor = Number(item.variation?.conversionFactor ?? 1)
+      await updateStock(item.productId, sale.branchId, Number(item.quantity) * convFactor, {
         type: 'RETURN',
         performedById: request.user.id,
         referenceId: id,

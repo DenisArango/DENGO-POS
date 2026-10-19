@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Package, Plus, Search, Edit, Trash2,
   Grid, List, Filter, ChevronDown,
-  AlertTriangle, Copy, DollarSign, Archive
+  AlertTriangle, Copy, DollarSign, Archive, RotateCcw
 } from 'lucide-react'
 import { toast } from 'sonner'
 import ProductModal from '../components/products/ProductModal'
@@ -68,6 +68,7 @@ export default function Products() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
   const [showProductModal, setShowProductModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<any>(null)
   // Bulk category reassignment — select several products (list view) and
@@ -91,13 +92,14 @@ export default function Products() {
     return () => clearTimeout(t)
   }, [searchTerm])
 
-  useEffect(() => { setPage(1) }, [selectedCategory])
+  useEffect(() => { setPage(1) }, [selectedCategory, showInactive])
 
   const fetchProducts = () => {
     setLoading(true)
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
     if (debouncedSearch) params.set('search', debouncedSearch)
     if (selectedCategory) params.set('categoryId', selectedCategory)
+    if (showInactive) params.set('isActive', 'false')
     Promise.all([
       api.get<{ data: Product[]; total: number; stats: { total: number; lowStock: number; outOfStock: number; totalValue: number } }>(`/api/products?${params}`),
       api.get<Category[]>('/api/categories'),
@@ -133,7 +135,7 @@ export default function Products() {
       .finally(() => { setLoading(false); setHasLoadedOnce(true) })
   }
 
-  useEffect(() => { fetchProducts() }, [page, debouncedSearch, selectedCategory])
+  useEffect(() => { fetchProducts() }, [page, debouncedSearch, selectedCategory, showInactive])
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
@@ -191,7 +193,7 @@ export default function Products() {
           setEditingProduct(null)
           fetchProducts()
         })
-        .catch(e => toast.error(e.message))
+        .catch(e => showSaveError(e))
     } else {
       api.post('/api/products', payload)
         .then(() => {
@@ -200,7 +202,26 @@ export default function Products() {
           setEditingProduct(null)
           fetchProducts()
         })
-        .catch(e => toast.error(e.message))
+        .catch(e => showSaveError(e))
+    }
+  }
+
+  // A barcode collision against a DELETED product (see products.ts's
+  // barcodeConflictResponse) names the existing product — offer reactivating
+  // it right from the error instead of just showing the message and leaving
+  // the person to go find it themselves in "Mostrar eliminados".
+  const showSaveError = (e: unknown) => {
+    const message = e instanceof Error ? e.message : 'Error al guardar'
+    const conflict = (e as { data?: { conflictingProduct?: { id: string; name: string } } })?.data?.conflictingProduct
+    if (conflict) {
+      toast.error(message, {
+        action: {
+          label: 'Reactivar',
+          onClick: () => handleReactivateProduct({ id: conflict.id, name: conflict.name }),
+        },
+      })
+    } else {
+      toast.error(message)
     }
   }
 
@@ -233,6 +254,17 @@ export default function Products() {
     api.delete(`/api/products/${product.id}${clearInventory ? '?clearInventory=true' : ''}`)
       .then(() => {
         toast.success('Producto eliminado exitosamente')
+        fetchProducts()
+      })
+      .catch(e => toast.error(e.message))
+  }
+
+  const handleReactivateProduct = (product: any) => {
+    const name = product.fullName ?? product.name
+    if (!confirm(`¿Reactivar "${name}"? Volverá a aparecer en ventas y búsquedas con su código de barras original.`)) return
+    api.post(`/api/products/${product.id}/reactivate`, {})
+      .then(() => {
+        toast.success('Producto reactivado')
         fetchProducts()
       })
       .catch(e => toast.error(e.message))
@@ -432,6 +464,12 @@ export default function Products() {
                   </button>
                 ))}
               </div>
+              {canDelete && (
+                <label className="flex items-center gap-2 mt-3 pt-3 border-t text-sm text-gray-600 cursor-pointer w-fit">
+                  <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="rounded" />
+                  Mostrar eliminados (para poder reactivarlos)
+                </label>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -574,7 +612,12 @@ export default function Products() {
                     )}
                     <td className="py-3 px-4">
                       <div>
-                        <p className="font-medium text-gray-800">{product.fullName ?? product.name}</p>
+                        <p className="font-medium text-gray-800 flex items-center gap-2">
+                          {product.fullName ?? product.name}
+                          {product.isActive === false && (
+                            <span className="text-[10px] font-semibold bg-red-100 text-red-700 px-1.5 py-0.5 rounded">ELIMINADO</span>
+                          )}
+                        </p>
                         <p className="text-xs text-gray-500">{product.barcode}</p>
                       </div>
                     </td>
@@ -595,32 +638,46 @@ export default function Products() {
                     <td className="py-3 px-4 text-center">{product.variations.length}</td>
                     <td className="py-3 px-4">
                       <div className="flex justify-center gap-2">
-                        {canEdit && (
-                          <button
-                            onClick={() => handleEditProduct(product)}
-                            className="p-1 hover:bg-gray-100 rounded transition-colors"
-                            title="Editar producto"
-                          >
-                            <Edit size={16} className="text-gray-600" />
-                          </button>
-                        )}
-                        {canCreate && (
-                          <button
-                            onClick={() => handleDuplicateProduct(product)}
-                            className="p-1 hover:bg-gray-100 rounded transition-colors"
-                            title="Duplicar producto"
-                          >
-                            <Copy size={16} className="text-gray-600" />
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button
-                            onClick={() => handleDeleteProduct(product)}
-                            className="p-1 hover:bg-gray-100 rounded transition-colors"
-                            title="Eliminar producto"
-                          >
-                            <Trash2 size={16} className="text-red-600" />
-                          </button>
+                        {product.isActive === false ? (
+                          canDelete && (
+                            <button
+                              onClick={() => handleReactivateProduct(product)}
+                              className="p-1 hover:bg-green-50 rounded transition-colors"
+                              title="Reactivar producto"
+                            >
+                              <RotateCcw size={16} className="text-green-600" />
+                            </button>
+                          )
+                        ) : (
+                          <>
+                            {canEdit && (
+                              <button
+                                onClick={() => handleEditProduct(product)}
+                                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                title="Editar producto"
+                              >
+                                <Edit size={16} className="text-gray-600" />
+                              </button>
+                            )}
+                            {canCreate && (
+                              <button
+                                onClick={() => handleDuplicateProduct(product)}
+                                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                title="Duplicar producto"
+                              >
+                                <Copy size={16} className="text-gray-600" />
+                              </button>
+                            )}
+                            {canDelete && (
+                              <button
+                                onClick={() => handleDeleteProduct(product)}
+                                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                title="Eliminar producto"
+                              >
+                                <Trash2 size={16} className="text-red-600" />
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>

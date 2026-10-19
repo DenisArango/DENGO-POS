@@ -9,10 +9,16 @@ const BASE_URL = import.meta.env.VITE_API_URL as string
 // check across the app; `status` is purely additive.
 export class ApiError extends Error {
   status: number
-  constructor(message: string, status: number) {
+  // The raw parsed response body — most callers only ever need `.message`,
+  // but a few 409s carry extra structured info beyond the error string (e.g.
+  // products.ts's barcode conflict names the existing product so the UI can
+  // offer "reactivar" instead of just showing the error text).
+  data?: unknown
+  constructor(message: string, status: number, data?: unknown) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.data = data
   }
 }
 
@@ -104,7 +110,7 @@ async function apiFetch<T = unknown>(
 
   if (!res.ok) {
     const msg = (data as Record<string, string>)?.error ?? `Error ${res.status}`
-    throw new ApiError(msg, res.status)
+    throw new ApiError(msg, res.status, data)
   }
 
   return data as T

@@ -38,6 +38,26 @@ const include = {
   altBarcodes: true,
 }
 
+// On a barcode P2002, tells the caller WHY it collided — if the existing
+// holder is inactive (deleted), the real fix is usually reactivating it
+// instead of creating a lookalike duplicate that starts over with no history.
+async function findBarcodeHolder(barcode: string | undefined | null, excludeId?: string) {
+  if (!barcode) return null
+  return prisma.product.findFirst({
+    where: { barcode, ...(excludeId ? { id: { not: excludeId } } : {}) },
+    select: { id: true, name: true, isActive: true },
+  })
+}
+function barcodeConflictResponse(holder: { id: string; name: string; isActive: boolean } | null) {
+  if (holder && !holder.isActive) {
+    return {
+      error: `El código de barras ya le pertenece a "${holder.name}", que está eliminado. Puedes reactivarlo en vez de crear uno nuevo.`,
+      conflictingProduct: { id: holder.id, name: holder.name, isActive: false },
+    }
+  }
+  return { error: 'El código de barras ya está registrado' }
+}
+
 export default async function productRoutes(fastify: FastifyInstance) {
   // GET /api/products
   fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
@@ -194,7 +214,10 @@ export default async function productRoutes(fastify: FastifyInstance) {
       await log({ userId: request.user.id, action: 'CREATE', entity: 'Product', entityId: product.id, newValues: productData })
       return reply.status(201).send(product)
     } catch (err: any) {
-      if (err.code === 'P2002') return reply.status(409).send({ error: 'El código de barras ya está registrado' })
+      if (err.code === 'P2002') {
+        const holder = await findBarcodeHolder(body.data.barcode)
+        return reply.status(409).send(barcodeConflictResponse(holder))
+      }
       throw err
     }
   })
@@ -300,6 +323,10 @@ export default async function productRoutes(fastify: FastifyInstance) {
       if (err.code === 'P2003') {
         return reply.status(409).send({ error: 'No se puede eliminar esta variante porque ya tiene ventas o cotizaciones asociadas' })
       }
+      if (err.code === 'P2002') {
+        const holder = await findBarcodeHolder(productData.barcode, id)
+        return reply.status(409).send(barcodeConflictResponse(holder))
+      }
       throw err
     }
   })
@@ -316,6 +343,12 @@ export default async function productRoutes(fastify: FastifyInstance) {
     const { clearInventory } = request.query as { clearInventory?: string }
     if (!hasPermission(request, 'inventory.delete')) return reply.status(403).send({ error: 'Acceso denegado' })
     try {
+      // Deliberately keeps the barcode — a deleted product can be reactivated
+      // (see POST /:id/reactivate below) and should come back exactly as it
+      // was, including its original code, not needing it re-typed. A barcode
+      // collision against an inactive product is handled at create/edit time
+      // instead (see the P2002 handler below), by pointing the user at
+      // reactivating the existing one rather than silently freeing it here.
       await prisma.product.update({ where: { id }, data: { isActive: false } })
 
       if (clearInventory === 'true') {
@@ -334,6 +367,39 @@ export default async function productRoutes(fastify: FastifyInstance) {
     } catch {
       return reply.status(404).send({ error: 'Producto no encontrado' })
     }
+  })
+
+  // POST /api/products/:id/reactivate — undo a delete. Same permission as
+  // delete itself (undoing it is the same tier of action). Inventory is
+  // never touched here, even if the delete zeroed it with ?clearInventory —
+  // that was an explicit, separate choice, not something reactivating should
+  // silently reverse.
+  fastify.post('/:id/reactivate', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    if (!hasPermission(request, 'inventory.delete')) return reply.status(403).send({ error: 'Acceso denegado' })
+
+    const existing = await prisma.product.findUnique({ where: { id }, select: { isActive: true, barcode: true } })
+    if (!existing) return reply.status(404).send({ error: 'Producto no encontrado' })
+    if (existing.isActive) return reply.status(400).send({ error: 'Este producto ya está activo' })
+
+    // The barcode could have been handed to a different, genuinely new
+    // active product in the meantime — reactivating would just re-collide,
+    // so this needs to be a clear, actionable error instead of a raw P2002.
+    if (existing.barcode) {
+      const activeHolder = await prisma.product.findFirst({
+        where: { barcode: existing.barcode, id: { not: id }, isActive: true },
+        select: { name: true },
+      })
+      if (activeHolder) {
+        return reply.status(409).send({
+          error: `No se puede reactivar: el código de barras "${existing.barcode}" ahora lo usa "${activeHolder.name}". Cambia el código de uno de los dos productos primero.`,
+        })
+      }
+    }
+
+    const product = await prisma.product.update({ where: { id }, data: { isActive: true }, include })
+    await log({ userId: request.user.id, action: 'UPDATE', entity: 'Product', entityId: id, newValues: { isActive: true, note: 'Producto reactivado' } })
+    return reply.send(product)
   })
 
   // ── Alternate barcodes ────────────────────────────────────────────────────

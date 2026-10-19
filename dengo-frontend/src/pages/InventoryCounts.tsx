@@ -93,24 +93,50 @@ export default function InventoryCounts() {
 
   const fetchCounts = () => {
     setLoading(true)
-    api.get<{ data: Count[] }>('/api/inventory-counts?limit=30')
-      .then(res => setCounts(res.data ?? []))
-      .catch(e => toast.error(e.message))
+    return api.get<{ data: Count[] }>('/api/inventory-counts?limit=30')
+      .then(res => { setCounts(res.data ?? []); return res.data ?? [] })
+      .catch(e => { toast.error(e.message); return [] as Count[] })
       .finally(() => setLoading(false))
   }
   useEffect(() => { fetchCounts() }, [])
-
-  // The "Nueva Tarea de Conteo" button in Inventario links here with ?new=1
-  // so it drops straight into the create form instead of the list.
-  useEffect(() => {
-    if (searchParams.get('new') === '1') { setActiveCount(null); setView('take') }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   function openExistingCount(count: Count) {
     setActiveCount(count)
     setView('take')
   }
+
+  // Starting "a new count" for a branch that already has one IN_PROGRESS
+  // just reopens that one instead — before this, leaving mid-count (to ring
+  // up a sale, say) and coming back via the same "Nueva Tarea de Conteo"
+  // button dropped the person into a blank branch picker, with their
+  // already-counted lines only reachable by remembering to dig for the old
+  // task in the list view instead. The data was never actually lost (it's
+  // DB-backed from the first item added on) — this just makes the obvious
+  // entry point find it automatically instead of looking abandoned.
+  function startOrResumeCount(list: Count[], branchId: string) {
+    const existing = list.find(c => c.status === 'IN_PROGRESS' && c.branchId === branchId)
+    if (existing) {
+      toast.info(`Continuando el conteo en progreso de ${existing.branch.name} (${existing.items.length} producto${existing.items.length !== 1 ? 's' : ''} hasta ahora)`)
+      openExistingCount(existing)
+    } else {
+      setActiveCount(null)
+      setView('take')
+    }
+  }
+
+  const didHandleNewParam = useRef(false)
+  // The "Nueva Tarea de Conteo" button in Inventario links here with ?new=1
+  // so it drops straight into the create/resume flow instead of the list —
+  // waits for fetchCounts to actually finish so the resume check above has
+  // real data to check against, not an empty list on the very first render.
+  useEffect(() => {
+    if (didHandleNewParam.current || loading) return
+    if (searchParams.get('new') === '1') {
+      didHandleNewParam.current = true
+      startOrResumeCount(counts, currentStore?.id ?? user?.branchId ?? '')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading])
 
   async function refreshActiveCount(id: string) {
     try {
@@ -472,7 +498,7 @@ export default function InventoryCounts() {
         <div className="flex gap-3">
           <button onClick={() => navigate('/reports/inventory-counts')} className="btn-outline btn-md">Ver reporte completo</button>
           {canAdjust && (
-            <button onClick={() => { setActiveCount(null); setView('take') }} className="btn-primary btn-md flex items-center gap-2">
+            <button onClick={() => startOrResumeCount(counts, currentStore?.id ?? user?.branchId ?? '')} className="btn-primary btn-md flex items-center gap-2">
               <Plus size={18} /> Nueva Tarea de Conteo
             </button>
           )}

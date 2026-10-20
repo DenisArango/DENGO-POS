@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Search, ArrowLeft, Trash2, CheckCircle,
@@ -115,6 +116,7 @@ function hasVariationChoice(product: ProductOption): boolean {
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function Purchases() {
   const { user } = useAuthStore()
+  const [searchParams] = useSearchParams()
   const { hasPermission } = usePermissions()
   // The actual submit calls POST /api/inventory/intake, gated server-side by
   // purchases.receive — the only permission this module has, since receiving
@@ -126,11 +128,22 @@ export default function Purchases() {
 
   const [view, setView] = useState<'list' | 'create'>('list')
 
-  // List state
-  const [movements, setMovements] = useState<StockMovement[]>([])
+  // List state — the server groups raw StockMovement rows into purchases
+  // (by referenceId) and paginates BY PURCHASE, so a page always holds whole
+  // purchases, never a partial one split across the page boundary.
+  const PURCHASES_PAGE_SIZE = 20
+  const [purchaseGroups, setPurchaseGroups] = useState<IntakeGroup[]>([])
+  const [purchasesTotal, setPurchasesTotal] = useState(0)
+  const [purchasesPage, setPurchasesPage] = useState(1)
+  const [purchaseStats, setPurchaseStats] = useState({ todayCount: 0, todayUnits: 0, todayCost: null as number | null })
   const [loading, setLoading] = useState(false)
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
-  const [historySearch, setHistorySearch] = useState('')
+  // Seeded from ?search= (Inventory.tsx's "Compra #N" link sets this to the
+  // full referenceId) so following that link lands with the right purchase
+  // already filtered in, not an empty search box the person has to retype.
+  const deepLinkSearch = searchParams.get('search') ?? ''
+  const [historySearch, setHistorySearch] = useState(deepLinkSearch)
+  const [debouncedHistorySearch, setDebouncedHistorySearch] = useState(deepLinkSearch)
 
   // Create form state
   const [intakeItems, setIntakeItems] = useState<IntakeItem[]>([])
@@ -187,20 +200,37 @@ export default function Purchases() {
   const [loadingEdit, setLoadingEdit] = useState(false)
 
   // ── Load data ─────────────────────────────────────────────────────────────
-  const fetchMovements = () => {
+  // Grouping (raw movements → one row per purchase) and pagination both now
+  // happen server-side — see GET /api/inventory/purchases — so this just
+  // renders whatever page/search the server already resolved.
+  const fetchPurchases = () => {
     setLoading(true)
-    // ADJUSTMENT is included alongside IN because editing a purchase files
-    // its reversal as ADJUSTMENT (see PUT /intake/:referenceId) — without it
-    // the signed-delta grouping below can't net an edited purchase back to
-    // its true current total.
-    api.get<StockMovement[]>('/api/inventory/movements?type=IN,ADJUSTMENT')
-      .then(data => setMovements((data ?? []).filter(m => m.referenceId?.startsWith('INTAKE-') || m.referenceId?.startsWith('COMPRA-'))))
+    const params = new URLSearchParams({ page: String(purchasesPage), limit: String(PURCHASES_PAGE_SIZE) })
+    if (debouncedHistorySearch) params.set('search', debouncedHistorySearch)
+    api.get<{ data: IntakeGroup[]; total: number; stats: typeof purchaseStats }>(`/api/inventory/purchases?${params}`)
+      .then(res => {
+        setPurchaseGroups(res.data ?? [])
+        setPurchasesTotal(res.total ?? 0)
+        setPurchaseStats(res.stats ?? { todayCount: 0, todayUnits: 0, todayCost: null })
+        // Arrived via "Compra #N" from Inventario's movement history —
+        // open it straight away instead of making the person click again
+        // to see what they clicked through here to find.
+        if (deepLinkSearch && (res.data ?? []).some(g => g.referenceId === deepLinkSearch)) {
+          setExpandedGroup(deepLinkSearch)
+        }
+      })
       .catch(e => toast.error(e.message))
       .finally(() => setLoading(false))
   }
 
   useEffect(() => {
-    fetchMovements()
+    const t = setTimeout(() => setDebouncedHistorySearch(historySearch.trim()), 300)
+    return () => clearTimeout(t)
+  }, [historySearch])
+  useEffect(() => { setPurchasesPage(1) }, [debouncedHistorySearch])
+  useEffect(() => { fetchPurchases() }, [purchasesPage, debouncedHistorySearch])
+
+  useEffect(() => {
     api.get<{ id: string; name: string }[]>('/api/branches')
       .then(setBranches)
       .catch(() => {})
@@ -556,61 +586,6 @@ export default function Purchases() {
   const totalUnits = intakeItems.reduce((s, i) => s + i.quantity, 0)
   const totalCost = intakeItems.reduce((s, i) => s + i.quantity * i.unitCost, 0)
 
-  const intakeGroups = useMemo<IntakeGroup[]>(() => {
-    const map = new Map<string, IntakeGroup>()
-    // `movements` comes back newest-first (GET /movements orders by
-    // createdAt desc), so within one referenceId the FIRST row this loop
-    // encounters is always the most recent one — used below to seed each
-    // group's "current" branch/supplier from whatever an edit last set,
-    // not from whenever the purchase was originally created.
-    for (const m of movements) {
-      const key = m.referenceId ?? m.id
-      if (!map.has(key)) {
-        // Extract supplier from reason "Proveedor: X | notes" — fallback for
-        // movements made before supplierId existed as a real FK.
-        const reasonParts = (m.reason ?? '').split(' | ')
-        const supplierPart = reasonParts.find(p => p.startsWith('Proveedor:'))
-        const supplierName = m.supplier?.name ?? (supplierPart ? supplierPart.replace('Proveedor: ', '') : '')
-        map.set(key, {
-          referenceId: key,
-          purchaseNumber: key.startsWith('COMPRA-') ? key.slice('COMPRA-'.length) : null,
-          date: m.createdAt,
-          user: m.performedBy?.name ?? '–',
-          branch: m.branch?.name ?? '–',
-          branchId: m.branchId,
-          supplier: supplierName,
-          supplierId: m.supplierId ?? '',
-          itemCount: 0,
-          totalUnits: 0,
-          totalCost: null,
-          items: [],
-        })
-      }
-      const g = map.get(key)!
-      g.itemCount++
-      // Signed, not the always-positive `quantity` column — an edit reverses
-      // the old movements (RETURN, decreasing) and re-applies the corrected
-      // ones (IN, increasing) under this SAME referenceId, so summing the
-      // raw magnitude would double-count the reversal instead of netting it
-      // out to the purchase's true final total.
-      const delta = Number(m.quantityAfter) - Number(m.quantityBefore)
-      g.totalUnits += delta
-      // null stays null until the first movement with real cost data shows
-      // up — an intake made before this field existed has none at all, and
-      // showing "Q0.00" for that would read as "this cost nothing" instead
-      // of "no sabemos".
-      if (m.unitCost != null) {
-        g.totalCost = (g.totalCost ?? 0) + delta * Number(m.unitCost)
-      }
-      g.items.push(m)
-    }
-    return Array.from(map.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [movements])
-
-  const filteredIntakeGroups = useMemo(() => {
-    if (!historySearch.trim()) return intakeGroups
-    return intakeGroups.filter(g => matchesSearch([g.purchaseNumber ?? '', g.referenceId, g.supplier], historySearch))
-  }, [intakeGroups, historySearch])
 
   // ── Confirm intake (or save edits to an existing one) ──────────────────────
   const handleConfirm = async () => {
@@ -648,7 +623,11 @@ export default function Purchases() {
       }
       resetForm()
       setView('list')
-      fetchMovements()
+      // A new purchase sorts to the top — jump back to page 1 so it's
+      // actually visible instead of possibly landing beyond whatever page
+      // the person was on before opening the create form.
+      if (purchasesPage === 1) fetchPurchases()
+      else setPurchasesPage(1)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : (editingReferenceId ? 'Error al actualizar la compra' : 'Error al confirmar ingreso'))
     } finally {
@@ -1162,10 +1141,7 @@ export default function Purchases() {
   }
 
   // ── LIST VIEW ──────────────────────────────────────────────────────────────
-  const todayStr = new Date().toDateString()
-  const todayGroups = intakeGroups.filter(g => new Date(g.date).toDateString() === todayStr)
-  const todayUnits = todayGroups.reduce((s, g) => s + g.totalUnits, 0)
-  const todayCost = todayGroups.reduce((s, g) => s + (g.totalCost ?? 0), 0)
+  const purchasesTotalPages = Math.max(1, Math.ceil(purchasesTotal / PURCHASES_PAGE_SIZE))
 
   return (
     <div className="space-y-4">
@@ -1191,7 +1167,7 @@ export default function Purchases() {
           <div className="p-2.5 bg-blue-100 rounded-lg"><Package size={20} className="text-blue-600" /></div>
           <div>
             <p className="text-xs text-gray-400">Ingresos hoy</p>
-            <p className="text-xl font-bold text-gray-800">{todayGroups.length}</p>
+            <p className="text-xl font-bold text-gray-800">{purchaseStats.todayCount}</p>
           </div>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
@@ -1199,7 +1175,7 @@ export default function Purchases() {
           <div>
             <p className="text-xs text-gray-400">Unidades hoy</p>
             <p className="text-xl font-bold text-gray-800">
-              {todayUnits % 1 === 0 ? todayUnits : todayUnits.toFixed(2)}
+              {purchaseStats.todayUnits % 1 === 0 ? purchaseStats.todayUnits : purchaseStats.todayUnits.toFixed(2)}
             </p>
           </div>
         </div>
@@ -1208,7 +1184,7 @@ export default function Purchases() {
           <div>
             <p className="text-xs text-gray-400">Costo hoy</p>
             <p className="text-xl font-bold text-gray-800">
-              {todayGroups.some(g => g.totalCost !== null) ? `Q${todayCost.toFixed(2)}` : '—'}
+              {purchaseStats.todayCost !== null ? `Q${purchaseStats.todayCost.toFixed(2)}` : '—'}
             </p>
           </div>
         </div>
@@ -1216,7 +1192,7 @@ export default function Purchases() {
           <div className="p-2.5 bg-purple-100 rounded-lg"><CheckCircle size={20} className="text-purple-600" /></div>
           <div>
             <p className="text-xs text-gray-400">Total registros</p>
-            <p className="text-xl font-bold text-gray-800">{intakeGroups.length}</p>
+            <p className="text-xl font-bold text-gray-800">{purchasesTotal}</p>
           </div>
         </div>
       </div>
@@ -1241,14 +1217,14 @@ export default function Purchases() {
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary-400 border-t-transparent" />
           </div>
-        ) : filteredIntakeGroups.length === 0 ? (
+        ) : purchaseGroups.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
             <Package size={40} strokeWidth={1.5} />
             <p className="text-sm">{historySearch.trim() ? 'Sin resultados para esa búsqueda' : 'No hay ingresos registrados'}</p>
           </div>
         ) : (
           <div className="divide-y">
-            {filteredIntakeGroups.map(group => (
+            {purchaseGroups.map(group => (
               <div key={group.referenceId}>
                 {/* Group row */}
                 <div className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 transition-colors">
@@ -1354,6 +1330,17 @@ export default function Purchases() {
                 </AnimatePresence>
               </div>
             ))}
+          </div>
+        )}
+        {purchasesTotalPages > 1 && (
+          <div className="flex items-center justify-between px-5 py-3 border-t">
+            <p className="text-sm text-gray-600">Página {purchasesPage} de {purchasesTotalPages} · {purchasesTotal} compra{purchasesTotal !== 1 ? 's' : ''}</p>
+            <div className="flex gap-2">
+              <button onClick={() => setPurchasesPage(p => Math.max(1, p - 1))} disabled={purchasesPage <= 1}
+                className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed">Anterior</button>
+              <button onClick={() => setPurchasesPage(p => Math.min(purchasesTotalPages, p + 1))} disabled={purchasesPage >= purchasesTotalPages}
+                className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed">Siguiente</button>
+            </div>
           </div>
         )}
       </div>

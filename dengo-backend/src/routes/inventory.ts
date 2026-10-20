@@ -6,7 +6,7 @@ import { updateStock, setStock } from '../services/inventory.service.js'
 import { resolveBranchScope, canAccessBranch } from '../lib/branch-scope.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
 import { multiWordSearch } from '../lib/search.js'
-import { parseBusinessDateParam } from '../lib/timezone.js'
+import { parseBusinessDateParam, getBusinessDayBounds } from '../lib/timezone.js'
 
 // Same thresholds as the frontend's computeStatus() — duplicated here because
 // 'low'/'critical'/'overstock' compares two columns from different tables
@@ -164,6 +164,99 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
       take: 500,
     })
     return reply.send(movements)
+  })
+
+  // GET /api/inventory/purchases — paginated purchase history for
+  // Purchases.tsx, grouped by referenceId (there's no dedicated Purchase
+  // entity — a "compra" is every StockMovement sharing one referenceId, see
+  // POST /intake below). Used to live entirely client-side: /movements
+  // fetched up to 500 raw rows and Purchases.tsx grouped+paginated them in
+  // the browser, so a store with more than ~500 intake movements ever
+  // couldn't see its older purchases at all, and there was no real paging —
+  // this moves that same grouping logic here so it can paginate by PURCHASE
+  // (not by raw row, which would split one purchase's items across pages)
+  // and raises the ceiling well past what a single store will hit for years.
+  fastify.get('/purchases', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
+    const q = request.query as { branchId?: string; search?: string; page?: string; limit?: string }
+    const branchId = resolveBranchScope(request, q.branchId)
+    const page = Math.max(1, parseInt(q.page ?? '1', 10) || 1)
+    const limit = Math.min(100, Math.max(1, parseInt(q.limit ?? '20', 10) || 20))
+
+    const movements = await prisma.stockMovement.findMany({
+      where: {
+        type: { in: ['IN', 'ADJUSTMENT'] },
+        referenceId: { not: null },
+        OR: [{ referenceId: { startsWith: 'COMPRA-' } }, { referenceId: { startsWith: 'INTAKE-' } }],
+        ...(branchId ? { branchId } : {}),
+      },
+      include: {
+        product: { select: { id: true, name: true } },
+        branch: { select: { id: true, name: true } },
+        performedBy: { select: { id: true, name: true } },
+        supplier: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20_000, // safeguard against unbounded growth, not a real-world ceiling
+    })
+
+    // Same grouping Purchases.tsx used to do in the browser — see its
+    // IntakeGroup useMemo (now removed) for the original, this is a 1:1 port.
+    const groupMap = new Map<string, {
+      referenceId: string; purchaseNumber: string | null; date: Date
+      user: string; branch: string; branchId: string; supplier: string; supplierId: string
+      itemCount: number; totalUnits: number; totalCost: number | null
+      items: typeof movements
+    }>()
+    for (const m of movements) {
+      const key = m.referenceId!
+      if (!groupMap.has(key)) {
+        const reasonParts = (m.reason ?? '').split(' | ')
+        const supplierPart = reasonParts.find(p => p.startsWith('Proveedor:'))
+        const supplierName = m.supplier?.name ?? (supplierPart ? supplierPart.replace('Proveedor: ', '') : '')
+        groupMap.set(key, {
+          referenceId: key,
+          purchaseNumber: key.startsWith('COMPRA-') ? key.slice('COMPRA-'.length) : null,
+          date: m.createdAt,
+          user: m.performedBy?.name ?? '–',
+          branch: m.branch?.name ?? '–',
+          branchId: m.branchId,
+          supplier: supplierName,
+          supplierId: m.supplierId ?? '',
+          itemCount: 0,
+          totalUnits: 0,
+          totalCost: null,
+          items: [],
+        })
+      }
+      const g = groupMap.get(key)!
+      g.itemCount++
+      const delta = Number(m.quantityAfter) - Number(m.quantityBefore)
+      g.totalUnits += delta
+      if (m.unitCost != null) g.totalCost = (g.totalCost ?? 0) + delta * Number(m.unitCost)
+      g.items.push(m)
+    }
+    const allGroups = Array.from(groupMap.values()).sort((a, b) => b.date.getTime() - a.date.getTime())
+
+    // "Hoy" stats always reflect every purchase (branch-scoped only, ignoring
+    // the search box) — a dashboard summary, not tied to whatever page/search
+    // the history list below happens to be on. Business-local day, not raw
+    // server time, same reasoning as every other "today" calc in this app.
+    const { start: todayStart, end: todayEnd } = getBusinessDayBounds()
+    const todayGroups = allGroups.filter(g => g.date >= todayStart && g.date <= todayEnd)
+    const stats = {
+      todayCount: todayGroups.length,
+      todayUnits: todayGroups.reduce((s, g) => s + g.totalUnits, 0),
+      todayCost: todayGroups.some(g => g.totalCost !== null) ? todayGroups.reduce((s, g) => s + (g.totalCost ?? 0), 0) : null,
+    }
+
+    const filtered = q.search?.trim()
+      ? allGroups.filter(g => [g.purchaseNumber ?? '', g.referenceId, g.supplier].some(v => v.toLowerCase().includes(q.search!.trim().toLowerCase())))
+      : allGroups
+
+    const total = filtered.length
+    const data = filtered.slice((page - 1) * limit, (page - 1) * limit + limit)
+
+    return reply.send({ data, total, page, limit, stats })
   })
 
   // GET /api/inventory/:productId/:branchId

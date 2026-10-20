@@ -771,6 +771,12 @@ export default function Inventory() {
                     {movements.map(mv => {
                       const { label, color } = getMovementTypeLabel(mv.type, mv.reason)
                       const qty = Number(mv.quantity ?? 0)
+                      // Purchases have no dedicated entity — a "compra" is
+                      // just every StockMovement sharing one referenceId
+                      // "COMPRA-N" (see inventory.ts's /intake route), so the
+                      // purchase number is parsed straight out of it. Legacy
+                      // "INTAKE-*" rows predate that numbering and have none.
+                      const purchaseNumber = mv.referenceId?.startsWith('COMPRA-') ? mv.referenceId.slice('COMPRA-'.length) : null
                       return (
                         <div key={mv.id} className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50">
                           <span className={`px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0 mt-0.5 ${color}`}>{label}</span>
@@ -778,6 +784,18 @@ export default function Inventory() {
                             <p className="text-sm font-medium text-gray-800">{mv.reason || 'Sin descripción'}</p>
                             <p className="text-xs text-gray-500 mt-0.5">
                               {mv.performedBy?.name ?? 'Sistema'} · {format(new Date(mv.createdAt), "d MMM yyyy, HH:mm", { locale: es })}
+                              {purchaseNumber && (
+                                <>
+                                  {' · '}
+                                  <button
+                                    onClick={() => navigate(`/purchases?search=${encodeURIComponent(mv.referenceId!)}`)}
+                                    className="text-primary-600 hover:underline font-medium"
+                                    title="Ver esta compra"
+                                  >
+                                    Compra #{purchaseNumber}
+                                  </button>
+                                </>
+                              )}
                             </p>
                           </div>
                           <span className={`text-sm font-bold flex-shrink-0 ${qty >= 0 ? 'text-green-600' : 'text-red-600'}`}>

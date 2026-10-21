@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
-import { updateStock } from '../services/inventory.service.js'
+import { updateStock, getConversionFactors } from '../services/inventory.service.js'
 import { log } from '../services/audit.service.js'
 import { canAccessBranch } from '../lib/branch-scope.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
@@ -54,19 +54,6 @@ const createSaleSchema = z.object({
   },
   { message: 'La suma de cashAmount + cardAmount + transferAmount debe ser igual al total en una venta mixta', path: ['paymentMethod'] },
 )
-
-// A sale item's quantity is in the VARIATION's own unit ("1 caja"), but stock
-// is tracked in the product's base unit — every item's actual stock impact is
-// quantity * variation.conversionFactor (e.g. 1 caja of 6 = 6 base units).
-// The request body only carries variationId (never a client-sent
-// conversionFactor — that would be trivially spoofable), so it has to be
-// looked up here before touching Inventory.
-async function getConversionFactors(variationIds: (string | undefined)[]): Promise<Map<string, number>> {
-  const ids = [...new Set(variationIds.filter((id): id is string => !!id))]
-  if (ids.length === 0) return new Map()
-  const variations = await prisma.productVariation.findMany({ where: { id: { in: ids } }, select: { id: true, conversionFactor: true } })
-  return new Map(variations.map(v => [v.id, Number(v.conversionFactor)]))
-}
 
 // Base include — uses only columns guaranteed to exist (pre-migration).
 // Fields added in migration_v2 (cashRegister.name/registerNumber, creditPayments)

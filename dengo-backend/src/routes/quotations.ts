@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
+import { updateStock, getConversionFactors } from '../services/inventory.service.js'
 import { log } from '../services/audit.service.js'
 import { resolveBranchScope, canAccessBranch } from '../lib/branch-scope.js'
 import { requirePermission } from '../lib/permissions.js'
@@ -223,6 +224,27 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
     const tax = afterDiscount * 0.12
     const total = afterDiscount + tax
 
+    // Stock — mirrors the same check in sales.ts's POST /: a quotation can
+    // sit accepted for a while, so stock may have moved since it was quoted.
+    const convFactors = await getConversionFactors(itemsToConvert.map(item => item.variationId))
+    const inventoryRows = await prisma.inventory.findMany({
+      where: { branchId: quot.branchId, productId: { in: itemsToConvert.map(item => item.productId!) } },
+      include: { product: { select: { name: true } } },
+    })
+    const stockByProduct = new Map(inventoryRows.map(inv => [inv.productId, { qty: Number(inv.quantity), name: inv.product.name }]))
+    for (const item of itemsToConvert) {
+      const convFactor = convFactors.get(item.variationId ?? '') ?? 1
+      const effectiveQty = Number(item.quantity) * convFactor
+      const qtyLabel = convFactor !== 1 ? `${item.quantity} (${effectiveQty} unidades base)` : String(item.quantity)
+      const stock = stockByProduct.get(item.productId!)
+      const available = stock?.qty ?? 0
+      if (available < effectiveQty) {
+        return reply.status(400).send({
+          error: `Stock insuficiente de "${stock?.name ?? item.productId}": disponible ${available}, solicitado ${qtyLabel}`,
+        })
+      }
+    }
+
     // Same atomic per-branch receipt correlativo as a normal POS sale (see
     // sales.ts) — this is a real Sale row too, it needs a real number.
     const receiptBranch = await prisma.branch.update({
@@ -264,6 +286,20 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
       where: { id },
       data: { status: 'CONVERTED', convertedToSaleId: sale.id },
     })
+
+    // sale.create above never touched Inventory — unlike a POS sale, a
+    // quotation conversion has no separate "checkout" step to hang this on,
+    // so it has to happen here. Same rule as sales.ts: a quantity is in the
+    // variation's own unit, stock is in base units, so the actual stock
+    // impact is quantity * variation.conversionFactor.
+    for (const item of itemsToConvert) {
+      const convFactor = convFactors.get(item.variationId ?? '') ?? 1
+      await updateStock(item.productId!, quot.branchId, -(Number(item.quantity) * convFactor), {
+        type: 'SALE',
+        performedById: request.user.id,
+        referenceId: sale.id,
+      })
+    }
 
     await log({ userId: request.user.id, action: 'CONVERT', entity: 'Quotation', entityId: id, newValues: { saleId: sale.id, partial: !!body.data.partial } })
     return reply.status(201).send({

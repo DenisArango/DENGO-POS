@@ -127,3 +127,18 @@ export async function getStock(productId: string, branchId: string): Promise<num
   })
   return Number(inv?.quantity ?? 0)
 }
+
+// A sale/quotation item only ever carries variationId, never the variation's
+// own conversionFactor (that would be client-spoofable) — every stock-moving
+// call site resolves it from here instead. 1 unit of a variation equals
+// conversionFactor base units (e.g. "Caja de 6" = 6), so stock must always be
+// adjusted by quantity * conversionFactor, never raw quantity.
+export async function getConversionFactors(variationIds: (string | undefined | null)[]): Promise<Map<string, number>> {
+  const ids = [...new Set(variationIds.filter((id): id is string => !!id))]
+  if (ids.length === 0) return new Map()
+  const variations = await prisma.productVariation.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, conversionFactor: true },
+  })
+  return new Map(variations.map(v => [v.id, Number(v.conversionFactor)]))
+}

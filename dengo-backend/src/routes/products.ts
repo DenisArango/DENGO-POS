@@ -28,6 +28,8 @@ const productSchema = z.object({
   categoryId: z.string(),
   baseUnitId: z.string(),
   minStock: z.number().int().default(0),
+  // Null/omitted = no ceiling, so the product is never flagged as sobrestock.
+  maxStock: z.number().int().min(1).nullish(),
   variations: z.array(variationSchema).default([]),
 })
 
@@ -61,7 +63,7 @@ function barcodeConflictResponse(holder: { id: string; name: string; isActive: b
 export default async function productRoutes(fastify: FastifyInstance) {
   // GET /api/products
   fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
-    const q = request.query as { search?: string; categoryId?: string; isActive?: string; page?: string; limit?: string }
+    const q = request.query as { search?: string; categoryId?: string; isActive?: string; page?: string; limit?: string; branchId?: string }
     const where = {
       isActive: q.isActive === 'false' ? false : true,
       ...(q.categoryId ? { categoryId: q.categoryId } : {}),
@@ -77,7 +79,9 @@ export default async function productRoutes(fastify: FastifyInstance) {
     // stock lives on Inventory, scoped per branch. Without this join every
     // product listed here showed "stock: 0" (the Products page's own tallies
     // — Valor Inventario, Stock Bajo, Sin Stock — were silently wrong too).
-    const branchId = resolveBranchScope(request)
+    // ?branchId= lets the POS search show the stock of the branch it's
+    // selling from (an admin otherwise gets the sum of every branch).
+    const branchId = resolveBranchScope(request, q.branchId)
     const stockRows = await prisma.inventory.groupBy({
       by: ['productId'],
       where: branchId ? { branchId } : {},

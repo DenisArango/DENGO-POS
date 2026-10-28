@@ -17,6 +17,7 @@ import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
 import { getAdjustmentReasons, type AdjustmentReason } from '../lib/inventoryReasons'
+import { SortableTh, type SortState } from '../components/common/SortableTh'
 
 interface InventoryItem {
   productId: string
@@ -32,6 +33,7 @@ interface InventoryItem {
     category?: string | { id: string; name: string; color?: string }
     baseUnit?: string | { id?: string; name?: string; abbreviation?: string }
     minStock?: number
+    maxStock?: number | null
     basePrice?: number
     cost?: number
     variations?: { id?: string; name: string; conversionFactor: number; price: number; isDefault?: boolean }[]
@@ -46,9 +48,12 @@ interface InventoryItemWithStatus extends InventoryItem {
   barcode: string
   baseUnit: string
   minStock: number
+  maxStock: number | null
   cost: number
   basePrice: number
 }
+
+type InventorySortKey = 'name' | 'category' | 'quantity' | 'minStock' | 'maxStock' | 'criticality' | 'overstock' | 'price' | 'value' | 'saleValue'
 
 interface StockAdjustment {
   productId: string
@@ -69,11 +74,13 @@ interface StockMovement {
   performedBy?: { id: string; name: string }
 }
 
-function computeStatus(quantity: number, minStock: number): InventoryItemWithStatus['status'] {
+// Must match STATUS_CASE_SQL in the backend's inventory.ts. Sobrestock only
+// applies to products with a maxStock set.
+function computeStatus(quantity: number, minStock: number, maxStock: number | null): InventoryItemWithStatus['status'] {
   if (quantity === 0) return 'critical'
   if (quantity <= minStock * 0.5) return 'critical'
   if (quantity <= minStock) return 'low'
-  if (quantity > minStock * 3) return 'overstock'
+  if (maxStock != null && quantity > maxStock) return 'overstock'
   return 'normal'
 }
 
@@ -88,21 +95,22 @@ function normaliseItem(item: InventoryItem): InventoryItemWithStatus {
     ? (p.baseUnit as { name?: string; abbreviation?: string })?.name ?? 'Pieza'
     : p.baseUnit ?? 'Pieza'
   const minStock = Number(p.minStock ?? 0)
+  const maxStock = p.maxStock != null ? Number(p.maxStock) : null
   const cost = Number(p.cost ?? 0)
   const basePrice = Number(p.basePrice ?? 0)
-  const status = computeStatus(quantity, minStock)
-  return { ...item, quantity, status, displayName, categoryName, sku, barcode, baseUnit, minStock, cost, basePrice }
+  const status = computeStatus(quantity, minStock, maxStock)
+  return { ...item, quantity, status, displayName, categoryName, sku, barcode, baseUnit, minStock, maxStock, cost, basePrice }
 }
 
 /** Client-side CSV export — no backend round-trip, includes cost/sale-price columns. */
 function downloadInventoryCsv(items: InventoryItemWithStatus[]) {
-  const columns = ['SKU', 'Código de barras', 'Producto', 'Categoría', 'Stock', 'Stock mínimo', 'Precio base', 'Costo unitario', 'Costo total', 'Valor de venta total']
+  const columns = ['SKU', 'Código de barras', 'Producto', 'Categoría', 'Stock', 'Stock mínimo', 'Stock máximo', 'Precio base', 'Costo unitario', 'Costo total', 'Valor de venta total']
   const escape = (v: unknown) => {
     const s = v === null || v === undefined ? '' : String(v)
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
   }
   const rows = items.map(item => [
-    item.sku, item.barcode, item.displayName, item.categoryName, item.quantity, item.minStock,
+    item.sku, item.barcode, item.displayName, item.categoryName, item.quantity, item.minStock, item.maxStock ?? '',
     item.basePrice.toFixed(2), item.cost.toFixed(2), (item.quantity * item.cost).toFixed(2), (item.quantity * item.basePrice).toFixed(2),
   ].map(escape).join(','))
   const csv = '﻿' + [columns.join(','), ...rows].join('\n') // BOM so Excel opens UTF-8 (tildes, Q) correctly
@@ -160,6 +168,9 @@ export default function Inventory() {
   const [page, setPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const [stats, setStats] = useState({ totalProducts: 0, totalValue: 0, totalSaleValue: 0, lowStock: 0, overstock: 0 })
+  // Sorted server-side (the list is paginated), so a sort applies to the
+  // whole branch, not just the 50 rows on screen.
+  const [sort, setSort] = useState<SortState<InventorySortKey> | null>(null)
 
   // Adjustment modal
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false)
@@ -209,7 +220,7 @@ export default function Inventory() {
     return () => clearTimeout(t)
   }, [searchTerm])
 
-  useEffect(() => { setPage(1) }, [selectedCategory, selectedStatus])
+  useEffect(() => { setPage(1) }, [selectedCategory, selectedStatus, sort])
 
   const fetchInventory = () => {
     setLoading(true)
@@ -217,6 +228,7 @@ export default function Inventory() {
     if (debouncedSearch) params.set('search', debouncedSearch)
     if (selectedCategory) params.set('category', selectedCategory)
     if (selectedStatus) params.set('status', selectedStatus)
+    if (sort) { params.set('sort', sort.key); params.set('dir', sort.dir) }
     api.get<{ data: InventoryItem[]; total: number; stats: typeof stats }>(`/api/inventory?${params}`)
       .then(res => {
         setInventory(res.data.map(normaliseItem))
@@ -229,7 +241,7 @@ export default function Inventory() {
 
   useEffect(() => {
     if (branchId) fetchInventory()
-  }, [branchId, page, debouncedSearch, selectedCategory, selectedStatus])
+  }, [branchId, page, debouncedSearch, selectedCategory, selectedStatus, sort])
 
   useEffect(() => {
     api.get<{ id: string; name: string; color?: string }[]>('/api/categories')
@@ -319,6 +331,7 @@ export default function Inventory() {
       basePrice: Number(productData.basePrice ?? 0),
       cost: Number(productData.cost ?? 0),
       minStock: Number(productData.minStock ?? 0),
+      maxStock: productData.maxStock ? Number(productData.maxStock) : null,
       imageUrl: productData.imageUrl || undefined,
       categoryId: productData.categoryId,
       baseUnitId: productData.baseUnitId,
@@ -516,14 +529,29 @@ export default function Inventory() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">SKU / Código</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Producto</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Categoría</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Stock Actual</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Stock Mínimo</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Estado</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-700">Precio Base</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-700">Costo Total</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-700">Valor Venta</th>
+                  <SortableTh label="Producto" sortKey="name" sort={sort} onSort={setSort} />
+                  <SortableTh label="Categoría" sortKey="category" sort={sort} onSort={setSort} />
+                  <SortableTh label="Stock Actual" sortKey="quantity" sort={sort} onSort={setSort} align="center" firstDir="desc" />
+                  <SortableTh label="Mín." sortKey="minStock" sort={sort} onSort={setSort} align="center" firstDir="desc" />
+                  <SortableTh label="Máx." sortKey="maxStock" sort={sort} onSort={setSort} align="center" firstDir="desc" />
+                  <th className="text-center py-3 px-4 font-medium text-gray-700">
+                    <div className="flex items-center justify-center gap-2 text-xs">
+                      <span>Estado</span>
+                      <button type="button" onClick={() => setSort({ key: 'criticality', dir: 'asc' })}
+                        className={`px-1.5 py-0.5 rounded ${sort?.key === 'criticality' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-red-50'}`}
+                        title="Primero los más críticos (menos stock respecto a su mínimo)">
+                        + crítico
+                      </button>
+                      <button type="button" onClick={() => setSort({ key: 'overstock', dir: 'desc' })}
+                        className={`px-1.5 py-0.5 rounded ${sort?.key === 'overstock' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-blue-50'}`}
+                        title="Primero los más sobrestockeados (respecto a su máximo)">
+                        + sobrestock
+                      </button>
+                    </div>
+                  </th>
+                  <SortableTh label="Precio Base" sortKey="price" sort={sort} onSort={setSort} align="right" firstDir="desc" />
+                  <SortableTh label="Costo Total" sortKey="value" sort={sort} onSort={setSort} align="right" firstDir="desc" />
+                  <SortableTh label="Valor Venta" sortKey="saleValue" sort={sort} onSort={setSort} align="right" firstDir="desc" />
                   <th className="text-center py-3 px-4 font-medium text-gray-700">Acciones</th>
                 </tr>
               </thead>
@@ -548,7 +576,10 @@ export default function Inventory() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center text-gray-600">
-                      {item.minStock} {item.baseUnit}
+                      {item.minStock}
+                    </td>
+                    <td className="py-3 px-4 text-center text-gray-600">
+                      {item.maxStock ?? <span className="text-gray-300" title="Sin máximo definido — nunca se marca como sobrestock">—</span>}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
@@ -594,7 +625,7 @@ export default function Inventory() {
                 ))}
                 {inventory.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="py-12 text-center text-gray-500">
+                    <td colSpan={11} className="py-12 text-center text-gray-500">
                       No se encontraron productos en inventario
                     </td>
                   </tr>

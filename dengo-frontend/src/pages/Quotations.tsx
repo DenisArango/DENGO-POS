@@ -14,6 +14,7 @@ import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
 import { matchesSearch } from '../lib/search'
+import { CustomerThumb } from '../components/common/CustomerThumb'
 import { QuotationPrint, type QuotationPrintData } from '../components/print/QuotationPrint'
 import { elementToPdfBlob, downloadBlob } from '../lib/pdfExport'
 
@@ -27,6 +28,7 @@ interface Customer {
   email?: string
   phone?: string
   isActive?: boolean
+  avatarUrl?: string | null
 }
 
 interface QuotationItem {
@@ -761,10 +763,13 @@ export default function Quotations() {
                         <div
                           key={c.id}
                           onMouseDown={() => { setSelectedCustomerId(c.id); setCustomerSearch('') }}
-                          className="px-3 py-2 hover:bg-primary-50 cursor-pointer"
+                          className="px-3 py-2 hover:bg-primary-50 cursor-pointer flex items-center gap-2.5"
                         >
-                          <p className="text-sm font-medium text-gray-800">{c.name}</p>
-                          {c.nit && <p className="text-xs text-gray-400">NIT: {c.nit}</p>}
+                          <CustomerThumb src={c.avatarUrl} name={c.name} />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-800 truncate">{c.name}</p>
+                            {c.nit && <p className="text-xs text-gray-400">NIT: {c.nit}</p>}
+                          </div>
                         </div>
                       )) : (
                         <p className="px-3 py-3 text-sm text-gray-500 text-center">Sin resultados</p>

@@ -127,6 +127,7 @@ model User {
   requestedTransfers  Transfer[]      @relation("RequestedBy")
   approvedTransfers   Transfer[]      @relation("ApprovedBy")
   receivedTransfers   Transfer[]      @relation("ReceivedByUser")
+  cancelledTransfers  Transfer[]      @relation("CancelledTransfers")
   quotations          Quotation[]
   stockMovements      StockMovement[]
   auditLogs           AuditLog[]
@@ -248,7 +249,7 @@ model Product {
   brand       String?  @map("BRAND") @db.VarChar(100)
   description String?  @map("DESCRIPTION")
   basePrice   Decimal  @default(0) @map("BASE_PRICE") @db.Decimal(18, 2)
-  cost        Decimal  @default(0) @map("COST") @db.Decimal(18, 2)
+  cost        Decimal  @default(0) @map("COST") @db.Decimal(18, 4)
   // Text, not VarChar(500): this stores a base64 data URL of the product
   // photo directly (no separate file storage/CDN), which for any real photo
   // is thousands of characters — VarChar(500) silently made every real
@@ -257,6 +258,9 @@ model Product {
   categoryId  String   @map("CATEGORY_ID") @db.VarChar(36)
   baseUnitId  String   @map("BASE_UNIT_ID") @db.VarChar(36)
   minStock    Int      @default(0) @map("MIN_STOCK")
+  // Null = no ceiling defined, which means the product can never be flagged
+  // as sobrestock (there's nothing to compare against).
+  maxStock    Int?     @map("MAX_STOCK")
   salesCount  Int      @default(0) @map("SALES_COUNT")
   isActive    Boolean  @default(true) @map("IS_ACTIVE")
   createdAt   DateTime @default(now()) @map("CREATED_AT")
@@ -294,6 +298,7 @@ model ProductVariation {
   product        Product         @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   saleItems      SaleItem[]
   quotationItems QuotationItem[]
+  transferItems  TransferItem[]
 
   @@map("PRODUCT_VARIATIONS")
 }
@@ -341,7 +346,7 @@ model StockMovement {
   // without which there was no way to know what a past intake actually
   // cost once Product.cost had since changed. Null on every other movement
   // type and on intakes made before this field existed.
-  unitCost       Decimal? @map("UNIT_COST") @db.Decimal(18, 2)
+  unitCost       Decimal? @map("UNIT_COST") @db.Decimal(18, 4)
   // Same idea as unitCost — only ever set on a Compras IN movement. Storing
   // the real FK (instead of relying on the "Proveedor: X" text baked into
   // `reason`) is what lets editing a past purchase change its supplier
@@ -704,20 +709,25 @@ model Transfer {
   id            String    @id @default(cuid()) @map("ID") @db.VarChar(36)
   fromBranchId  String    @map("FROM_BRANCH_ID") @db.VarChar(36)
   toBranchId    String    @map("TO_BRANCH_ID") @db.VarChar(36)
-  status        String    @default("PENDING") @map("STATUS") @db.VarChar(20)  // PENDING | APPROVED | IN_TRANSIT | RECEIVED | REJECTED
+  status        String    @default("PENDING") @map("STATUS") @db.VarChar(20)  // PENDING | APPROVED | IN_TRANSIT | RECEIVED | REJECTED | CANCELLED
   notes         String?   @map("NOTES")
   requestedById String    @map("REQUESTED_BY_ID") @db.VarChar(36)
   approvedById  String?   @map("APPROVED_BY_ID") @db.VarChar(36)
   receivedById  String?   @map("RECEIVED_BY_ID") @db.VarChar(36)
+  cancelledById String?   @map("CANCELLED_BY_ID") @db.VarChar(36)
+  cancelReason  String?   @map("CANCEL_REASON") @db.VarChar(500)
   createdAt     DateTime  @default(now()) @map("CREATED_AT")
   approvedAt    DateTime? @map("APPROVED_AT")
   receivedAt    DateTime? @map("RECEIVED_AT")
+  cancelledAt   DateTime? @map("CANCELLED_AT")
+  editedAt      DateTime? @map("EDITED_AT")
 
   fromBranch  Branch         @relation("FromBranch", fields: [fromBranchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   toBranch    Branch         @relation("ToBranch", fields: [toBranchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   requestedBy User           @relation("RequestedBy", fields: [requestedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   approvedBy  User?          @relation("ApprovedBy", fields: [approvedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   receivedBy  User?          @relation("ReceivedByUser", fields: [receivedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cancelledBy User?          @relation("CancelledTransfers", fields: [cancelledById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   items       TransferItem[]
 
   @@map("TRANSFERS")
@@ -727,10 +737,22 @@ model TransferItem {
   id         String  @id @default(cuid()) @map("ID") @db.VarChar(36)
   transferId String  @map("TRANSFER_ID") @db.VarChar(36)
   productId  String  @map("PRODUCT_ID") @db.VarChar(36)
+  // In the presentation's own unit ("2 cajas") when variationId is set —
+  // the stock impact is always quantity * conversionFactor base units.
   quantity   Decimal @map("QUANTITY") @db.Decimal(18, 4)
+  variationId      String?  @map("VARIATION_ID") @db.VarChar(36)
+  // Snapshotted at creation so approve/receive/void always move the same
+  // number of base units even if the variation's factor is edited meanwhile.
+  conversionFactor Decimal  @default(1) @map("CONVERSION_FACTOR") @db.Decimal(18, 4)
+  // Per presentation unit, snapshotted at creation. Null on transfers made
+  // before these columns existed — readers fall back to the product's
+  // current cost/basePrice.
+  unitCost   Decimal? @map("UNIT_COST") @db.Decimal(18, 4)
+  unitPrice  Decimal? @map("UNIT_PRICE") @db.Decimal(18, 2)
 
-  transfer Transfer @relation(fields: [transferId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  product  Product  @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  transfer  Transfer          @relation(fields: [transferId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product   Product           @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  variation ProductVariation? @relation(fields: [variationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("TRANSFER_ITEMS")
 }
@@ -823,8 +845,8 @@ model PriceHistory {
   id          String   @id @default(cuid()) @map("ID") @db.VarChar(36)
   productId   String   @map("PRODUCT_ID") @db.VarChar(36)
   field       String   @map("FIELD") @db.VarChar(30)
-  oldValue    Decimal  @map("OLD_VALUE") @db.Decimal(18, 2)
-  newValue    Decimal  @map("NEW_VALUE") @db.Decimal(18, 2)
+  oldValue    Decimal  @map("OLD_VALUE") @db.Decimal(18, 4)
+  newValue    Decimal  @map("NEW_VALUE") @db.Decimal(18, 4)
   changedById String   @map("CHANGED_BY_ID") @db.VarChar(36)
   createdAt   DateTime @default(now()) @map("CREATED_AT")
 

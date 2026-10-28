@@ -76,9 +76,17 @@ interface IntakeItem {
   id: string
   productId: string
   productName: string
+  // quantity, unitCost and unitPrice are per PRESENTATION when the line is
+  // a variation ("3 resmas a Q32"); the server converts to base units.
   quantity: number
   unitCost: number
   unitPrice: number
+  variationId?: string
+  conversionFactor?: number
+  // The product's own per-base-unit values, kept so switching this line to
+  // another presentation can recompute its defaults correctly.
+  productCost?: number
+  productBasePrice?: number
   // Carried along so the row can offer "cambiar variación"/"agregar otra
   // presentación" without re-fetching the product — undefined/empty means
   // this product has no real variations defined at all.
@@ -383,8 +391,8 @@ export default function Purchases() {
     return {
       id: item.productId.includes('__') ? item.productId.split('__')[0]! : item.productId,
       name: item.productName,
-      cost: item.unitCost,
-      basePrice: item.unitPrice,
+      cost: item.productCost ?? item.unitCost / (item.conversionFactor ?? 1),
+      basePrice: item.productBasePrice ?? item.unitPrice,
       variations: item.productVariations,
     }
   }
@@ -407,12 +415,18 @@ export default function Purchases() {
     // key still needs to tell them apart — otherwise adding the base and
     // then a real variation of the SAME product silently merged into one
     // line, losing which batch was received as loose pieces vs boxed.
-    const productId = variation && !variation.isDefault ? `${product.id}__${variation.id}` : product.id
-    const name = variation && !variation.isDefault
-      ? `${product.fullName ?? product.name} (${variation.name})`
+    const isPresentation = !!variation && !variation.isDefault
+    const productId = isPresentation ? `${product.id}__${variation!.id}` : product.id
+    const name = isPresentation
+      ? `${product.fullName ?? product.name} (${variation!.name})`
       : (product.fullName ?? product.name)
-    const cost = Number(product.cost ?? 0)
-    const price = Number(product.basePrice ?? 0)
+    const factor = isPresentation ? Number(variation!.conversionFactor) || 1 : 1
+    const productCost = Number(product.cost ?? 0)
+    const productBasePrice = Number(product.basePrice ?? 0)
+    // A presentation line is priced per presentation: a resma of 500 costs
+    // 500x one hoja and sells at the resma's own price.
+    const cost = productCost * factor
+    const price = isPresentation ? Number(variation!.price ?? 0) : productBasePrice
     setIntakeItems(prev => {
       const existing = prev.find(i => i.productId === productId)
       if (existing) {
@@ -421,6 +435,9 @@ export default function Purchases() {
       return [...prev, {
         id: Math.random().toString(36).slice(2), productId, productName: name, quantity: 1,
         unitCost: cost, unitPrice: price, productVariations: product.variations,
+        variationId: isPresentation ? variation!.id : undefined,
+        conversionFactor: factor,
+        productCost, productBasePrice,
       }]
     })
     setShowVariationModal(false)
@@ -477,6 +494,10 @@ export default function Purchases() {
   // ── Item helpers ───────────────────────────────────────────────────────────
   const setQtyDirect = (id: string, val: string) => {
     const n = parseFloat(val)
+    if (!isNaN(n) && n > 1_000_000) {
+      toast.error('Cantidad demasiado grande — ¿se escaneó un código de barras en la cantidad?')
+      return
+    }
     if (!isNaN(n) && n > 0) setIntakeItems(prev => prev.map(i => i.id === id ? { ...i, quantity: n } : i))
   }
 
@@ -608,6 +629,7 @@ export default function Purchases() {
           // Strip the dedup suffix (__variationId) — the backend tracks
           // stock per real product, not per presentation.
           productId: i.productId.includes('__') ? i.productId.split('__')[0]! : i.productId,
+          ...(i.variationId ? { variationId: i.variationId } : {}),
           productName: i.productName,
           quantity: i.quantity,
           unitCost: i.unitCost,
@@ -792,6 +814,9 @@ export default function Purchases() {
                               className="w-16 text-center border border-gray-200 rounded px-1 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                             />
                           </div>
+                          {(item.conversionFactor ?? 1) !== 1 && (
+                            <p className="text-[11px] text-gray-400 mt-0.5">= {+(item.quantity * (item.conversionFactor ?? 1)).toFixed(4)} unidades</p>
+                          )}
                         </td>
 
                         {/* Cost (inline edit) */}

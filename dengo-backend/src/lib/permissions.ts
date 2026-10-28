@@ -22,7 +22,11 @@ export const PERMISSION_CATALOG = {
   // a closed purchase's branch/supplier/items after the fact, which can move
   // real inventory between branches, so it's kept separate from receiving.
   purchases: ['purchases.receive', 'purchases.edit'],
-  transfers: ['transfers.view', 'transfers.create', 'transfers.approve', 'transfers.receive', 'transfers.reject'],
+  // transfers.edit / transfers.void can move real stock after the fact
+  // (a RECEIVED transfer's void pulls it back out of the destination), so
+  // they're left out of every default role — only ADMIN or a custom role
+  // that grants them explicitly can use them.
+  transfers: ['transfers.view', 'transfers.create', 'transfers.approve', 'transfers.receive', 'transfers.reject', 'transfers.edit', 'transfers.void'],
   quotations: ['quotations.view', 'quotations.create', 'quotations.convert'],
   reports: ['reports.sales', 'reports.inventory', 'reports.financial', 'reports.audit'],
   settings: ['settings.users', 'settings.roles', 'settings.stores', 'settings.system', 'settings.cashRegisters'],

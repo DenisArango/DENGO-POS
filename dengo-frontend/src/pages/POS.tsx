@@ -15,6 +15,7 @@ import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
 import ThermalReceipt from '../components/print/ThermalReceipt'
 import SalesGoalWidget from '../components/SalesGoalWidget'
+import { CustomerThumb } from '../components/common/CustomerThumb'
 import { queuePendingSale, setCache, getCache, addSaleToRegisterTally } from '../lib/offlineDb'
 import { trySync, refreshPendingCount, getLocallyClosingRegisterIds } from '../lib/offlineSync'
 import { getAdjustmentReasons, type AdjustmentReason } from '../lib/inventoryReasons'
@@ -48,6 +49,8 @@ interface ProductRecord {
   variations?: ProductVariation[]
   createdAt?: string
   updatedAt?: string
+  // Base units at the selling branch, as returned by the search endpoint.
+  stock?: number
 }
 
 interface CustomerRecord {
@@ -64,6 +67,7 @@ interface CustomerRecord {
   creditUsed?: number
   creditAvailable?: number | null // null = crédito sin límite
   creditUsedPercent?: number
+  avatarUrl?: string | null
 }
 
 type PaymentMethodType = 'CASH' | 'CARD' | 'TRANSFER' | 'MIXED' | 'CREDIT'
@@ -293,12 +297,14 @@ export default function POS() {
   const [otherBranchesStock, setOtherBranchesStock] = useState<{ branchId: string; branchName: string; quantity: number }[]>([])
   const [loadingOtherBranches, setLoadingOtherBranches] = useState(false)
 
-  // Out-of-stock gate at add time — see ensureStockAvailable(). Non-null
-  // while the "adjust inventory now?" prompt is open for a cashier with
-  // inventory.adjust; resolve(true/false) unblocks whichever add() is waiting.
+  // Current branch stock (base units) per product in the cart, keyed by
+  // product id. A product without enough stock can still be added — the
+  // cashier needs it on a line to check other branches — but its rows are
+  // flagged red and checkout is blocked until it's covered.
+  const [stockLevels, setStockLevels] = useState<Record<string, number>>({})
+  // "Sumar inventario" prompt opened from a flagged row (inventory.adjust).
   const [stockPrompt, setStockPrompt] = useState<{
-    product: ProductRecord; variation: ProductVariation; requestedQty: number; available: number
-    resolve: (proceed: boolean) => void
+    product: ProductRecord; requestedQty: number; available: number
   } | null>(null)
   const [stockPromptNewStock, setStockPromptNewStock] = useState('')
   const [stockPromptReason, setStockPromptReason] = useState('')
@@ -392,6 +398,10 @@ export default function POS() {
 
   // Saving
   const [saving, setSaving] = useState(false)
+  // Locks from the very first click through the stock pre-check and the
+  // POST itself — `saving` only flips once completeSaleRequest starts, so
+  // a second click during the pre-check used to slip through.
+  const checkoutInProgressRef = useRef(false)
 
   // Stock warning
   const [stockIssues, setStockIssues] = useState<{ name: string; available: number; requested: number }[]>([])
@@ -484,12 +494,14 @@ export default function POS() {
     return () => {
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
     }
+    // performSearch is redeclared every render; only a new term should re-run it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm])
 
   async function performSearch(query: string) {
     try {
       const data = await api.get<ProductRecord[]>(
-        `/api/products?search=${encodeURIComponent(query)}&isActive=true`
+        `/api/products?search=${encodeURIComponent(query)}&isActive=true${BRANCH_ID ? `&branchId=${BRANCH_ID}` : ''}`
       )
       if (latestSearchTermRef.current.trim() !== query) return // stale — searchTerm moved on (or was cleared) while this was in flight
       const results = (data ?? []).filter(p => p.isActive !== false).map(normaliseProduct)
@@ -579,19 +591,13 @@ export default function POS() {
     })
   }
 
-  // Same stock gate as adding a new item, but for raising the quantity of a
-  // line already in the cart (the "+" stepper and typing a quantity by
-  // hand) — lowering never needs a check. ensureStockAvailable adds
-  // `additionalQty` on top of whatever's already in the cart for this line,
-  // so passing (newQty - item.quantity) makes it evaluate the same absolute
-  // target this call is trying to reach.
-  async function changeQuantity(item: CartItem, newQty: number) {
-    if (newQty <= item.quantity || !item.variation) {
-      updateQuantity(item.product.id, item.variation?.id, newQty)
-      return
+  // Raising a line's quantity re-checks stock the same way adding does
+  // (warn + flag, never block); (newQty - item.quantity) is the extra demand.
+  function changeQuantity(item: CartItem, newQty: number) {
+    if (newQty > item.quantity && item.variation) {
+      void checkStockForAdd(item.product, item.variation, newQty - item.quantity)
     }
-    if (!(await ensureStockAvailable(item.product, item.variation, newQty - item.quantity))) return
-    updateQuantity(item.product.id, item.variation.id, newQty)
+    updateQuantity(item.product.id, item.variation?.id, newQty)
   }
 
   function updateQuantity(productId: string, variationId: string | undefined, qty: number) {
@@ -637,6 +643,7 @@ export default function POS() {
     setItemTotalStrings({})
     setItemUnitPriceStrings({})
     setBulkDiscountInput('')
+    setStockLevels({})
     // Starting a new sale (explicit "Nueva Venta" or right after completing
     // one) should return to the branch's default customer, not leave
     // whoever was just served still selected for the next sale.
@@ -651,41 +658,47 @@ export default function POS() {
     fetchCustomers()
   }
 
-  // Gate on stock BEFORE adding, not just at final checkout — additionalQty
-  // is on top of whatever's already in the cart for this exact product+
-  // variation. Resolves true when it's fine to add (enough stock, no
-  // inventory record, or the stock check itself couldn't run — e.g. offline,
-  // matching the same "allow the sale" fallback the final checkout check
-  // already used). Resolves false when blocked: either the cashier has no
-  // inventory.adjust and just gets told no, or they do and either cancel or
-  // finish the inline adjustment (in which case this resolves true instead).
-  async function ensureStockAvailable(product: ProductRecord, variation: ProductVariation, additionalQty: number): Promise<boolean> {
-    if (!BRANCH_ID) return true
-    const key = getItemKey(product.id, variation.id)
-    const existing = cartItems.find(i => getItemKey(i.product.id, i.variation?.id) === key)
-    const totalRequested = (existing?.quantity ?? 0) + additionalQty
-    const isRealVariation = !variation.id.endsWith('-default')
-    const productId = isRealVariation ? variation.productId : product.id
+  // Base units the whole cart asks for of one product — every presentation
+  // draws from the same stock, so 5 piezas + 1 "caja de 12" need 17.
+  function cartDemand(productId: string, items: CartItem[] = cartItems): number {
+    return items
+      .filter(i => i.product.id === productId)
+      .reduce((s, i) => s + i.quantity * Number(i.variation?.conversionFactor ?? 1), 0)
+  }
 
-    let available: number
+  async function fetchBranchStock(productId: string): Promise<number | undefined> {
+    if (!BRANCH_ID) return undefined
     try {
       const inv = await api.get<{ quantity: number }>(`/api/inventory/${productId}/${BRANCH_ID}`)
-      available = Number(inv?.quantity ?? 0)
+      const available = Number(inv?.quantity ?? 0)
+      setStockLevels(prev => ({ ...prev, [productId]: available }))
+      return available
     } catch {
-      return true
+      return undefined // offline / no record — nothing to flag
     }
-    if (available >= totalRequested) return true
+  }
 
-    if (!hasPermission('inventory.adjust')) {
-      toast.error(`Stock insuficiente — disponible: ${available}, necesitas: ${totalRequested}`)
-      return false
+  // Never blocks the add: a product without stock still goes on a line
+  // (that's where the cashier checks other branches). It only records the
+  // branch stock so the row can be flagged, and warns once if it's short.
+  async function checkStockForAdd(product: ProductRecord, variation: ProductVariation, additionalQty: number) {
+    const totalRequested = cartDemand(product.id) + additionalQty * Number(variation.conversionFactor ?? 1)
+    const available = await fetchBranchStock(product.id)
+    if (available !== undefined && available < totalRequested) {
+      toast.warning(`${product.name}: sin stock suficiente en esta sucursal (disponible ${available}, necesitas ${totalRequested})`)
     }
+  }
 
-    return new Promise<boolean>(resolve => {
-      setStockPromptNewStock(String(totalRequested))
-      setStockPromptReason('')
-      setStockPrompt({ product, variation, requestedQty: totalRequested, available, resolve })
-    })
+  function isLineShort(item: CartItem): boolean {
+    const available = stockLevels[item.product.id]
+    return available !== undefined && cartDemand(item.product.id) > available
+  }
+
+  function openStockPrompt(product: ProductRecord) {
+    const requestedQty = cartDemand(product.id)
+    setStockPromptNewStock(String(requestedQty))
+    setStockPromptReason('')
+    setStockPrompt({ product, requestedQty, available: stockLevels[product.id] ?? 0 })
   }
 
   async function confirmStockAdjustment() {
@@ -695,13 +708,12 @@ export default function POS() {
     if (isNaN(newStock) || newStock < stockPrompt.requestedQty) {
       toast.error(`El nuevo stock debe ser al menos ${stockPrompt.requestedQty}`); return
     }
-    const isRealVariation = !stockPrompt.variation.id.endsWith('-default')
-    const productId = isRealVariation ? stockPrompt.variation.productId : stockPrompt.product.id
+    const productId = stockPrompt.product.id
     setSavingStockPrompt(true)
     try {
       await api.put(`/api/inventory/${productId}/${BRANCH_ID}`, { quantity: newStock, reason: stockPromptReason })
       toast.success('Inventario ajustado')
-      stockPrompt.resolve(true)
+      setStockLevels(prev => ({ ...prev, [productId]: newStock }))
       setStockPrompt(null)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Error al ajustar inventario')
@@ -711,7 +723,6 @@ export default function POS() {
   }
 
   function cancelStockAdjustment() {
-    stockPrompt?.resolve(false)
     setStockPrompt(null)
   }
 
@@ -726,7 +737,7 @@ export default function POS() {
     // presentation is now a deliberate extra step from the cart row (see
     // openVariationPicker) instead of a mandatory first step.
     const base = buildDefaultVariation(product)
-    if (!(await ensureStockAvailable(product, base, 1))) return
+    void checkStockForAdd(product, base, 1)
     addToCart(product, base, 1)
     toast.success(`${product.name} agregado`)
   }
@@ -789,7 +800,7 @@ export default function POS() {
     if (exactProduct) {
       const matchedVariation = getVariations(exactProduct).find(v => barcodeEq(v.barcode))
       if (matchedVariation) {
-        if (!(await ensureStockAvailable(exactProduct, matchedVariation, 1))) return
+        void checkStockForAdd(exactProduct, matchedVariation, 1)
         addToCart(exactProduct, matchedVariation, 1)
         setSearchTerm('')
         setShowSearchResults(false)
@@ -811,7 +822,7 @@ export default function POS() {
           ? { ...data.variation, price: Number(data.variation.price ?? 0), conversionFactor: Number(data.variation.conversionFactor ?? 1) }
           : undefined
         if (variation) {
-          if (!(await ensureStockAvailable(product, variation, 1))) return
+          void checkStockForAdd(product, variation, 1)
           addToCart(product, variation, 1)
           setSearchTerm('')
           setShowSearchResults(false)
@@ -832,8 +843,7 @@ export default function POS() {
         const product = normaliseProduct(match)
         const matchedVariation = getVariations(match).find(v => barcodeEq(v.barcode))
         // Already confirmed unreachable above — skip the stock check here
-        // instead of firing another doomed request; matches ensureStockAvailable's
-        // own fallback of allowing the add when the check itself can't run.
+        // instead of firing another doomed request.
         if (matchedVariation) {
           addToCart(product, matchedVariation, 1)
           setSearchTerm('')
@@ -957,7 +967,7 @@ export default function POS() {
       // Adding fresh — keep the modal open so the cashier can add another
       // presentation of the same product right after (ej. 600ml y luego 3L)
       // instead of it just bumping the quantity of whichever was added first.
-      if (!(await ensureStockAvailable(selectedProductForVariation, variation, qty))) return
+      void checkStockForAdd(selectedProductForVariation, variation, qty)
       addToCart(selectedProductForVariation, variation, qty)
       toast.success(`${selectedProductForVariation.name} (${variation.name}) agregado`)
       setVariationQuantities(prev => ({ ...prev, [variation.id]: 1 }))
@@ -1147,6 +1157,18 @@ export default function POS() {
   }
 
   const handleCompleteSale = async () => {
+    if (checkoutInProgressRef.current) return
+    checkoutInProgressRef.current = true
+    setSaving(true)
+    try {
+      await runCompleteSale()
+    } finally {
+      checkoutInProgressRef.current = false
+      setSaving(false)
+    }
+  }
+
+  const runCompleteSale = async () => {
     if (cartItems.length === 0) { toast.error('El carrito está vacío'); return }
     if (!selectedCustomer) { toast.error('Selecciona un cliente antes de cobrar'); return }
     if (!selectedRegisterId) {
@@ -1166,20 +1188,26 @@ export default function POS() {
     // Check inventory availability
     if (BRANCH_ID) {
       const issues: { name: string; available: number; requested: number }[] = []
-      await Promise.all(cartItems.map(async (item) => {
+      // Stock is in base units and shared by every presentation of a
+      // product, so demand is summed per product: 5 piezas + 1 "caja de 12"
+      // need 17 units.
+      const demand = new Map<string, { name: string; requested: number }>()
+      for (const item of cartItems) {
+        const entry = demand.get(item.product.id) ?? { name: item.product.name, requested: 0 }
+        entry.requested += item.quantity * Number(item.variation?.conversionFactor ?? 1)
+        demand.set(item.product.id, entry)
+      }
+      const levels: Record<string, number> = {}
+      await Promise.all([...demand.entries()].map(async ([productId, { name, requested }]) => {
         try {
-          const productId = item.variation && !item.variation.id.endsWith('-default')
-            ? item.variation.productId
-            : item.product.id
           const inv = await api.get<{ quantity: number }>(`/api/inventory/${productId}/${BRANCH_ID}`)
           const available = Number(inv?.quantity ?? 0)
-          if (available < item.quantity) {
-            const name = item.product.name + (item.variation && !item.variation.id.endsWith('-default') ? ` (${item.variation.name})` : '')
-            issues.push({ name, available, requested: item.quantity })
-          }
+          levels[productId] = available
+          if (available < requested) issues.push({ name, available, requested })
         } catch { /* no inventory record = allow sale */ }
       }))
 
+      setStockLevels(prev => ({ ...prev, ...levels }))
       if (issues.length > 0) {
         setStockIssues(issues)
         setShowStockWarning(true)
@@ -1281,6 +1309,11 @@ export default function POS() {
                     </div>
                     <div className="text-right ml-4 flex-shrink-0">
                       <p className="text-sm font-bold text-primary-600">Q{Number(product.basePrice).toFixed(2)}</p>
+                      {product.stock !== undefined && (
+                        Number(product.stock) > 0
+                          ? <p className="text-xs text-green-600">Stock: {Number(product.stock)}</p>
+                          : <p className="text-xs font-medium text-red-500">Sin inventario</p>
+                      )}
                       {hasVariationChoice(product) && (
                         <p className="text-xs text-gray-400">{variations.length} variante{variations.length !== 1 ? 's' : ''}</p>
                       )}
@@ -1339,13 +1372,16 @@ export default function POS() {
                   const isPriceOverridden = itemPriceOverride[key] !== undefined
                   const disc = itemDiscounts[key] || 0
                   const lineTotal = getLineTotal(item)
+                  const short = isLineShort(item)
                   return (
                     <motion.div
                       key={key}
                       initial={{ opacity: 0, y: -6 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                      className="grid gap-2 px-4 py-2.5 items-center border-b border-gray-50 hover:bg-gray-50 transition-colors min-w-[540px]"
+                      className={`grid gap-2 px-4 py-2.5 items-center border-b transition-colors min-w-[540px] ${
+                        short ? 'bg-red-50 border-red-200 border-l-4 border-l-red-500' : 'border-gray-50 hover:bg-gray-50'
+                      }`}
                       style={{ gridTemplateColumns: '24px 1fr 90px 140px 110px 90px 28px' }}
                     >
                       <span className="text-xs text-gray-400">{idx + 1}</span>
@@ -1384,6 +1420,25 @@ export default function POS() {
                             <Building2 size={11} />
                           </button>
                         </div>
+                        {short && (
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <span className="text-[11px] font-medium text-red-700">
+                              Sin stock suficiente — disponible: {stockLevels[item.product.id]}, necesitas: {cartDemand(item.product.id)}
+                            </span>
+                            {hasPermission('inventory.adjust') && (
+                              <button
+                                onClick={() => openStockPrompt(item.product)}
+                                className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-red-600 text-white hover:bg-red-700">
+                                Sumar inventario
+                              </button>
+                            )}
+                            <button
+                              onClick={() => showOtherBranchesStock(item.product)}
+                              className="text-[11px] font-medium px-1.5 py-0.5 rounded border border-red-300 text-red-700 hover:bg-red-100">
+                              Otras sucursales
+                            </button>
+                          </div>
+                        )}
                       </div>
                       {/* Unit price editable — ajusta solo esta venta, nunca el
                           precio guardado del producto (mismo principio que el
@@ -1571,9 +1626,12 @@ export default function POS() {
                     ) : (
                       filteredCustomers.slice(0, 50).map(customer => (
                         <button key={customer.id} onMouseDown={() => handleSelectCustomer(customer)}
-                          className="w-full text-left px-3 py-2 hover:bg-primary-50 transition-colors border-b border-gray-50 last:border-0">
-                          <p className="text-sm font-medium text-gray-800">{getCustomerName(customer)}</p>
-                          <p className="text-xs text-gray-400">NIT: {getCustomerNit(customer)}{creditHint(customer)}</p>
+                          className="w-full text-left px-3 py-2 hover:bg-primary-50 transition-colors border-b border-gray-50 last:border-0 flex items-center gap-2.5">
+                          <CustomerThumb src={customer.avatarUrl} name={getCustomerName(customer)} />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-800 truncate">{getCustomerName(customer)}</p>
+                            <p className="text-xs text-gray-400">NIT: {getCustomerNit(customer)}{creditHint(customer)}</p>
+                          </div>
                         </button>
                       ))
                     )}
@@ -1930,9 +1988,8 @@ export default function POS() {
         )}
       </AnimatePresence>
 
-      {/* ── Stock-adjustment prompt — appears when adding a product without
-          enough stock and the cashier has inventory.adjust. Resolving it
-          (or cancelling) is what unblocks ensureStockAvailable()'s promise. ── */}
+      {/* ── "Sumar inventario" prompt — opened from a cart line flagged as
+          short, for cashiers with inventory.adjust. ── */}
       <AnimatePresence>
         {stockPrompt && (
           <motion.div
@@ -1947,12 +2004,12 @@ export default function POS() {
             >
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle size={22} className="text-orange-600" />
-                <h3 className="text-lg font-bold text-gray-800">Stock insuficiente</h3>
+                <h3 className="text-lg font-bold text-gray-800">Sumar inventario</h3>
               </div>
               <p className="text-sm text-gray-600 mb-4">
-                <span className="font-medium">{stockPrompt.product.name}{stockPrompt.variation.name !== 'Pieza' ? ` (${stockPrompt.variation.name})` : ''}</span>
-                {' '}— disponible: {stockPrompt.available}, necesitas: {stockPrompt.requestedQty}.
-                Tienes permiso para ajustar el inventario; hazlo aquí para continuar con la venta.
+                <span className="font-medium">{stockPrompt.product.name}</span>
+                {' '}— disponible: {stockPrompt.available}, la venta necesita: {stockPrompt.requestedQty} (unidades base).
+                Ajusta el inventario de esta sucursal para poder cobrar.
               </p>
               <div className="space-y-3">
                 <div>
@@ -1975,7 +2032,7 @@ export default function POS() {
                   Cancelar
                 </button>
                 <button onClick={confirmStockAdjustment} disabled={savingStockPrompt} className="flex-1 btn-primary btn-md">
-                  {savingStockPrompt ? 'Guardando...' : 'Ajustar y continuar'}
+                  {savingStockPrompt ? 'Guardando...' : 'Ajustar inventario'}
                 </button>
               </div>
             </motion.div>
@@ -2026,16 +2083,17 @@ export default function POS() {
                   ) : (
                     filteredCustomers.map(customer => (
                       <button key={customer.id} onClick={() => handleSelectCustomer(customer)}
-                        className="w-full p-3 bg-gray-50 hover:bg-primary-50 hover:border-primary-300 border border-transparent rounded-lg transition-colors text-left">
-                        <div className="flex justify-between items-start">
-                          <p className="font-medium text-gray-800 text-sm">{getCustomerName(customer)}</p>
+                        className="w-full p-3 bg-gray-50 hover:bg-primary-50 hover:border-primary-300 border border-transparent rounded-lg transition-colors text-left flex items-center gap-3">
+                        <CustomerThumb src={customer.avatarUrl} name={getCustomerName(customer)} size={40} />
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-800 text-sm truncate">{getCustomerName(customer)}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">NIT: {getCustomerNit(customer)}</p>
+                          {customer.creditEnabled && (
+                            <p className="text-xs text-green-600 mt-0.5">
+                              Crédito disponible: {customer.creditAvailable === null ? 'Ilimitado' : `Q${(customer.creditAvailable ?? 0).toFixed(2)}`}
+                            </p>
+                          )}
                         </div>
-                        <p className="text-xs text-gray-500 mt-0.5">NIT: {getCustomerNit(customer)}</p>
-                        {customer.creditEnabled && (
-                          <p className="text-xs text-green-600 mt-0.5">
-                            Crédito disponible: {customer.creditAvailable === null ? 'Ilimitado' : `Q${(customer.creditAvailable ?? 0).toFixed(2)}`}
-                          </p>
-                        )}
                       </button>
                     ))
                   )}
@@ -2255,7 +2313,10 @@ export default function POS() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-gray-800">Stock insuficiente</h3>
-                  <p className="text-sm text-gray-600 mt-1">Los siguientes productos no tienen suficiente stock en esta sucursal:</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    No se puede cobrar: estos productos no tienen suficiente stock en esta sucursal. Están marcados en rojo en el carrito
+                    {hasPermission('inventory.adjust') ? ' — usa "Sumar inventario" en cada línea, o quítalos.' : '; quítalos o pide a alguien con permiso que ajuste el inventario.'}
+                  </p>
                 </div>
               </div>
               <div className="space-y-2 mb-6">
@@ -2272,15 +2333,9 @@ export default function POS() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowStockWarning(false)}
-                  className="btn-outline btn-md flex-1"
-                >
-                  Revisar carrito
-                </button>
-                <button
-                  onClick={() => { setShowStockWarning(false); completeSaleRequest() }}
                   className="btn-primary btn-md flex-1"
                 >
-                  Vender de todas formas
+                  Revisar carrito
                 </button>
               </div>
             </motion.div>

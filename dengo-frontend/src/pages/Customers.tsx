@@ -10,6 +10,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { api } from '../lib/api'
+import { compressImageDataUrl } from '../lib/imageCompress'
 import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
@@ -111,9 +112,15 @@ export default function Customers() {
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) { toast.error('La imagen no debe superar 2MB'); return }
+    if (file.size > 8 * 1024 * 1024) { toast.error('La imagen no debe superar 8MB'); return }
     const reader = new FileReader()
-    reader.onloadend = () => setFormData(prev => ({ ...prev, avatarUrl: reader.result as string }))
+    // Small: the POS loads every customer (with photo) for its search box,
+    // so a full-size phone photo per customer would make it crawl.
+    reader.onloadend = () => {
+      compressImageDataUrl(reader.result as string, 256, 0.8)
+        .then(small => setFormData(prev => ({ ...prev, avatarUrl: small })))
+        .catch(() => toast.error('No se pudo procesar la imagen'))
+    }
     reader.readAsDataURL(file)
   }
 

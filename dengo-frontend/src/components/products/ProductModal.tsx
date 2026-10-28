@@ -34,6 +34,8 @@ interface ProductFormData {
   basePrice: number
   cost: number
   minStock: number
+  // null = no ceiling: never flagged as sobrestock.
+  maxStock: number | null
   variations: {
     id?: string
     name: string
@@ -78,6 +80,7 @@ export default function ProductModal({
     basePrice: 0,
     cost: 0,
     minStock: 10,
+    maxStock: null,
     variations: []
   })
   const [productImage, setProductImage] = useState<string | null>(null)
@@ -146,6 +149,7 @@ export default function ProductModal({
         basePrice: Number(editingProduct.basePrice ?? 0),
         cost: Number(editingProduct.cost ?? 0),
         minStock: Number(editingProduct.minStock ?? 0),
+        maxStock: editingProduct.maxStock != null ? Number(editingProduct.maxStock) : null,
         variations: (editingProduct.variations || [])
           .filter((v: any) => !v.isDefault)
           .map((v: any) => ({
@@ -402,6 +406,7 @@ export default function ProductModal({
       basePrice: 0,
       cost: 0,
       minStock: 10,
+      maxStock: null,
       variations: []
     })
     setProductImage(null)
@@ -629,6 +634,32 @@ export default function ProductModal({
                           className="input"
                           placeholder="10"
                         />
+                      </div>
+
+                      <div>
+                        <label className="label">Stock Máximo</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={numDrafts.maxStock ?? (formData.maxStock == null ? '' : String(formData.maxStock))}
+                          onChange={(e) => setNumDrafts(prev => ({ ...prev, maxStock: e.target.value }))}
+                          onFocus={(e) => e.target.select()}
+                          onBlur={() => {
+                            const str = numDrafts.maxStock
+                            if (str === undefined) return
+                            const n = parseFloat(str)
+                            // Empty (or 0) clears the ceiling.
+                            setFormData(prev => ({ ...prev, maxStock: !str.trim() || isNaN(n) || n <= 0 ? null : Math.round(n) }))
+                            setNumDrafts(prev => { const next = { ...prev }; delete next.maxStock; return next })
+                          }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                          className="input"
+                          placeholder="Sin máximo"
+                        />
+                        {formData.maxStock != null && formData.maxStock <= formData.minStock && (
+                          <p className="text-xs text-amber-600 mt-1">El máximo debería ser mayor que el mínimo</p>
+                        )}
+                        <p className="text-xs text-gray-400 mt-1">Vacío = no se marca como sobrestock</p>
                       </div>
 
                       <div>

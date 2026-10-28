@@ -5,7 +5,7 @@ import {
   Building2, Truck, Clock, CheckCircle,
   XCircle, ArrowRight, ChevronDown,
   Download, Eye, BarChart3, ArrowLeft, Printer,
-  ArrowLeftRight, Ban
+  ArrowLeftRight, Ban, Pencil
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -46,14 +46,27 @@ interface Product {
 }
 
 interface TransferItem {
+  // In the create/edit form this is the dedup key (`${productId}__${variationId}`
+  // for a presentation line); on a loaded transfer it's the real product id.
   productId: string
   productName: string
   productCode: string
+  // Per presentation when variationId is set ("2 cajas"); stock moves
+  // quantity * conversionFactor base units.
   quantity: number
+  variationId?: string
+  conversionFactor: number
   unitCost: number
   totalCost: number
+  unitPrice: number
+  totalPrice: number
   basePrice?: number
+  // Base units available at the origin branch.
   availableStock?: number
+  // The product's own per-base-unit values, so switching this line to
+  // another presentation can recompute its cost/price.
+  productCost?: number
+  productBasePrice?: number
   // Carried along so the row can offer "cambiar variación"/"agregar otra
   // presentación" without re-fetching the product — undefined/empty means
   // this product has no real variations defined at all.
@@ -70,12 +83,18 @@ interface Transfer {
   fromBranch?: Branch
   toBranch?: Branch
   status: 'pending' | 'in_transit' | 'approved' | 'completed' | 'cancelled' | 'rejected'
+  rawStatus?: string
   createdAt: string
+  cancelledAt?: string
+  cancelReason?: string
+  cancelledBy?: { id: string; name: string }
+  editedAt?: string
   createdBy?: string
   requestedBy?: { id: string; name: string }
   items: TransferItem[]
   totalItems?: number
   totalValue?: number
+  totalPriceValue?: number
   notes?: string
   receivedAt?: string
   receivedBy?: { id: string; name: string }
@@ -117,6 +136,8 @@ export default function StoreTransfers() {
   const canApprove = hasPermission('transfers.approve')
   const canReceive = hasPermission('transfers.receive')
   const canReject = hasPermission('transfers.reject')
+  const canEdit = hasPermission('transfers.edit')
+  const canVoid = hasPermission('transfers.void')
 
   const [view, setView] = useState<'list' | 'create'>('list')
   const [transfers, setTransfers] = useState<Transfer[]>([])
@@ -132,7 +153,14 @@ export default function StoreTransfers() {
   const [printingTransfer, setPrintingTransfer] = useState<Transfer | null>(null)
   const [page, setPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
-  const [stats, setStats] = useState({ total: 0, pending: 0, inTransit: 0, completed: 0, totalValue: 0 })
+  const [stats, setStats] = useState({ total: 0, pending: 0, inTransit: 0, completed: 0, totalValue: 0, totalPriceValue: 0 })
+  // Set while editing an existing transfer in the create/edit form.
+  const [editingTransfer, setEditingTransfer] = useState<Transfer | null>(null)
+  // Id of the transfer whose approve/receive/reject/void is in flight —
+  // its buttons are disabled until the server answers.
+  const [busyTransferId, setBusyTransferId] = useState<string | null>(null)
+  const [voidTarget, setVoidTarget] = useState<Transfer | null>(null)
+  const [voidReason, setVoidReason] = useState('')
 
   // ── Create view state ──────────────────────────────────────────────────────
   const [fromStore, setFromStore] = useState('')
@@ -179,21 +207,32 @@ export default function StoreTransfers() {
 
   const normalizeTransfer = (t: any): Transfer => ({
     ...t,
+    rawStatus: t.status,
     status: normalizeTransferStatus(t.status),
-    items: (t.items ?? []).map((item: any) => {
+    items: (t.items ?? []).map((item: any): TransferItem => {
       const qty = Number(item.quantity ?? 0)
-      // unitCost: prefer stored value, fall back to product.cost (cost field from Products table)
-      const unitCost = Number(item.unitCost ?? item.product?.cost ?? 0)
-      const totalCost = Number(item.totalCost ?? 0) || qty * unitCost
-      const basePrice = Number(item.product?.basePrice ?? 0)
+      const factor = Number(item.conversionFactor ?? 1) || 1
+      // Stored per presentation since cost/price snapshots were added; older
+      // transfers fall back to the product's current values.
+      const unitCost = item.unitCost != null ? Number(item.unitCost) : Number(item.product?.cost ?? 0) * factor
+      const unitPrice = item.unitPrice != null
+        ? Number(item.unitPrice)
+        : Number(item.variation?.price ?? item.product?.basePrice ?? 0)
+      const baseName = item.product?.name ?? item.productName ?? ''
       return {
         productId: item.productId ?? item.product?.id ?? '',
-        productName: item.product?.name ?? item.productName ?? '',
+        productName: item.variation ? `${baseName} (${item.variation.name})` : baseName,
         productCode: item.product?.barcode ?? item.product?.sku ?? item.productCode ?? item.productId ?? '',
         quantity: qty,
+        variationId: item.variationId ?? undefined,
+        conversionFactor: factor,
         unitCost,
-        totalCost,
-        basePrice,
+        totalCost: qty * unitCost,
+        unitPrice,
+        totalPrice: qty * unitPrice,
+        basePrice: Number(item.product?.basePrice ?? 0),
+        productCost: Number(item.product?.cost ?? 0),
+        productBasePrice: Number(item.product?.basePrice ?? 0),
       }
     }),
   })
@@ -208,11 +247,11 @@ export default function StoreTransfers() {
     setLoading(true)
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
     if (selectedStatus !== 'all' && STATUS_TO_API[selectedStatus]) params.set('status', STATUS_TO_API[selectedStatus]!)
-    api.get<{ data: any[]; total: number; stats: typeof stats }>(`/api/transfers?${params}`)
+    api.get<{ data: any[]; total: number; stats?: Partial<typeof stats> }>(`/api/transfers?${params}`)
       .then(res => {
         setTransfers((res.data ?? []).map(normalizeTransfer))
         setTotalCount(res.total ?? 0)
-        setStats(res.stats ?? { total: 0, pending: 0, inTransit: 0, completed: 0, totalValue: 0 })
+        setStats({ total: 0, pending: 0, inTransit: 0, completed: 0, totalValue: 0, totalPriceValue: 0, ...(res.stats ?? {}) })
       })
       .catch(e => toast.error(e.message))
       .finally(() => setLoading(false))
@@ -312,10 +351,10 @@ export default function StoreTransfers() {
   function productFromItem(item: TransferItem): Product {
     return {
       id: item.productId.includes('__') ? item.productId.split('__')[0]! : item.productId,
-      name: item.productName,
+      name: item.variationId ? item.productName.replace(/ \([^)]*\)$/, '') : item.productName,
       barcode: item.productCode,
-      cost: item.unitCost,
-      basePrice: item.basePrice,
+      cost: item.productCost ?? item.unitCost / (item.conversionFactor || 1),
+      basePrice: item.productBasePrice ?? item.basePrice,
       variations: item.productVariations,
     }
   }
@@ -334,13 +373,19 @@ export default function StoreTransfers() {
   }
 
   async function addTransferItem(product: Product, variation: ProductVariation | null, qty: number) {
-    const name = variation && !variation.isDefault
-      ? `${product.fullName ?? product.name} (${variation.name})`
+    const isPresentation = !!variation && !variation.isDefault
+    const name = isPresentation
+      ? `${product.fullName ?? product.name} (${variation!.name})`
       : (product.fullName ?? product.name)
     const code = product.barcode ?? product.sku ?? product.id
-    const cost = Number(product.cost ?? product.unitCost ?? 0)
+    const factor = isPresentation ? Number(variation!.conversionFactor) || 1 : 1
+    const productCost = Number(product.cost ?? product.unitCost ?? 0)
+    const productBasePrice = Number(product.basePrice ?? 0)
+    // Per presentation: a "caja de 12" costs 12x the unit and sells at the caja's own price.
+    const cost = productCost * factor
+    const price = isPresentation ? Number(variation!.price ?? 0) : productBasePrice
     // Use product+variation combo as dedup key so different variants are separate rows
-    const dedupKey = variation && !variation.isDefault ? `${product.id}__${variation.id}` : product.id
+    const dedupKey = isPresentation ? `${product.id}__${variation!.id}` : product.id
 
     // Fetch available stock from origin branch
     let availableStock: number | undefined
@@ -348,8 +393,10 @@ export default function StoreTransfers() {
       try {
         const inv = await api.get<{ quantity: number }>(`/api/inventory/${product.id}/${fromStore}`)
         availableStock = Number(inv?.quantity ?? 0)
-        if (availableStock === 0) {
-          toast.warning(`"${name}" no tiene stock disponible en la sucursal de origen`)
+        if (availableStock < qty * factor) {
+          toast.warning(availableStock === 0
+            ? `"${name}" no tiene stock disponible en la sucursal de origen`
+            : `"${name}": solo hay ${availableStock} unidades en la sucursal de origen`)
         }
       } catch { /* no inventory record */ }
     }
@@ -358,13 +405,18 @@ export default function StoreTransfers() {
       const existing = prev.find(i => i.productId === dedupKey)
       if (existing) {
         return prev.map(i => i.productId === dedupKey
-          ? { ...i, quantity: i.quantity + qty, totalCost: (i.quantity + qty) * i.unitCost, availableStock }
+          ? { ...i, quantity: i.quantity + qty, totalCost: (i.quantity + qty) * i.unitCost, totalPrice: (i.quantity + qty) * i.unitPrice, availableStock }
           : i
         )
       }
       return [...prev, {
         productId: dedupKey, productName: name, productCode: code, quantity: qty,
-        unitCost: cost, totalCost: qty * cost, availableStock, productVariations: product.variations,
+        variationId: isPresentation ? variation!.id : undefined,
+        conversionFactor: factor,
+        unitCost: cost, totalCost: qty * cost,
+        unitPrice: price, totalPrice: qty * price,
+        availableStock, productVariations: product.variations,
+        productCost, productBasePrice, basePrice: productBasePrice,
       }]
     })
   }
@@ -419,8 +471,12 @@ export default function StoreTransfers() {
   function setItemQty(productId: string, quantity: number) {
     setTransferItems(prev => prev.map(i => {
       if (i.productId !== productId) return i
+      if (quantity > 1_000_000) {
+        toast.error('Cantidad demasiado grande — ¿se escaneó un código de barras en la cantidad?')
+        return i
+      }
       const newQty = Math.max(1, quantity)
-      return { ...i, quantity: newQty, totalCost: newQty * i.unitCost }
+      return { ...i, quantity: newQty, totalCost: newQty * i.unitCost, totalPrice: newQty * i.unitPrice }
     }))
   }
 
@@ -431,6 +487,27 @@ export default function StoreTransfers() {
   function resetCreateForm() {
     setFromStore(''); setToStore(''); setNotes(''); setTransferItems([])
     setPosSearch(''); setSearchResults([]); setShowSearchResults(false)
+    setEditingTransfer(null)
+  }
+
+  // Loads an existing transfer into the form. Lines get the same dedup keys
+  // the form builds itself so adding/switching presentations keeps working.
+  async function startEditTransfer(transfer: Transfer) {
+    const fresh = await api.get<unknown>(`/api/transfers/${transfer.id}`).then(normalizeTransfer).catch(() => transfer)
+    const productIds = [...new Set(fresh.items.map(i => i.productId))]
+    const products = await Promise.all(productIds.map(id => api.get<Product>(`/api/products/${id}`).catch(() => null)))
+    const variationsByProduct = new Map(productIds.map((id, idx) => [id, products[idx]?.variations]))
+    setTransferItems(fresh.items.map(i => ({
+      ...i,
+      productId: i.variationId ? `${i.productId}__${i.variationId}` : i.productId,
+      productVariations: variationsByProduct.get(i.productId),
+    })))
+    setFromStore(fresh.fromBranchId ?? fresh.fromBranch?.id ?? '')
+    setToStore(fresh.toBranchId ?? fresh.toBranch?.id ?? '')
+    setNotes(fresh.notes ?? '')
+    setEditingTransfer(fresh)
+    setShowDetailsModal(false)
+    setView('create')
   }
 
   // Re-fetch stock when origin branch changes
@@ -460,7 +537,7 @@ export default function StoreTransfers() {
     if (transferItems.length === 0) { toast.error('Debes agregar al menos un producto'); return }
 
     // Warn (don't block) if quantities exceed available stock
-    const overStockItems = transferItems.filter(i => i.availableStock !== undefined && i.quantity > i.availableStock)
+    const overStockItems = transferItems.filter(i => i.availableStock !== undefined && i.quantity * i.conversionFactor > i.availableStock)
     if (overStockItems.length > 0) {
       const names = overStockItems.map(i => `${i.productName} (disponible: ${i.availableStock})`).join(', ')
       toast.warning(`Stock bajo en origen: ${names}. El traslado se creará de todas formas.`, { duration: 4000 })
@@ -468,19 +545,24 @@ export default function StoreTransfers() {
 
     creatingTransferRef.current = true
     setSaving(true)
-    api.post('/api/transfers', {
+    const payload = {
       fromBranchId: fromStore,
       toBranchId: toStore,
-      // Strip the dedup suffix (__variationId) to send the real product ID to the backend
+      // Strip the dedup suffix (__variationId) — the presentation travels as
+      // variationId and the server applies its conversion factor.
       items: transferItems.map(i => ({
         productId: i.productId.includes('__') ? i.productId.split('__')[0] : i.productId,
+        ...(i.variationId ? { variationId: i.variationId } : {}),
         quantity: i.quantity,
       })),
       notes: notes || undefined,
-      requestedById: user?.id,
-    })
+    }
+    const request = editingTransfer
+      ? api.put(`/api/transfers/${editingTransfer.id}`, payload)
+      : api.post('/api/transfers', payload)
+    request
       .then(() => {
-        toast.success('Transferencia creada exitosamente')
+        toast.success(editingTransfer ? 'Traslado actualizado' : 'Transferencia creada exitosamente')
         resetCreateForm()
         setView('list')
         fetchTransfers()
@@ -531,23 +613,43 @@ export default function StoreTransfers() {
     return t.toBranch?.name ?? t.toStore ?? t.toBranchId ?? '—'
   }
 
-  const handleApproveTransfer = (transfer: Transfer) => {
-    api.put(`/api/transfers/${transfer.id}/approve`, {})
-      .then(() => { toast.success('Transferencia aprobada.'); fetchTransfers(); if (selectedTransfer?.id === transfer.id) setShowDetailsModal(false) })
+  // One action at a time per transfer: the buttons stay disabled until the
+  // server answers, so a slow connection can't turn one click into two
+  // approvals/receptions (the server also refuses a repeated transition).
+  const runTransferAction = (transfer: Transfer, path: string, body: unknown, successMessage: string) => {
+    if (busyTransferId) return
+    setBusyTransferId(transfer.id)
+    api.put(`/api/transfers/${transfer.id}${path}`, body)
+      .then(() => {
+        toast.success(successMessage)
+        fetchTransfers()
+        if (selectedTransfer?.id === transfer.id) setShowDetailsModal(false)
+      })
       .catch(e => toast.error(e.message))
+      .finally(() => setBusyTransferId(null))
   }
 
-  const handleReceiveTransfer = (transfer: Transfer) => {
-    api.put(`/api/transfers/${transfer.id}/receive`, {})
-      .then(() => { toast.success('Recepción confirmada. Inventario actualizado.'); fetchTransfers(); if (selectedTransfer?.id === transfer.id) setShowDetailsModal(false) })
-      .catch(e => toast.error(e.message))
+  const handleApproveTransfer = (transfer: Transfer) =>
+    runTransferAction(transfer, '/approve', {}, 'Transferencia aprobada.')
+
+  const handleReceiveTransfer = (transfer: Transfer) =>
+    runTransferAction(transfer, '/receive', {}, 'Recepción confirmada. Inventario actualizado.')
+
+  const handleRejectTransfer = (transfer: Transfer) =>
+    runTransferAction(transfer, '/reject', {}, 'Transferencia rechazada.')
+
+  const confirmVoidTransfer = () => {
+    if (!voidTarget) return
+    const target = voidTarget
+    setVoidTarget(null)
+    runTransferAction(target, '/void', { reason: voidReason.trim() || undefined },
+      target.status === 'completed'
+        ? 'Traslado anulado — la mercadería regresó a la sucursal de origen'
+        : 'Traslado anulado')
+    setVoidReason('')
   }
 
-  const handleRejectTransfer = (transfer: Transfer) => {
-    api.put(`/api/transfers/${transfer.id}/reject`, {})
-      .then(() => { toast.success('Transferencia rechazada.'); fetchTransfers(); if (selectedTransfer?.id === transfer.id) setShowDetailsModal(false) })
-      .catch(e => toast.error(e.message))
-  }
+  const isLive = (t: Transfer) => t.status !== 'cancelled' && t.status !== 'rejected'
 
   const handlePrintTransfer = (transfer: Transfer) => {
     setPrintingTransfer(transfer)
@@ -579,12 +681,19 @@ export default function StoreTransfers() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-lg font-bold text-gray-800">Nueva Transferencia</h1>
+            <h1 className="text-lg font-bold text-gray-800">
+              {editingTransfer ? `Editar Traslado ${editingTransfer.code ?? editingTransfer.id.slice(0, 8)}` : 'Nueva Transferencia'}
+            </h1>
             <p className="text-xs text-gray-500">
               {transferItems.length > 0
-                ? `${transferItems.length} producto(s) · Q${transferItems.reduce((s, i) => s + i.totalCost, 0).toFixed(2)}`
+                ? `${transferItems.length} producto(s) · Q${transferItems.reduce((s, i) => s + i.totalPrice, 0).toFixed(2)} en precio de venta`
                 : 'Sin productos agregados'}
             </p>
+            {editingTransfer && editingTransfer.status !== 'pending' && (
+              <p className="text-xs text-amber-600 mt-0.5">
+                Este traslado ya {editingTransfer.status === 'completed' ? 'fue recibido' : 'salió de origen'} — al guardar se corrige el inventario de ambas sucursales.
+              </p>
+            )}
           </div>
         </div>
 
@@ -643,10 +752,12 @@ export default function StoreTransfers() {
             {/* Column header */}
             <div
               className="grid items-center px-4 py-2 border-b bg-gray-50 rounded-none text-xs font-semibold text-gray-500 uppercase tracking-wide"
-              style={{ gridTemplateColumns: '1fr 140px 32px' }}
+              style={{ gridTemplateColumns: '1fr 110px 100px 110px 32px' }}
             >
               <span>Producto</span>
               <span className="text-center">Cantidad</span>
+              <span className="text-right">Precio U.</span>
+              <span className="text-right">Subtotal</span>
               <span></span>
             </div>
 
@@ -660,12 +771,13 @@ export default function StoreTransfers() {
                 </div>
               ) : (
                 transferItems.map(item => {
-                  const overStock = item.availableStock !== undefined && item.quantity > item.availableStock
+                  const baseUnits = item.quantity * item.conversionFactor
+                  const overStock = item.availableStock !== undefined && baseUnits > item.availableStock
                   return (
                     <div
                       key={item.productId}
                       className={`grid items-center px-4 py-3 border-b hover:bg-gray-50 ${overStock ? 'bg-red-50' : ''}`}
-                      style={{ gridTemplateColumns: '1fr 140px 32px' }}
+                      style={{ gridTemplateColumns: '1fr 110px 100px 110px 32px' }}
                     >
                       <div>
                         <p className="text-sm font-medium text-gray-800">{item.productName}</p>
@@ -697,7 +809,7 @@ export default function StoreTransfers() {
                           <p className="text-xs text-red-600 mt-0.5">⚠ Cantidad supera el stock disponible</p>
                         )}
                       </div>
-                      <div className="flex items-center justify-center">
+                      <div className="flex flex-col items-center justify-center">
                         <input
                           type="text"
                           inputMode="decimal"
@@ -715,6 +827,16 @@ export default function StoreTransfers() {
                           onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                           className={`w-14 text-center border rounded py-1 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-primary-500 ${overStock ? 'text-red-600 border-red-300' : 'text-gray-800 border-gray-200'}`}
                         />
+                        {item.conversionFactor !== 1 && (
+                          <span className="text-[11px] text-gray-400 mt-0.5">= {+baseUnits.toFixed(4)} unid.</span>
+                        )}
+                      </div>
+                      <div className="text-right text-sm text-gray-700">
+                        Q{item.unitPrice.toFixed(2)}
+                        <p className="text-[11px] text-gray-400">Costo Q{item.unitCost.toFixed(2)}</p>
+                      </div>
+                      <div className="text-right text-sm font-semibold text-gray-800">
+                        Q{item.totalPrice.toFixed(2)}
                       </div>
                       <button onClick={() => removeTransferItem(item.productId)} className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded">
                         <XCircle size={16} />
@@ -728,9 +850,14 @@ export default function StoreTransfers() {
             {/* Footer */}
             <div className="border-t p-3 flex items-center justify-between bg-gray-50 rounded-b-lg text-sm">
               <span className="text-gray-500">{transferItems.length} producto(s)</span>
-              <span className="font-semibold text-gray-800">
-                Q{transferItems.reduce((s, i) => s + i.totalCost, 0).toFixed(2)}
-              </span>
+              <div className="text-right">
+                <p className="font-semibold text-gray-800">
+                  Total: Q{transferItems.reduce((s, i) => s + i.totalPrice, 0).toFixed(2)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Costo: Q{transferItems.reduce((s, i) => s + i.totalCost, 0).toFixed(2)}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -790,7 +917,7 @@ export default function StoreTransfers() {
                 {saving
                   ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
                   : <ArrowRight size={16} />}
-                Crear Transferencia
+                {saving ? 'Guardando…' : editingTransfer ? 'Guardar cambios' : 'Crear Transferencia'}
               </button>
               <button
                 onClick={() => { resetCreateForm(); setView('list') }}
@@ -945,8 +1072,8 @@ export default function StoreTransfers() {
               <span className="text-gray-600 text-sm">Valor Total</span>
               <Package className="text-purple-600" size={20} />
             </div>
-            <p className="text-2xl font-bold text-gray-800">Q{stats.totalValue.toLocaleString()}</p>
-            <p className="text-xs text-purple-600 mt-1">En transferencias</p>
+            <p className="text-2xl font-bold text-gray-800">Q{stats.totalPriceValue.toLocaleString('es-GT', { maximumFractionDigits: 2 })}</p>
+            <p className="text-xs text-purple-600 mt-1">Precio de venta · costo Q{stats.totalValue.toLocaleString('es-GT', { maximumFractionDigits: 2 })}</p>
           </motion.div>
         </div>
       )}
@@ -1006,8 +1133,8 @@ export default function StoreTransfers() {
               </thead>
               <tbody>
                 {filteredTransfers.map((transfer) => {
-                  const itemTotal = transfer.items.reduce((s, i) => s + i.totalCost, 0)
-                  const value = transfer.totalValue ?? itemTotal
+                  const value = transfer.items.reduce((s, i) => s + i.totalPrice, 0)
+                  const busy = busyTransferId === transfer.id
                   return (
                     <tr key={transfer.id} className="border-b hover:bg-gray-50">
                       <td className="py-3 px-4">
@@ -1054,7 +1181,8 @@ export default function StoreTransfers() {
                           {canApprove && transfer.status === 'pending' && (
                             <button
                               onClick={() => handleApproveTransfer(transfer)}
-                              className="p-1 hover:bg-blue-50 rounded transition-colors"
+                              disabled={busy}
+                              className="p-1 hover:bg-blue-50 rounded transition-colors disabled:opacity-40 disabled:cursor-wait"
                               title="Aprobar"
                             >
                               <Truck size={18} className="text-blue-600" />
@@ -1063,21 +1191,43 @@ export default function StoreTransfers() {
                           {canReceive && (transfer.status === 'in_transit' || transfer.status === 'approved') && (
                             <button
                               onClick={() => handleReceiveTransfer(transfer)}
-                              className="p-1 hover:bg-green-50 rounded transition-colors"
+                              disabled={busy}
+                              className="p-1 hover:bg-green-50 rounded transition-colors disabled:opacity-40 disabled:cursor-wait"
                               title="Confirmar recepción"
                             >
                               <CheckCircle size={18} className="text-green-600" />
                             </button>
                           )}
+                          {canEdit && isLive(transfer) && (
+                            <button
+                              onClick={() => startEditTransfer(transfer)}
+                              disabled={busy}
+                              className="p-1 hover:bg-gray-100 rounded transition-colors disabled:opacity-40"
+                              title="Editar traslado"
+                            >
+                              <Pencil size={17} className="text-gray-600" />
+                            </button>
+                          )}
                           {canReject && (transfer.status === 'pending' || transfer.status === 'in_transit' || transfer.status === 'approved') && (
                             <button
                               onClick={() => {
-                                if (confirm('¿Anular este traslado? Esto no se puede deshacer.')) handleRejectTransfer(transfer)
+                                if (confirm('¿Rechazar este traslado? Si ya salió de origen, el inventario regresa a origen.')) handleRejectTransfer(transfer)
                               }}
-                              className="p-1 hover:bg-red-50 rounded transition-colors"
+                              disabled={busy}
+                              className="p-1 hover:bg-red-50 rounded transition-colors disabled:opacity-40 disabled:cursor-wait"
+                              title="Rechazar traslado"
+                            >
+                              <XCircle size={18} className="text-red-400" />
+                            </button>
+                          )}
+                          {canVoid && isLive(transfer) && (
+                            <button
+                              onClick={() => { setVoidReason(''); setVoidTarget(transfer) }}
+                              disabled={busy}
+                              className="p-1 hover:bg-red-50 rounded transition-colors disabled:opacity-40 disabled:cursor-wait"
                               title="Anular traslado"
                             >
-                              <Ban size={18} className="text-red-500" />
+                              <Ban size={18} className="text-red-600" />
                             </button>
                           )}
                         </div>
@@ -1172,6 +1322,16 @@ export default function StoreTransfers() {
                 )}
               </div>
 
+              {selectedTransfer.status === 'cancelled' && (
+                <div className="p-3 bg-red-50 rounded-lg text-sm text-red-800">
+                  <p className="font-medium">
+                    Anulado{selectedTransfer.cancelledBy ? ` por ${selectedTransfer.cancelledBy.name}` : ''}
+                    {selectedTransfer.cancelledAt ? ` el ${format(new Date(selectedTransfer.cancelledAt), "d 'de' MMMM, HH:mm", { locale: es })}` : ''}
+                  </p>
+                  {selectedTransfer.cancelReason && <p className="mt-0.5">Motivo: {selectedTransfer.cancelReason}</p>}
+                </div>
+              )}
+
               {selectedTransfer.notes && (
                 <div className="p-3 bg-yellow-50 rounded-lg">
                   <p className="text-sm font-medium text-yellow-900 mb-1">Notas</p>
@@ -1187,8 +1347,9 @@ export default function StoreTransfers() {
                       <tr>
                         <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Producto</th>
                         <th className="text-center py-2 px-3 text-sm font-medium text-gray-700">Cantidad</th>
-                        <th className="text-right py-2 px-3 text-sm font-medium text-gray-700">Costo Unit.</th>
+                        <th className="text-right py-2 px-3 text-sm font-medium text-gray-700">Precio U.</th>
                         <th className="text-right py-2 px-3 text-sm font-medium text-gray-700">Total</th>
+                        <th className="text-right py-2 px-3 text-sm font-medium text-gray-700">Costo</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1198,9 +1359,15 @@ export default function StoreTransfers() {
                             <p className="text-sm font-medium">{item.productName}</p>
                             <p className="text-xs text-gray-500">{item.productCode}</p>
                           </td>
-                          <td className="py-2 px-3 text-center">{item.quantity}</td>
-                          <td className="py-2 px-3 text-right">Q{item.unitCost.toFixed(2)}</td>
-                          <td className="py-2 px-3 text-right font-medium">Q{item.totalCost.toFixed(2)}</td>
+                          <td className="py-2 px-3 text-center">
+                            {item.quantity}
+                            {item.conversionFactor !== 1 && (
+                              <p className="text-[11px] text-gray-400">= {+(item.quantity * item.conversionFactor).toFixed(4)} unid.</p>
+                            )}
+                          </td>
+                          <td className="py-2 px-3 text-right">Q{item.unitPrice.toFixed(2)}</td>
+                          <td className="py-2 px-3 text-right font-medium">Q{item.totalPrice.toFixed(2)}</td>
+                          <td className="py-2 px-3 text-right text-gray-500">Q{item.totalCost.toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1208,7 +1375,10 @@ export default function StoreTransfers() {
                       <tr>
                         <td colSpan={3} className="py-2 px-3 text-right font-medium">Total:</td>
                         <td className="py-2 px-3 text-right font-bold">
-                          Q{(selectedTransfer.totalValue ?? selectedTransfer.items.reduce((s, i) => s + i.totalCost, 0)).toFixed(2)}
+                          Q{selectedTransfer.items.reduce((s, i) => s + i.totalPrice, 0).toFixed(2)}
+                        </td>
+                        <td className="py-2 px-3 text-right text-gray-600">
+                          Q{selectedTransfer.items.reduce((s, i) => s + i.totalCost, 0).toFixed(2)}
                         </td>
                       </tr>
                     </tfoot>
@@ -1222,28 +1392,70 @@ export default function StoreTransfers() {
               <button onClick={() => handlePrintTransfer(selectedTransfer)} className="btn-outline btn-md flex items-center gap-2">
                 <Printer size={16} /> Imprimir
               </button>
+              {canEdit && isLive(selectedTransfer) && (
+                <button onClick={() => startEditTransfer(selectedTransfer)} disabled={busyTransferId === selectedTransfer.id}
+                  className="btn-outline btn-md flex items-center gap-2 disabled:opacity-50">
+                  <Pencil size={15} /> Editar
+                </button>
+              )}
               {canReject && (selectedTransfer.status === 'pending' || selectedTransfer.status === 'in_transit' || selectedTransfer.status === 'approved') && (
                 <button
                   onClick={() => {
-                    if (confirm('¿Anular este traslado? Esto no se puede deshacer.')) handleRejectTransfer(selectedTransfer)
+                    if (confirm('¿Rechazar este traslado? Si ya salió de origen, el inventario regresa a origen.')) handleRejectTransfer(selectedTransfer)
                   }}
-                  className="btn-danger btn-md"
+                  disabled={busyTransferId === selectedTransfer.id}
+                  className="btn-outline btn-md text-red-600 disabled:opacity-50"
+                >
+                  Rechazar
+                </button>
+              )}
+              {canVoid && isLive(selectedTransfer) && (
+                <button
+                  onClick={() => { setVoidReason(''); setVoidTarget(selectedTransfer) }}
+                  disabled={busyTransferId === selectedTransfer.id}
+                  className="btn-danger btn-md disabled:opacity-50"
                 >
                   Anular
                 </button>
               )}
               {selectedTransfer.status === 'pending' && canApprove && (
-                <button onClick={() => handleApproveTransfer(selectedTransfer)} className="btn-primary btn-md flex-1">
-                  Aprobar Transferencia
+                <button onClick={() => handleApproveTransfer(selectedTransfer)} disabled={busyTransferId === selectedTransfer.id}
+                  className="btn-primary btn-md flex-1 disabled:opacity-50 disabled:cursor-wait">
+                  {busyTransferId === selectedTransfer.id ? 'Procesando…' : 'Aprobar Transferencia'}
                 </button>
               )}
               {canReceive && (selectedTransfer.status === 'in_transit' || selectedTransfer.status === 'approved') && (
-                <button onClick={() => handleReceiveTransfer(selectedTransfer)} className="btn-primary btn-md flex-1">
-                  Confirmar Recepción
+                <button onClick={() => handleReceiveTransfer(selectedTransfer)} disabled={busyTransferId === selectedTransfer.id}
+                  className="btn-primary btn-md flex-1 disabled:opacity-50 disabled:cursor-wait">
+                  {busyTransferId === selectedTransfer.id ? 'Procesando…' : 'Confirmar Recepción'}
                 </button>
               )}
             </div>
           </motion.div>
+        </div>
+      )}
+
+      {voidTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-800 mb-1">Anular traslado {voidTarget.code ?? voidTarget.id.slice(0, 8)}</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {voidTarget.status === 'completed'
+                ? `Ya fue recibido: la mercadería se descontará de ${displayName(voidTarget, 'to')} y regresará a ${displayName(voidTarget, 'from')}.`
+                : voidTarget.status === 'pending'
+                  ? 'Todavía no ha movido inventario; solo quedará marcado como anulado.'
+                  : `Ya salió de origen: la mercadería regresará a ${displayName(voidTarget, 'from')}.`}
+            </p>
+            <label className="label">Motivo (opcional)</label>
+            <textarea value={voidReason} onChange={e => setVoidReason(e.target.value)} rows={3} maxLength={500}
+              className="input w-full resize-none" placeholder="Ej. se envió a la sucursal equivocada" />
+            <div className="flex gap-3 mt-4">
+              <button onClick={() => setVoidTarget(null)} className="btn-outline btn-md flex-1">Cancelar</button>
+              <button onClick={confirmVoidTransfer} disabled={!!busyTransferId} className="btn-danger btn-md flex-1 disabled:opacity-50">
+                Anular traslado
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -1264,13 +1476,18 @@ export default function StoreTransfers() {
           notes: printingTransfer.notes,
           logo: currentStore?.logo,
           companyName: currentStore?.companyName,
+          status: getStatusLabel(printingTransfer.status),
           items: printingTransfer.items.map(item => ({
             productName: item.productName,
             productCode: item.productCode,
             quantity: item.quantity,
-            cost: item.unitCost,
-            basePrice: item.basePrice,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+            unitCost: item.unitCost,
+            baseUnits: item.conversionFactor !== 1 ? item.quantity * item.conversionFactor : undefined,
           })),
+          totalPrice: printingTransfer.items.reduce((s, i) => s + i.totalPrice, 0),
+          totalCost: printingTransfer.items.reduce((s, i) => s + i.totalCost, 0),
         }}
       />
     )}

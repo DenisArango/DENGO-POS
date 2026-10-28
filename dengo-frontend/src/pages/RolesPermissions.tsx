@@ -72,6 +72,8 @@ const PERMISSION_LABELS: Record<string, string> = {
   'transfers.approve': 'Aprobar traslados',
   'transfers.receive': 'Recibir traslados',
   'transfers.reject': 'Rechazar traslados',
+  'transfers.edit': 'Editar traslados (incluso ya enviados o recibidos — ajusta el inventario de ambas sucursales)',
+  'transfers.void': 'Anular traslados (si ya fue recibido, regresa la mercadería a la sucursal de origen)',
   'quotations.view': 'Ver cotizaciones',
   'quotations.create': 'Crear cotizaciones',
   'quotations.convert': 'Convertir cotización a venta',

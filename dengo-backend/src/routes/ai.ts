@@ -3,6 +3,9 @@ import { z } from 'zod'
 import { hasPermission } from '../lib/permissions.js'
 import { SALES_DIMENSIONS, SALES_METRICS, INVENTORY_DIMENSIONS, INVENTORY_METRICS, CASH_DIMENSIONS, CASH_METRICS, DIMENSION_LABELS } from '../lib/reportQuery.js'
 import { toBusinessDateKey, toBusinessDateTimeLabel } from '../lib/timezone.js'
+import { prisma } from '../lib/prisma.js'
+import { allowedBranchIds } from '../lib/branch-scope.js'
+import { runAnalyst } from '../lib/aiAnalyst.js'
 
 // AI calls cost real money per request — require at least one reports.*
 // permission so a role deliberately created without any reporting access
@@ -661,6 +664,68 @@ export default async function aiRoutes(fastify: FastifyInstance) {
     } catch (err) {
       fastify.log.error(err, 'Failed to fetch report data')
       return reply.status(500).send({ error: 'Error al obtener los datos del reporte' })
+    }
+  })
+
+  // POST /api/ai/analyst — open-ended analysis: the model writes and runs its
+  // own read-only SQL over business views (see lib/aiAnalyst.ts), iterates
+  // on the real results, and returns a structured report the frontend
+  // renders as KPIs/charts/tables. Handles questions nobody anticipated.
+  fastify.post('/analyst', { config: { rateLimit: { max: 10, timeWindow: 60_000 } }, preHandler: [fastify.authenticate] }, async (request, reply) => {
+    if (!hasAnyReportsPermission(request)) return reply.status(403).send({ error: 'No tienes permiso para esta acción' })
+    const parsed = z.object({
+      question: z.string().trim().min(3).max(1000),
+      branchId: z.string().optional(),
+      // Trimmed rather than rejected — an over-long history should never
+      // make a follow-up question fail.
+      history: z.array(z.object({
+        question: z.string().transform(s => s.slice(0, 1000)),
+        summary: z.string().transform(s => s.slice(0, 6000)).optional(),
+        queries: z.array(z.object({ purpose: z.string().optional(), sql: z.string().transform(s => s.slice(0, 8000)) }))
+          .transform(qs => qs.slice(-8)).optional(),
+      })).transform(h => h.slice(-4)).optional(),
+    }).safeParse(request.body)
+    if (!parsed.success) return reply.status(400).send({ error: parsed.error.flatten() })
+
+    const client = await getAnthropicClient()
+    if (!client) {
+      return reply.status(503).send({ error: 'La IA no está configurada en el servidor (falta ANTHROPIC_API_KEY).' })
+    }
+
+    const isAdmin = request.user.role === 'ADMIN'
+    const branchIds = isAdmin ? null : allowedBranchIds(request)
+    const canSeeCosts = hasPermission(request, 'reports.financial')
+    const branches = await prisma.branch.findMany({
+      where: branchIds ? { id: { in: branchIds } } : {},
+      select: { id: true, name: true },
+    })
+    const selected = parsed.data.branchId ? branches.find(b => b.id === parsed.data.branchId) : undefined
+    const user = await prisma.user.findUnique({ where: { id: request.user.id }, select: { name: true } })
+
+    try {
+      const report = await runAnalyst({
+        client,
+        model: process.env.ANTHROPIC_ANALYST_MODEL ?? 'claude-sonnet-5-5',
+        question: parsed.data.question,
+        history: parsed.data.history ?? [],
+        ctx: {
+          today: toBusinessDateKey(new Date()),
+          now: toBusinessDateTimeLabel(new Date()),
+          userName: user?.name ?? 'usuario',
+          branchNames: branchIds ? branches.map(b => b.name) : null,
+          ...(selected ? { selectedBranchName: selected.name } : {}),
+          canSeeCosts,
+        },
+        scope: { branchIds, canSeeCosts },
+        log: (obj, msg) => fastify.log.warn(obj, msg),
+      })
+      return reply.send(report)
+    } catch (err) {
+      fastify.log.error(err, 'AI analyst failed')
+      const status = (err as { status?: number }).status
+      if (status === 401) return reply.status(503).send({ error: 'La clave de la IA no es válida — revisa ANTHROPIC_API_KEY en el servidor.' })
+      if (status === 429 || status === 529) return reply.status(503).send({ error: 'La IA está saturada en este momento, intenta de nuevo en un minuto.' })
+      return reply.status(502).send({ error: 'No se pudo completar el análisis. Intenta de nuevo o reformula la pregunta.' })
     }
   })
 

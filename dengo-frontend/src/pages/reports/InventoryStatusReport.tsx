@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Package, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store'
 import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
+import { SortableTh, sortRows, type SortState } from '../../components/common/SortableTh'
 
 const STATUS_CONFIG = {
   normal:    { label: 'Normal',     color: '#10B981', bg: 'bg-green-100 text-green-700' },
@@ -58,6 +59,7 @@ export default function InventoryStatusReport() {
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState<ReportFilterState>({ branchId: currentStore?.id ?? user?.branchId ?? '', cashRegisterId: '' })
   const [asOf, setAsOf] = useState('') // YYYY-MM-DD, empty = live stock
+  const [sort, setSort] = useState<SortState | null>(null)
 
   useEffect(() => { fetchData() }, [filters, asOf])
 
@@ -93,6 +95,21 @@ export default function InventoryStatusReport() {
     const matchStatus = !filterStatus || inv.status === filterStatus
     return matchSearch && matchStatus
   })
+  const sortedFiltered = useMemo(() => sortRows(filtered, sort, (r, key) => {
+    switch (key) {
+      case 'name': return r.product?.name ?? ''
+      case 'category': return r.product?.category?.name ?? ''
+      case 'quantity': return r.quantity
+      case 'minStock': return r.minStock
+      case 'maxStock': return r.maxStock > 0 ? r.maxStock : null
+      case 'value': return r.quantity * r.cost
+      // Lowest stock relative to its minimum first.
+      case 'criticality': return r.minStock > 0 ? r.quantity / r.minStock : Number.MAX_SAFE_INTEGER
+      // Furthest above its ceiling first (no ceiling = not overstocked).
+      case 'overstock': return r.maxStock > 0 ? r.quantity / r.maxStock : 0
+      default: return null
+    }
+  }), [filtered, sort])
   const filteredNoData = withoutData.filter(inv => !search || (inv.product?.name ?? '').toLowerCase().includes(search.toLowerCase()))
 
   const statusCounts = Object.keys(STATUS_CONFIG).reduce((acc, k) => {
@@ -184,17 +201,27 @@ export default function InventoryStatusReport() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 sticky top-0">
                 <tr>
-                  <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">Producto</th>
-                  <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">Categoría</th>
-                  <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">Stock actual</th>
-                  <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">Stock mín.</th>
-                  <th className="text-center px-4 py-2 text-xs text-gray-500 font-medium">Estado</th>
+                  <SortableTh label="Producto" sortKey="name" sort={sort} onSort={setSort} className="!py-2 text-xs !text-gray-500" />
+                  <SortableTh label="Categoría" sortKey="category" sort={sort} onSort={setSort} className="!py-2 text-xs !text-gray-500" />
+                  <SortableTh label="Stock actual" sortKey="quantity" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
+                  <SortableTh label="Mín." sortKey="minStock" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
+                  <SortableTh label="Máx." sortKey="maxStock" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
+                  <SortableTh label="Valor (costo)" sortKey="value" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
+                  <th className="text-center px-4 py-2 text-xs text-gray-500 font-medium">
+                    <div className="flex items-center justify-center gap-1">
+                      Estado
+                      <button type="button" onClick={() => setSort({ key: 'criticality', dir: 'asc' })} title="Primero los más críticos"
+                        className={`px-1.5 rounded ${sort?.key === 'criticality' ? 'bg-red-100 text-red-700' : 'bg-gray-100 hover:bg-red-50'}`}>+ crítico</button>
+                      <button type="button" onClick={() => setSort({ key: 'overstock', dir: 'desc' })} title="Primero los más sobrestockeados"
+                        className={`px-1.5 rounded ${sort?.key === 'overstock' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 hover:bg-blue-50'}`}>+ sobrestock</button>
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filtered.length === 0 && filteredNoData.length === 0
-                  ? <tr><td colSpan={5} className="text-center py-8 text-gray-400">Sin productos</td></tr>
-                  : filtered.map(inv => {
+                  ? <tr><td colSpan={7} className="text-center py-8 text-gray-400">Sin productos</td></tr>
+                  : sortedFiltered.map(inv => {
                       const cfg = STATUS_CONFIG[inv.status]
                       return (
                         <tr key={inv.id} className="hover:bg-gray-50">
@@ -202,6 +229,8 @@ export default function InventoryStatusReport() {
                           <td className="px-4 py-2.5 text-gray-500 text-xs">{inv.product?.category?.name ?? '–'}</td>
                           <td className="px-4 py-2.5 text-right font-semibold text-gray-800">{inv.quantity.toFixed(inv.quantity % 1 === 0 ? 0 : 2)} {inv.product?.baseUnit?.symbol ?? ''}</td>
                           <td className="px-4 py-2.5 text-right text-gray-500">{inv.minStock}</td>
+                          <td className="px-4 py-2.5 text-right text-gray-500">{inv.maxStock > 0 ? inv.maxStock : '—'}</td>
+                          <td className="px-4 py-2.5 text-right text-gray-700">Q{(inv.quantity * inv.cost).toFixed(2)}</td>
                           <td className="px-4 py-2.5 text-center">
                             <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${cfg.bg}`}>{cfg.label}</span>
                           </td>

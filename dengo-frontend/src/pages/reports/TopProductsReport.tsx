@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Calendar, TrendingUp, DollarSign, Package } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
@@ -8,6 +8,7 @@ import { useAuthStore } from '../../store'
 import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
+import { SortableTh, sortRows, type SortState } from '../../components/common/SortableTh'
 
 export default function TopProductsReport() {
   const navigate = useNavigate()
@@ -31,6 +32,8 @@ export default function TopProductsReport() {
     } catch { setProducts([]) } finally { setLoading(false) }
   }
 
+  const [sort, setSort] = useState<SortState | null>(null)
+  const sortedProducts = useMemo(() => sortRows(products, sort, (p, key) => (key === 'name' || key === 'category' ? p[key] : Number(p[key]))), [products, sort])
   const totalRevenue = products.reduce((s, p) => s + Number(p.revenue), 0)
   const totalUnits = products.reduce((s, p) => s + Number(p.quantitySold), 0)
   const topByRevenue = products.slice(0, 10).map(p => ({ name: p.name.slice(0, 20), revenue: Math.round(Number(p.revenue) * 100) / 100 }))
@@ -96,15 +99,15 @@ export default function TopProductsReport() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="text-center px-3 py-2 text-xs text-gray-500 font-medium w-12">#</th>
-                    <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">Producto</th>
-                    <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">Categoría</th>
-                    <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">Unidades</th>
-                    <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">Ingresos</th>
-                    <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">Margen</th>
+                    <SortableTh label="Producto" sortKey="name" sort={sort} onSort={setSort} className="!py-2 text-xs !text-gray-500" />
+                    <SortableTh label="Categoría" sortKey="category" sort={sort} onSort={setSort} className="!py-2 text-xs !text-gray-500" />
+                    <SortableTh label="Unidades" sortKey="quantitySold" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
+                    <SortableTh label="Ingresos" sortKey="revenue" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
+                    <SortableTh label="Margen" sortKey="marginPercent" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {products.map((p, i) => (
+                  {sortedProducts.map((p, i) => (
                     <tr key={p.productId} className="hover:bg-gray-50">
                       <td className="px-3 py-2.5 text-center">
                         {i < 3

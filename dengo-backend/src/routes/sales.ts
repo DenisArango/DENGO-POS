@@ -680,15 +680,19 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     if (!sale) return reply.status(404).send({ error: 'Venta no encontrada' })
     if (sale.isVoided) return reply.status(400).send({ error: 'La venta ya fue anulada' })
 
-    await prisma.sale.update({
-      where: { id },
+    // Conditional claim (WHERE isVoided = false): two near-simultaneous
+    // voids of the same sale used to both pass the check above and both
+    // return the stock and reverse the credit.
+    const claimed = await prisma.sale.updateMany({
+      where: { id, isVoided: false },
       data: {
         isVoided: true,
         voidedById: request.user.id,
         voidedAt: new Date(),
-        voidReason: reason,
+        voidReason: reason ?? null,
       },
     })
+    if (claimed.count === 0) return reply.status(400).send({ error: 'La venta ya fue anulada' })
 
     for (const item of sale.items) {
       const convFactor = Number(item.variation?.conversionFactor ?? 1)

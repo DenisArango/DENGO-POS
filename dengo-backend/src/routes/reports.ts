@@ -292,8 +292,10 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     const q = request.query as { branchId?: string; asOf?: string }
     const branchId = resolveBranchScope(request, q.branchId)
 
+    // Active products only — same as the Inventario page, so both report the
+    // same stock value (a deleted product's leftover stock used to count here).
     const rows = await prisma.inventory.findMany({
-      where: branchId ? { branchId } : {},
+      where: { ...(branchId ? { branchId } : {}), product: { isActive: true } },
       include: {
         product: { include: { category: true, baseUnit: true } },
         branch: { select: { id: true, name: true } },
@@ -347,7 +349,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     // see Documentación Técnica → Pendientes y mejoras for the reasoning.
     const items = await prisma.saleItem.findMany({
       where: { sale: filter },
-      include: { product: { include: { category: true } } },
+      include: { product: { include: { category: true } }, variation: { select: { conversionFactor: true } } },
       take: 50_000,
     })
     const map = new Map<string, { name: string; category: string; quantity: number; revenue: number }>()
@@ -356,7 +358,8 @@ export default async function reportRoutes(fastify: FastifyInstance) {
         map.set(item.productId, { name: item.product.name, category: item.product.category?.name ?? '', quantity: 0, revenue: 0 })
       }
       const p = map.get(item.productId)!
-      p.quantity += Number(item.quantity)
+      // Base units — 1 "resma de 500" is 500 hojas, not 1.
+      p.quantity += Number(item.quantity) * Number(item.variation?.conversionFactor ?? 1)
       p.revenue += Number(item.total)
     }
     const result = Array.from(map.entries())
@@ -420,6 +423,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
         cashier: item.sale.cashier,
         variationName: item.variation?.name ?? null,
         quantity: qty,
+        baseQuantity: qty * convFactor,
         unitPrice: Number(item.unitPrice),
         discount: Number(item.discount ?? 0),
         total: revenue,
@@ -431,7 +435,8 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     const active = rows.filter(r => !r.isVoided)
     const summary = {
       transactionCount: active.length,
-      totalQuantity: active.reduce((s, r) => s + r.quantity, 0),
+      // Base units — rows mixing "Unidad" and "Caja de 12" can't be added raw.
+      totalQuantity: active.reduce((s, r) => s + r.baseQuantity, 0),
       totalRevenue: active.reduce((s, r) => s + r.total, 0),
       totalProfit: active.reduce((s, r) => s + r.profit, 0),
       avgUnitPrice: active.length > 0 ? active.reduce((s, r) => s + r.unitPrice, 0) / active.length : 0,
@@ -606,9 +611,10 @@ export default async function reportRoutes(fastify: FastifyInstance) {
         })
       }
       const p = map.get(item.productId)!
-      const convFactor = Number((item.variation as any)?.conversionFactor ?? 1)
+      const convFactor = Number(item.variation?.conversionFactor ?? 1)
       const qty = Number(item.quantity)
-      p.quantitySold += qty
+      // Base units, so presentations of the same product add up correctly.
+      p.quantitySold += qty * convFactor
       p.revenue += Number(item.total)
       p.totalCostAcc += p.cost * convFactor * qty
     }
@@ -709,7 +715,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
 
     const [inventory, saleItems] = await Promise.all([
       prisma.inventory.findMany({
-        where: branchId ? { branchId } : {},
+        where: { ...(branchId ? { branchId } : {}), product: { isActive: true } },
         include: { product: { include: { category: true } } },
       }),
       prisma.saleItem.findMany({
@@ -721,15 +727,30 @@ export default async function reportRoutes(fastify: FastifyInstance) {
             ...(q.cashRegisterId ? { cashRegisterId: q.cashRegisterId } : {}),
           },
         },
-        select: { productId: true, quantity: true },
+        select: { productId: true, quantity: true, variation: { select: { conversionFactor: true } } },
       }),
     ])
 
+    // Stock is in base units, so sales must be too: a product sold by the
+    // "resma" otherwise looked like it barely moved.
     const salesMap = new Map<string, number>()
-    for (const si of saleItems) salesMap.set(si.productId, (salesMap.get(si.productId) ?? 0) + Number(si.quantity))
+    for (const si of saleItems) {
+      const base = Number(si.quantity) * Number(si.variation?.conversionFactor ?? 1)
+      salesMap.set(si.productId, (salesMap.get(si.productId) ?? 0) + base)
+    }
 
-    const result = inventory.map(inv => {
-      const stock = Number(inv.quantity)
+    // Across all branches, one row per product with its total stock —
+    // comparing each branch's stock against every branch's sales made
+    // days-of-inventory meaningless.
+    const byProduct = new Map<string, (typeof inventory)[number] & { totalQty: number }>()
+    for (const inv of inventory) {
+      const existing = byProduct.get(inv.productId)
+      if (existing) existing.totalQty += Number(inv.quantity)
+      else byProduct.set(inv.productId, { ...inv, totalQty: Number(inv.quantity) })
+    }
+
+    const result = [...byProduct.values()].map(inv => {
+      const stock = inv.totalQty
       const sales30 = salesMap.get(inv.productId) ?? 0
       const avgDaily = sales30 / 30
       const daysOfInventory = avgDaily > 0 ? Math.min(999, Math.round(stock / avgDaily)) : 999

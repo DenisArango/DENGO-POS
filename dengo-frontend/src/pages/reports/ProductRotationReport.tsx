@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Package, TrendingUp, TrendingDown, AlertTriangle, Clock } from 'lucide-react'
 import { api } from '../../lib/api'
@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store'
 import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
+import { SortableTh, sortRows, type SortState } from '../../components/common/SortableTh'
 
 const STATUS_CONFIG = {
   high:     { label: 'Alta rotación',  bg: 'bg-green-100 text-green-700',  icon: TrendingUp },
@@ -22,6 +23,7 @@ export default function ProductRotationReport() {
   const [products, setProducts] = useState<any[]>([])
   const [filterStatus, setFilterStatus] = useState('')
   const [search, setSearch] = useState('')
+  const [sort, setSort] = useState<SortState | null>(null)
   const [filters, setFilters] = useState<ReportFilterState>({ branchId: currentStore?.id ?? user?.branchId ?? '', cashRegisterId: '' })
 
   useEffect(() => { fetchData() }, [filters])
@@ -40,6 +42,8 @@ export default function ProductRotationReport() {
     const matchStatus = !filterStatus || p.status === filterStatus
     return matchSearch && matchStatus
   })
+
+  const sortedFiltered = useMemo(() => sortRows(filtered, sort, (p, key) => p[key]), [filtered, sort])
 
   const counts = Object.keys(STATUS_CONFIG).reduce((acc, k) => { acc[k] = products.filter(p => p.status === k).length; return acc }, {} as Record<string, number>)
 
@@ -80,20 +84,20 @@ export default function ProductRotationReport() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Producto</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Categoría</th>
-                <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Stock actual</th>
-                <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Ventas 30d</th>
-                <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Prom. diario</th>
-                <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Días inventario</th>
-                <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Índice rotación</th>
+                <SortableTh label="Producto" sortKey="name" sort={sort} onSort={setSort} className="!py-2 text-xs !text-gray-500" />
+                <SortableTh label="Categoría" sortKey="category" sort={sort} onSort={setSort} className="!py-2 text-xs !text-gray-500" />
+                <SortableTh label="Stock actual" sortKey="currentStock" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
+                <SortableTh label="Ventas 30d" sortKey="salesLast30Days" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
+                <SortableTh label="Prom. diario" sortKey="averageDailySales" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
+                <SortableTh label="Días inventario" sortKey="daysOfInventory" sort={sort} onSort={setSort} align="right" className="!py-2 text-xs !text-gray-500" />
+                <SortableTh label="Índice rotación" sortKey="rotationIndex" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
                 <th className="text-center px-4 py-3 text-xs text-gray-500 font-medium">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.length === 0
                 ? <tr><td colSpan={8} className="text-center py-12 text-gray-400">Sin datos</td></tr>
-                : filtered.map(p => {
+                : sortedFiltered.map(p => {
                     const cfg = STATUS_CONFIG[p.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.normal
                     const daysLabel = p.daysOfInventory >= 999 ? '∞' : String(p.daysOfInventory)
                     return (

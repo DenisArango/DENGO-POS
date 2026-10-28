@@ -245,6 +245,12 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
       }
     }
 
+    // Claim the quotation before creating anything: two near-simultaneous
+    // converts (a double click on a slow connection) used to both pass the
+    // ACCEPTED check above and create two sales.
+    const claimed = await prisma.quotation.updateMany({ where: { id, status: 'ACCEPTED' }, data: { status: 'CONVERTED' } })
+    if (claimed.count === 0) return reply.status(409).send({ error: 'Esta cotización ya fue convertida' })
+
     // Same atomic per-branch receipt correlativo as a normal POS sale (see
     // sales.ts) — this is a real Sale row too, it needs a real number.
     const receiptBranch = await prisma.branch.update({
@@ -280,11 +286,15 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
           })),
         },
       },
+    }).catch(async (err: unknown) => {
+      // Release the claim so the conversion can be retried.
+      await prisma.quotation.update({ where: { id }, data: { status: 'ACCEPTED' } })
+      throw err
     })
 
     await prisma.quotation.update({
       where: { id },
-      data: { status: 'CONVERTED', convertedToSaleId: sale.id },
+      data: { convertedToSaleId: sale.id },
     })
 
     // sale.create above never touched Inventory — unlike a POS sale, a

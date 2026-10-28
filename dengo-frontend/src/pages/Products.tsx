@@ -42,6 +42,7 @@ interface Product {
   cost?: number
   stock?: number
   minStock?: number
+  maxStock?: number | null
   isActive?: boolean
   variations: ProductVariation[]
   attributes?: Record<string, string>
@@ -118,6 +119,7 @@ export default function Products() {
           basePrice: Number(p.basePrice ?? 0),
           cost: Number(p.cost ?? 0),
           minStock: Number(p.minStock ?? 0),
+          maxStock: p.maxStock != null ? Number(p.maxStock) : null,
           stock: Number(p.stock ?? 0),
           variations: (p.variations ?? []).map((v: ProductVariation) => ({
             ...v,
@@ -178,6 +180,7 @@ export default function Products() {
       basePrice: product.basePrice,
       cost: product.cost,
       minStock: product.minStock,
+      maxStock: product.maxStock ?? null,
       categoryId: resolvedCategoryId,
       baseUnitId: resolvedBaseUnitId,
       variations: product.variations,

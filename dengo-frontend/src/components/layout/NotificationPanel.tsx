@@ -80,8 +80,8 @@ export default function NotificationPanel({ branchId }: NotificationPanelProps) 
 
         const overstock = (inventory.value ?? []).filter((item: any) => {
           const qty = Number(item.quantity ?? 0)
-          const min = Number(item.product?.minStock ?? 0)
-          return min > 0 && qty > min * 3
+          const max = item.product?.maxStock
+          return max != null && Number(max) > 0 && qty > Number(max)
         })
         if (overstock.length > 0) {
           items.push({

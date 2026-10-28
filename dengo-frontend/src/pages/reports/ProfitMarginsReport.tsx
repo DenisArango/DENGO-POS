@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Calendar, DollarSign, TrendingUp, Percent } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
@@ -8,6 +8,7 @@ import { useAuthStore } from '../../store'
 import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
+import { SortableTh, sortRows, type SortState } from '../../components/common/SortableTh'
 
 interface ProductMargin {
   rank: number
@@ -32,6 +33,7 @@ export default function ProfitMarginsReport() {
   const [loading, setLoading] = useState(false)
   const [products, setProducts] = useState<ProductMargin[]>([])
   const [minMargin, setMinMargin] = useState('')
+  const [sort, setSort] = useState<SortState | null>(null)
   const [filters, setFilters] = useState<ReportFilterState>({ branchId: currentStore?.id ?? user?.branchId ?? '', cashRegisterId: '' })
 
   useEffect(() => { fetchData() }, [from, to, filters])
@@ -47,6 +49,10 @@ export default function ProfitMarginsReport() {
   }
 
   const filtered = products.filter(p => !minMargin || Number(p.marginPercent) >= Number(minMargin))
+  const sortedProducts = useMemo(() => sortRows(filtered, sort, (p, key) => {
+    const v = (p as unknown as Record<string, unknown>)[key]
+    return typeof v === 'string' && key !== 'name' && key !== 'category' ? Number(v) : v
+  }), [filtered, sort])
   const totalRevenue = filtered.reduce((s, p) => s + Number(p.revenue), 0)
   const totalProfit = filtered.reduce((s, p) => s + Number(p.profit), 0)
   const avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0
@@ -159,18 +165,18 @@ export default function ProfitMarginsReport() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="text-center px-3 py-2 text-xs text-gray-500 font-medium w-10">#</th>
-                <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">Producto</th>
-                <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">Categoría</th>
-                <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">Unidades</th>
-                <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">Ingresos</th>
-                <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">Ganancia</th>
-                <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">Margen</th>
+                <SortableTh label="Producto" sortKey="name" sort={sort} onSort={setSort} className="!py-2 text-xs !text-gray-500" />
+                <SortableTh label="Categoría" sortKey="category" sort={sort} onSort={setSort} className="!py-2 text-xs !text-gray-500" />
+                <SortableTh label="Unidades" sortKey="quantitySold" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
+                <SortableTh label="Ingresos" sortKey="revenue" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
+                <SortableTh label="Ganancia" sortKey="profit" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
+                <SortableTh label="Margen" sortKey="marginPercent" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.length === 0
                 ? <tr><td colSpan={7} className="text-center py-10 text-gray-400">Sin datos en el período seleccionado</td></tr>
-                : filtered.map((p, i) => (
+                : sortedProducts.map((p, i) => (
                     <tr key={p.productId} className="hover:bg-gray-50">
                       <td className="px-3 py-2.5 text-center text-gray-400 text-xs">{i + 1}</td>
                       <td className="px-4 py-2.5 font-medium text-gray-800">{p.name}</td>

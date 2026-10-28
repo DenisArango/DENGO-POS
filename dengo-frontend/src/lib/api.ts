@@ -116,10 +116,44 @@ async function apiFetch<T = unknown>(
   return data as T
 }
 
+// Double-click protection for every write in the app, in one place: on a
+// slow connection people click "Cobrar"/"Recibir"/"Confirmar" again while
+// the first request is still in flight, and each click used to become its
+// own sale/transfer/purchase. An identical write (same method, path and
+// body) is refused while the first is pending, and a POST is also refused
+// for a short moment after it succeeded, covering the gap before the screen
+// resets. Status 409 (not a TypeError/5xx) so offline-queue fallbacks never
+// treat it as "server unreachable".
+export const DUPLICATE_REQUEST_MESSAGE = 'Esta operación ya se está procesando — espera la respuesta antes de volver a intentar'
+const RECENT_POST_WINDOW_MS = 2500
+const inFlightWrites = new Set<string>()
+const recentPosts = new Map<string, number>()
+
+async function guardedWrite<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const key = `${method} ${path} ${body === undefined ? '' : JSON.stringify(body)}`
+  const now = Date.now()
+  for (const [k, at] of recentPosts) if (now - at > RECENT_POST_WINDOW_MS) recentPosts.delete(k)
+  if (inFlightWrites.has(key) || recentPosts.has(key)) {
+    throw new ApiError(DUPLICATE_REQUEST_MESSAGE, 409, { duplicate: true })
+  }
+  inFlightWrites.add(key)
+  try {
+    const result = await apiFetch<T>(method, path, body)
+    if (method === 'POST') recentPosts.set(key, Date.now())
+    return result
+  } finally {
+    inFlightWrites.delete(key)
+  }
+}
+
+export function isDuplicateRequestError(e: unknown): boolean {
+  return e instanceof ApiError && (e.data as { duplicate?: boolean } | undefined)?.duplicate === true
+}
+
 export const api = {
   get:    <T = unknown>(path: string)                  => apiFetch<T>('GET',    path),
-  post:   <T = unknown>(path: string, body: unknown)   => apiFetch<T>('POST',   path, body),
-  put:    <T = unknown>(path: string, body: unknown)   => apiFetch<T>('PUT',    path, body),
-  patch:  <T = unknown>(path: string, body: unknown)   => apiFetch<T>('PATCH',  path, body),
-  delete: <T = unknown>(path: string, body?: unknown)   => apiFetch<T>('DELETE', path, body),
+  post:   <T = unknown>(path: string, body: unknown)   => guardedWrite<T>('POST',   path, body),
+  put:    <T = unknown>(path: string, body: unknown)   => guardedWrite<T>('PUT',    path, body),
+  patch:  <T = unknown>(path: string, body: unknown)   => guardedWrite<T>('PATCH',  path, body),
+  delete: <T = unknown>(path: string, body?: unknown)   => guardedWrite<T>('DELETE', path, body),
 }

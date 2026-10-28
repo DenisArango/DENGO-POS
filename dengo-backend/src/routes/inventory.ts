@@ -12,18 +12,39 @@ import { parseBusinessDateParam, getBusinessDayBounds } from '../lib/timezone.js
 // 'low'/'critical'/'overstock' compares two columns from different tables
 // (Inventory.quantity vs Product.minStock) row-by-row, which Prisma's typed
 // `where` can't express without raw SQL.
+// Sobrestock only exists against a real ceiling: a product with no
+// maxStock set is never flagged (it used to be "more than 3x the minimum",
+// which flagged almost everything with a low minimum).
 const STATUS_CASE_SQL = Prisma.sql`(CASE
   WHEN i."QUANTITY" = 0 THEN 'critical'
   WHEN i."QUANTITY" <= p."MIN_STOCK" * 0.5 THEN 'critical'
   WHEN i."QUANTITY" <= p."MIN_STOCK" THEN 'low'
-  WHEN i."QUANTITY" > p."MIN_STOCK" * 3 THEN 'overstock'
+  WHEN p."MAX_STOCK" IS NOT NULL AND i."QUANTITY" > p."MAX_STOCK" THEN 'overstock'
   ELSE 'normal'
 END)`
+
+// Whitelisted ORDER BY expressions for the Inventory page's sortable
+// columns — never interpolate the raw query param into SQL.
+const SORT_SQL: Record<string, Prisma.Sql> = {
+  name: Prisma.sql`p."NAME"`,
+  category: Prisma.sql`c."NAME"`,
+  quantity: Prisma.sql`i."QUANTITY"`,
+  minStock: Prisma.sql`p."MIN_STOCK"`,
+  maxStock: Prisma.sql`p."MAX_STOCK"`,
+  cost: Prisma.sql`p."COST"`,
+  price: Prisma.sql`p."BASE_PRICE"`,
+  value: Prisma.sql`(i."QUANTITY" * p."COST")`,
+  saleValue: Prisma.sql`(i."QUANTITY" * p."BASE_PRICE")`,
+  // How far below its minimum it is (most critical first when ascending).
+  criticality: Prisma.sql`(CASE WHEN p."MIN_STOCK" > 0 THEN i."QUANTITY" / p."MIN_STOCK" ELSE 999999 END)`,
+  // How far above its ceiling it is (no ceiling sorts as not-overstocked).
+  overstock: Prisma.sql`(CASE WHEN p."MAX_STOCK" IS NOT NULL AND p."MAX_STOCK" > 0 THEN i."QUANTITY" / p."MAX_STOCK" ELSE 0 END)`,
+}
 
 export default async function inventoryRoutes(fastify: FastifyInstance) {
   // GET /api/inventory?branchId=
   fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
-    const q = request.query as { branchId?: string; search?: string; category?: string; status?: string; page?: string; limit?: string }
+    const q = request.query as { branchId?: string; search?: string; category?: string; status?: string; page?: string; limit?: string; sort?: string; dir?: string }
     const branchId = resolveBranchScope(request, q.branchId)
     // product.isActive always applies (not just when search/category are
     // set) — a deleted (soft-deactivated) product's Inventory row otherwise
@@ -65,6 +86,8 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
       if (q.category) conditions.push(Prisma.sql`c."NAME" = ${q.category}`)
       if (q.status) conditions.push(Prisma.sql`${STATUS_CASE_SQL} = ${q.status}`)
       const whereSql = conditions.length ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}` : Prisma.sql``
+      const sortExpr = SORT_SQL[q.sort ?? ''] ?? SORT_SQL.name!
+      const sortDir = q.dir === 'desc' ? Prisma.sql`DESC NULLS LAST` : Prisma.sql`ASC NULLS LAST`
 
       const [rows, countRows, statsRows] = await Promise.all([
         prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
@@ -73,7 +96,7 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
           JOIN "PRODUCTS" p ON p."ID" = i."PRODUCT_ID"
           JOIN "CATEGORIES" c ON c."ID" = p."CATEGORY_ID"
           ${whereSql}
-          ORDER BY p."NAME" ASC
+          ORDER BY ${sortExpr} ${sortDir}, p."NAME" ASC
           LIMIT ${limit} OFFSET ${(page - 1) * limit}
         `),
         prisma.$queryRaw<{ count: bigint }[]>(Prisma.sql`
@@ -85,7 +108,7 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
         `),
         prisma.inventory.findMany({
           where: { ...(branchId ? { branchId } : {}), product: { isActive: true } },
-          select: { quantity: true, product: { select: { minStock: true, basePrice: true, cost: true } } },
+          select: { quantity: true, product: { select: { minStock: true, maxStock: true, basePrice: true, cost: true } } },
         }),
       ])
 
@@ -105,8 +128,9 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
       for (const row of statsRows) {
         const qty = Number(row.quantity)
         const minStock = Number(row.product.minStock ?? 0)
+        const maxStock = row.product.maxStock
         if (qty <= minStock) lowStock++
-        else if (qty > minStock * 3) overstock++
+        else if (maxStock != null && qty > maxStock) overstock++
         totalValue += qty * Number(row.product.cost ?? 0)
         totalSaleValue += qty * Number(row.product.basePrice ?? 0)
       }
@@ -326,37 +350,80 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
 
   const intakeItemSchema = z.object({
     productId: z.string(),
+    // Set when the line was received as a presentation ("Resma de 500"):
+    // quantity, unitCost and unitPrice are then all per presentation, and
+    // the server converts to base units with the variation's factor.
+    variationId: z.string().optional(),
     productName: z.string(),
-    quantity: z.number().min(0.001),
+    // A barcode scanned into the quantity box would otherwise add billions.
+    quantity: z.number().min(0.001).max(1_000_000, 'La cantidad por línea no puede superar 1,000,000 — ¿se escaneó un código de barras en la cantidad?'),
     unitCost: z.number().min(0),
     unitPrice: z.number().min(0).optional(),
   })
+
+  type IntakeItem = z.infer<typeof intakeItemSchema>
+
+  // Everything stored per BASE unit: stock quantity, StockMovement.unitCost
+  // and Product.cost. Receiving "10 resmas at Q32" used to add 10 hojas and
+  // set every hoja's cost to Q32 — inflating inventory value 500x.
+  interface ResolvedIntakeItem extends IntakeItem {
+    factor: number
+    baseQuantity: number
+    baseUnitCost: number
+  }
+
+  async function resolveIntakeItems(items: IntakeItem[]): Promise<{ items: ResolvedIntakeItem[] } | { error: string }> {
+    const variationIds = [...new Set(items.map(i => i.variationId).filter((v): v is string => !!v))]
+    const variations = variationIds.length
+      ? await prisma.productVariation.findMany({ where: { id: { in: variationIds } }, select: { id: true, productId: true, conversionFactor: true } })
+      : []
+    const byId = new Map(variations.map(v => [v.id, v]))
+    const resolved: ResolvedIntakeItem[] = []
+    for (const item of items) {
+      let factor = 1
+      if (item.variationId) {
+        const v = byId.get(item.variationId)
+        if (!v || v.productId !== item.productId) return { error: `La presentación de "${item.productName}" no es válida` }
+        factor = Number(v.conversionFactor) || 1
+      }
+      resolved.push({ ...item, factor, baseQuantity: item.quantity * factor, baseUnitCost: item.unitCost / factor })
+    }
+    return { items: resolved }
+  }
 
   // Persisting cost/sale price here (gated the same as the dedicated
   // price-edit screen) avoids the double work of entering the intake and
   // then separately editing the product. Shared by both create and edit —
   // an edit that corrects a unit cost should update the product the same
-  // way the original intake did.
+  // way the original intake did. A presentation line's sale price updates
+  // that presentation's own price, never the base unit's.
   async function persistIntakePrices(
-    items: z.infer<typeof intakeItemSchema>[],
+    items: ResolvedIntakeItem[],
     changedById: string,
   ): Promise<void> {
     for (const item of items) {
       const old = await prisma.product.findUnique({ where: { id: item.productId }, select: { cost: true, basePrice: true } })
       if (!old) continue
-      const data: { cost?: number; basePrice?: number } = {}
-      if (Number(old.cost) !== item.unitCost) data.cost = item.unitCost
-      if (item.unitPrice !== undefined && Number(old.basePrice) !== item.unitPrice) data.basePrice = item.unitPrice
-      if (Object.keys(data).length === 0) continue
-      await prisma.product.update({ where: { id: item.productId }, data })
-      if (data.cost !== undefined) {
+      const baseCost = Math.round(item.baseUnitCost * 10000) / 10000
+      if (Number(old.cost) !== baseCost) {
+        await prisma.product.update({ where: { id: item.productId }, data: { cost: baseCost } })
         await prisma.priceHistory.create({
-          data: { productId: item.productId, field: 'Cost', oldValue: old.cost, newValue: data.cost, changedById },
+          data: { productId: item.productId, field: 'Cost', oldValue: old.cost, newValue: baseCost, changedById },
         })
       }
-      if (data.basePrice !== undefined) {
+      if (item.unitPrice === undefined) continue
+      if (item.variationId) {
+        const v = await prisma.productVariation.findUnique({ where: { id: item.variationId }, select: { price: true } })
+        if (v && Number(v.price) !== item.unitPrice) {
+          await prisma.productVariation.update({ where: { id: item.variationId }, data: { price: item.unitPrice } })
+          await prisma.priceHistory.create({
+            data: { productId: item.productId, field: 'VariationPrice', oldValue: v.price, newValue: item.unitPrice, changedById },
+          })
+        }
+      } else if (Number(old.basePrice) !== item.unitPrice) {
+        await prisma.product.update({ where: { id: item.productId }, data: { basePrice: item.unitPrice } })
         await prisma.priceHistory.create({
-          data: { productId: item.productId, field: 'BasePrice', oldValue: old.basePrice, newValue: data.basePrice, changedById },
+          data: { productId: item.productId, field: 'BasePrice', oldValue: old.basePrice, newValue: item.unitPrice, changedById },
         })
       }
     }
@@ -403,28 +470,31 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
     if (!canAccessBranch(request, body.data.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
     if (!hasPermission(request, 'purchases.receive')) return reply.status(403).send({ error: 'Acceso denegado' })
 
+    const resolved = await resolveIntakeItems(body.data.items)
+    if ('error' in resolved) return reply.status(400).send({ error: resolved.error })
+
     const supplierName = await resolveSupplierName(body.data.supplierId)
     const referenceId = `COMPRA-${await nextPurchaseNumber()}`
 
-    for (const item of body.data.items) {
-      await updateStock(item.productId, body.data.branchId, item.quantity, {
+    for (const item of resolved.items) {
+      await updateStock(item.productId, body.data.branchId, item.baseQuantity, {
         type: 'IN',
         performedById: request.user.id,
         referenceId,
         reason: buildIntakeReason(supplierName, body.data.notes, item.productName),
-        unitCost: item.unitCost,
+        unitCost: item.baseUnitCost,
         ...(body.data.supplierId ? { supplierId: body.data.supplierId } : {}),
       })
     }
 
     if (hasPermission(request, 'inventory.editPrice')) {
-      await persistIntakePrices(body.data.items, request.user.id)
+      await persistIntakePrices(resolved.items, request.user.id)
     }
 
     return reply.status(201).send({
       referenceId,
-      itemCount: body.data.items.length,
-      totalUnits: body.data.items.reduce((s, i) => s + i.quantity, 0),
+      itemCount: resolved.items.length,
+      totalUnits: resolved.items.reduce((s, i) => s + i.baseQuantity, 0),
     })
   })
 
@@ -476,6 +546,9 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
     if (!canAccessBranch(request, oldBranchId)) return reply.status(403).send({ error: 'Acceso denegado' })
     if (!canAccessBranch(request, body.data.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
 
+    const resolved = await resolveIntakeItems(body.data.items)
+    if ('error' in resolved) return reply.status(400).send({ error: resolved.error })
+
     const supplierName = await resolveSupplierName(body.data.supplierId)
 
     const netByProduct = new Map<string, number>()
@@ -499,25 +572,25 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
     }
 
     // Re-apply the corrected item list at the (possibly new) destination.
-    for (const item of body.data.items) {
-      await updateStock(item.productId, body.data.branchId, item.quantity, {
+    for (const item of resolved.items) {
+      await updateStock(item.productId, body.data.branchId, item.baseQuantity, {
         type: 'IN',
         performedById: request.user.id,
         referenceId,
         reason: buildIntakeReason(supplierName, body.data.notes, item.productName),
-        unitCost: item.unitCost,
+        unitCost: item.baseUnitCost,
         ...(body.data.supplierId ? { supplierId: body.data.supplierId } : {}),
       })
     }
 
     if (hasPermission(request, 'inventory.editPrice')) {
-      await persistIntakePrices(body.data.items, request.user.id)
+      await persistIntakePrices(resolved.items, request.user.id)
     }
 
     return reply.send({
       referenceId,
-      itemCount: body.data.items.length,
-      totalUnits: body.data.items.reduce((s, i) => s + i.quantity, 0),
+      itemCount: resolved.items.length,
+      totalUnits: resolved.items.reduce((s, i) => s + i.baseQuantity, 0),
       branchMoved: body.data.branchId !== oldBranchId,
     })
   })

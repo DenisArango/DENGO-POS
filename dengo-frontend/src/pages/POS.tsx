@@ -708,6 +708,11 @@ export default function POS() {
     if (isNaN(newStock) || newStock < stockPrompt.requestedQty) {
       toast.error(`El nuevo stock debe ser al menos ${stockPrompt.requestedQty}`); return
     }
+    // A barcode scanned while this field has focus lands here as a 13-digit
+    // "stock" — that's exactly how two products ended up with trillions.
+    if (newStock > 1_000_000) {
+      toast.error('Cantidad no válida — ¿se escaneó un código de barras en el campo de stock?'); return
+    }
     const productId = stockPrompt.product.id
     setSavingStockPrompt(true)
     try {

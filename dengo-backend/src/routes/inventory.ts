@@ -313,10 +313,10 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
     if (!canAccessBranch(request, branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
     if (!hasPermission(request, 'inventory.adjust')) return reply.status(403).send({ error: 'Acceso denegado' })
     const body = z.object({
-      quantity: z.number().min(0),
+      quantity: z.number().min(0).max(1_000_000, 'La cantidad no puede superar 1,000,000 — ¿se escaneó un código de barras en la cantidad?'),
       reason: z.string().optional(),
     }).safeParse(request.body)
-    if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+    if (!body.success) return reply.status(400).send({ error: body.error.issues[0]?.message ?? 'Datos inválidos' })
 
     await setStock(productId, branchId, body.data.quantity, {
       type: 'ADJUSTMENT',
@@ -332,10 +332,10 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
       productId: z.string(),
       branchId: z.string(),
       type: z.enum(['IN', 'OUT', 'ADJUSTMENT', 'RETURN']),
-      quantity: z.number().min(0.001),
+      quantity: z.number().min(0.001).max(1_000_000, 'La cantidad no puede superar 1,000,000 — ¿se escaneó un código de barras en la cantidad?'),
       reason: z.string().optional(),
     }).safeParse(request.body)
-    if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+    if (!body.success) return reply.status(400).send({ error: body.error.issues[0]?.message ?? 'Datos inválidos' })
     if (!canAccessBranch(request, body.data.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
     if (!hasPermission(request, 'inventory.adjust')) return reply.status(403).send({ error: 'Acceso denegado' })
 

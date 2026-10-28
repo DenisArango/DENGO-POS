@@ -96,8 +96,8 @@ export default async function inventoryCountRoutes(fastify: FastifyInstance) {
   // PUT /api/inventory-counts/:id/items/:itemId — record what was actually counted.
   fastify.put('/:id/items/:itemId', { preHandler: [fastify.authenticate, requirePermission('inventory.adjust')] }, async (request, reply) => {
     const { id, itemId } = request.params as { id: string; itemId: string }
-    const body = z.object({ countedQuantity: z.number().min(0), notes: z.string().optional() }).safeParse(request.body)
-    if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+    const body = z.object({ countedQuantity: z.number().min(0).max(1_000_000, 'La cantidad no puede superar 1,000,000 — ¿se escaneó un código de barras en la cantidad?'), notes: z.string().optional() }).safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: body.error.issues[0]?.message ?? 'Datos inválidos' })
 
     const count = await prisma.inventoryCount.findUnique({ where: { id } })
     if (!count) return reply.status(404).send({ error: 'Conteo no encontrado' })

@@ -308,8 +308,11 @@ interface LicenseState {
   // the safe default while unresolved is hidden, not briefly shown then
   // yanked away once the real value loads.
   felEnabled: boolean
+  // AI add-on (analista + recomendaciones). Same hidden-until-loaded default
+  // as felEnabled — it's a paid extra, not something to flash then yank.
+  aiEnabled: boolean
   loaded: boolean
-  setLicense: (license: { posEnabled: boolean; maestrosEnabled: boolean; pageEnabled: boolean; felEnabled?: boolean }) => void
+  setLicense: (license: { posEnabled: boolean; maestrosEnabled: boolean; pageEnabled: boolean; felEnabled?: boolean; aiEnabled?: boolean }) => void
 }
 
 export const useLicenseStore = create<LicenseState>((set) => ({
@@ -317,8 +320,9 @@ export const useLicenseStore = create<LicenseState>((set) => ({
   maestrosEnabled: true,
   pageEnabled: true,
   felEnabled: false,
+  aiEnabled: false,
   loaded: false,
-  setLicense: (license) => set({ ...license, felEnabled: license.felEnabled ?? false, loaded: true }),
+  setLicense: (license) => set({ ...license, felEnabled: license.felEnabled ?? false, aiEnabled: license.aiEnabled ?? true, loaded: true }),
 }))
 
 // Store de la aplicación (solo UI state)

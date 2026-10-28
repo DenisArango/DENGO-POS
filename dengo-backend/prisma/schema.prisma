@@ -1157,9 +1157,34 @@ model LicenseConfig {
   maestrosEnabled Boolean  @default(true) @map("MAESTROS_ENABLED") // funcionalidad de pedidos del portal de maestros
   posEnabled      Boolean  @default(true) @map("POS_ENABLED")      // el sistema POS completo
   felEnabled      Boolean  @default(false) @map("FEL_ENABLED")     // facturación electrónica (Guatemala FEL) — oculta "generar factura" en POS hasta que esté certificada para este cliente
+  aiEnabled       Boolean  @default(true) @map("AI_ENABLED")       // add-on de IA (analista de datos + recomendaciones en reportes); apagado = se oculta y el servidor rechaza las llamadas
+  aiMonthlyLimit  Int?     @default(100) @map("AI_MONTHLY_LIMIT") // consultas de IA por mes calendario (hora de Guatemala); null = sin límite
   updatedAt       DateTime @updatedAt @map("UPDATED_AT")
 
   @@map("LICENSE_CONFIG")
+}
+
+// One row per AI call that reached the model — the monthly quota counts the
+// successful ones; failed ones are kept so the vendor still sees their token
+// cost. No FK to User on purpose: the log must survive a user being deleted.
+model AiUsage {
+  id               String   @id @default(cuid()) @map("ID") @db.VarChar(36)
+  kind             String   @map("KIND") @db.VarChar(20)        // ANALYST | RECOMMENDATION | QUERY
+  userId           String   @map("USER_ID") @db.VarChar(36)
+  userName         String   @map("USER_NAME") @db.VarChar(150)
+  branchId         String?  @map("BRANCH_ID") @db.VarChar(36)
+  question         String   @map("QUESTION") @db.VarChar(1000)  // the question, or the report name for RECOMMENDATION
+  success          Boolean  @map("SUCCESS")
+  model            String   @map("MODEL") @db.VarChar(60)
+  inputTokens      Int      @default(0) @map("INPUT_TOKENS")
+  outputTokens     Int      @default(0) @map("OUTPUT_TOKENS")
+  cacheReadTokens  Int      @default(0) @map("CACHE_READ_TOKENS")
+  cacheWriteTokens Int      @default(0) @map("CACHE_WRITE_TOKENS")
+  durationMs       Int      @default(0) @map("DURATION_MS")
+  createdAt        DateTime @default(now()) @map("CREATED_AT")
+
+  @@index([createdAt])
+  @@map("AI_USAGE")
 }
 
 model InternalMessage {

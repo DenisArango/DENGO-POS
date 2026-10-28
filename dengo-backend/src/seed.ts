@@ -37,6 +37,10 @@ const LICENSE = {
   posEnabled: process.env.SEED_LICENSE_POS !== 'false',
   maestrosEnabled: process.env.SEED_LICENSE_MAESTROS !== 'false',
   pageEnabled: process.env.SEED_LICENSE_PAGINA !== 'false',
+  // AI add-on: SEED_LICENSE_IA=false for a client that didn't buy it;
+  // SEED_LICENSE_IA_LIMITE = monthly questions (default 100, 'ilimitado' = no limit).
+  aiEnabled: process.env.SEED_LICENSE_IA !== 'false',
+  aiMonthlyLimit: process.env.SEED_LICENSE_IA_LIMITE === 'ilimitado' ? null : Number(process.env.SEED_LICENSE_IA_LIMITE ?? 100),
 }
 
 async function main() {
@@ -76,7 +80,7 @@ async function main() {
   const existingLicense = await prisma.licenseConfig.findFirst()
   if (!existingLicense) {
     await prisma.licenseConfig.create({ data: LICENSE })
-    console.log(`✅ Licencia inicial — POS: ${LICENSE.posEnabled}, Portal de maestros: ${LICENSE.maestrosEnabled}, Landing con marca: ${LICENSE.pageEnabled}`)
+    console.log(`✅ Licencia inicial — POS: ${LICENSE.posEnabled}, Portal de maestros: ${LICENSE.maestrosEnabled}, Landing con marca: ${LICENSE.pageEnabled}, IA: ${LICENSE.aiEnabled ? `sí (${LICENSE.aiMonthlyLimit ?? 'sin límite'}/mes)` : 'no'}`)
   }
 
   console.log(`\n🌱 Listo. Inicia sesión con ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`)

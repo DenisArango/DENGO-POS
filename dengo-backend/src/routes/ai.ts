@@ -5,7 +5,8 @@ import { SALES_DIMENSIONS, SALES_METRICS, INVENTORY_DIMENSIONS, INVENTORY_METRIC
 import { toBusinessDateKey, toBusinessDateTimeLabel } from '../lib/timezone.js'
 import { prisma } from '../lib/prisma.js'
 import { allowedBranchIds } from '../lib/branch-scope.js'
-import { runAnalyst } from '../lib/aiAnalyst.js'
+import { runAnalyst, type AnalystUsage } from '../lib/aiAnalyst.js'
+import { aiPeriod, getAiStatus, recordAiUsage, requireAiQuota } from '../lib/aiQuota.js'
 
 // AI calls cost real money per request — require at least one reports.*
 // permission so a role deliberately created without any reporting access
@@ -580,6 +581,9 @@ export default async function aiRoutes(fastify: FastifyInstance) {
 
     let config: QueryConfig | null = null
     const client = await getAnthropicClient()
+    if (client && !(await requireAiQuota(reply))) return reply
+    const startedAt = Date.now()
+    const tokens = { inputTokens: 0, outputTokens: 0 }
 
     if (client) {
       try {
@@ -588,6 +592,8 @@ export default async function aiRoutes(fastify: FastifyInstance) {
           max_tokens: 700,
           messages: [{ role: 'user', content: buildQueryPrompt(question, branchId, today, history) }],
         })
+        tokens.inputTokens += msg.usage.input_tokens
+        tokens.outputTokens += msg.usage.output_tokens
         const text = msg.content[0]?.type === 'text' ? msg.content[0].text : ''
         const match = text.match(/\{[\s\S]*\}/)
         if (!match) {
@@ -653,6 +659,8 @@ export default async function aiRoutes(fastify: FastifyInstance) {
             max_tokens: 350,
             messages: [{ role: 'user', content: buildAnalysisFromDataPrompt(question, columns, rows, today) }],
           })
+          tokens.inputTokens += analysisMsg.usage.input_tokens
+          tokens.outputTokens += analysisMsg.usage.output_tokens
           const analysisText = analysisMsg.content[0]?.type === 'text' ? analysisMsg.content[0].text.trim() : ''
           if (analysisText) description = analysisText
         } catch (err) {
@@ -660,6 +668,9 @@ export default async function aiRoutes(fastify: FastifyInstance) {
         }
       }
 
+      if (client) {
+        await recordAiUsage(request, { kind: 'QUERY', question, success: true, model: AI_MODEL, branchId, ...tokens, durationMs: Date.now() - startedAt })
+      }
       return reply.send({ config: { title, description, visualization: config.visualization, intent: config.intent }, columns, rows })
     } catch (err) {
       fastify.log.error(err, 'Failed to fetch report data')
@@ -687,6 +698,7 @@ export default async function aiRoutes(fastify: FastifyInstance) {
     }).safeParse(request.body)
     if (!parsed.success) return reply.status(400).send({ error: parsed.error.flatten() })
 
+    if (!(await requireAiQuota(reply))) return reply
     const client = await getAnthropicClient()
     if (!client) {
       return reply.status(503).send({ error: 'La IA no está configurada en el servidor (falta ANTHROPIC_API_KEY).' })
@@ -702,10 +714,17 @@ export default async function aiRoutes(fastify: FastifyInstance) {
     const selected = parsed.data.branchId ? branches.find(b => b.id === parsed.data.branchId) : undefined
     const user = await prisma.user.findUnique({ where: { id: request.user.id }, select: { name: true } })
 
+    const model = process.env.ANTHROPIC_ANALYST_MODEL ?? 'claude-sonnet-5-5'
+    const usage: AnalystUsage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }
+    const startedAt = Date.now()
+    const logUsage = (success: boolean) => recordAiUsage(request, {
+      kind: 'ANALYST', question: parsed.data.question, success, model,
+      branchId: parsed.data.branchId ?? null, ...usage, durationMs: Date.now() - startedAt,
+    })
     try {
       const report = await runAnalyst({
         client,
-        model: process.env.ANTHROPIC_ANALYST_MODEL ?? 'claude-sonnet-5-5',
+        model,
         question: parsed.data.question,
         history: parsed.data.history ?? [],
         ctx: {
@@ -718,10 +737,14 @@ export default async function aiRoutes(fastify: FastifyInstance) {
         },
         scope: { branchIds, canSeeCosts },
         log: (obj, msg) => fastify.log.warn(obj, msg),
+        usage,
       })
+      await logUsage(true)
       return reply.send(report)
     } catch (err) {
       fastify.log.error(err, 'AI analyst failed')
+      // Not charged to the client's allowance, but kept so the token cost is visible
+      if (usage.inputTokens > 0) await logUsage(false)
       const status = (err as { status?: number }).status
       if (status === 401) return reply.status(503).send({ error: 'La clave de la IA no es válida — revisa ANTHROPIC_API_KEY en el servidor.' })
       if (status === 429 || status === 529) return reply.status(503).send({ error: 'La IA está saturada en este momento, intenta de nuevo en un minuto.' })
@@ -745,7 +768,9 @@ export default async function aiRoutes(fastify: FastifyInstance) {
     if (!client) {
       return reply.send({ recommendations: localRules(reportType, data as Record<string, unknown>) })
     }
+    if (!(await requireAiQuota(reply))) return reply
 
+    const startedAt = Date.now()
     try {
       const msg = await client.messages.create({
         model: AI_MODEL,
@@ -755,11 +780,73 @@ export default async function aiRoutes(fastify: FastifyInstance) {
 
       const text = msg.content[0]?.type === 'text' ? msg.content[0].text : ''
       const recommendations = parseRecommendations(text)
+      await recordAiUsage(request, {
+        kind: 'RECOMMENDATION',
+        question: `Recomendaciones: ${REPORT_TYPE_LABELS[reportType] ?? reportType}`,
+        success: recommendations.length > 0,
+        model: AI_MODEL,
+        inputTokens: msg.usage.input_tokens,
+        outputTokens: msg.usage.output_tokens,
+        durationMs: Date.now() - startedAt,
+      })
 
       return reply.send({ recommendations: recommendations.length > 0 ? recommendations : localRules(reportType, data as Record<string, unknown>) })
     } catch (err) {
       fastify.log.error(err, 'AI analyze error')
       return reply.send({ recommendations: localRules(reportType, data as Record<string, unknown>) })
     }
+  })
+  // GET /api/ai/usage — this month's allowance, for the counter shown next
+  // to every AI feature. Any logged-in user.
+  fastify.get('/usage', { preHandler: [fastify.authenticate] }, async (_request, reply) => {
+    return reply.send(await getAiStatus())
+  })
+
+  // GET /api/ai/usage/details — who asked what this month (client ADMIN).
+  // Counts only, no tokens/cost — that's the vendor's business (see /usage/vendor).
+  fastify.get('/usage/details', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    if (request.user.role !== 'ADMIN') return reply.status(403).send({ error: 'Acceso denegado' })
+    const { start, end } = aiPeriod()
+    const where = { success: true, createdAt: { gte: start, lt: end } }
+    const [status, byUser, byKind, recent] = await Promise.all([
+      getAiStatus(),
+      prisma.aiUsage.groupBy({ by: ['userId', 'userName'], where, _count: { _all: true } }),
+      prisma.aiUsage.groupBy({ by: ['kind'], where, _count: { _all: true } }),
+      prisma.aiUsage.findMany({
+        where, orderBy: { createdAt: 'desc' }, take: 100,
+        select: { id: true, kind: true, userName: true, question: true, durationMs: true, createdAt: true },
+      }),
+    ])
+    return reply.send({
+      status,
+      byUser: byUser.map(u => ({ userId: u.userId, userName: u.userName, count: u._count._all })).sort((a, b) => b.count - a.count),
+      byKind: Object.fromEntries(byKind.map(k => [k.kind, k._count._all])),
+      recent,
+    })
+  })
+
+  // GET /api/ai/usage/vendor?months=6 — token totals per month and model, for
+  // the vendor to see what each client really costs. Same shared secret as
+  // PUT /api/license; 404 without it so the route doesn't advertise itself.
+  fastify.get('/usage/vendor', async (request, reply) => {
+    const secret = process.env.LICENSE_ADMIN_SECRET
+    if (!secret || request.headers['x-license-secret'] !== secret) return reply.status(404).send({ error: 'Not found' })
+    const months = Math.min(24, Math.max(1, Number((request.query as { months?: string }).months) || 6))
+    const rows = await prisma.$queryRaw<{ month: string; model: string; kind: string; success: boolean; calls: bigint; input: bigint; output: bigint; cache_read: bigint; cache_write: bigint }[]>`
+      SELECT to_char("CREATED_AT" - interval '6 hours', 'YYYY-MM') AS month, "MODEL" AS model, "KIND" AS kind, "SUCCESS" AS success,
+             count(*) AS calls, sum("INPUT_TOKENS") AS input, sum("OUTPUT_TOKENS") AS output,
+             sum("CACHE_READ_TOKENS") AS cache_read, sum("CACHE_WRITE_TOKENS") AS cache_write
+      FROM "AI_USAGE"
+      WHERE "CREATED_AT" >= now() - make_interval(months => ${months}::int)
+      GROUP BY 1, 2, 3, 4
+      ORDER BY 1 DESC, 2, 3, 4`
+    return reply.send({
+      status: await getAiStatus(),
+      rows: rows.map(r => ({
+        month: r.month, model: r.model, kind: r.kind, success: r.success, calls: Number(r.calls),
+        inputTokens: Number(r.input), outputTokens: Number(r.output),
+        cacheReadTokens: Number(r.cache_read), cacheWriteTokens: Number(r.cache_write),
+      })),
+    })
   })
 }

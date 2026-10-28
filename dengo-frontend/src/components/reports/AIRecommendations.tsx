@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, TrendingUp, AlertCircle, Lightbulb, ChevronRight, Loader } from 'lucide-react'
 import { useAIRecommendations } from '../../services/aiRecommendations'
 import type { ReportData } from '../../services/aiRecommendations'
+import { useLicenseStore } from '../../store'
 
 interface AIRecommendationsProps {
   reportData: ReportData
@@ -11,12 +12,13 @@ interface AIRecommendationsProps {
 
 export default function AIRecommendations({ reportData, autoGenerate = false }: AIRecommendationsProps) {
   const { recommendations, loading, error, generateRecommendations } = useAIRecommendations()
+  const aiEnabled = useLicenseStore(s => s.aiEnabled)
 
   useEffect(() => {
-    if (autoGenerate) {
+    if (autoGenerate && aiEnabled) {
       generateRecommendations(reportData)
     }
-  }, [autoGenerate])
+  }, [autoGenerate, aiEnabled])
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -63,6 +65,9 @@ export default function AIRecommendations({ reportData, autoGenerate = false }: 
         return <Sparkles size={18} className="text-gray-600" />
     }
   }
+
+  // AI add-on not in this client's plan
+  if (!aiEnabled) return null
 
   return (
     <motion.div

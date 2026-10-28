@@ -14,7 +14,7 @@ import {
 import { format, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../lib/api'
-import { useAuthStore } from '../store'
+import { useAuthStore, useLicenseStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
 
 interface ReportCard {
@@ -187,6 +187,7 @@ const categories = [
 export default function Reports() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const aiEnabled = useLicenseStore(s => s.aiEnabled)
   const { currentStore } = useStore()
   const branchId = currentStore?.id ?? user?.branchId ?? ''
 
@@ -369,7 +370,7 @@ export default function Reports() {
       </div>
 
       {/* Categorías de reportes */}
-      {categories.map((category) => (
+      {categories.filter(category => category.id !== 'ai' || aiEnabled).map((category) => (
         <div key={category.id} className="space-y-4">
           <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
             <category.icon size={20} />

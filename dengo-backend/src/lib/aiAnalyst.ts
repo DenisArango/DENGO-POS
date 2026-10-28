@@ -580,6 +580,9 @@ Si los datos no permiten responder, dilo claramente en el reporte y sugiere qué
 
 export interface HistoryTurn { question: string; summary?: string | undefined; queries?: { purpose?: string | undefined; sql: string }[] | undefined }
 
+/** Tokens spent by one analyst run, summed over every model call. */
+export interface AnalystUsage { inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number }
+
 export async function runAnalyst(opts: {
   client: Anthropic
   model: string
@@ -588,6 +591,8 @@ export async function runAnalyst(opts: {
   ctx: AnalystContext
   scope: { branchIds: string[] | null; canSeeCosts: boolean }
   log: (obj: unknown, msg: string) => void
+  /** Mutated in place, so the caller still has the totals if this throws midway. */
+  usage?: AnalystUsage
 }): Promise<AnalystReport> {
   const { client, model, question, history, ctx, scope } = opts
   const results = new Map<string, QueryResult>()
@@ -629,6 +634,12 @@ export async function runAnalyst(opts: {
         ? { tool_choice: { type: 'tool' as const, name: 'presentar_reporte' } }
         : { thinking: { type: 'adaptive' as const } }),
     }, { timeout: 120_000 })
+    if (opts.usage) {
+      opts.usage.inputTokens += response.usage.input_tokens
+      opts.usage.outputTokens += response.usage.output_tokens
+      opts.usage.cacheReadTokens += response.usage.cache_read_input_tokens ?? 0
+      opts.usage.cacheWriteTokens += response.usage.cache_creation_input_tokens ?? 0
+    }
     messages.push({ role: 'assistant', content: response.content })
 
     const toolUses = response.content.filter((c): c is Anthropic.ToolUseBlock => c.type === 'tool_use')

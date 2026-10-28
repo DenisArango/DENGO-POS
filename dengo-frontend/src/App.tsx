@@ -59,7 +59,7 @@ function useDisableNumberInputScroll() {
 // own DEFAULT_LICENSE fallback when no LicenseConfig row exists yet.
 function useLicense() {
   useEffect(() => {
-    api.get<{ posEnabled: boolean; maestrosEnabled: boolean; pageEnabled: boolean }>('/api/license')
+    api.get<{ posEnabled: boolean; maestrosEnabled: boolean; pageEnabled: boolean; felEnabled?: boolean; aiEnabled?: boolean }>('/api/license')
       .then(license => useLicenseStore.getState().setLicense(license))
       .catch(() => {})
   }, [])

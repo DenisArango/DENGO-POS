@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 
-const DEFAULT_LICENSE = { pageEnabled: true, maestrosEnabled: true, posEnabled: true, felEnabled: false }
+const DEFAULT_LICENSE = { pageEnabled: true, maestrosEnabled: true, posEnabled: true, felEnabled: false, aiEnabled: true, aiMonthlyLimit: 100 as number | null }
 
 /**
  * Feature gate for the DENGO POS vendor, not this client's own ADMIN. There
@@ -35,6 +35,9 @@ export default async function licenseRoutes(fastify: FastifyInstance) {
       maestrosEnabled: z.boolean().optional(),
       posEnabled: z.boolean().optional(),
       felEnabled: z.boolean().optional(),
+      aiEnabled: z.boolean().optional(),
+      // null = unlimited
+      aiMonthlyLimit: z.number().int().min(0).max(100_000).nullable().optional(),
     }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
 

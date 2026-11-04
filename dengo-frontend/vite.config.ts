@@ -24,21 +24,9 @@ export default defineConfig({
     // as NetworkOnly and simply fail through to the existing offline paths.
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['vite.svg'],
-      manifest: {
-        name: 'DENGO POS',
-        short_name: 'DENGO POS',
-        description: 'Sistema de punto de venta DENGO',
-        theme_color: '#2563eb',
-        background_color: '#ffffff',
-        display: 'standalone',
-        start_url: '/pos',
-        icons: [
-          { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-        ],
-      },
+      // The manifest is served by the backend (/api/app/manifest.webmanifest)
+      // so the installed app shows the client's name and logo, not DENGO's.
+      manifest: false,
       workbox: {
         // Only precache the built app shell; every /api/* request bypasses
         // the service worker entirely (see comment above).

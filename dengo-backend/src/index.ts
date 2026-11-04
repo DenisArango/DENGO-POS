@@ -35,6 +35,7 @@ import portalRoutes from './routes/portal.js'
 import portalAdminRoutes from './routes/portal-admin.js'
 import messagesRoutes from './routes/messages.js'
 import pushRoutes from './routes/push.js'
+import appRoutes from './routes/app.js'
 
 const fastify = Fastify({
   // Behind Caddy on the same machine: trust X-Forwarded-For only from the
@@ -159,6 +160,7 @@ async function bootstrap() {
   await fastify.register(portalAdminRoutes,  { prefix: '/api/portal-admin' })
   await fastify.register(messagesRoutes,     { prefix: '/api/messages' })
   await fastify.register(pushRoutes,         { prefix: '/api/push' })
+  await fastify.register(appRoutes,          { prefix: '/api/app' })
 
   // 404 handler
   fastify.setNotFoundHandler((_request, reply) => {

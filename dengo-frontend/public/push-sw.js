@@ -4,10 +4,11 @@
 self.addEventListener('push', event => {
   let data = {}
   try { data = event.data ? event.data.json() : {} } catch { data = { body: event.data ? event.data.text() : '' } }
-  event.waitUntil(self.registration.showNotification(data.title || 'DENGO POS', {
+  event.waitUntil(self.registration.showNotification(data.title || 'Punto de venta', {
     body: data.body || '',
-    icon: '/pwa-192.png',
-    badge: '/pwa-192.png',
+    // The client's logo (Configuración → Empresa), not DENGO's.
+    icon: '/api/app/icon-192.png',
+    badge: '/api/app/badge.png',
     tag: data.tag || undefined,
     renotify: !!data.tag,
     data: { url: data.url || '/dashboard' },

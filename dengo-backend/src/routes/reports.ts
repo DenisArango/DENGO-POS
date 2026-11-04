@@ -111,6 +111,8 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     try {
       return reply.send(await runReportQuery(request, input))
     } catch (err) {
+      const status = (err as { statusCode?: number }).statusCode
+      if (status === 400) return reply.status(400).send({ error: (err as Error).message })
       fastify.log.error(err, 'reports/query failed')
       return reply.status(500).send({ error: 'No se pudo generar el reporte' })
     }

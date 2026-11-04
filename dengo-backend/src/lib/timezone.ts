@@ -25,6 +25,16 @@ const BUSINESS_UTC_OFFSET_HOURS = -6
  * A value that already carries its own offset ('Z' or ±HH:MM) is left alone.
  */
 export function parseBusinessDateParam(value: string): Date {
+  const d = parseBusinessDateParamRaw(String(value ?? '').trim())
+  // A malformed date (e.g. a half-typed year in a date field) used to reach
+  // Prisma as Invalid Date and fail as a 500 — now it's a clear 400.
+  if (Number.isNaN(d.getTime())) {
+    throw Object.assign(new Error(`Fecha inválida: "${value}"`), { statusCode: 400 })
+  }
+  return d
+}
+
+function parseBusinessDateParamRaw(value: string): Date {
   if (/Z$|[+-]\d{2}:\d{2}$/.test(value)) return new Date(value)
   // A bare "YYYY-MM-DD" (ej. Dashboard.tsx's weekly chart, which sends only
   // `from` with no time part at all) needs a time component before the

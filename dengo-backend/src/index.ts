@@ -1,4 +1,4 @@
-import Fastify from 'fastify'
+import Fastify, { type FastifyError } from 'fastify'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import compress from '@fastify/compress'
@@ -103,6 +103,20 @@ async function bootstrap() {
     },
   })
 
+  // Global error handler — set BEFORE the routes: in Fastify a route plugin
+  // registered earlier keeps the default handler, which echoes internal
+  // error text (e.g. Prisma's) to the client on a 500.
+  fastify.setErrorHandler((error: FastifyError, _request, reply) => {
+    if ((error.statusCode ?? 500) >= 500) fastify.log.error(error)
+    if (error.validation) {
+      return reply.status(400).send({ error: 'Datos inválidos', details: error.validation })
+    }
+    const statusCode = error.statusCode ?? 500
+    reply.status(statusCode).send({
+      error: statusCode === 500 ? 'Error interno del servidor' : error.message,
+    })
+  })
+
   // Auth (JWT + authenticate decorator)
   await fastify.register(authPlugin)
 
@@ -143,18 +157,6 @@ async function bootstrap() {
   await fastify.register(portalRoutes,       { prefix: '/api/portal' })
   await fastify.register(portalAdminRoutes,  { prefix: '/api/portal-admin' })
   await fastify.register(messagesRoutes,     { prefix: '/api/messages' })
-
-  // Global error handler
-  fastify.setErrorHandler((error, _request, reply) => {
-    fastify.log.error(error)
-    if (error.validation) {
-      return reply.status(400).send({ error: 'Datos inválidos', details: error.validation })
-    }
-    const statusCode = error.statusCode ?? 500
-    reply.status(statusCode).send({
-      error: statusCode === 500 ? 'Error interno del servidor' : error.message,
-    })
-  })
 
   // 404 handler
   fastify.setNotFoundHandler((_request, reply) => {

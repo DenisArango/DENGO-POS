@@ -13,23 +13,65 @@ const SIZES = [32, 72, 96, 180, 192, 512] as const
 const THEME = '#2563eb'
 const cache = new Map<string, Buffer>()
 
+/**
+ * Every candidate logo, best first: the company's, then each branch's
+ * (PNG before JPEG — PNGs usually keep a transparent background).
+ * The first one sharp can actually read wins.
+ */
 async function brand() {
   const company = await prisma.companyProfile.findFirst({ select: { name: true, logo: true, updatedAt: true } })
-  let logo = company?.logo ?? null
-  let version = company?.updatedAt?.getTime() ?? 0
-  if (!logo?.startsWith('data:image/')) {
-    // No company logo yet: the first branch that has one.
-    const branch = await prisma.branch.findFirst({ where: { logo: { startsWith: 'data:image/' } }, select: { logo: true, updatedAt: true }, orderBy: { createdAt: 'asc' } })
-    logo = branch?.logo ?? null
-    version = branch?.updatedAt?.getTime() ?? version
-  }
+  const branches = await prisma.branch.findMany({
+    where: { logo: { startsWith: 'data:image/' } },
+    select: { logo: true, updatedAt: true },
+    orderBy: { createdAt: 'asc' },
+  })
+  const pngFirst = [...branches].sort((a, b) => Number(!a.logo!.startsWith('data:image/png')) - Number(!b.logo!.startsWith('data:image/png')))
+  const logos = [company?.logo, ...pngFirst.map(b => b.logo)].filter((l): l is string => !!l?.startsWith('data:image/'))
+  const version = Math.max(company?.updatedAt?.getTime() ?? 0, ...branches.map(b => b.updatedAt?.getTime() ?? 0))
   const name = company?.name?.trim() || 'Punto de venta'
-  return { name, logo, version }
+  return { name, logos, version }
 }
 
-function logoBytes(logo: string | null): Buffer | null {
-  const m = logo?.match(/^data:image\/[a-z0-9.+-]+;base64,(.+)$/i)
-  return m ? Buffer.from(m[1]!, 'base64') : null
+/**
+ * A .ico can't be read by sharp, but modern ones carry PNG images inside:
+ * take the largest embedded PNG. (Old BMP-only icons are skipped.)
+ */
+function pngFromIco(buf: Buffer): Buffer | null {
+  if (buf.length < 6 || buf.readUInt16LE(0) !== 0 || buf.readUInt16LE(2) !== 1) return null
+  const count = buf.readUInt16LE(4)
+  let best: { size: number; data: Buffer } | null = null
+  for (let k = 0; k < count; k++) {
+    const e = 6 + k * 16
+    if (e + 16 > buf.length) break
+    const w = buf[e] || 256
+    const len = buf.readUInt32LE(e + 8), off = buf.readUInt32LE(e + 12)
+    const data = buf.subarray(off, off + len)
+    if (data.length > 8 && data.readUInt32BE(0) === 0x89504e47 && (!best || w > best.size)) best = { size: w, data }
+  }
+  return best?.data ?? null
+}
+
+/**
+ * The best candidate logo: the first one sharp can decode that is at least
+ * 192px (a tiny .ico favicon blown up to 512px looks blurry), otherwise the
+ * largest readable one.
+ */
+async function readableLogo(logos: string[]): Promise<Buffer | null> {
+  let largest: { px: number; bytes: Buffer } | null = null
+  for (const logo of logos) {
+    const m = logo.match(/^data:image\/([a-z0-9.+-]+);base64,(.+)$/i)
+    if (!m) continue
+    let bytes: Buffer | null = Buffer.from(m[2]!, 'base64')
+    if (/icon/i.test(m[1]!)) bytes = pngFromIco(bytes)
+    if (!bytes) continue
+    try {
+      const { width = 0, height = 0 } = await sharp(bytes).metadata()
+      const px = Math.min(width, height)
+      if (px >= 192) return bytes
+      if (!largest || px > largest.px) largest = { px, bytes }
+    } catch { /* unreadable: try the next one */ }
+  }
+  return largest?.bytes ?? null
 }
 
 /** Logo centred on white with a safe margin (Android's round/squircle masks never cut it). */
@@ -39,7 +81,7 @@ async function appIcon(size: number): Promise<Buffer> {
   const hit = cache.get(key)
   if (hit) return hit
   let png: Buffer | null = null
-  const bytes = logoBytes(b.logo)
+  const bytes = await readableLogo(b.logos)
   if (bytes) {
     try {
       const inner = Math.round(size * 0.74)
@@ -70,7 +112,7 @@ async function badge(): Promise<Buffer> {
   if (hit) return hit
   const size = 96
   let png: Buffer | null = null
-  const bytes = logoBytes(b.logo)
+  const bytes = await readableLogo(b.logos)
   if (bytes) {
     try {
       const { data, info } = await sharp(bytes)

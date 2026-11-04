@@ -1,0 +1,31 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Outfit", sans-serif; color: #121826; }
+    #cj-head { position: absolute; left: 80px; top: 200px; }
+    .cj-mask { display: block; overflow: hidden; }
+    .cj-mask span { display: block; }
+    #cj-time { font-size: 124px; font-weight: 700; color: #1e4d68; letter-spacing: -0.02em; line-height: 1.08; }
+    #cj-t2 { font-size: 72px; line-height: 1.3; }
+    #cj-card { position: absolute; left: 80px; top: 500px; width: 920px; height: 167.3px; border-radius: 14px; box-shadow: 0 24px 60px rgba(18, 24, 38, 0.16); }
+    #cj-hist { position: absolute; left: 240px; top: 720px; width: 600px; height: 503px; border-radius: 14px; border: 1px solid #e3e8ee; box-shadow: 0 18px 44px rgba(18, 24, 38, 0.1); background: #fff; }
+    #cj-ring { position: absolute; left: 344px; top: 980px; width: 170px; height: 222px; border: 6px solid #e07a5f; border-radius: 16px; opacity: 0; }
+  </style>
+  <div id="root" data-composition-id="caja" data-width="1080" data-height="1920">
+    <div id="cj-head">
+      <div class="cj-mask"><span id="cj-time">7:30 p.m.</span></div>
+      <div class="cj-mask"><span id="cj-t2">La caja cuadra.</span></div>
+    </div>
+    <img id="cj-card" src="assets/caja_tiles.png" alt="Ventas por método y efectivo en caja" />
+    <img id="cj-hist" src="assets/caja_diff.png" alt="Diferencia Q0.00 en el cierre de caja" />
+    <div id="cj-ring"></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#cj-time", { yPercent: 110 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, 0.1);
+    tl.fromTo("#cj-card", { clipPath: "inset(0 0 100% 0 round 14px)" }, { clipPath: "inset(0 0 0% 0 round 14px)", duration: 0.6, ease: "power3.out" }, 0.4);
+    tl.fromTo("#cj-hist", { clipPath: "inset(0 0 100% 0 round 14px)" }, { clipPath: "inset(0 0 0% 0 round 14px)", duration: 0.7, ease: "power2.out" }, 0.9);
+    tl.fromTo("#cj-t2", { yPercent: 110 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, 1.6);
+    tl.fromTo("#cj-ring", { opacity: 0, scale: 1.08 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, 1.9);
+    window.__timelines["caja"] = tl;
+  </script>
+</template>

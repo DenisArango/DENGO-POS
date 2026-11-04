@@ -1,0 +1,58 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Outfit", sans-serif; color: #121826; }
+    .mask { display: block; overflow: hidden; }
+    .mask > span { display: block; }
+    .time { position: absolute; left: 80px; top: 84px; }
+    .time > span { font-size: 84px; font-weight: 700; color: #1e4d68; letter-spacing: -0.02em; line-height: 1.12; }
+    .ui { position: absolute; display: block; height: auto; border-radius: 14px; border: 1px solid #e3e8ee; background: #fff; box-shadow: 0 22px 56px rgba(18, 24, 38, 0.14); }
+    .ring { position: absolute; border: 5px solid #e07a5f; border-radius: 12px; opacity: 0; }
+    .h { font-weight: 700; color: #1e4d68; letter-spacing: -0.02em; line-height: 1.1; }
+    .card { position: absolute; background: #fff; border: 1px solid #e3e8ee; border-radius: 18px; box-shadow: 0 22px 56px rgba(18, 24, 38, 0.12); }
+
+    #c14-chart { left: 640px; top: 140px; width: 1200px; height: 570px; padding: 34px 44px; }
+    #c14-chart h3 { font-size: 36px; font-weight: 600; color: #121826; }
+    #c14-bars { display: flex; align-items: flex-end; gap: 30px; height: 390px; margin-top: 26px; }
+    .c14-col { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 80px; font-size: 28px; color: #5b6b78; }
+    .c14-bar { width: 70px; border-radius: 10px 10px 4px 4px; }
+    #c14-note { position: absolute; left: 1120px; top: 250px; font-size: 44px; font-weight: 700; color: #cf5f43; }
+    #c14-stores { position: absolute; left: 640px; top: 750px; display: flex; gap: 40px; align-items: flex-end; }
+    #c14-stores .store { width: 190px; height: 165px; }
+    #c14-new { width: 190px; height: 165px; border: 6px dashed #1e4d68; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 84px; font-weight: 700; color: #1e4d68; }
+
+  </style>
+  <div id="root" data-composition-id="c14" data-width="1920" data-height="1080" data-layout-allow-overflow>
+    <div class="time mask"><span id="c14-time">Lo que viene</span></div>
+
+    <div id="c14-chart" class="card"><h3>Ventas mensuales · Central Zona 1 · 2026</h3><div id="c14-bars"><div class="c14-col"><div class="c14-bar" style="height:330px;background:#e07a5f"></div><span>Ene</span></div><div class="c14-col"><div class="c14-bar" style="height:216px;background:#1e4d68"></div><span>Feb</span></div><div class="c14-col"><div class="c14-bar" style="height:170px;background:#1e4d68"></div><span>Mar</span></div><div class="c14-col"><div class="c14-bar" style="height:164px;background:#1e4d68"></div><span>Abr</span></div><div class="c14-col"><div class="c14-bar" style="height:190px;background:#1e4d68"></div><span>May</span></div><div class="c14-col"><div class="c14-bar" style="height:190px;background:#1e4d68"></div><span>Jun</span></div><div class="c14-col"><div class="c14-bar" style="height:181px;background:#1e4d68"></div><span>Jul</span></div><div class="c14-col"><div class="c14-bar" style="height:188px;background:#1e4d68"></div><span>Ago</span></div><div class="c14-col"><div class="c14-bar" style="height:192px;background:#1e4d68"></div><span>Sep</span></div><div class="c14-col"><div class="c14-bar" style="height:205px;background:#1e4d68"></div><span>Oct</span></div></div></div>
+    <div id="c14-note" class="mask"><span id="c14-n1">Enero: 1.8× un mes normal</span></div>
+    <div id="c14-stores"><div id="c14-s1"><svg viewBox="0 0 300 260" class="store"><rect x="20" y="70" width="260" height="180" rx="10" fill="#fff" stroke="#1e4d68" stroke-width="7"/>
+<path d="M10 70 L290 70 L276 24 L24 24 Z" fill="#e07a5f"/><path d="M10 70 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0" fill="#e07a5f" stroke="#e07a5f"/>
+<rect x="46" y="120" width="96" height="70" rx="6" fill="#f4c542"/><rect x="168" y="118" width="80" height="132" rx="6" fill="#1e4d68"/><circle cx="234" cy="186" r="5" fill="#f4c542"/></svg></div><div id="c14-s2"><svg viewBox="0 0 300 260" class="store"><rect x="20" y="70" width="260" height="180" rx="10" fill="#fff" stroke="#1e4d68" stroke-width="7"/>
+<path d="M10 70 L290 70 L276 24 L24 24 Z" fill="#e07a5f"/><path d="M10 70 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0" fill="#e07a5f" stroke="#e07a5f"/>
+<rect x="46" y="120" width="96" height="70" rx="6" fill="#f4c542"/><rect x="168" y="118" width="80" height="132" rx="6" fill="#1e4d68"/><circle cx="234" cy="186" r="5" fill="#f4c542"/></svg></div><div id="c14-s3"><svg viewBox="0 0 300 260" class="store"><rect x="20" y="70" width="260" height="180" rx="10" fill="#fff" stroke="#1e4d68" stroke-width="7"/>
+<path d="M10 70 L290 70 L276 24 L24 24 Z" fill="#e07a5f"/><path d="M10 70 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0" fill="#e07a5f" stroke="#e07a5f"/>
+<rect x="46" y="120" width="96" height="70" rx="6" fill="#f4c542"/><rect x="168" y="118" width="80" height="132" rx="6" fill="#1e4d68"/><circle cx="234" cy="186" r="5" fill="#f4c542"/></svg></div><div id="c14-new">?</div></div>
+
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const K = 1.0000;
+    const at = (t) => t * K;
+    const rise = (s, t, d = 0.5) => tl.fromTo(s, { yPercent: 115 }, { yPercent: 0, duration: d, ease: "expo.out" }, at(t));
+    const wipe = (s, t, d = 0.6) => tl.fromTo(s, { clipPath: "inset(0 0 100% 0 round 14px)" }, { clipPath: "inset(0 0 0% 0 round 14px)", duration: d, ease: "power3.out" }, at(t));
+    const wipeX = (s, t, d = 0.7) => tl.fromTo(s, { clipPath: "inset(0 100% 0 0 round 14px)" }, { clipPath: "inset(0 0% 0 0 round 14px)", duration: d, ease: "power2.inOut" }, at(t));
+    const pop = (s, t) => tl.fromTo(s, { opacity: 0, scale: 0.86 }, { opacity: 1, scale: 1, duration: 0.42, ease: "back.out(1.8)" }, at(t));
+    const slide = (s, t, x = -120) => tl.fromTo(s, { x: x, opacity: 0 }, { x: 0, opacity: 1, duration: 0.6, ease: "expo.out" }, at(t));
+    const gone = (s, t, d = 0.35) => tl.to(s, { opacity: 0, scale: 0.97, duration: d, ease: "power2.in" }, at(t));
+    const ring = (s, t) => tl.fromTo(s, { opacity: 0, scale: 1.06 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, at(t));
+    rise("#c14-time", 0.05);
+
+    wipe("#c14-chart", 0.3);
+    tl.fromTo(".c14-bar", { scaleY: 0, transformOrigin: "50% 100%" }, { scaleY: 1, duration: 0.6, ease: "power3.out", stagger: 0.07 }, at(0.6));
+    rise("#c14-n1", 2.5);
+    pop("#c14-s1", 4.3); pop("#c14-s2", 4.45); pop("#c14-s3", 4.6); pop("#c14-new", 5.2);
+
+    window.__timelines["c14"] = tl;
+  </script>
+</template>

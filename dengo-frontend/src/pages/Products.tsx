@@ -56,6 +56,8 @@ export default function Products() {
   const canDelete = hasPermission('inventory.delete')
   const canEditPrice = hasPermission('inventory.editPrice')
   const canViewMoneyTotals = hasPermission('settings.system')
+  // Row checkboxes serve both bulk category reassign (edit) and bulk delete/reactivate (delete).
+  const canSelect = canEdit || canDelete
   const PAGE_SIZE = 50
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -94,6 +96,8 @@ export default function Products() {
   }, [searchTerm])
 
   useEffect(() => { setPage(1) }, [selectedCategory, showInactive])
+  // Active and deleted products need different bulk actions — never mix them.
+  useEffect(() => { setSelectedIds(new Set()) }, [showInactive])
 
   const fetchProducts = () => {
     setLoading(true)
@@ -273,6 +277,57 @@ export default function Products() {
       .catch(e => toast.error(e.message))
   }
 
+  // Several products at once — one confirmation for the whole batch (and one
+  // for zeroing their stock, if any still have some), plus a toast "Deshacer"
+  // that reactivates exactly what was just deleted.
+  async function handleBulkDelete() {
+    const ids = Array.from(selectedIds)
+    if (ids.length === 0) return
+    if (!confirm(`¿Eliminar ${ids.length} producto(s)? Se desactivarán y ya no aparecerán en ventas ni búsquedas. Puedes reactivarlos después desde "Mostrar eliminados".`)) return
+    setBulkSaving(true)
+    try {
+      let clearInventory = false
+      try {
+        const preview = await api.post<{ productsWithStock: number; totalUnits: number }>('/api/products/bulk-delete', { productIds: ids, dryRun: true })
+        if (preview.productsWithStock > 0) {
+          clearInventory = confirm(
+            `${preview.productsWithStock} de estos productos todavía tienen inventario (${preview.totalUnits} unidades en total).\n\n` +
+            `¿También quieres poner su inventario en 0 en todas las sucursales?\n\n` +
+            `Aceptar = sí, poner en 0. Cancelar = dejar el inventario como está (solo referencia, ya no se podrán vender).`
+          )
+        }
+      } catch {
+        // Couldn't check stock — plain deactivation, same as the single delete.
+      }
+      const res = await api.post<{ count: number }>('/api/products/bulk-delete', { productIds: ids, clearInventory })
+      setSelectedIds(new Set())
+      fetchProducts()
+      toast.success(`${res.count} producto(s) eliminado(s)`, {
+        duration: 8000,
+        ...(clearInventory ? {} : { action: { label: 'Deshacer', onClick: () => { void reactivateMany(ids) } } }),
+      })
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al eliminar productos')
+    } finally {
+      setBulkSaving(false)
+    }
+  }
+
+  async function reactivateMany(ids: string[]) {
+    setBulkSaving(true)
+    let ok = 0
+    const failed: string[] = []
+    for (const id of ids) {
+      try { await api.post(`/api/products/${id}/reactivate`, {}); ok++ }
+      catch (e) { failed.push(e instanceof Error ? e.message : id) }
+    }
+    setBulkSaving(false)
+    setSelectedIds(new Set())
+    fetchProducts()
+    if (ok > 0) toast.success(`${ok} producto(s) reactivado(s)`)
+    if (failed.length > 0) toast.error(`${failed.length} no se pudieron reactivar: ${failed[0]}`)
+  }
+
   function toggleSelected(id: string) {
     setSelectedIds(prev => {
       const next = new Set(prev)
@@ -359,7 +414,7 @@ export default function Products() {
         {canViewMoneyTotals && (
           <div className="bg-white rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Valor Inventario</span>
+              <span className="text-gray-600 text-sm" title="Stock × precio de venta. El costo del inventario está en Inventario → Costo Total.">Valor de Venta Inventario</span>
               <DollarSign className="text-green-600" size={20} />
             </div>
             <p className="text-2xl font-bold text-gray-800">
@@ -478,18 +533,32 @@ export default function Products() {
         </AnimatePresence>
       </div>
 
-      {/* Barra de reasignación masiva de categoría — solo aplica a la vista de lista, donde hay checkboxes por fila */}
-      {canEdit && viewMode === 'list' && selectedIds.size > 0 && (
-        <div className="bg-primary-50 border border-primary-200 rounded-lg p-3 flex flex-wrap items-center gap-3">
+      {/* Barra de acciones masivas: reasignar categoría, eliminar o reactivar varios a la vez */}
+      {canSelect && selectedIds.size > 0 && (
+        <div className="sticky top-2 z-20 bg-primary-50 border border-primary-200 rounded-lg p-3 flex flex-wrap items-center gap-3 shadow-sm">
           <span className="text-sm font-medium text-primary-800">{selectedIds.size} producto(s) seleccionado(s)</span>
-          {showNewCategoryInput ? (
+          {showInactive ? (
+            <>
+              <button onClick={() => reactivateMany(Array.from(selectedIds))} disabled={bulkSaving} className="btn-primary btn-sm flex items-center gap-1.5 disabled:opacity-50">
+                <RotateCcw size={14} /> {bulkSaving ? 'Reactivando...' : 'Reactivar seleccionados'}
+              </button>
+              <button onClick={() => setSelectedIds(new Set())} className="text-sm text-gray-500 hover:text-gray-700">Cancelar selección</button>
+            </>
+          ) : !canEdit ? (
+            <>
+              <button onClick={handleBulkDelete} disabled={bulkSaving} className="btn-sm flex items-center gap-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">
+                <Trash2 size={14} /> {bulkSaving ? 'Eliminando...' : 'Eliminar seleccionados'}
+              </button>
+              <button onClick={() => setSelectedIds(new Set())} className="text-sm text-gray-500 hover:text-gray-700">Cancelar selección</button>
+            </>
+          ) : showNewCategoryInput ? (
             <>
               <input
                 value={newCategoryName}
                 onChange={e => setNewCategoryName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleCreateCategoryInline()}
                 placeholder="Nombre de la nueva categoría"
-                className="input text-sm py-1.5"
+                className="input text-sm py-1.5 w-auto max-w-xs"
                 autoFocus
               />
               <button onClick={handleCreateCategoryInline} disabled={!newCategoryName.trim() || creatingCategory} className="btn-primary btn-sm disabled:opacity-50">
@@ -502,7 +571,7 @@ export default function Products() {
               <select
                 value={bulkCategoryId}
                 onChange={e => e.target.value === '__new__' ? setShowNewCategoryInput(true) : setBulkCategoryId(e.target.value)}
-                className="input text-sm py-1.5"
+                className="input text-sm py-1.5 w-auto max-w-xs"
               >
                 <option value="">Reasignar a categoría...</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -511,6 +580,11 @@ export default function Products() {
               <button onClick={handleBulkReassign} disabled={!bulkCategoryId || bulkSaving} className="btn-primary btn-sm disabled:opacity-50">
                 {bulkSaving ? 'Reasignando...' : 'Reasignar'}
               </button>
+              {canDelete && (
+                <button onClick={handleBulkDelete} disabled={bulkSaving} className="btn-sm flex items-center gap-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">
+                  <Trash2 size={14} /> Eliminar seleccionados
+                </button>
+              )}
               <button onClick={() => setSelectedIds(new Set())} className="text-sm text-gray-500 hover:text-gray-700">Cancelar selección</button>
             </>
           )}
@@ -526,10 +600,14 @@ export default function Products() {
                 key={product.id}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all"
+                className={`border rounded-lg p-4 hover:shadow-md transition-all ${selectedIds.has(product.id) ? 'border-primary-400 bg-primary-50/40' : 'border-gray-200'}`}
               >
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex-1">
+                <div className="flex justify-between items-start mb-3 gap-2">
+                  {canSelect && (
+                    <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelected(product.id)}
+                      className="mt-0.5 rounded border-gray-300" aria-label={`Seleccionar ${product.fullName ?? product.name}`} />
+                  )}
+                  <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-gray-800 text-sm line-clamp-2">
                       {product.fullName ?? product.name}
                     </h3>
@@ -589,7 +667,7 @@ export default function Products() {
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  {canEdit && (
+                  {canSelect && (
                     <th className="w-10 py-3 px-4">
                       <input type="checkbox" checked={selectedIds.size > 0 && selectedIds.size === products.length}
                         onChange={toggleSelectAll} className="rounded border-gray-300" />
@@ -607,7 +685,7 @@ export default function Products() {
               <tbody>
                 {products.map((product) => (
                   <tr key={product.id} className={`border-b hover:bg-gray-50 ${selectedIds.has(product.id) ? 'bg-primary-50/40' : ''}`}>
-                    {canEdit && (
+                    {canSelect && (
                       <td className="py-3 px-4">
                         <input type="checkbox" checked={selectedIds.has(product.id)}
                           onChange={() => toggleSelected(product.id)} className="rounded border-gray-300" />

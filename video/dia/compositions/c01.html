@@ -1,0 +1,60 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Outfit", sans-serif; color: #121826; }
+    .mask { display: block; overflow: hidden; }
+    .mask > span { display: block; }
+    .time { position: absolute; left: 80px; top: 84px; }
+    .time > span { font-size: 84px; font-weight: 700; color: #1e4d68; letter-spacing: -0.02em; line-height: 1.12; }
+    .ui { position: absolute; display: block; height: auto; border-radius: 14px; border: 1px solid #e3e8ee; background: #fff; box-shadow: 0 22px 56px rgba(18, 24, 38, 0.14); }
+    .ring { position: absolute; border: 5px solid #e07a5f; border-radius: 12px; opacity: 0; }
+    .h { font-weight: 700; color: #1e4d68; letter-spacing: -0.02em; line-height: 1.1; }
+    .card { position: absolute; background: #fff; border: 1px solid #e3e8ee; border-radius: 18px; box-shadow: 0 22px 56px rgba(18, 24, 38, 0.12); }
+
+    #c01-title { position: absolute; left: 640px; top: 150px; }
+    #c01-t1 { font-size: 120px; }
+    #c01-t2 { font-size: 46px; color: #121826; margin-top: 10px; }
+    .c01-shop { position: absolute; top: 400px; width: 330px; text-align: center; font-size: 38px; font-weight: 600; color: #1e4d68; }
+    .c01-shop .store { width: 300px; height: 260px; display: block; margin: 0 auto 10px; }
+    .c01-q { position: absolute; padding: 26px 38px; font-size: 46px; font-weight: 600; color: #1e4d68; background: #fff; border: 4px solid #1e4d68; border-radius: 34px; box-shadow: 0 16px 40px rgba(18,24,38,.12); }
+
+  </style>
+  <div id="root" data-composition-id="c01" data-width="1920" data-height="1080" data-layout-allow-overflow>
+    <div class="time mask"><span id="c01-time">María José</span></div>
+
+    <div id="c01-title"><div class="mask"><span id="c01-t1" class="h">Librería Aurora</span></div><div class="mask"><span id="c01-t2">3 sucursales en la ciudad</span></div></div>
+    <div class="c01-shop" id="c01-s1" style="left:680px"><svg viewBox="0 0 300 260" class="store"><rect x="20" y="70" width="260" height="180" rx="10" fill="#fff" stroke="#1e4d68" stroke-width="7"/>
+<path d="M10 70 L290 70 L276 24 L24 24 Z" fill="#e07a5f"/><path d="M10 70 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0" fill="#e07a5f" stroke="#e07a5f"/>
+<rect x="46" y="120" width="96" height="70" rx="6" fill="#f4c542"/><rect x="168" y="118" width="80" height="132" rx="6" fill="#1e4d68"/><circle cx="234" cy="186" r="5" fill="#f4c542"/></svg>Central Zona 1</div>
+    <div class="c01-shop" id="c01-s2" style="left:1090px"><svg viewBox="0 0 300 260" class="store"><rect x="20" y="70" width="260" height="180" rx="10" fill="#fff" stroke="#1e4d68" stroke-width="7"/>
+<path d="M10 70 L290 70 L276 24 L24 24 Z" fill="#e07a5f"/><path d="M10 70 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0" fill="#e07a5f" stroke="#e07a5f"/>
+<rect x="46" y="120" width="96" height="70" rx="6" fill="#f4c542"/><rect x="168" y="118" width="80" height="132" rx="6" fill="#1e4d68"/><circle cx="234" cy="186" r="5" fill="#f4c542"/></svg>Mixco</div>
+    <div class="c01-shop" id="c01-s3" style="left:1500px"><svg viewBox="0 0 300 260" class="store"><rect x="20" y="70" width="260" height="180" rx="10" fill="#fff" stroke="#1e4d68" stroke-width="7"/>
+<path d="M10 70 L290 70 L276 24 L24 24 Z" fill="#e07a5f"/><path d="M10 70 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0" fill="#e07a5f" stroke="#e07a5f"/>
+<rect x="46" y="120" width="96" height="70" rx="6" fill="#f4c542"/><rect x="168" y="118" width="80" height="132" rx="6" fill="#1e4d68"/><circle cx="234" cy="186" r="5" fill="#f4c542"/></svg>Villa Nueva</div>
+    <div class="c01-q" id="c01-q1" style="left:600px; top:790px">¿Cuánto vendimos ayer?</div>
+    <div class="c01-q" id="c01-q2" style="left:1170px; top:900px">¿Qué se nos está acabando?</div>
+
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const K = 1.0000;
+    const at = (t) => t * K;
+    const rise = (s, t, d = 0.5) => tl.fromTo(s, { yPercent: 115 }, { yPercent: 0, duration: d, ease: "expo.out" }, at(t));
+    const wipe = (s, t, d = 0.6) => tl.fromTo(s, { clipPath: "inset(0 0 100% 0 round 14px)" }, { clipPath: "inset(0 0 0% 0 round 14px)", duration: d, ease: "power3.out" }, at(t));
+    const wipeX = (s, t, d = 0.7) => tl.fromTo(s, { clipPath: "inset(0 100% 0 0 round 14px)" }, { clipPath: "inset(0 0% 0 0 round 14px)", duration: d, ease: "power2.inOut" }, at(t));
+    const pop = (s, t) => tl.fromTo(s, { opacity: 0, scale: 0.86 }, { opacity: 1, scale: 1, duration: 0.42, ease: "back.out(1.8)" }, at(t));
+    const slide = (s, t, x = -120) => tl.fromTo(s, { x: x, opacity: 0 }, { x: 0, opacity: 1, duration: 0.6, ease: "expo.out" }, at(t));
+    const gone = (s, t, d = 0.35) => tl.to(s, { opacity: 0, scale: 0.97, duration: d, ease: "power2.in" }, at(t));
+    const ring = (s, t) => tl.fromTo(s, { opacity: 0, scale: 1.06 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, at(t));
+    rise("#c01-time", 0.05);
+
+    rise("#c01-t1", 0.15); rise("#c01-t2", 1.5);
+    pop("#c01-s1", 1.9); pop("#c01-s2", 2.1); pop("#c01-s3", 2.3);
+    tl.to(".c01-shop", { opacity: 0.35, duration: 0.4 }, at(6.6));
+    pop("#c01-q1", 7.9); pop("#c01-q2", 9.6);
+    gone("#c01-q1", 11.1); gone("#c01-q2", 11.15);
+    tl.to(".c01-shop", { opacity: 1, duration: 0.4 }, at(11.2));
+
+    window.__timelines["c01"] = tl;
+  </script>
+</template>

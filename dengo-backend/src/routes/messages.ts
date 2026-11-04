@@ -42,24 +42,25 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
       orderBy: { name: 'asc' },
     })
 
-    // Per thread: last message + unread count
-    const threads = await Promise.all(
-      allUsers.map(async u => {
-        const last = await prisma.internalMessage.findFirst({
-          where: {
-            OR: [
-              { fromUserId: me, toUserId: u.id },
-              { fromUserId: u.id, toUserId: me },
-            ],
-          },
-          orderBy: { createdAt: 'desc' },
-        })
-        const unread = await prisma.internalMessage.count({
-          where: { fromUserId: u.id, toUserId: me, isRead: false },
-        })
-        return { user: u, lastMessage: last, unread, hasHistory: partnerIds.has(u.id) }
-      })
-    )
+    // Per thread: last message + unread count — 3 queries in total instead
+    // of 2 per user (this list was N+1).
+    const [lastIds, unreadRows] = await Promise.all([
+      prisma.$queryRaw<{ id: string }[]>`
+        SELECT DISTINCT ON (partner) id FROM (
+          SELECT "ID" AS id, CASE WHEN "FROM_USER_ID" = ${me} THEN "TO_USER_ID" ELSE "FROM_USER_ID" END AS partner, "CREATED_AT" AS created
+          FROM "INTERNAL_MESSAGES" WHERE "FROM_USER_ID" = ${me} OR "TO_USER_ID" = ${me}
+        ) t ORDER BY partner, created DESC`,
+      prisma.internalMessage.groupBy({ by: ['fromUserId'], where: { toUserId: me, isRead: false }, _count: { _all: true } }),
+    ])
+    const lastMessages = await prisma.internalMessage.findMany({ where: { id: { in: lastIds.map(r => r.id) } } })
+    const lastByPartner = new Map(lastMessages.map(m => [m.fromUserId === me ? m.toUserId : m.fromUserId, m]))
+    const unreadByUser = new Map(unreadRows.map(r => [r.fromUserId, r._count._all]))
+    const threads = allUsers.map(u => ({
+      user: u,
+      lastMessage: lastByPartner.get(u.id) ?? null,
+      unread: unreadByUser.get(u.id) ?? 0,
+      hasHistory: partnerIds.has(u.id),
+    }))
 
     // Sort: threads with history first (by lastMessage date), then alphabetically
     threads.sort((a, b) => {

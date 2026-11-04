@@ -1,0 +1,17 @@
+
+    #c07-movs, #c07-badge { opacity: 0; }
+    #c07-compras { left: 640px; top: 150px; width: 1150px; }
+    #c07-movs { left: 640px; top: 190px; width: 1200px; }
+    #c07-ring { left: 1448px; top: 300px; width: 300px; height: 290px; }
+    #c07-badge { left: 640px; top: 650px; width: 900px; height: 170px; display: flex; align-items: center; gap: 36px; padding: 0 44px; font-size: 46px; font-weight: 700; color: #1e4d68; }
+    #c07-badge svg { width: 104px; height: 104px; flex: none; }
+<!--markup-->
+    <img id="c07-compras" class="ui" src="assets/compras.png" alt="Historial de compras a proveedores" />
+    <img id="c07-movs" class="ui" src="assets/movs.png" alt="Movimientos de inventario con antes, después y usuario" />
+    <div id="c07-ring" class="ring"></div>
+    <div id="c07-badge" class="card"><svg viewBox="0 0 24 24"><path d="M12 2 L20 5 V11 C20 16.5 16.4 20.6 12 22 C7.6 20.6 4 16.5 4 11 V5 Z" fill="#1e4d68"/><path d="M8.2 12.2 L11 15 L16 9.6" fill="none" stroke="#f4c542" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Cada movimiento, con nombre y motivo</div>
+<!--script-->
+    wipe("#c07-compras", 2.1); gone("#c07-compras", 5.8);
+    tl.set("#c07-movs", { opacity: 1 }, at(6.1)); wipe("#c07-movs", 6.1);
+    ring("#c07-ring", 8.1);
+    pop("#c07-badge", 10.6);

@@ -1,0 +1,22 @@
+
+    .c04-lock { opacity: 0; }
+    #c04-card { left: 640px; top: 170px; width: 1200px; }
+    #c04-list { left: 640px; top: 430px; width: 1200px; height: 420px; padding: 20px 40px; }
+    .c04-row { display: flex; align-items: center; gap: 30px; height: 126px; border-bottom: 2px solid #eef3f6; font-size: 42px; }
+    .c04-row:last-child { border-bottom: 0; }
+    .c04-av { width: 84px; height: 84px; border-radius: 50%; color: #fff; font-size: 38px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; }
+    .c04-row b { color: #1e4d68; }
+    .c04-row span.br { margin-left: auto; color: #5b6b78; }
+    .c04-lock { width: 46px; height: 46px; margin-left: 24px; }
+<!--markup-->
+    <img id="c04-card" class="ui" src="assets/caja_card.png" alt="Caja abierta con fondo de Q500" />
+    <div id="c04-list" class="card">
+      <div class="c04-row" id="c04-r1"><div class="c04-av" style="background:#1e4d68">A</div><b>Ana Sofía López</b><span class="br">Central Zona 1</span><svg class="c04-lock" id="c04-l1" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2" fill="#1e4d68"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="#1e4d68" stroke-width="2.2"/></svg></div>
+      <div class="c04-row" id="c04-r2"><div class="c04-av" style="background:#e07a5f">C</div><b>Carlos Méndez</b><span class="br">Mixco</span><svg class="c04-lock" id="c04-l2" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2" fill="#1e4d68"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="#1e4d68" stroke-width="2.2"/></svg></div>
+      <div class="c04-row" id="c04-r3"><div class="c04-av" style="background:#2f9e77">L</div><b>Lucía Hernández</b><span class="br">Villa Nueva</span><svg class="c04-lock" id="c04-l3" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2" fill="#1e4d68"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="#1e4d68" stroke-width="2.2"/></svg></div>
+    </div>
+<!--script-->
+    wipe("#c04-card", 0.7);
+    wipe("#c04-list", 1.6);
+    slide("#c04-r1", 1.8); slide("#c04-r2", 2.0); slide("#c04-r3", 2.2);
+    pop("#c04-l1", 5.4); pop("#c04-l2", 5.55); pop("#c04-l3", 5.7);

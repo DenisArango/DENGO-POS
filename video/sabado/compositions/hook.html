@@ -1,0 +1,50 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Outfit", sans-serif; color: #121826; }
+    #hook-sheet {
+      position: absolute; left: 150px; top: 130px; width: 780px; height: 820px;
+      background: #fff; border: 1px solid #e3e8ee; border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(18, 24, 38, 0.14); padding: 64px 64px;
+    }
+    #hook-sheet h2 { font-size: 44px; font-weight: 700; color: #1e4d68; letter-spacing: -0.01em; margin-bottom: 48px; }
+    .hook-line { position: relative; display: flex; align-items: center; gap: 28px; height: 104px; border-bottom: 2px solid #e6edf2; font-size: 42px; }
+    .hook-box { position: relative; width: 40px; height: 40px; border: 3px solid #1e4d68; border-radius: 8px; flex: none; }
+    .hook-check { position: absolute; left: 6px; top: -2px; width: 16px; height: 30px; border-right: 6px solid #1e4d68; border-bottom: 6px solid #1e4d68; opacity: 0; }
+    .hook-text { position: relative; z-index: 1; }
+    #hook-marker { position: absolute; left: 56px; right: -16px; top: 26px; height: 54px; background: #e07a5f; opacity: 0.32; border-radius: 6px; z-index: 0; }
+    #hook-title { position: absolute; left: 1040px; top: 300px; }
+    .hook-mask { display: block; overflow: hidden; }
+    .hook-mask span { display: block; }
+    #hook-t1, #hook-t2 { font-size: 120px; font-weight: 700; color: #1e4d68; letter-spacing: -0.02em; line-height: 1.08; }
+    #hook-sub { font-size: 44px; line-height: 1.35; margin-top: 36px; max-width: 760px; }
+  </style>
+  <div id="root" data-composition-id="hook" data-width="1920" data-height="1080">
+    <div id="hook-sheet">
+      <h2>Lista de útiles · 3er. grado</h2>
+      <div class="hook-line" id="hook-l1"><div class="hook-box"><div class="hook-check" id="hook-c1"></div></div><span class="hook-text">2 cuadernos espiral cuadriculados</span></div>
+      <div class="hook-line" id="hook-l2"><div class="hook-box"><div class="hook-check" id="hook-c2"></div></div><span class="hook-text">1 caja de crayones de 12</span></div>
+      <div class="hook-line" id="hook-l3"><div class="hook-box"><div class="hook-check" id="hook-c3"></div></div><span class="hook-text">1 pegamento en barra</span></div>
+      <div class="hook-line" id="hook-l4"><div class="hook-box"><div class="hook-check" id="hook-c4"></div></div><span class="hook-text">1 docena de lápices No. 2</span></div>
+      <div class="hook-line" id="hook-l5"><div id="hook-marker"></div><div class="hook-box"></div><span class="hook-text">1 calculadora científica</span></div>
+    </div>
+    <div id="hook-title">
+      <div class="hook-mask"><span id="hook-t1">Sábado,</span></div>
+      <div class="hook-mask"><span id="hook-t2">10:42 a.m.</span></div>
+      <div class="hook-mask"><span id="hook-sub">Cola de papás con su lista de útiles.</span></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    ["#hook-l3", "#hook-l4", "#hook-l5"].forEach((sel, i) => {
+      tl.fromTo(sel, { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.35, ease: "power2.out" }, 0.1 + i * 0.2);
+    });
+    tl.fromTo("#hook-t1", { yPercent: 0 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, 0.3);
+    tl.fromTo("#hook-t2", { yPercent: 0 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, 0.42);
+    tl.fromTo("#hook-sub", { yPercent: 110 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, 0.9);
+    ["#hook-c1", "#hook-c2", "#hook-c3", "#hook-c4"].forEach((sel, i) => {
+      tl.fromTo(sel, { opacity: 0, scale: 0.4, rotation: 45 }, { opacity: 1, scale: 1, rotation: 45, duration: 0.22, ease: "back.out(2)" }, 1.6 + i * 0.28);
+    });
+    tl.fromTo("#hook-marker", { scaleX: 0, transformOrigin: "left center" }, { scaleX: 1, duration: 0.5, ease: "power2.inOut" }, 2.95);
+    window.__timelines["hook"] = tl;
+  </script>
+</template>

@@ -84,7 +84,7 @@ export default function ThermalReceipt({ data, widthMm }: { data: ThermalReceipt
       {/* ── Membrete: logo + nombre de la empresa ── */}
       <div style={{ textAlign: 'center', marginBottom: '4px' }}>
         {data.logo && <img src={data.logo} alt="" style={{ maxHeight: '44px', maxWidth: '80%', margin: '0 auto 2px', objectFit: 'contain' }} />}
-        <div style={{ fontWeight: 'bold', fontSize: '18px' }}>{data.companyName || 'DENGO POS'}</div>
+        <div style={{ fontWeight: 'bold', fontSize: '18px' }}>{data.companyName || data.branchName}</div>
       </div>
 
       {/* ── Datos de la tienda ── */}

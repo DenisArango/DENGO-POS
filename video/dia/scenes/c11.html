@@ -1,0 +1,14 @@
+
+    #c11-hist { left: 640px; top: 260px; width: 1200px; }
+    #c11-ring { left: 1448px; top: 368px; width: 84px; height: 104px; }
+    #c11-big { position: absolute; left: 640px; top: 600px; }
+    #c11-big span { font-size: 120px; }
+    #c11-sub { position: absolute; left: 640px; top: 750px; font-size: 46px; }
+<!--markup-->
+    <img id="c11-hist" class="ui" src="assets/caja_hist.png" alt="Historial de cierres de caja" />
+    <div id="c11-ring" class="ring"></div>
+    <div id="c11-big" class="mask"><span id="c11-b1" class="h">Q0.00</span></div>
+    <div id="c11-sub" class="mask"><span id="c11-s1">de diferencia al cerrar</span></div>
+<!--script-->
+    wipe("#c11-hist", 0.5); ring("#c11-ring", 2.4);
+    rise("#c11-b1", 2.6, 0.6); rise("#c11-s1", 2.9);

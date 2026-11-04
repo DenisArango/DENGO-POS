@@ -21,6 +21,20 @@ export const useStore = () => {
   return context
 }
 
+// Receipts, quotations and invoices print the CLIENT's brand: the branch's
+// own logo/name, else the company profile (Configuración → Empresa) — never
+// DENGO's. Merged here so every print reads currentStore the same way.
+type CompanyDefaults = { name?: string | null; legalName?: string | null; taxId?: string | null; logo?: string | null } | null
+function withCompanyDefaults<T extends Record<string, unknown>>(b: T, company: CompanyDefaults): T {
+  if (!company) return b
+  return {
+    ...b,
+    logo: b.logo || company.logo || null,
+    companyName: b.companyName || company.legalName || company.name || null,
+    companyTaxId: b.companyTaxId || company.taxId || null,
+  }
+}
+
 function branchToStore(b: any): Store {
   const rawStatus = (b.status ?? 'active').toLowerCase()
   const status: Store['status'] =
@@ -146,11 +160,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      const branches: any[] = await res.json()
-      if (!Array.isArray(branches) || branches.length === 0) {
+      const rawBranches: any[] = await res.json()
+      if (!Array.isArray(rawBranches) || rawBranches.length === 0) {
         setIsLoading(false)
         return
       }
+      const company: CompanyDefaults = await fetch(`${apiUrl}/api/settings/company`, { headers: { Authorization: `Bearer ${authToken}` } })
+        .then(r => (r.ok ? r.json() : null))
+        .catch(() => null)
+      const branches = rawBranches.map(b => withCompanyDefaults(b, company))
       await setCache('branches', branches)
       applyStores(branches.map(branchToStore))
     } catch (err) {

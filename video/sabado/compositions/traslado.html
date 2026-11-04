@@ -1,0 +1,32 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Outfit", sans-serif; color: #121826; overflow: hidden; }
+    #tr-title { position: absolute; left: 140px; top: 200px; }
+    .tr-mask { display: block; overflow: hidden; }
+    .tr-mask span { display: block; }
+    #tr-t1 { font-size: 104px; font-weight: 700; color: #1e4d68; letter-spacing: -0.02em; line-height: 1.12; }
+    #tr-t2 { font-size: 64px; font-weight: 400; line-height: 1.3; margin-top: 8px; }
+    #tr-row {
+      position: absolute; left: 140px; top: 600px; width: 1640px; height: 189.9px;
+      border-radius: 10px; border: 1px solid #e3e8ee; box-shadow: 0 24px 60px rgba(18, 24, 38, 0.14);
+    }
+    #tr-route { position: absolute; left: 140px; top: 850px; font-size: 44px; }
+    #tr-route b { color: #1e4d68; }
+  </style>
+  <div id="root" data-composition-id="traslado" data-width="1920" data-height="1080">
+    <div id="tr-title">
+      <div class="tr-mask"><span id="tr-t1">Se pide el traslado.</span></div>
+      <div class="tr-mask"><span id="tr-t2">Y la venta sigue.</span></div>
+    </div>
+    <img id="tr-row" src="assets/traslado_row.png" alt="Traslado pendiente de Central Zona 1 a Mixco" />
+    <div class="tr-mask" id="tr-route"><span id="tr-r1"><b>Central Zona 1</b> → <b>Mixco</b> · 5 calculadoras</span></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#tr-t1", { yPercent: 110 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, 0.1);
+    tl.fromTo("#tr-row", { x: -1900 }, { x: 0, duration: 0.8, ease: "expo.out" }, 0.45);
+    tl.fromTo("#tr-r1", { yPercent: 110 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, 1.2);
+    tl.fromTo("#tr-t2", { yPercent: 110 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, 1.6);
+    window.__timelines["traslado"] = tl;
+  </script>
+</template>

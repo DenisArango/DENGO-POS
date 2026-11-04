@@ -1,5 +1,5 @@
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
+// jsPDF + html2canvas are ~600 KB and only needed when someone actually
+// exports a PDF — loaded on demand instead of with the Quotations page.
 
 /**
  * Renders an off-screen DOM element (see QuotationPrint's `variant="export"`)
@@ -13,6 +13,7 @@ export async function elementToPdfBlob(elementId: string): Promise<Blob> {
   const el = document.getElementById(elementId)
   if (!el) throw new Error('No se encontró el contenido a exportar')
 
+  const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')])
   const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff' })
   const imgData = canvas.toDataURL('image/jpeg', 0.92)
 

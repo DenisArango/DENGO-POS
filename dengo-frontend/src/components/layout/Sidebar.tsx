@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
+  TrendingUp,
   ShoppingCart,
   Package,
   Warehouse,
@@ -62,6 +63,7 @@ const portalItems = [
   { path: '/portal/programs', icon: BookOpen, label: 'Programas', roles: ['ADMIN'] },
   { path: '/portal/program-options', icon: Layers, label: 'Paquetes', roles: ['ADMIN'] },
   { path: '/portal/consolidated', icon: BarChart2, label: 'Consolidado', roles: ['ADMIN'] },
+  { path: '/portal/metrics', icon: TrendingUp, label: 'Rentabilidad', roles: ['ADMIN'] },
   { path: '/portal/config', icon: Globe, label: 'Config. Portal', roles: ['ADMIN'] },
 ]
 

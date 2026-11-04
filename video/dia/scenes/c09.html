@@ -1,0 +1,31 @@
+
+    #c09-m1, #c09-m2, #c09-dots, #c09-hours { opacity: 0; }
+    #c09-chat { left: 700px; top: 130px; width: 1080px; height: 800px; overflow: hidden; }
+    #c09-head { height: 112px; background: #1e4d68; display: flex; align-items: center; gap: 24px; padding: 0 36px; color: #fff; }
+    #c09-head svg { width: 62px; height: 62px; }
+    #c09-head b { font-size: 42px; }
+    #c09-head small { display: block; font-size: 28px; color: #bfe6d5; }
+    .c09-msg { position: absolute; max-width: 720px; padding: 26px 32px 18px; border-radius: 26px; font-size: 36px; line-height: 1.32; box-shadow: 0 6px 18px rgba(18,24,38,.08); }
+    .c09-msg i { display: block; font-style: normal; font-size: 26px; color: #6b7c88; text-align: right; margin-top: 6px; }
+    #c09-m1 { right: 36px; top: 160px; background: #dcf3e8; border-bottom-right-radius: 8px; }
+    #c09-m2 { left: 36px; top: 370px; background: #fff; border: 2px solid #e3ebf0; border-bottom-left-radius: 8px; }
+    #c09-dots { position: absolute; left: 36px; top: 370px; display: flex; gap: 12px; padding: 26px 32px; background: #fff; border: 2px solid #e3ebf0; border-radius: 26px; }
+    #c09-dots div { width: 18px; height: 18px; border-radius: 50%; background: #9fb3c2; }
+    #c09-hours { position: absolute; left: 36px; bottom: 34px; display: flex; align-items: center; gap: 20px; font-size: 48px; font-weight: 700; color: #1e4d68; }
+    #c09-hours svg { width: 64px; height: 64px; }
+<!--markup-->
+    <div id="c09-chat" class="card">
+      <div id="c09-head"><svg viewBox="5 5 120 135"><path d="M 65,15 L 115,44 L 115,101 L 65,130 L 15,101 L 15,44 Z" fill="none" stroke="#fff" stroke-width="12" stroke-linejoin="round"/><line x1="15" y1="101" x2="115" y2="44" stroke="#fff" stroke-width="8" stroke-linecap="round"/><path d="M 28,107 L 65,42 L 102,107" fill="none" stroke="#e07a5f" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/></svg><div><b>Soporte DENGO</b><small>● en línea</small></div></div>
+      <div class="c09-msg" id="c09-m1">¿Cómo le hago un descuento especial a un colegio?<i>3:12 p.m.</i></div>
+      <div id="c09-dots"><div></div><div></div><div></div></div>
+      <div class="c09-msg" id="c09-m2">¡Hola, María José! En el punto de venta puede poner el % de descuento en cada producto, o usar «Descuento general» para toda la venta. ¿Le ayudo con algo más?<i>3:15 p.m.</i></div>
+      <div id="c09-hours"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#1e4d68" stroke-width="2.2"/><path d="M12 6.5 V12 L15.5 14" fill="none" stroke="#e07a5f" stroke-width="2.2" stroke-linecap="round"/></svg>7:00 a.m. – 7:00 p.m.</div>
+    </div>
+<!--script-->
+    wipe("#c09-chat", 3.9, 0.5);
+    tl.set("#c09-m1", { opacity: 1 }, at(4.5)); wipeX("#c09-m1", 4.5, 0.9);
+    pop("#c09-dots", 5.5);
+    tl.fromTo("#c09-dots div", { y: 0 }, { y: -8, duration: 0.18, ease: "sine.inOut", yoyo: true, repeat: 3, stagger: 0.09 }, at(5.6));
+    tl.to("#c09-dots", { opacity: 0, duration: 0.15 }, at(6.25));
+    pop("#c09-m2", 6.3);
+    pop("#c09-hours", 8.4);

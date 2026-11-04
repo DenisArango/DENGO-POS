@@ -10,6 +10,7 @@ import { api } from '../lib/api'
 import { useAuthStore } from '../store/authStore'
 import type { Program, PortalOrder, TeacherSchoolAssignment } from '../types'
 import { programLabel, programIcon, statusStyle, money, formatDate } from '../lib/labels'
+import { getPushState, type PushState } from '../lib/push'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -36,7 +37,9 @@ export default function Dashboard() {
     total: orders.length,
   }
 
-  const today = new Date().toLocaleDateString('es-GT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  // Only the first letter — CSS `capitalize` turned "de" into "De".
+  const todayRaw = new Date().toLocaleDateString('es-GT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const today = todayRaw.charAt(0).toUpperCase() + todayRaw.slice(1)
   const recent = orders.slice(0, 5)
 
   if (loading) {
@@ -52,12 +55,13 @@ export default function Dashboard() {
   return (
     <PortalLayout>
       <div className="space-y-8">
+        <PushNudge />
         {/* Welcome */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
             ¡Bienvenido/a, {user?.name?.split(' ')[0] ?? 'Maestro'}!
           </h1>
-          <p className="text-gray-500 mt-1 capitalize">{today}</p>
+          <p className="text-gray-600 mt-1">{today}</p>
         </motion.div>
 
         {/* Stats */}
@@ -105,7 +109,7 @@ export default function Dashboard() {
                   </p>
                   {s.school.municipio && <p className="text-xs text-gray-400 mt-0.5">{s.school.municipio}</p>}
                   <button
-                    onClick={() => navigate('/orders/new')}
+                    onClick={() => navigate(`/orders/new?school=${s.id}`)}
                     className="mt-4 px-4 py-2.5 rounded-xl bg-brand-500 text-white text-sm font-semibold hover:bg-brand-600 transition-colors flex items-center justify-center gap-1.5"
                   >
                     Hacer Pedido <ArrowRight size={15} />
@@ -201,5 +205,28 @@ export default function Dashboard() {
         <Plus size={26} />
       </button>
     </PortalLayout>
+  )
+}
+
+// Small, dismissible invitation to turn on phone notifications.
+function PushNudge() {
+  const [state, setState] = useState<PushState | null>(null)
+  const [hidden, setHidden] = useState(() => {
+    try { return localStorage.getItem('portal-push-nudge') === 'hidden' } catch { return false }
+  })
+  useEffect(() => { getPushState().then(setState).catch(() => setState(null)) }, [])
+  if (hidden || state === null || state === 'on' || state === 'unsupported') return null
+  const hide = () => {
+    setHidden(true)
+    try { localStorage.setItem('portal-push-nudge', 'hidden') } catch { /* storage blocked */ }
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-brand-50 border border-brand-100 px-4 py-3 text-sm text-brand-900">
+      <span className="flex-1 min-w-[14rem]">
+        <strong>¿Quieres que te avisemos en tu celular?</strong> Te llega una notificación cuando tu pedido cambia o te envían la cotización o factura.
+      </span>
+      <Link to="/notifications" className="px-4 py-2 rounded-xl bg-brand-500 text-white font-semibold hover:bg-brand-600">Ver cómo activarlas</Link>
+      <button onClick={hide} className="text-brand-700 hover:underline">Ahora no</button>
+    </div>
   )
 }

@@ -62,6 +62,46 @@ export async function computeSales(branchId: string, openedAt: Date, closedAt?: 
   return result
 }
 
+// Several devices legitimately share one physical till ("Caja 1" open on the
+// counter PC and on a tablet). A device that kept its POS open can still hold
+// the id of a session another device already closed (or closed and reopened)
+// — sales/abonos saved against that closed session fall after its closedAt
+// and are counted by NO close at all. Resolves the id to the session that is
+// actually open right now for the same register number in the same branch.
+// Returns null only when that register has no open session at all.
+// branchId omitted (abonos carry no branch of their own) = the register's own.
+export async function resolveOpenRegisterId(cashRegisterId: string, branchId?: string) {
+  const reg = await prisma.cashRegister.findUnique({
+    where: { id: cashRegisterId },
+    select: { id: true, status: true, branchId: true, registerNumber: true },
+  })
+  if (!reg || (branchId && reg.branchId !== branchId)) return null
+  if (reg.status === 'OPEN') return { id: reg.id, redirected: false }
+  const open = await prisma.cashRegister.findFirst({
+    where: { branchId: reg.branchId, registerNumber: reg.registerNumber, status: 'OPEN' },
+    select: { id: true },
+  })
+  return open ? { id: open.id, redirected: true } : null
+}
+
+// Per-session totals columns (TOTAL_SALES/SALES_COUNT/CASH_SALES/...) read by
+// Reportes → Flujo de caja and the AI's cashRegisters queries. Written once at
+// close; a still-OPEN session has nothing stored yet, so it's computed live.
+export function totalsColumns(sales: Awaited<ReturnType<typeof computeSales>>) {
+  return { totalSales: sales.total, salesCount: sales.count, cashSales: sales.cash, cardSales: sales.card, transferSales: sales.transfer }
+}
+
+export async function sessionTotals(reg: {
+  id: string; branchId: string; openedAt: Date; status: string
+  totalSales: unknown; salesCount: number; cashSales: unknown; cardSales: unknown; transferSales: unknown
+}) {
+  if (reg.status === 'OPEN') return totalsColumns(await computeSales(reg.branchId, reg.openedAt, null, reg.id))
+  return {
+    totalSales: Number(reg.totalSales), salesCount: reg.salesCount,
+    cashSales: Number(reg.cashSales), cardSales: Number(reg.cardSales), transferSales: Number(reg.transferSales),
+  }
+}
+
 async function withSales(reg: any) {
   if (!reg) return null
   const sales = await computeSales(reg.branchId, reg.openedAt, reg.closedAt, reg.id)
@@ -255,6 +295,7 @@ export default async function cashRegisterRoutes(fastify: FastifyInstance) {
         finalAmount: body.data.finalAmount,
         expectedAmount,
         difference: body.data.finalAmount - expectedAmount,
+        ...totalsColumns(sales),
         ...(body.data.clientRequestId ? { closeRequestId: body.data.clientRequestId } : {}),
         ...(body.data.externalSalesTotal !== undefined ? {
           externalSalesTotal: body.data.externalSalesTotal,

@@ -1,0 +1,47 @@
+<!doctype html>
+<html
+  lang="es"
+  data-composition-variables='[{"id":"whatsapp","type":"string","label":"WhatsApp","default":"+502 5568-3004"},{"id":"claim1","type":"string","label":"Claim línea 1","default":"Toda tu librería,"},{"id":"claim2","type":"string","label":"Claim línea 2","default":"en un solo lugar."}]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --ground: #ffffff;
+        --grid: #e6edf2;
+        --ink: #121826;
+        --brand: #1e4d68;
+        --accent: #e07a5f;
+        --font-display: "Outfit", sans-serif;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: var(--ground); }
+      #root { position: relative; width: 100%; height: 100%; font-family: var(--font-display); color: var(--ink); }
+      #paper {
+        position: absolute; inset: 0;
+        background-color: var(--ground);
+        background-image:
+          linear-gradient(var(--grid) 1px, transparent 1px),
+          linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+        background-size: 48px 48px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="29.5" data-width="1080" data-height="1920">
+      <div id="paper"></div>
+      <div id="hook" data-composition-id="hook" data-composition-src="compositions/hook.html" data-start="0" data-duration="3.5" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="pos" data-composition-id="pos" data-composition-src="compositions/pos.html" data-start="3.5" data-duration="5" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="otras" data-composition-id="otras" data-composition-src="compositions/otras.html" data-start="8.5" data-duration="4.5" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="caja" data-composition-id="caja" data-composition-src="compositions/caja.html" data-start="13" data-duration="4" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="ia" data-composition-id="ia" data-composition-src="compositions/ia.html" data-start="17" data-duration="5.5" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="claim" data-composition-id="claim" data-composition-src="compositions/claim.html" data-start="22.5" data-duration="2.5" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="endcard" data-composition-id="endcard" data-composition-src="compositions/endcard.html" data-start="25" data-duration="4.5" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+    </div>
+    <script>
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+    </script>
+  </body>
+</html>

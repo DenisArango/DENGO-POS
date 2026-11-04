@@ -1,0 +1,19 @@
+
+    #c05-cart { left: 640px; top: 160px; width: 1120px; }
+    #c05-pay { left: 1420px; top: 250px; width: 420px; }
+    #c05-scan { left: 632px; top: 198px; width: 760px; height: 66px; }
+    #c05-stock { left: 640px; top: 690px; width: 700px; height: 250px; padding: 34px 44px; }
+    #c05-stock .lbl { font-size: 36px; color: #5b6b78; }
+    #c05-stock .name { font-size: 40px; font-weight: 600; margin-top: 6px; }
+    #c05-num { font-size: 84px; font-weight: 700; color: #1e4d68; margin-top: 4px; }
+    #c05-num em { font-style: normal; color: #cf5f43; font-size: 52px; margin-left: 20px; }
+<!--markup-->
+    <img id="c05-cart" class="ui" src="assets/cart2.png" alt="Venta con tres productos" />
+    <div id="c05-scan" class="ring"></div>
+    <img id="c05-pay" class="ui" src="assets/pay2.png" alt="Métodos de pago" />
+    <div id="c05-stock" class="card"><div class="lbl">Existencia en Mixco</div><div class="name">Cuaderno espiral 100 hojas</div><div id="c05-num">50 → 49 <em>−1</em></div></div>
+<!--script-->
+    wipe("#c05-cart", 0.4);
+    ring("#c05-scan", 2.5); tl.to("#c05-scan", { opacity: 0, duration: 0.3 }, at(3.6));
+    slide("#c05-pay", 5.5, 160);
+    pop("#c05-stock", 8.6);

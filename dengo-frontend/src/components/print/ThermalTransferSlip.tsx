@@ -37,7 +37,7 @@ export function ThermalTransferSlip({ data, widthMm }: { data: ThermalTransferDa
 
       <div style={{ textAlign: 'center', marginBottom: '4px' }}>
         {data.logo && <img src={data.logo} alt="" style={{ maxHeight: '44px', maxWidth: '80%', margin: '0 auto 2px', objectFit: 'contain' }} />}
-        <div style={{ fontWeight: 'bold', fontSize: '18px' }}>{data.companyName || 'DENGO POS'}</div>
+        <div style={{ fontWeight: 'bold', fontSize: '18px' }}>{data.companyName || ''}</div>
       </div>
 
       <div style={{ borderTop: '1px dashed #000', borderBottom: '1px dashed #000', padding: '3px 0', margin: '3px 0', textAlign: 'center', fontWeight: 'bold' }}>

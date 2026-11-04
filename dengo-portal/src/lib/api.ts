@@ -1,5 +1,5 @@
 import type {
-  PortalConfig, TeacherUser, Program, Product, Category, PortalOrder, ProgramOption, PortalMessage,
+  PortalConfig, TeacherUser, Program, BlockedProgram, PortalDocument, Product, Category, PortalOrder, ProgramOption, PortalMessage,
 } from '../types'
 
 const BASE = '/api/portal'
@@ -47,7 +47,8 @@ export interface CreateOrderBody {
   programType: string
   grades: GradeRow[]
   notes?: string
-  items: Array<{ productId: string; quantity: number; unitPrice: number; notes?: string }>
+  /** For per-student programs, quantity is per student (one kit). */
+  items: Array<{ productId: string; quantity: number; unitPrice?: number; notes?: string }>
 }
 
 export const api = {
@@ -57,7 +58,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
-  getMe: () => request<TeacherUser & { programs: Program[] }>('/me'),
+  getMe: () => request<TeacherUser & { programs: Program[]; blockedPrograms?: BlockedProgram[] }>('/me'),
   getPrograms: () => request<Program[]>('/programs'),
   getProgramOptions: (programType?: string, level?: string) => {
     const params = new URLSearchParams()
@@ -81,6 +82,15 @@ export const api = {
   // Messages — single thread per teacher (not tied to a specific order)
   getMessages: () => request<{ data: PortalMessage[] }>('/messages'),
   getUnreadMessages: () => request<{ count: number }>('/messages/unread'),
+  // Notifications on this device (Web Push)
+  getPushPublicKey: () => request<{ publicKey: string }>('/push/public-key'),
+  subscribePush: (subscription: PushSubscriptionJSON) =>
+    request<{ ok: true }>('/push/subscribe', { method: 'POST', body: JSON.stringify(subscription) }),
+  unsubscribePush: (endpoint: string) =>
+    request<{ ok: true }>('/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) }),
+  testPush: () => request<{ sent: number }>('/push/test', { method: 'POST', body: '{}' }),
+  // Quotation / invoice the provider sent through Mensajes
+  getDocument: (kind: 'quotation' | 'invoice', id: string) => request<PortalDocument>(`/documents/${kind}/${id}`),
   sendMessage: (body: string, portalOrderId?: string) =>
     request<PortalMessage>('/messages', {
       method: 'POST',

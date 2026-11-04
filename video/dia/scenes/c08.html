@@ -1,0 +1,13 @@
+
+    #c08-cre { opacity: 0; }
+    #c08-cot { left: 640px; top: 150px; width: 1150px; }
+    #c08-cre { left: 640px; top: 150px; width: 1150px; }
+    #c08-ring { left: 1704px; top: 338px; width: 80px; height: 472px; }
+<!--markup-->
+    <img id="c08-cot" class="ui" src="assets/cotiz.png" alt="Cotizaciones a colegios" />
+    <img id="c08-cre" class="ui" src="assets/credito.png" alt="Clientes con crédito y abonos" />
+    <div id="c08-ring" class="ring"></div>
+<!--script-->
+    wipe("#c08-cot", 1.2); gone("#c08-cot", 4.5);
+    tl.set("#c08-cre", { opacity: 1 }, at(4.7)); wipe("#c08-cre", 4.7);
+    ring("#c08-ring", 6.6);

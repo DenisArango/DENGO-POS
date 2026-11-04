@@ -19,7 +19,7 @@ const PROGRAM_LABELS: Record<string, string> = {
 }
 
 interface ConsolidatedRow {
-  productId: string
+  productId: string | null // null = typed in by the provider, not in the catalog
   productName: string
   productBrand: string | null
   programType: string
@@ -61,6 +61,7 @@ export default function PortalConsolidated() {
   useEffect(() => { fetchData() }, [fetchData])
 
   const openEdit = (row: ConsolidatedRow) => {
+    if (!row.productId) return // typed-in products have no purchase tracking
     setEditing({
       productId: row.productId,
       programType: row.programType,
@@ -192,14 +193,15 @@ export default function PortalConsolidated() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {rows.map(row => {
-                  const isEditing = editing?.productId === row.productId && editing?.programType === row.programType
+                  const isEditing = !!row.productId && editing?.productId === row.productId && editing?.programType === row.programType
                   const pct = row.totalNeeded > 0 ? Math.round(row.purchasedQty / row.totalNeeded * 100) : 0
 
                   return (
-                    <tr key={`${row.productId}:${row.programType}`} className={`hover:bg-gray-50 ${isEditing ? 'bg-blue-50' : ''}`}>
+                    <tr key={`${row.productId ?? row.productName}:${row.programType}`} className={`hover:bg-gray-50 ${isEditing ? 'bg-blue-50' : ''}`}>
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-900">{row.productName}</p>
                         {row.productBrand && <p className="text-xs text-gray-400">{row.productBrand}</p>}
+                        {!row.productId && <p className="text-xs text-amber-700">Fuera del catálogo</p>}
                       </td>
                       <td className="px-4 py-3 text-gray-600">{PROGRAM_LABELS[row.programType] ?? row.programType}</td>
                       <td className="px-4 py-3 text-right font-semibold text-gray-800">{qty(row.totalNeeded)}</td>
@@ -263,7 +265,7 @@ export default function PortalConsolidated() {
                               <X size={15} />
                             </button>
                           </div>
-                        ) : (
+                        ) : row.productId && (
                           <button
                             onClick={() => openEdit(row)}
                             className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-primary-600"

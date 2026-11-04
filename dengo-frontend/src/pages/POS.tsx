@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Trash2, X, DollarSign, CreditCard,
   UserPlus, User, Barcode, ShoppingCart, Printer,
-  Calendar, AlertCircle, Receipt, ArrowLeftRight, Edit2, History, ExternalLink, Wallet, Package, Building2, Plus
+  Calendar, AlertCircle, Receipt, ArrowLeftRight, Edit2, History, ExternalLink, Wallet, Package, Building2, Plus, Minus
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -194,10 +194,19 @@ export default function POS() {
   const [selectedRegisterId, setSelectedRegisterId] = useState<string>('')
   const [showRegisterPanel, setShowRegisterPanel] = useState(false)
   const [registersLoaded, setRegistersLoaded] = useState(false)
-
+  const selectedRegisterNumberRef = useRef<string | undefined>(undefined)
   useEffect(() => {
+    const reg = openRegisters.find(r => r.id === selectedRegisterId)
+    if (reg) selectedRegisterNumberRef.current = reg.registerNumber
+  }, [openRegisters, selectedRegisterId])
+
+  // initial=false is a background refresh (interval / window focus): another
+  // device sharing this till may have closed — or closed and reopened — the
+  // session this POS still has selected. Follow the reopened session of the
+  // same register number instead of silently selling into a closed one.
+  const loadRegisters = useCallback((initial: boolean) => {
     if (!BRANCH_ID) return
-    setRegistersLoaded(false)
+    if (initial) setRegistersLoaded(false)
     const registerCacheKey = `registers-${BRANCH_ID}`
     api.get<any[]>(`/api/cash-registers/current?branchId=${BRANCH_ID}`)
       .then(async d => {
@@ -222,7 +231,19 @@ export default function POS() {
         const saved = localStorage.getItem(registerStorageKey)
         if (saved && list.some(r => r.id === saved)) {
           setSelectedRegisterId(saved)
-        } else {
+        } else if (!initial && saved) {
+          const prevNumber = selectedRegisterNumberRef.current
+          const reopened = prevNumber ? list.find(r => r.registerNumber === prevNumber) : undefined
+          if (reopened) {
+            setSelectedRegisterId(reopened.id)
+            localStorage.setItem(registerStorageKey, reopened.id)
+          } else {
+            setSelectedRegisterId('')
+            localStorage.removeItem(registerStorageKey)
+            toast.error('La caja que tenías seleccionada fue cerrada — selecciona una caja abierta')
+            if (list.length > 0) setShowRegisterPanel(true)
+          }
+        } else if (initial) {
           setSelectedRegisterId('')
           if (list.length > 0) setShowRegisterPanel(true)
         }
@@ -242,6 +263,15 @@ export default function POS() {
       .finally(() => setRegistersLoaded(true))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [BRANCH_ID])
+
+  useEffect(() => { loadRegisters(true) }, [loadRegisters])
+
+  useEffect(() => {
+    const refresh = () => { if (navigator.onLine) loadRegisters(false) }
+    const timer = window.setInterval(refresh, 60_000)
+    window.addEventListener('focus', refresh)
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh) }
+  }, [loadRegisters])
 
   const handleRegisterChange = (id: string) => {
     setSelectedRegisterId(id)
@@ -897,8 +927,10 @@ export default function POS() {
   }
 
   const handleSaveQuickCustomer = async () => {
-    if (!quickCustomerForm.name.trim() || !quickCustomerForm.nit.trim()) {
-      toast.error('Nombre y NIT son requeridos'); return
+    // Only the name: in high season the cashier adds the rest later from
+    // Clientes → "Datos incompletos".
+    if (!quickCustomerForm.name.trim()) {
+      toast.error('Escribe el nombre del cliente'); return
     }
     setSavingQuickCustomer(true)
     try {
@@ -1105,7 +1137,15 @@ export default function POS() {
         // on its own (see offlineDb.ts's addSaleToRegisterTally). Without
         // this, a cashier who doesn't happen to revisit Caja between sales
         // sees a stale "efectivo esperado" at close time.
-        if (selectedRegisterId) {
+        // The server may have moved the sale onto the reopened session of this
+        // same till (sales.ts → resolveOpenRegisterId) — follow it.
+        const registerId: string = created?.cashRegisterId ?? selectedRegisterId
+        if (created?.cashRegisterId && created.cashRegisterId !== selectedRegisterId) {
+          setSelectedRegisterId(created.cashRegisterId)
+          localStorage.setItem(registerStorageKey, created.cashRegisterId)
+          loadRegisters(false)
+        }
+        if (registerId) {
           const contribution: { total: number; cash?: number; card?: number; transfer?: number; credit?: number } = { total }
           if (payload.paymentMethod === 'CASH') contribution.cash = total
           else if (payload.paymentMethod === 'CARD') contribution.card = total
@@ -1115,7 +1155,7 @@ export default function POS() {
             contribution.cash = payload.cashAmount ?? 0
             contribution.transfer = payload.transferAmount ?? 0
           }
-          addSaleToRegisterTally(selectedRegisterId, contribution)
+          addSaleToRegisterTally(registerId, contribution)
         }
         setLastCashReceived(cashReceived)
         setCompletedSale(buildReceipt(created, pendingSync, offlineRef))
@@ -1154,6 +1194,7 @@ export default function POS() {
           trySync()
         } else {
           toast.error(err instanceof Error ? err.message : 'Error al procesar la venta')
+          if (err instanceof ApiError && err.status === 409) loadRegisters(false)
         }
       }
     } finally {
@@ -1299,7 +1340,7 @@ export default function POS() {
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {product.imageUrl ? (
-                        <img src={product.imageUrl} alt="" className="w-9 h-9 rounded object-cover flex-shrink-0 border border-gray-100" />
+                        <img loading="lazy" decoding="async" src={product.imageUrl} alt="" className="w-9 h-9 rounded object-cover flex-shrink-0 border border-gray-100" />
                       ) : (
                         <div className="w-9 h-9 rounded bg-gray-100 flex-shrink-0 flex items-center justify-center">
                           <Package size={16} className="text-gray-300" />
@@ -1349,7 +1390,7 @@ export default function POS() {
         <div className="flex-1 bg-white rounded-lg shadow-sm flex flex-col overflow-hidden min-h-[280px] md:min-h-0">
           {/* Table header */}
           <div className="grid gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide select-none min-w-[540px]"
-            style={{ gridTemplateColumns: '24px 1fr 90px 140px 110px 90px 28px' }}>
+            style={{ gridTemplateColumns: '24px 1fr 90px 140px 110px 90px 40px' }}>
             <span>#</span>
             <span>Artículo</span>
             <span className="text-right">Precio</span>
@@ -1387,7 +1428,7 @@ export default function POS() {
                       className={`grid gap-2 px-4 py-2.5 items-center border-b transition-colors min-w-[540px] ${
                         short ? 'bg-red-50 border-red-200 border-l-4 border-l-red-500' : 'border-gray-50 hover:bg-gray-50'
                       }`}
-                      style={{ gridTemplateColumns: '24px 1fr 90px 140px 110px 90px 28px' }}
+                      style={{ gridTemplateColumns: '24px 1fr 90px 140px 110px 90px 40px' }}
                     >
                       <span className="text-xs text-gray-400">{idx + 1}</span>
                       <div className="min-w-0">
@@ -1401,28 +1442,32 @@ export default function POS() {
                         <p className="text-sm font-medium text-gray-800 truncate">
                           {item.variation && !item.variation.isDefault ? item.variation.name : item.product.name}
                         </p>
-                        <div className="flex items-center gap-1">
+                        {/* Touch-sized (32px) — these were 11px icons, hard to hit fast. */}
+                        <div className="flex items-center gap-1.5 mt-1">
                           {hasVariationChoice(item.product) && (
                             <>
                               <button
                                 onClick={() => handleChangeVariation(item)}
                                 title="Cambiar variación de esta línea"
-                                className="text-primary-400 hover:text-primary-600 transition-colors">
-                                <ArrowLeftRight size={11} />
+                                aria-label="Cambiar variación de esta línea"
+                                className="w-8 h-8 flex items-center justify-center rounded-lg border border-primary-200 text-primary-600 hover:bg-primary-50 active:scale-95 transition">
+                                <ArrowLeftRight size={18} />
                               </button>
                               <button
                                 onClick={() => openVariationPicker(item.product)}
                                 title="Agregar otra presentación de este producto"
-                                className="text-primary-400 hover:text-primary-600 transition-colors">
-                                <Plus size={12} />
+                                aria-label="Agregar otra presentación de este producto"
+                                className="w-8 h-8 flex items-center justify-center rounded-lg border border-primary-200 text-primary-600 hover:bg-primary-50 active:scale-95 transition">
+                                <Plus size={18} />
                               </button>
                             </>
                           )}
                           <button
                             onClick={() => showOtherBranchesStock(item.product)}
                             title="Ver inventario en otras sucursales"
-                            className="text-gray-400 hover:text-primary-600 transition-colors">
-                            <Building2 size={11} />
+                            aria-label="Ver inventario en otras sucursales"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:text-primary-600 hover:bg-gray-50 active:scale-95 transition">
+                            <Building2 size={18} />
                           </button>
                         </div>
                         {short && (
@@ -1541,8 +1586,9 @@ export default function POS() {
                       </div>
                       <button
                         onClick={() => removeItem(item.product.id, item.variation?.id)}
-                        className="text-gray-300 hover:text-red-500 transition-colors">
-                        <X size={16} />
+                        aria-label="Quitar de la venta"
+                        className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 active:scale-95 transition">
+                        <X size={20} />
                       </button>
                     </motion.div>
                   )
@@ -1936,46 +1982,57 @@ export default function POS() {
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-xl p-6 max-w-xl w-full max-h-[92vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800">Seleccionar presentación</h3>
-                  <p className="text-sm text-gray-500">{selectedProductForVariation.name}</p>
+                  <h3 className="text-xl font-bold text-gray-800">Seleccionar presentación</h3>
+                  <p className="text-base text-gray-500">{selectedProductForVariation.name}</p>
                   {!changingVariationItem && (
                     <p className="text-xs text-gray-400 mt-0.5">Puedes agregar más de una presentación antes de cerrar</p>
                   )}
                 </div>
-                <button onClick={closeVariationModal}
-                  className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                <button onClick={closeVariationModal} aria-label="Cerrar"
+                  className="w-12 h-12 flex items-center justify-center rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={26} /></button>
               </div>
-              <div className="space-y-2 max-h-80 overflow-y-auto">
+              {/* Big touch targets: cashiers tap these fast, often on a tablet. */}
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto">
                 {getVariations(selectedProductForVariation).map(variation => {
                   const qty = variationQuantities[variation.id] || 1
                   return (
                     <div key={variation.id}
-                      className="p-3 border border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-all">
-                      <div className="flex items-center justify-between mb-2">
+                      className="p-4 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition-all">
+                      <div className="flex items-center justify-between mb-3">
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium text-gray-800 text-sm">{variation.name}</p>
+                            <p className="font-semibold text-gray-800 text-lg">{variation.name}</p>
                             {variation.isDefault && (
                               <span className="text-xs bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded">Default</span>
                             )}
                           </div>
-                          <p className="text-xs text-gray-500">Factor: ×{variation.conversionFactor}</p>
+                          <p className="text-sm text-gray-500">Factor: ×{variation.conversionFactor}</p>
                         </div>
-                        <p className="text-lg font-bold text-primary-600">Q{variation.price.toFixed(2)}</p>
+                        <p className="text-2xl font-bold text-primary-600">Q{variation.price.toFixed(2)}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <input type="number" value={qty}
+                        <button type="button" aria-label="Menos"
+                          onClick={() => setVariationQuantities(p => ({ ...p, [variation.id]: Math.max(1, qty - 1) }))}
+                          className="w-14 h-14 rounded-xl border-2 border-gray-300 text-gray-700 flex items-center justify-center hover:bg-gray-100 active:scale-95">
+                          <Minus size={22} />
+                        </button>
+                        <input type="number" value={qty} aria-label={`Cantidad de ${variation.name}`}
                           onChange={e => setVariationQuantities(p => ({ ...p, [variation.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
-                          className="w-14 text-center border border-gray-300 rounded-lg py-1 focus:outline-none text-sm" min="1" />
+                          className="w-20 h-14 text-center border-2 border-gray-300 rounded-xl focus:outline-none focus:border-primary-500 text-xl font-semibold" min="1" />
+                        <button type="button" aria-label="Más"
+                          onClick={() => setVariationQuantities(p => ({ ...p, [variation.id]: qty + 1 }))}
+                          className="w-14 h-14 rounded-xl border-2 border-gray-300 text-gray-700 flex items-center justify-center hover:bg-gray-100 active:scale-95">
+                          <Plus size={22} />
+                        </button>
                         <button
                           onClick={() => handleAddVariationToCart(variation, qty)}
-                          className="flex-1 btn-primary btn-sm flex items-center justify-center gap-1">
-                          <ShoppingCart size={14} />
+                          className="flex-1 h-14 btn-primary rounded-xl text-lg font-semibold flex items-center justify-center gap-2 active:scale-[0.98]">
+                          <ShoppingCart size={22} />
                           Agregar Q{(variation.price * qty).toFixed(2)}
                         </button>
                       </div>
@@ -1984,7 +2041,7 @@ export default function POS() {
                 })}
               </div>
               {!changingVariationItem && (
-                <button onClick={closeVariationModal} className="btn-outline btn-md w-full mt-4">
+                <button onClick={closeVariationModal} className="btn-outline w-full mt-4 h-14 rounded-xl text-lg font-semibold">
                   Listo
                 </button>
               )}
@@ -2199,10 +2256,10 @@ export default function POS() {
                     className="input w-full" placeholder="Nombre completo" autoFocus />
                 </div>
                 <div>
-                  <label className="label">NIT *</label>
+                  <label className="label">NIT <span className="font-normal text-gray-400">(opcional)</span></label>
                   <input type="text" value={quickCustomerForm.nit}
                     onChange={e => setQuickCustomerForm(f => ({ ...f, nit: e.target.value }))}
-                    className="input w-full" placeholder="CF o número de NIT" />
+                    className="input w-full" placeholder="Vacío = CF" />
                 </div>
                 <div>
                   <label className="label">Teléfono</label>
@@ -2365,7 +2422,7 @@ export default function POS() {
                   {currentStore?.logo && (
                     <img src={currentStore.logo} alt="Logo" className="h-14 mx-auto mb-2 object-contain" />
                   )}
-                  <h2 className="text-2xl font-bold text-gray-800">{currentStore?.companyName ?? 'DENGO POS'}</h2>
+                  <h2 className="text-2xl font-bold text-gray-800">{currentStore?.companyName || currentStore?.name}</h2>
                   <p className="text-sm text-gray-500">{completedSale.branchName}</p>
                   {selectedRegisterId && openRegisters.length > 0 && (() => {
                     const reg = openRegisters.find(r => r.id === selectedRegisterId)

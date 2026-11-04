@@ -34,6 +34,7 @@ const PortalProgramOptions = lazy(() => import('./pages/portal/PortalProgramOpti
 const PortalConsolidated = lazy(() => import('./pages/portal/PortalConsolidated'))
 const PortalMessages = lazy(() => import('./pages/portal/PortalMessages'))
 const PortalLandingConfig = lazy(() => import('./pages/portal/PortalLandingConfig'))
+const PortalMetrics = lazy(() => import('./pages/portal/PortalMetrics'))
 const Messages = lazy(() => import('./pages/Messages'))
 
 // Páginas de configuración
@@ -104,6 +105,7 @@ export default function Router() {
             <Route path="/portal/programs" element={<PortalPrograms />} />
             <Route path="/portal/program-options" element={<PortalProgramOptions />} />
             <Route path="/portal/consolidated" element={<PortalConsolidated />} />
+            <Route path="/portal/metrics" element={<PortalMetrics />} />
             <Route path="/portal/messages" element={<PortalMessages />} />
             <Route path="/portal/config" element={<PortalLandingConfig />} />
           </Route>

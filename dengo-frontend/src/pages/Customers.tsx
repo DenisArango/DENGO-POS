@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import {
   Plus, Search, Edit2, Trash2, Eye, AlertCircle,
   User, Mail, Phone, MapPin, CreditCard, CheckCircle,
-  XCircle, DollarSign, TrendingUp, Clock, ShoppingBag, ExternalLink
+  XCircle, DollarSign, TrendingUp, Clock, ShoppingBag, ExternalLink, UserCog
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -32,7 +32,7 @@ interface OpenRegister {
 
 interface Customer {
   id: string
-  nit: string
+  nit: string | null // null = consumidor final / not captured yet
   name: string
   email?: string
   phone?: string
@@ -60,6 +60,8 @@ export default function Customers() {
   const canEdit = hasPermission('customers.edit')
   const canDelete = hasPermission('customers.delete')
   const canRegisterPayment = hasPermission('customers.registerPayment')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
   const PAGE_SIZE = 50
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
@@ -72,9 +74,11 @@ export default function Customers() {
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
+  // A selection only makes sense for the list being looked at.
+  useEffect(() => { setSelectedIds(new Set()) }, [searchTerm, filterStatus])
   const [page, setPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
-  const [stats, setStats] = useState({ total: 0, active: 0, withCredit: 0, totalCreditUsed: 0 })
+  const [stats, setStats] = useState({ total: 0, active: 0, withCredit: 0, incomplete: 0, totalCreditUsed: 0 })
   const [showModal, setShowModal] = useState(false)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
@@ -158,6 +162,10 @@ export default function Customers() {
     if (filterStatus === 'credit') {
       params.set('isActive', 'all')
       params.set('hasCredit', 'true')
+    } else if (filterStatus === 'incomplete') {
+      // Customers created in a hurry (only the name) — to complete later.
+      params.set('isActive', 'true')
+      params.set('incomplete', 'true')
     } else if (filterStatus === 'active' || filterStatus === 'inactive') {
       params.set('isActive', String(filterStatus === 'active'))
     } else {
@@ -186,7 +194,7 @@ export default function Customers() {
   const openEdit = (customer: Customer) => {
     setEditingCustomer(customer)
     setFormData({
-      nit: customer.nit,
+      nit: customer.nit ?? '',
       name: customer.name,
       email: customer.email ?? '',
       phone: customer.phone ?? '',
@@ -203,8 +211,8 @@ export default function Customers() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.nit || !formData.name) {
-      toast.error('NIT y nombre son requeridos')
+    if (!formData.name.trim()) {
+      toast.error('El nombre es requerido')
       return
     }
 
@@ -230,6 +238,35 @@ export default function Customers() {
           fetchCustomers()
         })
         .catch(e => toast.error(e.message))
+    }
+  }
+
+  const toggleSelected = (id: string) => setSelectedIds(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  })
+
+  // Several customers at once. The backend skips anyone still owing credit
+  // and says who, so a real receivable never disappears from Créditos.
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds)
+    if (ids.length === 0) return
+    if (!confirm(`¿Eliminar ${ids.length} cliente(s)? Los que tengan saldo de crédito pendiente no se eliminarán.`)) return
+    setBulkDeleting(true)
+    try {
+      const res = await api.post<{ count: number; skipped: { name: string; creditUsed: number }[] }>('/api/customers/bulk-delete', { customerIds: ids })
+      if (res.count > 0) toast.success(`${res.count} cliente(s) eliminado(s)`)
+      if (res.skipped.length > 0) {
+        toast.warning(`${res.skipped.length} con saldo pendiente no se eliminaron: ${res.skipped.slice(0, 3).map(c => `${c.name} (Q${c.creditUsed.toFixed(2)})`).join(', ')}${res.skipped.length > 3 ? '…' : ''}`, { duration: 8000 })
+      }
+      setSelectedIds(new Set())
+      fetchCustomers()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al eliminar clientes')
+    } finally {
+      setBulkDeleting(false)
     }
   }
 
@@ -340,15 +377,18 @@ export default function Customers() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           { label: 'Total Clientes',    value: stats.total,                      Icon: User,       bg: 'bg-blue-100',    color: 'text-blue-600' },
           { label: 'Activos',           value: stats.active,                     Icon: CheckCircle,bg: 'bg-green-100',   color: 'text-green-600' },
           { label: 'Con Crédito',       value: stats.withCredit,                 Icon: CreditCard, bg: 'bg-purple-100',  color: 'text-purple-600' },
           { label: 'Crédito Utilizado', value: `Q${stats.totalCreditUsed.toLocaleString()}`, Icon: TrendingUp, bg: 'bg-orange-100', color: 'text-orange-600' },
-        ].map(({ label, value, Icon, bg, color }) => (
+          { label: 'Datos incompletos', value: stats.incomplete ?? 0, Icon: UserCog, bg: 'bg-amber-100', color: 'text-amber-600', filter: 'incomplete' },
+        ].map(({ label, value, Icon, bg, color, filter }) => (
           <motion.div key={label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-lg shadow-sm p-6">
+            onClick={filter ? () => setFilterStatus(filterStatus === filter ? 'all' : filter) : undefined}
+            title={filter ? 'Ver los clientes a los que les falta NIT o teléfono' : undefined}
+            className={`bg-white rounded-lg shadow-sm p-6 ${filter ? 'cursor-pointer hover:ring-2 hover:ring-amber-300' : ''} ${filter && filterStatus === filter ? 'ring-2 ring-amber-400' : ''}`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">{label}</p>
@@ -373,6 +413,7 @@ export default function Customers() {
           <option value="active">Activos</option>
           <option value="inactive">Inactivos</option>
           <option value="credit">Con crédito</option>
+          <option value="incomplete">Datos incompletos</option>
         </select>
       </div>
 
@@ -389,9 +430,26 @@ export default function Customers() {
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
+          {canDelete && selectedIds.size > 0 && (
+            <div className="sticky left-0 flex flex-wrap items-center gap-3 p-3 bg-primary-50 border-b border-primary-200">
+              <span className="text-sm font-medium text-primary-800">{selectedIds.size} cliente(s) seleccionado(s)</span>
+              <button onClick={handleBulkDelete} disabled={bulkDeleting} className="btn-sm flex items-center gap-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">
+                <Trash2 size={14} /> {bulkDeleting ? 'Eliminando...' : 'Eliminar seleccionados'}
+              </button>
+              <button onClick={() => setSelectedIds(new Set())} className="text-sm text-gray-500 hover:text-gray-700">Cancelar selección</button>
+            </div>
+          )}
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
+                {canDelete && (
+                  <th className="w-10 p-4">
+                    <input type="checkbox" aria-label="Seleccionar todos"
+                      checked={customers.length > 0 && customers.every(c => selectedIds.has(c.id))}
+                      onChange={e => setSelectedIds(e.target.checked ? new Set(customers.map(c => c.id)) : new Set())}
+                      className="rounded border-gray-300" />
+                  </th>
+                )}
                 {['Cliente', 'Contacto', 'Dirección', 'Crédito', 'Estado', 'Acciones'].map(h => (
                   <th key={h} className="text-left p-4 text-sm font-semibold text-gray-600">{h}</th>
                 ))}
@@ -400,11 +458,17 @@ export default function Customers() {
             <tbody className="divide-y divide-gray-200">
               {customers.map(customer => (
                 <motion.tr key={customer.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  className="hover:bg-gray-50">
+                  className={`hover:bg-gray-50 ${selectedIds.has(customer.id) ? 'bg-primary-50/40' : ''}`}>
+                  {canDelete && (
+                    <td className="p-4">
+                      <input type="checkbox" checked={selectedIds.has(customer.id)} onChange={() => toggleSelected(customer.id)}
+                        aria-label={`Seleccionar ${customer.name}`} className="rounded border-gray-300" />
+                    </td>
+                  )}
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       {customer.avatarUrl ? (
-                        <img src={customer.avatarUrl} alt={customer.name} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                        <img loading="lazy" decoding="async" src={customer.avatarUrl} alt={customer.name} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
                       ) : (
                         <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-600 text-sm flex-shrink-0">
                           {customer.name.charAt(0).toUpperCase()}
@@ -412,7 +476,18 @@ export default function Customers() {
                       )}
                       <div>
                         <p className="font-semibold text-gray-800">{customer.name}</p>
-                        <p className="text-xs text-gray-500">NIT: {customer.nit}</p>
+                        <p className="text-xs text-gray-500">NIT: {customer.nit || 'CF'}</p>
+                        {(!customer.nit || !customer.phone) && !/^consumidor final$/i.test(customer.name.trim()) && (
+                          <button
+                            type="button"
+                            disabled={!canEdit}
+                            onClick={() => openEdit(customer)}
+                            className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 hover:bg-amber-100 disabled:cursor-default"
+                            title={canEdit ? 'Completar datos' : undefined}
+                          >
+                            Falta {[!customer.nit && 'NIT', !customer.phone && 'teléfono'].filter(Boolean).join(' y ')}{canEdit ? ' · Completar' : ''}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -552,10 +627,10 @@ export default function Customers() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">NIT *</label>
+                  <label className="label">NIT <span className="font-normal text-gray-400">(opcional)</span></label>
                   <input type="text" value={formData.nit}
                     onChange={e => setFormData({ ...formData, nit: e.target.value })}
-                    className="input" required placeholder="CF / 12345678" />
+                    className="input" placeholder="Vacío = CF" />
                 </div>
                 <div>
                   <label className="label">Nombre completo *</label>
@@ -739,7 +814,7 @@ export default function Customers() {
                 </div>
                 <div>
                   <p className="text-lg font-bold text-gray-800">{selectedCustomer.name}</p>
-                  <p className="text-sm text-gray-500">NIT: {selectedCustomer.nit}</p>
+                  <p className="text-sm text-gray-500">NIT: {selectedCustomer.nit || 'CF (sin NIT)'}</p>
                 </div>
               </div>
 

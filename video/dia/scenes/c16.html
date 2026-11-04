@@ -1,0 +1,24 @@
+
+    #c16-list { position: absolute; left: 640px; top: 250px; }
+    #c16-list .h { font-size: 96px; }
+    #c16-end { position: absolute; left: 0; right: 0; top: 330px; text-align: center; }
+    #c16-lock { display: flex; justify-content: center; align-items: center; gap: 40px; }
+    #c16-iso { width: 150px; height: 168px; overflow: visible; }
+    #c16-word { font-family: "Inter", sans-serif; font-size: 136px; font-weight: 700; letter-spacing: 0.05em; color: #1e4d68; line-height: 1; }
+    #c16-c1 { font-size: 56px; margin-top: 70px; }
+    #c16-c2 { font-size: 80px; font-weight: 700; color: #1e4d68; margin-top: 10px; }
+<!--markup-->
+    <div id="c16-list"><div class="mask"><span class="h" id="c16-l1">Más ventas.</span></div><div class="mask"><span class="h" id="c16-l2">Inventario bajo control.</span></div><div class="mask"><span class="h" id="c16-l3">Tranquilidad.</span></div></div>
+    <div id="c16-end">
+      <div id="c16-lock"><svg id="c16-iso" viewBox="5 5 120 135"><path id="c16-hex" d="M 65,15 L 115,44 L 115,101 L 65,130 L 15,101 L 15,44 Z" fill="none" stroke="#1E4D68" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/><line id="c16-diag" x1="15" y1="101" x2="115" y2="44" stroke="#1E4D68" stroke-width="8" stroke-linecap="round"/><path id="c16-chev" d="M 28,107 L 65,42 L 102,107" fill="none" stroke="#E07A5F" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/></svg><div class="mask"><span id="c16-word">DENGO</span></div></div>
+      <div class="mask"><span id="c16-c1">Agende su demo por WhatsApp</span></div>
+      <div class="mask"><span id="c16-c2" data-var-text="whatsapp">+502 5568-3004</span></div>
+    </div>
+<!--script-->
+    rise("#c16-l1", 0.3); rise("#c16-l2", 1.2); rise("#c16-l3", 2.8);
+    tl.to("#c16-list", { opacity: 0, duration: 0.35 }, at(4.9));
+    tl.fromTo("#c16-hex", { strokeDasharray: 360, strokeDashoffset: 360 }, { strokeDashoffset: 0, duration: 0.8, ease: "power2.inOut" }, at(5.1));
+    tl.fromTo("#c16-diag", { strokeDasharray: 120, strokeDashoffset: 120 }, { strokeDashoffset: 0, duration: 0.4 }, at(5.7));
+    tl.fromTo("#c16-chev", { strokeDasharray: 160, strokeDashoffset: 160 }, { strokeDashoffset: 0, duration: 0.5, ease: "power3.out" }, at(5.9));
+    tl.fromTo("#c16-word", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.6, ease: "power3.inOut" }, at(6.2));
+    rise("#c16-c1", 6.6); rise("#c16-c2", 6.9);

@@ -9,7 +9,7 @@ export function CustomerThumb({ src, name, size = 36 }: { src?: string | null; n
     .join('') || '?'
   const style = { width: size, height: size }
   if (src) {
-    return <img src={src} alt="" style={style} className="rounded-full object-cover flex-shrink-0 border border-gray-100" />
+    return <img loading="lazy" decoding="async" src={src} alt="" style={style} className="rounded-full object-cover flex-shrink-0 border border-gray-100" />
   }
   return (
     <div style={{ ...style, fontSize: Math.round(size * 0.36) }}

@@ -8,6 +8,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../../lib/api'
 import { useLicenseStore } from '../../store'
+import { useStore } from '../../contexts/StoreContext'
 import { usePermissions } from '../../hooks/usePermissions'
 import { toast } from 'sonner'
 import ThermalReceipt from '../../components/print/ThermalReceipt'
@@ -47,6 +48,8 @@ function toCost(item: EditItem) {
 }
 
 export default function SaleDetail() {
+  // Company logo/name fallback for branches that have none of their own.
+  const { currentStore } = useStore()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { hasPermission } = usePermissions()
@@ -96,12 +99,14 @@ export default function SaleDetail() {
     setEditItems((sale.items ?? []).map((item: any) => ({
       productId: item.product?.id ?? item.productId,
       variationId: item.variationId ?? undefined,
-      productName: item.product?.name ?? 'Producto',
+      productName: item.product?.name ?? item.customName ?? 'Producto',
       variationName: item.variation?.name,
       quantityStr: String(Number(item.quantity)),
       priceStr: String(Number(item.unitPrice)),
       discountStr: String(Math.round(Number(item.discount ?? 0) * 100)),
-      cost: Number(item.product?.cost ?? 0),
+      // item.cost = the base-unit cost frozen when it was sold (see the
+      // backend's lib/saleCost.ts), not today's product cost.
+      cost: Number(item.cost ?? item.product?.cost ?? 0),
       convFactor: Number(item.variation?.conversionFactor ?? 1),
     })))
     setEditNotes(sale.notes ?? '')
@@ -162,8 +167,10 @@ export default function SaleDetail() {
   const handleSave = async () => {
     if (!id) return
     const items = editItems.map(item => ({
-      productId: item.productId,
-      variationId: item.variationId,
+      // A line sold outside the catalog keeps being one (name + its cost).
+      ...(item.productId
+        ? { productId: item.productId, variationId: item.variationId }
+        : { customName: item.productName, unitCost: item.cost }),
       quantity: parseFloat(item.quantityStr) || 0,
       unitPrice: parseFloat(item.priceStr) || 0,
       discount: (parseFloat(item.discountStr) || 0) / 100,
@@ -377,7 +384,7 @@ export default function SaleDetail() {
                           className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-primary-50 text-left text-sm">
                           <span className="flex items-center gap-3 min-w-0">
                             {p.imageUrl ? (
-                              <img src={p.imageUrl} alt="" className="w-9 h-9 rounded object-cover flex-shrink-0 border border-gray-100" />
+                              <img loading="lazy" decoding="async" src={p.imageUrl} alt="" className="w-9 h-9 rounded object-cover flex-shrink-0 border border-gray-100" />
                             ) : (
                               <span className="w-9 h-9 rounded bg-gray-100 flex-shrink-0 flex items-center justify-center">
                                 <Package size={16} className="text-gray-300" />
@@ -391,7 +398,7 @@ export default function SaleDetail() {
                         <div className="px-4 py-2">
                           <p className="text-xs font-semibold text-gray-500 mb-1 flex items-center gap-2">
                             {p.imageUrl ? (
-                              <img src={p.imageUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0 border border-gray-100" />
+                              <img loading="lazy" decoding="async" src={p.imageUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0 border border-gray-100" />
                             ) : (
                               <span className="w-6 h-6 rounded bg-gray-100 flex-shrink-0 flex items-center justify-center">
                                 <Package size={12} className="text-gray-300" />
@@ -483,12 +490,13 @@ export default function SaleDetail() {
               ) : (
                 (sale.items ?? []).map((item: any, idx: number) => {
                   const convFactor = Number(item.variation?.conversionFactor ?? 1)
-                  const cost = Number(item.product?.cost ?? 0) * convFactor * Number(item.quantity)
+                  const cost = item.totalCost != null ? Number(item.totalCost) : Number(item.product?.cost ?? 0) * convFactor * Number(item.quantity)
                   const profit = Number(item.total) - cost
                   return (
                     <tr key={idx} className="hover:bg-gray-50">
                       <td className="px-5 py-2.5">
-                        <p className="font-medium text-gray-800">{item.product?.name ?? '–'}</p>
+                        <p className="font-medium text-gray-800">{item.product?.name ?? item.customName ?? '–'}</p>
+                        {!item.productId && <p className="text-[11px] text-amber-700">Fuera del catálogo</p>}
                         {item.variation?.name && (
                           <p className="text-xs text-gray-400">{item.variation.name} ×{convFactor}</p>
                         )}
@@ -667,8 +675,8 @@ export default function SaleDetail() {
         branchName: sale.branch?.name ?? 'Tienda',
         branchAddress: sale.branch?.address,
         branchPhone: sale.branch?.phone,
-        logo: sale.branch?.logo,
-        companyName: sale.branch?.companyName,
+        logo: sale.branch?.logo || currentStore?.logo,
+        companyName: sale.branch?.companyName || currentStore?.companyName,
         companyTaxId: sale.branch?.companyTaxId,
         companyTagline: sale.branch?.companyTagline,
         socialMediaName: sale.branch?.socialMediaName,
@@ -676,7 +684,7 @@ export default function SaleDetail() {
         createdAt: sale.createdAt,
         items: (sale.items ?? []).map((item: any) => ({
           id: item.id,
-          productName: item.product?.name ?? '–',
+          productName: item.product?.name ?? item.customName ?? '–',
           variationName: item.variation?.name,
           quantity: Number(item.quantity),
           unitPrice: Number(item.unitPrice),

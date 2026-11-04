@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { Send, MessageSquare, ArrowLeft } from 'lucide-react'
+import { Send, MessageSquare, ArrowLeft, FileText, Receipt, ChevronRight } from 'lucide-react'
 import PortalLayout from '../components/layout/PortalLayout'
 import { api } from '../lib/api'
 import type { PortalMessage } from '../types'
+import { usePortalConfig } from '../lib/usePortalConfig'
 
 export default function Messages() {
   const [searchParams] = useSearchParams()
@@ -17,6 +18,7 @@ export default function Messages() {
   const [input, setInput] = useState(refOrderNum ? `[Pedido ${refOrderNum}] ` : '')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const { config } = usePortalConfig()
 
   const loadMessages = useCallback(() => {
     api.getMessages()
@@ -53,7 +55,7 @@ export default function Messages() {
           <Link to="/dashboard" className="text-gray-400 hover:text-gray-600"><ArrowLeft size={18} /></Link>
           <div>
             <h1 className="text-xl font-bold text-gray-900">Mensajes con el proveedor</h1>
-            <p className="text-xs text-gray-500">Variedades Dayana — responde en horario comercial</p>
+            <p className="text-xs text-gray-500">{config?.businessName ? `${config.businessName} · ` : ''}responde en horario comercial</p>
           </div>
         </div>
 
@@ -103,7 +105,20 @@ export default function Messages() {
                         📋 Pedido {msg.portalOrder.orderNumber}
                       </p>
                     )}
-                    <p className="leading-relaxed">{msg.body}</p>
+                    <p className="leading-relaxed whitespace-pre-line">{msg.body}</p>
+                    {(msg.kind === 'QUOTATION' || msg.kind === 'INVOICE') && (msg.quotationId || msg.saleId) && (
+                      <Link
+                        to={msg.kind === 'INVOICE' ? `/documents/invoice/${msg.saleId}` : `/documents/quotation/${msg.quotationId}`}
+                        className="mt-2.5 flex items-center gap-3 rounded-xl bg-white border border-gray-200 px-3 py-2.5 text-gray-800 hover:border-brand-300"
+                      >
+                        {msg.kind === 'INVOICE' ? <Receipt size={20} className="text-brand-600" /> : <FileText size={20} className="text-brand-600" />}
+                        <span className="flex-1">
+                          <span className="block font-semibold">{msg.kind === 'INVOICE' ? 'Ver factura' : 'Ver cotización'}</span>
+                          <span className="block text-xs text-gray-500">Puedes imprimirla o guardarla en PDF</span>
+                        </span>
+                        <ChevronRight size={16} className="text-gray-400" />
+                      </Link>
+                    )}
                     <p className={`text-[10px] mt-1.5 ${isMe ? 'text-brand-200' : 'text-gray-400'}`}>
                       {isMe ? 'Tú' : 'Proveedor'} · {new Date(msg.createdAt).toLocaleString('es-GT', {
                         day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',

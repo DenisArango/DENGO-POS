@@ -1,0 +1,13 @@
+
+    #c15-b { opacity: 0; }
+    .c15-st { position: absolute; left: 640px; top: 300px; width: 1200px; display: flex; align-items: center; gap: 50px; }
+    .c15-st svg { width: 220px; height: 220px; flex: none; }
+    .c15-st .h { font-size: 92px; }
+    .c15-st p { font-size: 46px; margin-top: 14px; }
+<!--markup-->
+    <div class="c15-st" id="c15-a"><svg viewBox="0 0 24 24"><path d="M10 3 h4 v3 a2 2 0 0 0 4 0 v-1 h3 v6 h-1 a2 2 0 0 0 0 4 h1 v6 h-6 v-1 a2 2 0 0 0 -4 0 v1 H3 v-6 h1 a2 2 0 0 0 0 -4 H3 V5 h7 Z" fill="#f4c542" stroke="#1e4d68" stroke-width="1.4" stroke-linejoin="round"/></svg><div><div class="mask"><span class="h" id="c15-a1">A su medida</span></div><div class="mask"><p id="c15-a2">Si su negocio necesita algo distinto, lo adecuamos.</p></div></div></div>
+    <div class="c15-st" id="c15-b"><svg viewBox="0 0 24 24"><path d="M12 22 C12 22 4.5 14.6 4.5 9.4 A7.5 7.5 0 0 1 19.5 9.4 C19.5 14.6 12 22 12 22 Z" fill="#e07a5f" stroke="#1e4d68" stroke-width="1.4"/><circle cx="12" cy="9.4" r="2.8" fill="#fff"/></svg><div><div class="mask"><span class="h" id="c15-b1">Hecho en Guatemala</span></div><div class="mask"><p id="c15-b2">Para emprendedores como usted.</p></div></div></div>
+<!--script-->
+    pop("#c15-a svg", 0.3); rise("#c15-a1", 0.6); rise("#c15-a2", 1.6);
+    gone("#c15-a", 4.15);
+    tl.set("#c15-b", { opacity: 1 }, at(4.3)); pop("#c15-b svg", 4.3); rise("#c15-b1", 4.9); rise("#c15-b2", 6.0);

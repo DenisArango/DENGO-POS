@@ -485,16 +485,10 @@ export default function Quotations() {
       .catch(e => toast.error(e.message))
   }
 
-  // Custom (non-catalog) lines can't become SaleItems — offers converting
-  // just the catalog lines instead of blocking the whole sale outright.
+  // Custom (non-catalog) lines are now sold as custom sale lines too (no
+  // stock movement) — the whole quotation converts.
   function handleConvertClick(q: Quotation) {
-    const customCount = (q.items ?? []).filter(item => !item.product).length
-    if (customCount === 0) { handleConvert(q.id); return }
-    const catalogCount = q.items.length - customCount
-    if (catalogCount === 0) { toast.error('Esta cotización solo tiene productos personalizados — no hay nada que vender del catálogo'); return }
-    if (confirm(`Esta cotización tiene ${customCount} producto(s) personalizado(s) que no se pueden vender directamente.\n\n¿Convertir la venta solo con los ${catalogCount} producto(s) de catálogo?`)) {
-      handleConvert(q.id, true)
-    }
+    handleConvert(q.id)
   }
 
   const handleDelete = (id: string) => {
@@ -577,7 +571,7 @@ export default function Quotations() {
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         {p.imageUrl ? (
-                          <img src={p.imageUrl} alt="" className="w-9 h-9 rounded object-cover flex-shrink-0 border border-gray-100" />
+                          <img loading="lazy" decoding="async" src={p.imageUrl} alt="" className="w-9 h-9 rounded object-cover flex-shrink-0 border border-gray-100" />
                         ) : (
                           <div className="w-9 h-9 rounded bg-gray-100 flex-shrink-0 flex items-center justify-center">
                             <Package size={16} className="text-gray-300" />
@@ -636,7 +630,7 @@ export default function Quotations() {
                           className="input text-sm py-1 w-full border-primary-200"
                         />
                       )}
-                      {!item.productId && <span className="text-[10px] text-primary-500">Personalizado — no está en el catálogo</span>}
+                      {!item.productId && <span className="text-[10px] text-primary-500">Fuera del catálogo — se vende sin descontar inventario</span>}
                     </div>
 
                     {/* Quantity */}

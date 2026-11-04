@@ -53,6 +53,8 @@ export default function OrderDetail() {
   const st = statusStyle(order.status)
   const rejected = order.status === 'REJECTED'
   const currentIdx = TIMELINE.indexOf(order.status)
+  const kit = (order.items ?? []).some(it => it.qtyPerStudent != null)
+  const headers = kit ? ['Producto', 'Por alumno', 'Total', 'Precio', 'Subtotal'] : ['Producto', 'Cantidad', 'Precio Unit.', 'Total']
 
   return (
     <PortalLayout>
@@ -133,6 +135,13 @@ export default function OrderDetail() {
           </div>
         )}
 
+        {order.adjustedAt && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-amber-900">
+            <p className="font-semibold">El proveedor ajustó este pedido</p>
+            <p className="text-sm mt-1">El {formatDate(order.adjustedAt)} se corrigieron productos o alumnos según tus comentarios. Lo que ves abajo ya es el pedido corregido.</p>
+          </div>
+        )}
+
         {/* Admin notes */}
         {!rejected && order.adminNotes && (
           <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5">
@@ -150,7 +159,7 @@ export default function OrderDetail() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-gray-500">
                 <tr>
-                  {['Producto', 'Cantidad', 'Precio Unit.', 'Total'].map(h => (
+                  {headers.map(h => (
                     <th key={h} className="text-left px-4 py-3 font-semibold whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -159,6 +168,7 @@ export default function OrderDetail() {
                 {(order.items ?? []).map(it => (
                   <tr key={it.id}>
                     <td className="px-4 py-3 text-gray-800 font-medium">{it.productName}</td>
+                    {kit && <td className="px-4 py-3 text-gray-600">{Number(it.qtyPerStudent ?? 0)}</td>}
                     <td className="px-4 py-3 text-gray-600">{Number(it.quantity)}</td>
                     <td className="px-4 py-3 text-gray-600">{money(it.unitPrice)}</td>
                     <td className="px-4 py-3 font-semibold text-gray-900">{money(it.total)}</td>
@@ -167,7 +177,7 @@ export default function OrderDetail() {
               </tbody>
               <tfoot>
                 <tr className="border-t border-gray-200">
-                  <td colSpan={3} className="px-4 py-3 text-right font-bold text-gray-700">Total</td>
+                  <td colSpan={headers.length - 1} className="px-4 py-3 text-right font-bold text-gray-700">Total</td>
                   <td className="px-4 py-3 text-lg font-extrabold text-brand-600">{money(order.totalAmount)}</td>
                 </tr>
               </tfoot>

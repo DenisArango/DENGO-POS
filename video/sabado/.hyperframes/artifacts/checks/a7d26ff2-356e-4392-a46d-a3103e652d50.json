@@ -1,0 +1,634 @@
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "filesScanned": 9
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 11,
+    "findings": [
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 6.5,
+        "selector": "#pos-t1",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 97,
+          "top": 315.83,
+          "right": 864.02,
+          "bottom": 430.22,
+          "width": 767.02,
+          "height": 114.39
+        },
+        "containerSelector": "#pos-title > div:nth-of-type(1)",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 97,
+          "top": 190,
+          "right": 864.02,
+          "bottom": 304.39,
+          "width": 767.02,
+          "height": 114.39
+        },
+        "overflow": {
+          "bottom": 125.83
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/pos.html",
+        "bbox": {
+          "x": 97,
+          "y": 315.83,
+          "width": 767.02,
+          "height": 114.39
+        },
+        "firstSeen": 6.5,
+        "lastSeen": 6.5,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          6.5
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 6.5,
+        "selector": "#pos-s1",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 97,
+          "top": 785.33,
+          "right": 1010.09,
+          "bottom": 844.72,
+          "width": 913.09,
+          "height": 59.39
+        },
+        "containerSelector": "#pos-sub",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 97,
+          "top": 720,
+          "right": 1010.09,
+          "bottom": 779.39,
+          "width": 913.09,
+          "height": 59.39
+        },
+        "overflow": {
+          "bottom": 65.33
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/pos.html",
+        "bbox": {
+          "x": 97,
+          "y": 785.33,
+          "width": 913.09,
+          "height": 59.39
+        },
+        "firstSeen": 6.5,
+        "lastSeen": 6.5,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          6.5
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 10.833,
+        "selector": "#otras-t1",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 140,
+          "top": 598.12,
+          "right": 847.73,
+          "bottom": 714.58,
+          "width": 707.73,
+          "height": 116.47
+        },
+        "containerSelector": "#otras-title > div:nth-of-type(1)",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 140,
+          "top": 470,
+          "right": 847.73,
+          "bottom": 586.47,
+          "width": 707.73,
+          "height": 116.47
+        },
+        "overflow": {
+          "bottom": 128.11
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/otras.html",
+        "bbox": {
+          "x": 140,
+          "y": 598.12,
+          "width": 707.73,
+          "height": 116.47
+        },
+        "firstSeen": 10.833,
+        "lastSeen": 10.833,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          10.833
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 10.833,
+        "selector": "#otras-t2",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 140,
+          "top": 714.58,
+          "right": 847.73,
+          "bottom": 831.05,
+          "width": 707.73,
+          "height": 116.47
+        },
+        "containerSelector": "#otras-title > div:nth-of-type(2)",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 140,
+          "top": 586.47,
+          "right": 847.73,
+          "bottom": 702.94,
+          "width": 707.73,
+          "height": 116.47
+        },
+        "overflow": {
+          "bottom": 128.11
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/otras.html",
+        "bbox": {
+          "x": 140,
+          "y": 714.58,
+          "width": 707.73,
+          "height": 116.47
+        },
+        "firstSeen": 10.833,
+        "lastSeen": 10.833,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          10.833
+        ]
+      },
+      {
+        "code": "text_box_overflow",
+        "severity": "info",
+        "time": 15.167,
+        "selector": "#tr-t1",
+        "message": "Text extends outside its nearest visual/container box.",
+        "rect": {
+          "left": 140,
+          "top": 271.3,
+          "right": 1001.75,
+          "bottom": 369.3,
+          "width": 861.75,
+          "height": 98
+        },
+        "containerSelector": "#tr-title > div:nth-of-type(1)",
+        "text": "Se pide el traslado.",
+        "fixHint": "Text is 862px x 98px inside 862px x 116px and overflows by up to 53px; increase the container height to at least ~169px, or allow wrapping with max-width/fitTextFontSize.",
+        "containerRect": {
+          "left": 140,
+          "top": 200,
+          "right": 1001.75,
+          "bottom": 316.47,
+          "width": 861.75,
+          "height": 116.47
+        },
+        "overflow": {
+          "bottom": 52.83
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/traslado.html",
+        "bbox": {
+          "x": 140,
+          "y": 271.3,
+          "width": 861.75,
+          "height": 98
+        },
+        "firstSeen": 15.167,
+        "lastSeen": 15.167,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          15.167
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 15.167,
+        "selector": "#tr-row",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": -1760,
+          "top": 600,
+          "right": -120,
+          "bottom": 733.5,
+          "width": 1640,
+          "height": 133.5
+        },
+        "containerSelector": "#traslado > div:nth-of-type(1)",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 0,
+          "top": 0,
+          "right": 1920,
+          "bottom": 1080,
+          "width": 1920,
+          "height": 1080
+        },
+        "overflow": {
+          "left": 1760
+        },
+        "dataAttributes": {
+          "data-hf-render-id": "tr-row",
+          "data-hf-authored-opacity": ""
+        },
+        "sourceFile": "compositions/traslado.html",
+        "bbox": {
+          "x": -1760,
+          "y": 600,
+          "width": 1640,
+          "height": 133.5
+        },
+        "firstSeen": 15.167,
+        "lastSeen": 15.167,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          15.167
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 15.167,
+        "selector": "#tr-t1",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 140,
+          "top": 251.3,
+          "right": 1001.75,
+          "bottom": 367.77,
+          "width": 861.75,
+          "height": 116.47
+        },
+        "containerSelector": "#tr-title > div:nth-of-type(1)",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 140,
+          "top": 200,
+          "right": 1001.75,
+          "bottom": 316.47,
+          "width": 861.75,
+          "height": 116.47
+        },
+        "overflow": {
+          "bottom": 51.3
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/traslado.html",
+        "bbox": {
+          "x": 140,
+          "y": 251.3,
+          "width": 861.75,
+          "height": 116.47
+        },
+        "firstSeen": 15.167,
+        "lastSeen": 15.167,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          15.167
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 15.167,
+        "selector": "#tr-t2",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 140,
+          "top": 415.98,
+          "right": 1001.75,
+          "bottom": 499.16,
+          "width": 861.75,
+          "height": 83.19
+        },
+        "containerSelector": "#tr-title > div:nth-of-type(2)",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 140,
+          "top": 316.47,
+          "right": 1001.75,
+          "bottom": 407.66,
+          "width": 861.75,
+          "height": 91.19
+        },
+        "overflow": {
+          "bottom": 91.5
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/traslado.html",
+        "bbox": {
+          "x": 140,
+          "y": 415.98,
+          "width": 861.75,
+          "height": 83.19
+        },
+        "firstSeen": 15.167,
+        "lastSeen": 15.167,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          15.167
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 15.167,
+        "selector": "#tr-r1",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 140,
+          "top": 860.5,
+          "right": 914.25,
+          "bottom": 915.5,
+          "width": 774.25,
+          "height": 55
+        },
+        "containerSelector": "#tr-route",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 140,
+          "top": 800,
+          "right": 914.25,
+          "bottom": 855,
+          "width": 774.25,
+          "height": 55
+        },
+        "overflow": {
+          "bottom": 60.5
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/traslado.html",
+        "bbox": {
+          "x": 140,
+          "y": 860.5,
+          "width": 774.25,
+          "height": 55
+        },
+        "firstSeen": 15.167,
+        "lastSeen": 15.167,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          15.167
+        ]
+      },
+      {
+        "code": "escaped_container",
+        "severity": "info",
+        "time": 15.167,
+        "selector": "#tr-row",
+        "message": "Positioned element renders far outside its offset parent — its coordinates were likely computed in a different frame (canvas/viewport pixels).",
+        "rect": {
+          "left": -1760,
+          "top": 600,
+          "right": -120,
+          "bottom": 733.5,
+          "width": 1640,
+          "height": 133.5
+        },
+        "containerSelector": "#traslado > div:nth-of-type(1)",
+        "text": "",
+        "fixHint": "Compute left/top in the offset parent's frame (subtract its rect), or mark intentional placement with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 0,
+          "top": 0,
+          "right": 1920,
+          "bottom": 1080,
+          "width": 1920,
+          "height": 1080
+        },
+        "dataAttributes": {
+          "data-hf-render-id": "tr-row",
+          "data-hf-authored-opacity": ""
+        },
+        "sourceFile": "compositions/traslado.html",
+        "bbox": {
+          "x": -1760,
+          "y": 600,
+          "width": 1640,
+          "height": 133.5
+        },
+        "firstSeen": 15.167,
+        "lastSeen": 15.167,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          15.167
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 19.5,
+        "selector": "#cj-t2",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 607.23,
+          "top": 212.51,
+          "right": 1044.42,
+          "bottom": 295.69,
+          "width": 437.19,
+          "height": 83.19
+        },
+        "containerSelector": "#cj-head > div:nth-of-type(2)",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 607.23,
+          "top": 121,
+          "right": 1044.42,
+          "bottom": 204.19,
+          "width": 437.19,
+          "height": 83.19
+        },
+        "overflow": {
+          "bottom": 91.5
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/caja.html",
+        "bbox": {
+          "x": 607.23,
+          "y": 212.51,
+          "width": 437.19,
+          "height": 83.19
+        },
+        "firstSeen": 19.5,
+        "lastSeen": 19.5,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          19.5
+        ]
+      }
+    ],
+    "duration": 39,
+    "samples": [
+      2.167,
+      6.5,
+      10.833,
+      15.167,
+      19.5,
+      23.833,
+      28.167,
+      32.5,
+      36.833
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 11,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 1,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "contrast_aa_failure",
+        "severity": "warning",
+        "message": "Contrast is 2.95:1; WCAG AA requires 3:1.",
+        "text": "21",
+        "fg": "rgb(224,122,95)",
+        "bg": "rgb(255,255,255)",
+        "ratio": 2.95,
+        "requiredRatio": 3,
+        "suggestedColor": "rgb(221,121,94)",
+        "large": true,
+        "selector": "#otras-21",
+        "dataAttributes": {},
+        "sourceFile": "compositions/otras.html",
+        "bbox": {
+          "x": 328.359375,
+          "y": 706.5843505859375,
+          "width": 98.59375,
+          "height": 131
+        },
+        "time": 10.833,
+        "times": [
+          10.833
+        ]
+      }
+    ],
+    "enabled": true,
+    "samples": [
+      2.167,
+      10.833,
+      19.5,
+      28.167,
+      36.833
+    ],
+    "checked": 19,
+    "passed": 18
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 1,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "film_silent",
+        "severity": "warning",
+        "message": "This 39 s film has no sound source (no <audio>, no <video> with sound): add a music bed and sounds on the visible actions unless the person asked for silence; see references/sound.md.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      }
+    ],
+    "enabled": true,
+    "step": 0.125,
+    "samples": 312
+  },
+  "audio": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 1,
+    "findings": [
+      {
+        "code": "audio_none",
+        "severity": "info",
+        "message": "The film has no sound: no clip in it plays audio.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      }
+    ]
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

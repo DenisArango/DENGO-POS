@@ -1,0 +1,37 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Inter", sans-serif; color: #121826; }
+    #ec-lockup { position: absolute; left: 0; right: 0; top: 300px; display: flex; justify-content: center; align-items: center; gap: 44px; }
+    #ec-iso { width: 168px; height: 188px; overflow: visible; }
+    #ec-word { font-size: 150px; font-weight: 700; letter-spacing: 0.05em; color: #1e4d68; line-height: 1; }
+    #ec-cta { position: absolute; left: 0; right: 0; top: 610px; text-align: center; }
+    .ec-mask { display: block; overflow: hidden; }
+    .ec-mask span { display: block; }
+    #ec-c1 { font-family: "Outfit", sans-serif; font-size: 60px; font-weight: 400; color: #121826; }
+    #ec-c2 { font-family: "Outfit", sans-serif; font-size: 76px; font-weight: 700; color: #1e4d68; margin-top: 12px; }
+  </style>
+  <div id="root" data-composition-id="endcard" data-width="1920" data-height="1080">
+    <div id="ec-lockup">
+      <svg id="ec-iso" viewBox="5 5 120 135" aria-label="Isotipo DENGO">
+        <path id="ec-hex" d="M 65,15 L 115,44 L 115,101 L 65,130 L 15,101 L 15,44 Z" fill="none" stroke="#1E4D68" stroke-width="12" stroke-linejoin="round" stroke-linecap="round" />
+        <line id="ec-diag" x1="15" y1="101" x2="115" y2="44" stroke="#1E4D68" stroke-width="8" stroke-linecap="round" />
+        <path id="ec-chev" d="M 28,107 L 65,42 L 102,107" fill="none" stroke="#E07A5F" stroke-width="12" stroke-linejoin="round" stroke-linecap="round" />
+      </svg>
+      <div class="ec-mask"><span id="ec-word">DENGO</span></div>
+    </div>
+    <div id="ec-cta">
+      <div class="ec-mask"><span id="ec-c1">Agenda una demo por WhatsApp</span></div>
+      <div class="ec-mask"><span id="ec-c2" data-var-text="whatsapp">+502 5568-3004</span></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#ec-hex", { strokeDasharray: 360, strokeDashoffset: 360 }, { strokeDashoffset: 0, duration: 0.8, ease: "power2.inOut" }, 0.15);
+    tl.fromTo("#ec-diag", { strokeDasharray: 120, strokeDashoffset: 120 }, { strokeDashoffset: 0, duration: 0.4, ease: "power2.out" }, 0.75);
+    tl.fromTo("#ec-chev", { strokeDasharray: 160, strokeDashoffset: 160 }, { strokeDashoffset: 0, duration: 0.5, ease: "power3.out" }, 1.0);
+    tl.fromTo("#ec-word", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.6, ease: "power3.inOut" }, 1.25);
+    tl.fromTo("#ec-c1", { yPercent: 110 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, 2.0);
+    tl.fromTo("#ec-c2", { yPercent: 110 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, 2.25);
+    window.__timelines["endcard"] = tl;
+  </script>
+</template>

@@ -1,0 +1,56 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Outfit", sans-serif; color: #121826; }
+    .mask { display: block; overflow: hidden; }
+    .mask > span { display: block; }
+    .time { position: absolute; left: 80px; top: 84px; }
+    .time > span { font-size: 84px; font-weight: 700; color: #1e4d68; letter-spacing: -0.02em; line-height: 1.12; }
+    .ui { position: absolute; display: block; height: auto; border-radius: 14px; border: 1px solid #e3e8ee; background: #fff; box-shadow: 0 22px 56px rgba(18, 24, 38, 0.14); }
+    .ring { position: absolute; border: 5px solid #e07a5f; border-radius: 12px; opacity: 0; }
+    .h { font-weight: 700; color: #1e4d68; letter-spacing: -0.02em; line-height: 1.1; }
+    .card { position: absolute; background: #fff; border: 1px solid #e3e8ee; border-radius: 18px; box-shadow: 0 22px 56px rgba(18, 24, 38, 0.12); }
+
+    #c13-proj { opacity: 0; }
+    #c13-q { left: 700px; top: 130px; width: 1100px; border: 0; border-radius: 30px; }
+    #c13-proj { left: 700px; top: 290px; width: 1100px; }
+    #c13-cover { position: absolute; left: 752px; top: 432px; width: 1030px; height: 350px; background: #fff; opacity: 0; }
+    #c13-ring { left: 980px; top: 293px; width: 262px; height: 114px; }
+    #c13-end { position: absolute; left: 700px; top: 330px; }
+    #c13-e1 { font-size: 96px; } #c13-e2 { font-size: 132px; margin-top: 10px; }
+    #c13-e2 b { color: #cf5f43; }
+
+  </style>
+  <div id="root" data-composition-id="c13" data-width="1920" data-height="1080" data-layout-allow-overflow>
+    <div class="time mask"><span id="c13-time">9:20 p.m.</span></div>
+
+    <img id="c13-q" class="ui" src="assets/ia2_q.png" alt="¿Cuánto tengo que vender por día para llegar a la meta de este mes en cada sucursal?" />
+    <img id="c13-proj" class="ui" src="assets/ia2_proj.png" alt="Venta diaria necesaria por sucursal y proyección" />
+    <div id="c13-cover"></div>
+    <div id="c13-ring" class="ring"></div>
+    <div id="c13-end"><div class="mask"><span id="c13-e1" class="h">Ya no decido a ciegas.</span></div><div class="mask"><span id="c13-e2" class="h">Decido con <b>datos.</b></span></div></div>
+
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const K = 1.0000;
+    const at = (t) => t * K;
+    const rise = (s, t, d = 0.5) => tl.fromTo(s, { yPercent: 115 }, { yPercent: 0, duration: d, ease: "expo.out" }, at(t));
+    const wipe = (s, t, d = 0.6) => tl.fromTo(s, { clipPath: "inset(0 0 100% 0 round 14px)" }, { clipPath: "inset(0 0 0% 0 round 14px)", duration: d, ease: "power3.out" }, at(t));
+    const wipeX = (s, t, d = 0.7) => tl.fromTo(s, { clipPath: "inset(0 100% 0 0 round 14px)" }, { clipPath: "inset(0 0% 0 0 round 14px)", duration: d, ease: "power2.inOut" }, at(t));
+    const pop = (s, t) => tl.fromTo(s, { opacity: 0, scale: 0.86 }, { opacity: 1, scale: 1, duration: 0.42, ease: "back.out(1.8)" }, at(t));
+    const slide = (s, t, x = -120) => tl.fromTo(s, { x: x, opacity: 0 }, { x: 0, opacity: 1, duration: 0.6, ease: "expo.out" }, at(t));
+    const gone = (s, t, d = 0.35) => tl.to(s, { opacity: 0, scale: 0.97, duration: d, ease: "power2.in" }, at(t));
+    const ring = (s, t) => tl.fromTo(s, { opacity: 0, scale: 1.06 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, at(t));
+    rise("#c13-time", 0.05);
+
+    tl.fromTo("#c13-q", { clipPath: "inset(0 100% 0 0 round 30px)" }, { clipPath: "inset(0 0% 0 0 round 30px)", duration: 2.2, ease: "steps(30)" }, at(1.6));
+    tl.set("#c13-proj", { opacity: 1 }, at(4.6)); wipe("#c13-proj", 4.6);
+    tl.set("#c13-cover", { opacity: 1 }, at(4.6));
+    tl.fromTo("#c13-cover", { scaleX: 1, transformOrigin: "100% 50%" }, { scaleX: 0, duration: 1.4, ease: "power2.inOut" }, at(5.2));
+    ring("#c13-ring", 9.3);
+    gone("#c13-q", 14.2); gone("#c13-proj", 14.2); tl.to("#c13-ring", { opacity: 0, duration: 0.3 }, at(14.2));
+    rise("#c13-e1", 14.6, 0.6); rise("#c13-e2", 15.9, 0.6);
+
+    window.__timelines["c13"] = tl;
+  </script>
+</template>

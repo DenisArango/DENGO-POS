@@ -5,6 +5,8 @@ import { updateStock, getConversionFactors } from '../services/inventory.service
 import { log } from '../services/audit.service.js'
 import { resolveBranchScope, canAccessBranch } from '../lib/branch-scope.js'
 import { requirePermission } from '../lib/permissions.js'
+import { resolveOpenRegisterId } from './cash-registers.js'
+import { currentUnitCosts } from '../lib/saleCost.js'
 
 const itemSchema = z.object({
   productId: z.string().optional(),
@@ -182,35 +184,30 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
     const body = z.object({
       cashRegisterId: z.string().optional(),
       paymentMethod: z.enum(['CASH', 'CARD', 'TRANSFER', 'MIXED', 'CREDIT']).default('CASH'),
-      // Explicit opt-in: convert only the catalog lines, skipping any
-      // custom (non-catalog) ones instead of blocking the whole sale. Kept
-      // as an explicit flag rather than the default behavior so a plain
-      // convert() call never silently sells less than the full quotation.
+      // Optional: sell only the catalog lines and leave the custom ones out.
+      // By default every line is sold — custom ones become custom sale lines.
       partial: z.boolean().optional(),
     }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
 
-    const quot = await prisma.quotation.findUnique({ where: { id }, include: { items: true } })
+    const quot = await prisma.quotation.findUnique({
+      where: { id },
+      include: { items: true, portalOrder: { include: { items: { where: { productId: null } } } } },
+    })
     if (!quot || quot.status !== 'ACCEPTED') return reply.status(400).send({ error: 'Solo se pueden convertir cotizaciones aceptadas' })
     if (!canAccessBranch(request, quot.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
 
+    // Custom (non-catalog) lines are sold as custom sale lines: no stock, no
+    // per-product tracking, never a throwaway Product row (client rule).
     const customItems = quot.items.filter(item => !item.productId)
-    // A custom (non-catalog) line has no real Product to hang a SaleItem off
-    // of — rather than silently dropping it (undercharging) or inventing a
-    // throwaway Product (exactly what the client asked this feature NOT to
-    // do), block a plain conversion and say why. `partial: true` is the
-    // explicit way around this: sell just the catalog lines.
-    if (customItems.length > 0 && !body.data.partial) {
-      return reply.status(400).send({
-        error: 'Esta cotización tiene productos personalizados (fuera del catálogo) que no se pueden convertir directamente a venta. Quítalos de la cotización, factura esa parte por separado, o convierte solo los productos de catálogo.',
-        customItemCount: customItems.length,
-      })
-    }
-
     const itemsToConvert = body.data.partial ? quot.items.filter(item => !!item.productId) : quot.items
     if (itemsToConvert.length === 0) {
-      return reply.status(400).send({ error: 'No hay productos de catálogo en esta cotización para convertir' })
+      return reply.status(400).send({ error: 'No hay productos en esta cotización para convertir' })
     }
+    const catalogLines = itemsToConvert.filter((i): i is typeof i & { productId: string } => !!i.productId)
+    // A custom line that came from a teacher-portal order keeps the cost the
+    // provider typed there, so the school's profit report stays right.
+    const portalCustomCost = new Map((quot.portalOrder?.items ?? []).map(i => [i.productName.toLowerCase(), Number(i.unitCost ?? 0)]))
 
     // Recompute totals from only the included lines when converting
     // partially — quot.subtotal/tax/total reflect EVERY line, custom ones
@@ -226,17 +223,17 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
 
     // Stock — mirrors the same check in sales.ts's POST /: a quotation can
     // sit accepted for a while, so stock may have moved since it was quoted.
-    const convFactors = await getConversionFactors(itemsToConvert.map(item => item.variationId))
+    const convFactors = await getConversionFactors(catalogLines.map(item => item.variationId))
     const inventoryRows = await prisma.inventory.findMany({
-      where: { branchId: quot.branchId, productId: { in: itemsToConvert.map(item => item.productId!) } },
+      where: { branchId: quot.branchId, productId: { in: catalogLines.map(item => item.productId) } },
       include: { product: { select: { name: true } } },
     })
     const stockByProduct = new Map(inventoryRows.map(inv => [inv.productId, { qty: Number(inv.quantity), name: inv.product.name }]))
-    for (const item of itemsToConvert) {
+    for (const item of catalogLines) {
       const convFactor = convFactors.get(item.variationId ?? '') ?? 1
       const effectiveQty = Number(item.quantity) * convFactor
       const qtyLabel = convFactor !== 1 ? `${item.quantity} (${effectiveQty} unidades base)` : String(item.quantity)
-      const stock = stockByProduct.get(item.productId!)
+      const stock = stockByProduct.get(item.productId)
       const available = stock?.qty ?? 0
       if (available < effectiveQty) {
         return reply.status(400).send({
@@ -244,6 +241,17 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
         })
       }
     }
+
+    // Same stale-session guard as a POS sale (see resolveOpenRegisterId):
+    // a register another device already closed would leave this sale out of
+    // every cash close.
+    let cashRegisterId = body.data.cashRegisterId
+    if (cashRegisterId) {
+      const resolved = await resolveOpenRegisterId(cashRegisterId, quot.branchId)
+      if (!resolved) return reply.status(409).send({ error: 'La caja seleccionada ya fue cerrada — selecciona una caja abierta', code: 'REGISTER_CLOSED' })
+      cashRegisterId = resolved.id
+    }
+    const unitCosts = await currentUnitCosts(catalogLines.map(i => ({ productId: i.productId, variationId: i.variationId ?? undefined })))
 
     // Claim the quotation before creating anything: two near-simultaneous
     // converts (a double click on a slow connection) used to both pass the
@@ -265,7 +273,7 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
         branchId: quot.branchId,
         cashierId: request.user.id,
         customerId: quot.customerId,
-        cashRegisterId: body.data.cashRegisterId,
+        cashRegisterId,
         subtotal,
         tax,
         discount,
@@ -273,16 +281,17 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
         paymentMethod: body.data.paymentMethod,
         saleType: 'CASH',
         items: {
-          // item.productId! — guaranteed non-null: itemsToConvert either IS
-          // every item (full conversion, already confirmed none are custom)
-          // or is pre-filtered to just the catalog ones (partial).
           create: itemsToConvert.map(item => ({
-            productId: item.productId!,
-            variationId: item.variationId,
+            productId: item.productId ?? null,
+            customName: item.productId ? null : item.customName,
+            variationId: item.productId ? item.variationId : null,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             discount: item.discount,
             total: item.total,
+            unitCost: item.productId
+              ? (unitCosts.get(`${item.productId}:${item.variationId ?? ''}`) ?? 0)
+              : (portalCustomCost.get((item.customName ?? '').toLowerCase()) ?? 0),
           })),
         },
       },
@@ -302,9 +311,9 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
     // so it has to happen here. Same rule as sales.ts: a quantity is in the
     // variation's own unit, stock is in base units, so the actual stock
     // impact is quantity * variation.conversionFactor.
-    for (const item of itemsToConvert) {
+    for (const item of catalogLines) {
       const convFactor = convFactors.get(item.variationId ?? '') ?? 1
-      await updateStock(item.productId!, quot.branchId, -(Number(item.quantity) * convFactor), {
+      await updateStock(item.productId, quot.branchId, -(Number(item.quantity) * convFactor), {
         type: 'SALE',
         performedById: request.user.id,
         referenceId: sale.id,
@@ -314,10 +323,10 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
     await log({ userId: request.user.id, action: 'CONVERT', entity: 'Quotation', entityId: id, newValues: { saleId: sale.id, partial: !!body.data.partial } })
     return reply.status(201).send({
       sale,
-      message: customItems.length > 0
+      message: body.data.partial && customItems.length > 0
         ? `Venta creada solo con los ${itemsToConvert.length} producto(s) de catálogo — se dejaron fuera ${customItems.length} producto(s) personalizado(s)`
         : 'Cotización convertida a venta',
-      skippedCustomItems: customItems.length,
+      skippedCustomItems: body.data.partial ? customItems.length : 0,
     })
   })
 

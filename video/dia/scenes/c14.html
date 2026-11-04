@@ -1,0 +1,25 @@
+
+    #c14-chart { left: 640px; top: 140px; width: 1200px; height: 570px; padding: 34px 44px; }
+    #c14-chart h3 { font-size: 36px; font-weight: 600; color: #121826; }
+    #c14-bars { display: flex; align-items: flex-end; gap: 30px; height: 390px; margin-top: 26px; }
+    .c14-col { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 80px; font-size: 28px; color: #5b6b78; }
+    .c14-bar { width: 70px; border-radius: 10px 10px 4px 4px; }
+    #c14-note { position: absolute; left: 1120px; top: 250px; font-size: 44px; font-weight: 700; color: #cf5f43; }
+    #c14-stores { position: absolute; left: 640px; top: 750px; display: flex; gap: 40px; align-items: flex-end; }
+    #c14-stores .store { width: 190px; height: 165px; }
+    #c14-new { width: 190px; height: 165px; border: 6px dashed #1e4d68; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 84px; font-weight: 700; color: #1e4d68; }
+<!--markup-->
+    <div id="c14-chart" class="card"><h3>Ventas mensuales · Central Zona 1 · 2026</h3><div id="c14-bars"><div class="c14-col"><div class="c14-bar" style="height:330px;background:#e07a5f"></div><span>Ene</span></div><div class="c14-col"><div class="c14-bar" style="height:216px;background:#1e4d68"></div><span>Feb</span></div><div class="c14-col"><div class="c14-bar" style="height:170px;background:#1e4d68"></div><span>Mar</span></div><div class="c14-col"><div class="c14-bar" style="height:164px;background:#1e4d68"></div><span>Abr</span></div><div class="c14-col"><div class="c14-bar" style="height:190px;background:#1e4d68"></div><span>May</span></div><div class="c14-col"><div class="c14-bar" style="height:190px;background:#1e4d68"></div><span>Jun</span></div><div class="c14-col"><div class="c14-bar" style="height:181px;background:#1e4d68"></div><span>Jul</span></div><div class="c14-col"><div class="c14-bar" style="height:188px;background:#1e4d68"></div><span>Ago</span></div><div class="c14-col"><div class="c14-bar" style="height:192px;background:#1e4d68"></div><span>Sep</span></div><div class="c14-col"><div class="c14-bar" style="height:205px;background:#1e4d68"></div><span>Oct</span></div></div></div>
+    <div id="c14-note" class="mask"><span id="c14-n1">Enero: 1.8× un mes normal</span></div>
+    <div id="c14-stores"><div id="c14-s1"><svg viewBox="0 0 300 260" class="store"><rect x="20" y="70" width="260" height="180" rx="10" fill="#fff" stroke="#1e4d68" stroke-width="7"/>
+<path d="M10 70 L290 70 L276 24 L24 24 Z" fill="#e07a5f"/><path d="M10 70 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0" fill="#e07a5f" stroke="#e07a5f"/>
+<rect x="46" y="120" width="96" height="70" rx="6" fill="#f4c542"/><rect x="168" y="118" width="80" height="132" rx="6" fill="#1e4d68"/><circle cx="234" cy="186" r="5" fill="#f4c542"/></svg></div><div id="c14-s2"><svg viewBox="0 0 300 260" class="store"><rect x="20" y="70" width="260" height="180" rx="10" fill="#fff" stroke="#1e4d68" stroke-width="7"/>
+<path d="M10 70 L290 70 L276 24 L24 24 Z" fill="#e07a5f"/><path d="M10 70 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0" fill="#e07a5f" stroke="#e07a5f"/>
+<rect x="46" y="120" width="96" height="70" rx="6" fill="#f4c542"/><rect x="168" y="118" width="80" height="132" rx="6" fill="#1e4d68"/><circle cx="234" cy="186" r="5" fill="#f4c542"/></svg></div><div id="c14-s3"><svg viewBox="0 0 300 260" class="store"><rect x="20" y="70" width="260" height="180" rx="10" fill="#fff" stroke="#1e4d68" stroke-width="7"/>
+<path d="M10 70 L290 70 L276 24 L24 24 Z" fill="#e07a5f"/><path d="M10 70 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0 q23 26 46 0" fill="#e07a5f" stroke="#e07a5f"/>
+<rect x="46" y="120" width="96" height="70" rx="6" fill="#f4c542"/><rect x="168" y="118" width="80" height="132" rx="6" fill="#1e4d68"/><circle cx="234" cy="186" r="5" fill="#f4c542"/></svg></div><div id="c14-new">?</div></div>
+<!--script-->
+    wipe("#c14-chart", 0.3);
+    tl.fromTo(".c14-bar", { scaleY: 0, transformOrigin: "50% 100%" }, { scaleY: 1, duration: 0.6, ease: "power3.out", stagger: 0.07 }, at(0.6));
+    rise("#c14-n1", 2.5);
+    pop("#c14-s1", 4.3); pop("#c14-s2", 4.45); pop("#c14-s3", 4.6); pop("#c14-new", 5.2);

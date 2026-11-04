@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js'
 import { hashPassword } from '../services/auth.service.js'
 import { log } from '../services/audit.service.js'
 import { requirePermission } from '../lib/permissions.js'
+import { forgetUserSession } from '../plugins/auth.plugin.js'
 
 const userSchema = z.object({
   email: z.string().email(),
@@ -97,6 +98,7 @@ export default async function userRoutes(fastify: FastifyInstance) {
     }
     try {
       const user = await prisma.user.update({ where: { id }, data, include: userInclude })
+      forgetUserSession(id)
       if (additionalBranchIds !== undefined) {
         await syncAdditionalBranches(id, user.branchId, additionalBranchIds)
       }
@@ -115,6 +117,7 @@ export default async function userRoutes(fastify: FastifyInstance) {
     if (id === request.user.id) return reply.status(400).send({ error: 'No puedes desactivar tu propia cuenta' })
     try {
       await prisma.user.update({ where: { id }, data: { isActive: false } })
+      forgetUserSession(id)
       await log({ userId: request.user.id, action: 'DELETE', entity: 'User', entityId: id })
       return reply.send({ message: 'Usuario desactivado' })
     } catch {

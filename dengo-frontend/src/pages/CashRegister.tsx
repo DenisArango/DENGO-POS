@@ -153,6 +153,34 @@ export default function CashRegisterPage() {
     }
   }
 
+  // Several cashiers can sell into the same open register from their own
+  // devices, so what this screen shows goes stale the moment someone else
+  // sells. Light refresh of just the open registers (not the history list):
+  // every 20s while visible, on returning to the tab, and right before a
+  // close — the close modal's "Efectivo Esperado" must include every
+  // device's sales, not only those made before this page was opened.
+  const refreshOpenRegisters = async () => {
+    if (!BRANCH_ID || !navigator.onLine) return
+    try {
+      const openList = await api.get<any[]>(`/api/cash-registers/current?branchId=${BRANCH_ID}`)
+      const closingIds = await getLocallyClosingRegisterIds()
+      const opens = (openList ?? []).filter(Boolean).filter((r: any) => !closingIds.has(r.id)).map(normalizeRegister)
+      setOpenRegisters(opens)
+      setRegisterToClose(prev => (prev ? opens.find(r => r.id === prev.id) ?? prev : prev))
+    } catch {
+      // Offline or server hiccup — keep showing the last numbers we had.
+    }
+  }
+
+  useEffect(() => {
+    if (openRegisters.length === 0) return
+    const tick = () => { if (!document.hidden) void refreshOpenRegisters() }
+    const timer = window.setInterval(tick, 20_000)
+    window.addEventListener('focus', tick)
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', tick) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [BRANCH_ID, openRegisters.length])
+
   useEffect(() => {
     fetchRegisters()
     if (BRANCH_ID) {
@@ -530,7 +558,7 @@ export default function CashRegisterPage() {
                 )}
                 {canClose && (
                   <button
-                    onClick={() => { setRegisterToClose(reg); setFinalCount(''); setExternalSalesTotalInput(''); setShowCloseModal(true); refreshRegisterTallies([reg.id]) }}
+                    onClick={() => { setRegisterToClose(reg); setFinalCount(''); setExternalSalesTotalInput(''); setShowCloseModal(true); refreshRegisterTallies([reg.id]); void refreshOpenRegisters() }}
                     className="px-3 py-1.5 text-xs font-medium bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg flex items-center gap-1">
                     <Lock size={13} /> Cerrar
                   </button>

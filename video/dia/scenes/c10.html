@@ -1,0 +1,38 @@
+
+    #c10-banner, #c10-rec, #c10-toast, #c10-ok, #c10-cloud, #c10-book { opacity: 0; }
+    #c10-wifi { position: absolute; left: 960px; top: 230px; width: 460px; height: 460px; }
+    #c10-book { position: absolute; left: 1420px; top: 300px; width: 380px; height: 460px; }
+    #c10-banner { left: 640px; top: 150px; width: 1200px; }
+    #c10-ring { left: 630px; top: 140px; width: 1220px; height: 56px; }
+    #c10-rec { left: 760px; top: 240px; width: 470px; }
+    #c10-toast { left: 1280px; top: 300px; width: 560px; }
+    #c10-ok { left: 890px; top: 760px; width: 600px; height: 120px; display: flex; align-items: center; gap: 24px; padding: 0 34px; font-size: 44px; font-weight: 700; color: #2f9e77; }
+    #c10-ok svg { width: 72px; height: 72px; }
+    #c10-cloud { position: absolute; left: 820px; top: 200px; width: 860px; height: 620px; }
+    #c10-cl { position: absolute; left: 820px; top: 830px; width: 860px; text-align: center; }
+    #c10-cl span { font-size: 60px; }
+<!--markup-->
+    <svg id="c10-wifi" viewBox="0 0 24 24"><path d="M2 8.5 C7.5 3.5 16.5 3.5 22 8.5" fill="none" stroke="#1e4d68" stroke-width="2" stroke-linecap="round"/><path d="M5 12 C9 8.6 15 8.6 19 12" fill="none" stroke="#1e4d68" stroke-width="2" stroke-linecap="round"/><path d="M8.3 15.4 C10.4 13.8 13.6 13.8 15.7 15.4" fill="none" stroke="#1e4d68" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="19" r="1.6" fill="#1e4d68"/><path id="c10-slash" d="M3 3 L21 21" stroke="#cf5f43" stroke-width="2.4" stroke-linecap="round"/></svg>
+    <svg id="c10-book" viewBox="0 0 38 46"><rect x="1" y="1" width="36" height="44" rx="3" fill="#fff" stroke="#1e4d68" stroke-width="1.6"/><path d="M7 10 H31 M7 16 H28 M7 22 H31 M7 28 H25 M7 34 H30" stroke="#9fb3c2" stroke-width="1.2"/><path d="M5 40 L33 6" stroke="#cf5f43" stroke-width="2" stroke-linecap="round"/></svg>
+    <img id="c10-banner" class="ui" src="assets/off_banner.png" alt="Sin conexión con el servidor, se guarda todo localmente" />
+    <img id="c10-rec" class="ui" src="assets/off_receipt.png" alt="Ticket pendiente de sincronizar" />
+    <img id="c10-toast" class="ui" src="assets/off_toast.png" alt="Venta guardada, se sincronizará automáticamente" />
+    <div id="c10-ring" class="ring"></div>
+    <div id="c10-ok" class="card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#2f9e77"/><path d="M7 12.4 L10.4 15.6 L17 8.8" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Todo sincronizado</div>
+    <svg id="c10-cloud" viewBox="0 0 86 62"><path d="M22 34 C14 34 10 28 11 23 C12 17 18 14 23 16 C25 8 33 4 41 6 C48 7 52 12 53 17 C60 15 67 20 66 27 C72 28 75 33 72 37 C70 40 67 41 63 41 L24 41 C18 41 16 37 22 34 Z" fill="#fff" stroke="#1e4d68" stroke-width="2"/><path d="M33 26 L39 32 L51 20" fill="none" stroke="#2f9e77" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><g fill="none" stroke="#1e4d68" stroke-width="1.6"><rect x="6" y="50" width="16" height="10" rx="1.5"/><path d="M4 61 H24"/><rect x="38" y="48" width="9" height="14" rx="1.5"/><rect x="62" y="49" width="16" height="11" rx="1.5"/></g><path d="M14 49 L24 41 M42.5 47 V41 M70 48 L60 41" stroke="#9fb3c2" stroke-width="1.2" stroke-dasharray="2 2"/></svg>
+    <div id="c10-cl" class="mask"><span id="c10-c1" class="h">Respaldada en la nube</span></div>
+<!--script-->
+    pop("#c10-wifi", 0.5);
+    tl.fromTo("#c10-slash", { strokeDasharray: 30, strokeDashoffset: 30 }, { strokeDashoffset: 0, duration: 0.4, ease: "power2.out" }, at(1.7));
+    pop("#c10-book", 3.6);
+    gone("#c10-wifi", 5.8); gone("#c10-book", 5.8);
+    tl.set("#c10-banner", { opacity: 1 }, at(6.0)); wipeX("#c10-banner", 6.0);
+    ring("#c10-ring", 6.6);
+    tl.set("#c10-rec", { opacity: 1 }, at(7.0)); wipe("#c10-rec", 7.0);
+    slide("#c10-toast", 7.6, 140);
+    tl.to("#c10-ring", { opacity: 0, duration: 0.2 }, at(8.6));
+    gone("#c10-banner", 8.6); gone("#c10-rec", 8.6); gone("#c10-toast", 8.6);
+    tl.set("#c10-slash", { opacity: 0 }, at(8.7)); pop("#c10-wifi", 8.7);
+    pop("#c10-ok", 9.8);
+    gone("#c10-wifi", 11.2); gone("#c10-ok", 11.2);
+    pop("#c10-cloud", 11.4); rise("#c10-c1", 12.2);

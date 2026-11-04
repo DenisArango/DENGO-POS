@@ -12,6 +12,7 @@ interface Program {
   maxAmountPerTeacher?: number | null
   limitPerStudent?: number | null
   allowedCategoryIds?: string[]
+  perStudent?: boolean
   isActive: boolean
 }
 interface Category { id: string; name: string }
@@ -25,7 +26,7 @@ const PROGRAM_TYPES = [
 const typeMeta = (t: string) => PROGRAM_TYPES.find(p => p.value === t) ?? { value: t, label: t, icon: '📦' }
 const money = (v: number) => `Q${Number(v).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-const EMPTY = { type: 'TEACHING_KIT', name: '', description: '', maxAmountPerTeacher: '', limitPerStudent: '', allowedCategoryIds: [] as string[], isActive: true }
+const EMPTY = { type: 'TEACHING_KIT', name: '', description: '', maxAmountPerTeacher: '', limitPerStudent: '', allowedCategoryIds: [] as string[], perStudent: false, isActive: true }
 
 export default function PortalPrograms() {
   const [programs, setPrograms] = useState<Program[]>([])
@@ -59,6 +60,7 @@ export default function PortalPrograms() {
       maxAmountPerTeacher: p.maxAmountPerTeacher != null ? String(p.maxAmountPerTeacher) : '',
       limitPerStudent: p.limitPerStudent != null ? String(p.limitPerStudent) : '',
       allowedCategoryIds: p.allowedCategoryIds ?? [],
+      perStudent: !!p.perStudent,
       isActive: p.isActive,
     })
     setShowModal(true)
@@ -84,6 +86,7 @@ export default function PortalPrograms() {
       maxAmountPerTeacher: form.maxAmountPerTeacher ? Number(form.maxAmountPerTeacher) : null,
       limitPerStudent: form.limitPerStudent ? Number(form.limitPerStudent) : null,
       allowedCategoryIds: form.allowedCategoryIds,
+      perStudent: form.perStudent,
       isActive: form.isActive,
     }
     const req = editing
@@ -95,6 +98,20 @@ export default function PortalPrograms() {
       .finally(() => setBusy(false))
   }
 
+  // Teachers only see active programs, so this switch is what opens or
+  // closes a program for them.
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+  const toggleActive = (p: Program) => {
+    setTogglingId(p.id)
+    api.put(`/api/portal-admin/programs/${p.id}`, { isActive: !p.isActive })
+      .then(() => {
+        setPrograms(prev => prev.map(x => x.id === p.id ? { ...x, isActive: !p.isActive } : x))
+        toast.success(p.isActive ? `${p.name}: los maestros ya no lo ven` : `${p.name}: abierto para los maestros`)
+      })
+      .catch(e => toast.error(e.message))
+      .finally(() => setTogglingId(null))
+  }
+
   const catName = (id: string) => categories.find(c => c.id === id)?.name ?? id
 
   return (
@@ -102,7 +119,7 @@ export default function PortalPrograms() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Programas Educativos</h1>
-          <p className="text-gray-600 mt-1">Configura los programas disponibles para los maestros</p>
+          <p className="text-gray-600 mt-1">Los maestros solo ven los programas que tengas activos.</p>
         </div>
         <button onClick={openCreate} className="btn-primary btn-md flex items-center gap-2"><Plus size={20} /> Nuevo Programa</button>
       </div>
@@ -123,9 +140,22 @@ export default function PortalPrograms() {
               <motion.div key={p.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
                 <div className="flex items-start justify-between">
                   <div className="text-4xl">{meta.icon}</div>
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${p.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                    {p.isActive ? <CheckCircle size={11} /> : <XCircle size={11} />}{p.isActive ? 'Activo' : 'Inactivo'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center gap-1 text-xs font-medium ${p.isActive ? 'text-green-700' : 'text-gray-500'}`}>
+                      {p.isActive ? <CheckCircle size={12} /> : <XCircle size={12} />}{p.isActive ? 'Visible para maestros' : 'Oculto'}
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={p.isActive}
+                      aria-label={p.isActive ? `Ocultar ${p.name}` : `Activar ${p.name}`}
+                      disabled={togglingId === p.id}
+                      onClick={() => toggleActive(p)}
+                      className={`relative w-10 h-6 rounded-full transition-colors disabled:opacity-50 ${p.isActive ? 'bg-green-500' : 'bg-gray-300'}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${p.isActive ? 'translate-x-4' : ''}`} />
+                    </button>
+                  </div>
                 </div>
                 <h3 className="mt-3 font-bold text-gray-800 text-lg">{p.name}</h3>
                 <p className="text-xs text-gray-400">{meta.label}</p>
@@ -134,8 +164,9 @@ export default function PortalPrograms() {
                 <div className="mt-4 space-y-1.5 text-sm">
                   <p className="text-gray-600">Límite total: <span className="font-semibold text-gray-800">{p.maxAmountPerTeacher != null ? money(p.maxAmountPerTeacher) : 'Sin límite'}</span></p>
                   {p.limitPerStudent != null && (
-                    <p className="text-gray-600">Límite por alumno: <span className="font-semibold text-emerald-700">{money(p.limitPerStudent)}</span></p>
+                    <p className="text-gray-600">Monto por alumno: <span className="font-semibold text-emerald-700">{money(p.limitPerStudent)}</span></p>
                   )}
+                  <p className="text-gray-600">Pedido: <span className="font-medium text-gray-800">{p.perStudent ? 'kit por alumno × alumnos' : 'un solo pedido total'}</span></p>
                   <p className="text-gray-600">
                     Categorías:{' '}
                     <span className="font-medium text-gray-800">
@@ -170,10 +201,17 @@ export default function PortalPrograms() {
               <div><label className="label">Descripción</label><textarea rows={2} className="input w-full resize-none" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
               <div><label className="label">Monto máximo por maestro (Q)</label><input type="number" min={0} step="0.01" className="input w-full" value={form.maxAmountPerTeacher} onChange={e => setForm({ ...form, maxAmountPerTeacher: e.target.value })} placeholder="Vacío = sin límite" /></div>
               <div>
-                <label className="label">Límite por alumno (Q)</label>
-                <input type="number" min={0} step="0.01" className="input w-full" value={form.limitPerStudent} onChange={e => setForm({ ...form, limitPerStudent: e.target.value })} placeholder="Vacío = sin límite" />
-                <p className="text-xs text-gray-400 mt-1">El máximo del pedido = límite × número de alumnos ingresados</p>
+                <label className="label">Monto por alumno (Q)</label>
+                <input type="number" min={0} step="0.01" className="input w-full" value={form.limitPerStudent} onChange={e => setForm({ ...form, limitPerStudent: e.target.value })} placeholder="Ej: 85 · vacío = sin monto por alumno" />
+                <p className="text-xs text-gray-400 mt-1">El total del pedido = monto por alumno × número de alumnos.</p>
               </div>
+              <label className="flex items-start gap-2 cursor-pointer rounded-lg border border-gray-200 p-3">
+                <input type="checkbox" checked={form.perStudent} onChange={e => setForm({ ...form, perStudent: e.target.checked })} className="w-4 h-4 mt-0.5 text-primary-600 rounded" />
+                <span className="text-sm text-gray-700">
+                  <strong>Cada alumno recibe su kit</strong>
+                  <span className="block text-xs text-gray-500 mt-0.5">El maestro arma el kit de un alumno y se multiplica por sus alumnos (ej. 2 cuadernos × 100 alumnos = 200). La cotización y la factura salen por el total, y puedes imprimir la hoja de preparación por kit.</span>
+                </span>
+              </label>
               <div>
                 <label className="label">Categorías permitidas</label>
                 <p className="text-xs text-gray-400 mb-2">Si no seleccionas ninguna, se permitirán todas.</p>
@@ -190,7 +228,7 @@ export default function PortalPrograms() {
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} className="w-4 h-4 text-primary-600 rounded" />
-                <span className="text-sm text-gray-700">Programa activo</span>
+                <span className="text-sm text-gray-700">Activo (visible para los maestros)</span>
               </label>
               <div className="flex gap-3 justify-end pt-2 border-t">
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary btn-md">Cancelar</button>

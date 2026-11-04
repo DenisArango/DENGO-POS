@@ -93,24 +93,24 @@ const VIEWS: ViewDef[] = [
   },
   {
     name: 'ventas_detalle',
-    doc: 'una fila por producto vendido: id, venta_id, numero, fecha, dia, hora, dia_semana, sucursal_id, sucursal, cajero, cliente_id, cliente, metodo_pago, producto_id, producto, categoria, presentacion ("Unidad" si se vendió la unidad base), factor_conversion, cantidad (en la presentación vendida), unidades_base (cantidad*factor — úsala para comparar con inventario), precio_unitario, descuento_pct, total_linea, costo_linea, ganancia_linea, anulada',
+    doc: 'una fila por producto vendido: id, venta_id, numero, fecha, dia, hora, dia_semana, sucursal_id, sucursal, cajero, cliente_id, cliente, metodo_pago, producto_id (vacío en productos fuera del catálogo), producto, categoria ("Fuera del catálogo" para esos), presentacion ("Unidad" si se vendió la unidad base), factor_conversion, cantidad (en la presentación vendida), unidades_base (cantidad*factor — úsala para comparar con inventario), precio_unitario, descuento_pct, total_linea, costo_linea, ganancia_linea, anulada',
     sql: `SELECT si."ID" AS id, s."ID" AS venta_id, s."INVOICE_NUMBER" AS numero, ${LOCAL('s."CREATED_AT"')} AS fecha,
                  ${LOCAL('s."CREATED_AT"')}::date AS dia, EXTRACT(HOUR FROM ${LOCAL('s."CREATED_AT"')})::int AS hora,
                  EXTRACT(ISODOW FROM ${LOCAL('s."CREATED_AT"')})::int AS dia_semana,
                  s."BRANCH_ID" AS sucursal_id, b."NAME" AS sucursal, us."NAME" AS cajero, s."CUSTOMER_ID" AS cliente_id,
-                 cu."NAME" AS cliente, s."PAYMENT_METHOD" AS metodo_pago, si."PRODUCT_ID" AS producto_id, p."NAME" AS producto,
-                 c."NAME" AS categoria, COALESCE(v."NAME", 'Unidad') AS presentacion,
+                 cu."NAME" AS cliente, s."PAYMENT_METHOD" AS metodo_pago, si."PRODUCT_ID" AS producto_id, COALESCE(p."NAME", si."CUSTOM_NAME") AS producto,
+                 COALESCE(c."NAME", 'Fuera del catálogo') AS categoria, COALESCE(v."NAME", 'Unidad') AS presentacion,
                  COALESCE(v."CONVERSION_FACTOR", 1)::float8 AS factor_conversion, si."QUANTITY"::float8 AS cantidad,
                  (si."QUANTITY" * COALESCE(v."CONVERSION_FACTOR", 1))::float8 AS unidades_base,
                  si."UNIT_PRICE"::float8 AS precio_unitario, (si."DISCOUNT" * 100)::float8 AS descuento_pct,
                  si."TOTAL"::float8 AS total_linea,
-                 ${COST('p."COST" * COALESCE(v."CONVERSION_FACTOR", 1) * si."QUANTITY"')} AS costo_linea,
-                 ${COST('si."TOTAL" - p."COST" * COALESCE(v."CONVERSION_FACTOR", 1) * si."QUANTITY"')} AS ganancia_linea,
+                 ${COST('COALESCE(si."UNIT_COST", p."COST" * COALESCE(v."CONVERSION_FACTOR", 1), 0) * si."QUANTITY"')} AS costo_linea,
+                 ${COST('si."TOTAL" - COALESCE(si."UNIT_COST", p."COST" * COALESCE(v."CONVERSION_FACTOR", 1), 0) * si."QUANTITY"')} AS ganancia_linea,
                  s."IS_VOIDED" AS anulada
           FROM public."SALE_ITEMS" si
           JOIN public."SALES" s ON s."ID" = si."SALE_ID"
-          JOIN public."PRODUCTS" p ON p."ID" = si."PRODUCT_ID"
-          JOIN public."CATEGORIES" c ON c."ID" = p."CATEGORY_ID"
+          LEFT JOIN public."PRODUCTS" p ON p."ID" = si."PRODUCT_ID"
+          LEFT JOIN public."CATEGORIES" c ON c."ID" = p."CATEGORY_ID"
           JOIN public."BRANCHES" b ON b."ID" = s."BRANCH_ID"
           JOIN public."USERS" us ON us."ID" = s."CASHIER_ID"
           LEFT JOIN public."CUSTOMERS" cu ON cu."ID" = s."CUSTOMER_ID"

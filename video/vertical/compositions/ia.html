@@ -1,0 +1,32 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Outfit", sans-serif; color: #121826; }
+    #ia-head { position: absolute; left: 80px; top: 200px; }
+    .ia-mask { display: block; overflow: hidden; }
+    .ia-mask span { display: block; }
+    #ia-time { font-size: 124px; font-weight: 700; color: #1e4d68; letter-spacing: -0.02em; line-height: 1.08; }
+    #ia-t2 { font-size: 64px; line-height: 1.3; }
+    #ia-q { position: absolute; left: 80px; top: 500px; width: 920px; height: 95.4px; border-radius: 26px; }
+    #ia-chart { position: absolute; left: 80px; top: 650px; width: 920px; height: 464.4px; border-radius: 16px; border: 1px solid #e3e8ee; box-shadow: 0 24px 60px rgba(18, 24, 38, 0.14); background: #fff; }
+    #ia-cover { position: absolute; left: 248px; top: 692px; width: 730px; height: 381px; background: #fff; opacity: 0; }
+  </style>
+  <div id="root" data-composition-id="ia" data-width="1080" data-height="1920">
+    <div id="ia-head" data-layout-allow-overflow>
+      <div class="ia-mask"><span id="ia-time">9:00 p.m.</span></div>
+      <div class="ia-mask"><span id="ia-t2">Le pregunta a su negocio.</span></div>
+    </div>
+    <img id="ia-q" src="assets/ia_q.png" alt="¿Qué productos se vendieron más esta semana en todas las sucursales?" />
+    <img id="ia-chart" src="assets/ia_chart.png" alt="Top 10 por unidades vendidas" />
+    <div id="ia-cover"></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#ia-time", { yPercent: 110 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, 0.1);
+    tl.fromTo("#ia-t2", { yPercent: 110 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, 0.3);
+    tl.fromTo("#ia-q", { clipPath: "inset(0 100% 0 0 round 26px)" }, { clipPath: "inset(0 0% 0 0 round 26px)", duration: 1.1, ease: "steps(24)" }, 0.7);
+    tl.fromTo("#ia-chart", { clipPath: "inset(0 0 100% 0 round 16px)" }, { clipPath: "inset(0 0 0% 0 round 16px)", duration: 0.45, ease: "power3.out" }, 2.0);
+    tl.set("#ia-cover", { opacity: 1 }, 2.0);
+    tl.fromTo("#ia-cover", { scaleX: 1, transformOrigin: "100% 50%" }, { scaleX: 0, duration: 1.2, ease: "power2.inOut" }, 2.35);
+    window.__timelines["ia"] = tl;
+  </script>
+</template>

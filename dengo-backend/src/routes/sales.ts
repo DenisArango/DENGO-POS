@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify'
+import { notifyTeacherLater } from '../lib/webPush.js'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { updateStock, getConversionFactors } from '../services/inventory.service.js'
@@ -8,15 +9,39 @@ import { hasPermission, requirePermission } from '../lib/permissions.js'
 import { certifyInvoice } from '../lib/fel.js'
 import { looksLikeRealNit } from '../lib/nit.js'
 import { parseBusinessDateParam } from '../lib/timezone.js'
+import { resolveOpenRegisterId } from './cash-registers.js'
+import { saleLineCost, saleBaseUnitCost, currentUnitCosts } from '../lib/saleCost.js'
 
+// A line is a catalog product (productId) OR a product typed in that isn't
+// in the catalog (customName): no stock movement, no per-product tracking,
+// its cost is whatever the cashier/provider entered (or 0).
 const saleItemSchema = z.object({
-  productId: z.string(),
+  productId: z.string().min(1).optional(),
+  customName: z.string().trim().min(1).max(200).optional(),
   variationId: z.string().optional(),
   quantity: z.number().min(0.001),
   unitPrice: z.number().min(0),
   discount: z.number().min(0).max(1).default(0),
   total: z.number().min(0),
-})
+  unitCost: z.number().min(0).optional(), // only used for custom lines
+}).refine(i => !!i.productId !== !!i.customName, { message: 'Cada línea necesita un producto del catálogo o un nombre' })
+
+type SaleItemInput = z.infer<typeof saleItemSchema>
+const catalogItems = <T extends { productId?: string | null | undefined }>(items: T[]) =>
+  items.filter((i): i is T & { productId: string } => !!i.productId)
+
+/** Name of a line for documents (FEL, receipts): product · presentation, or the typed-in name. */
+function lineDescription(item: { customName?: string | null; productId?: string | null; product?: { name?: string } | null; variation?: { name?: string; isDefault?: boolean } | null }) {
+  if (item.customName) return item.customName
+  const base = item.product?.name ?? item.productId ?? 'Producto'
+  return item.variation && !item.variation.isDefault ? `${base} (${item.variation.name})` : base
+}
+
+/** Frozen unit cost per line: catalog cost today, or the typed cost for a custom line. */
+function lineUnitCost(item: SaleItemInput, catalogCosts: Map<string, number>) {
+  if (!item.productId) return item.unitCost ?? 0
+  return catalogCosts.get(`${item.productId}:${item.variationId ?? ''}`) ?? 0
+}
 
 const createSaleSchema = z.object({
   branchId: z.string(),
@@ -75,11 +100,10 @@ const saleInclude = {
 async function enrichSale(sale: any): Promise<any> {
   // Calculate per-item profit and total saleProfit
   const items = (sale.items ?? []).map((item: any) => {
-    const cost = Number(item.product?.cost ?? 0)
+    const cost = saleBaseUnitCost(item)
     const convFactor = Number(item.variation?.conversionFactor ?? 1)
-    const qty = Number(item.quantity)
     const revenue = Number(item.total)
-    const totalCost = cost * convFactor * qty
+    const totalCost = saleLineCost(item)
     return { ...item, cost, convFactor, totalCost, profit: revenue - totalCost }
   })
   // Item totals sum to the pre-header-discount subtotal, so Sale.discount must be
@@ -156,7 +180,7 @@ async function generateInvoiceForSale(
 
   // Certification is external I/O — deliberately outside the DB transaction
   // above (never hold row locks on a network call), same as at sale creation.
-  const items = await prisma.saleItem.findMany({ where: { saleId } })
+  const items = await prisma.saleItem.findMany({ where: { saleId }, include: { product: { select: { name: true } }, variation: { select: { name: true, isDefault: true } } } })
   let felResult: { status: string; uuid?: string; authNumber?: string; certifiedAt?: Date; error?: string }
   try {
     felResult = await certifyInvoice({
@@ -166,7 +190,7 @@ async function generateInvoiceForSale(
       buyerNit: buyerNit!,
       buyerName: buyerName!,
       total: Number(sale.total),
-      items: items.map(i => ({ description: i.productId, quantity: Number(i.quantity), unitPrice: Number(i.unitPrice), total: Number(i.total) })),
+      items: items.map(i => ({ description: lineDescription(i), quantity: Number(i.quantity), unitPrice: Number(i.unitPrice), total: Number(i.total) })),
     })
   } catch (err: any) {
     felResult = { status: 'FAILED', error: err?.message ?? 'Error al certificar' }
@@ -186,6 +210,10 @@ async function generateInvoiceForSale(
   // simply matches zero rows here, which is the normal case.
   if (sale.quotation) {
     await prisma.portalOrder.updateMany({ where: { quotationId: sale.quotation.id }, data: { status: 'INVOICED' } })
+    const billed = await prisma.portalOrder.findMany({ where: { quotationId: sale.quotation.id }, select: { id: true, teacherId: true, orderNumber: true } })
+    for (const o of billed) {
+      notifyTeacherLater(o.teacherId, { title: `Tu pedido ${o.orderNumber} fue facturado`, body: 'El proveedor te enviará la factura por Mensajes.', url: `/orders/${o.id}`, tag: `order-${o.id}` })
+    }
   }
 
   await log({
@@ -240,9 +268,7 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     // come from cashRegisterId join below per-record only when migration is done)
     const enriched = sales.map((sale: any) => {
       const items = (sale.items ?? []).map((item: any) => {
-        const cost = Number(item.product?.cost ?? 0)
-        const convFactor = Number(item.variation?.conversionFactor ?? 1)
-        const totalCost = cost * convFactor * Number(item.quantity)
+        const totalCost = saleLineCost(item)
         return { ...item, totalCost, profit: Number(item.total) - totalCost }
       })
       const saleProfit = items.reduce((s: number, i: any) => s + i.profit, 0) - Number(sale.discount ?? 0)
@@ -268,6 +294,13 @@ export default async function salesRoutes(fastify: FastifyInstance) {
 
     const data = body.data
 
+    // The POS only sells catalog products. Lines outside the catalog exist
+    // only through quotations and teacher-portal orders, which become sales
+    // via POST /quotations/:id/convert (not this endpoint).
+    if (data.items.some(i => !i.productId)) {
+      return reply.status(400).send({ error: 'En el punto de venta solo se pueden vender productos del catálogo. Los productos fuera del catálogo van por cotización.' })
+    }
+
     // Idempotent replay: a synced offline sale may legitimately be POSTed
     // twice (the first response was lost to the same outage that queued it).
     // Returning the existing sale — not an error, not a second sale — is
@@ -291,16 +324,30 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     const isOfflineReplay = !!data.clientRequestId
     const offlineDiscrepancies: string[] = []
 
+    // Register — one physical till can be open on several devices at once
+    // (see resolveOpenRegisterId). A device still holding a session another
+    // device already closed gets its sale moved onto the open session of
+    // that same register, so it's counted at close instead of being lost.
+    let effectiveRegisterId = data.cashRegisterId
+    const resolvedRegister = await resolveOpenRegisterId(data.cashRegisterId, data.branchId)
+    if (resolvedRegister) {
+      effectiveRegisterId = resolvedRegister.id
+    } else if (!isOfflineReplay) {
+      return reply.status(409).send({ error: 'La caja seleccionada ya fue cerrada — abre la caja de nuevo o selecciona otra antes de cobrar', code: 'REGISTER_CLOSED' })
+    } else {
+      offlineDiscrepancies.push('La caja de esta venta ya estaba cerrada al sincronizar y no había otra sesión abierta de esa caja — la venta no entra en ningún cierre, revísala manualmente')
+    }
+
     // Stock — the POS UI already blocks adding an out-of-stock item to the
     // cart, but stock can change between "add to cart" and "checkout"
     // (another register selling the last unit).
     const inventoryRows = await prisma.inventory.findMany({
-      where: { branchId: data.branchId, productId: { in: data.items.map(i => i.productId) } },
+      where: { branchId: data.branchId, productId: { in: catalogItems(data.items).map(i => i.productId) } },
       include: { product: { select: { name: true } } },
     })
     const stockByProduct = new Map(inventoryRows.map(inv => [inv.productId, { qty: Number(inv.quantity), name: inv.product.name }]))
     const checkConvFactors = await getConversionFactors(data.items.map(i => i.variationId))
-    for (const item of data.items) {
+    for (const item of catalogItems(data.items)) {
       const convFactor = item.variationId ? (checkConvFactors.get(item.variationId) ?? 1) : 1
       const effectiveQty = item.quantity * convFactor
       const qtyLabel = convFactor !== 1 ? `${item.quantity} (${effectiveQty} unidades base)` : String(item.quantity)
@@ -363,7 +410,7 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     let buyerName: string | undefined
     let requiresInvoice = data.requiresInvoice
     if (requiresInvoice) {
-      buyerNit = data.buyerNit?.trim() || customer?.nit
+      buyerNit = data.buyerNit?.trim() || customer?.nit || undefined
       buyerName = data.buyerName?.trim() || customer?.name
       if (!looksLikeRealNit(buyerNit)) {
         if (!isOfflineReplay) return reply.status(400).send({ error: 'Se necesita un NIT válido para generar factura — el cliente no tiene uno registrado' })
@@ -373,6 +420,8 @@ export default async function salesRoutes(fastify: FastifyInstance) {
         buyerName = undefined
       }
     }
+
+    const unitCosts = await currentUnitCosts(catalogItems(data.items))
 
     const sale = await prisma.$transaction(async (tx) => {
       let invoiceSeries: string | undefined
@@ -405,7 +454,7 @@ export default async function salesRoutes(fastify: FastifyInstance) {
           branchId: data.branchId,
           cashierId: request.user.id,
           customerId: effectiveCustomerId,
-          cashRegisterId: data.cashRegisterId,
+          cashRegisterId: effectiveRegisterId,
           subtotal: data.subtotal,
           tax: data.tax,
           discount: data.discount,
@@ -428,12 +477,14 @@ export default async function salesRoutes(fastify: FastifyInstance) {
           felStatus: requiresInvoice ? 'PENDING' : 'NONE',
           items: {
             create: data.items.map(item => ({
-              productId: item.productId,
-              variationId: item.variationId,
+              productId: item.productId ?? null,
+              customName: item.productId ? null : item.customName!,
+              variationId: item.productId ? item.variationId : undefined,
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               discount: item.discount,
               total: item.total,
+              unitCost: lineUnitCost(item, unitCosts),
             })),
           },
         },
@@ -455,7 +506,7 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     // point in this file, same as the Exact<...> baseline errors around it)
     // — cast here rather than fight that, consistent with enrichSale's own
     // `any` usage elsewhere in this file for the same underlying issue.
-    for (const item of (sale as any).items) {
+    for (const item of catalogItems((sale as any).items as { productId: string | null; quantity: unknown; variation?: { conversionFactor?: unknown } }[])) {
       const convFactor = Number(item.variation?.conversionFactor ?? 1)
       await updateStock(item.productId, data.branchId, -(Number(item.quantity) * convFactor), {
         type: 'SALE',
@@ -485,7 +536,7 @@ export default async function salesRoutes(fastify: FastifyInstance) {
           buyerNit: buyerNit!,
           buyerName: buyerName!,
           total: data.total,
-          items: data.items.map(i => ({ description: i.productId, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
+          items: ((sale as any).items as any[]).map(i => ({ description: lineDescription(i), quantity: Number(i.quantity), unitPrice: Number(i.unitPrice), total: Number(i.total) })),
         })
       } catch (err: any) {
         felResult = { status: 'FAILED', error: err?.message ?? 'Error al certificar' }
@@ -511,19 +562,19 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     const body = z.object({
       // Simple field updates
       isPaid: z.boolean().optional(),
-      paidAmount: z.number().optional(),
+      paidAmount: z.number().min(0).optional(),
       notes: z.string().optional(),
       // Full item edit
       items: z.array(saleItemSchema).optional(),
-      subtotal: z.number().optional(),
-      tax: z.number().optional(),
-      discount: z.number().optional(),
-      total: z.number().optional(),
+      subtotal: z.number().min(0).optional(),
+      tax: z.number().min(0).optional(),
+      discount: z.number().min(0).optional(),
+      total: z.number().min(0).optional(),
       paymentMethod: z.enum(['CASH', 'CARD', 'TRANSFER', 'MIXED', 'CREDIT']).optional(),
-      cashAmount: z.number().optional(),
-      cardAmount: z.number().optional(),
+      cashAmount: z.number().min(0).optional(),
+      cardAmount: z.number().min(0).optional(),
       cardReference: z.string().optional(),
-      transferAmount: z.number().optional(),
+      transferAmount: z.number().min(0).optional(),
       transferDocumentNumber: z.string().optional(),
     }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
@@ -534,8 +585,18 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     })
     if (!existing) return reply.status(404).send({ error: 'Venta no encontrada' })
     if (existing.isVoided) return reply.status(400).send({ error: 'No se puede editar una venta anulada' })
+    if (!canAccessBranch(request, existing.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
 
     const { items: newItems, ...simpleFields } = body.data
+
+    // Editing may keep the out-of-catalog lines a converted quotation
+    // brought, but never add new ones (the POS sells catalog products only).
+    if (newItems) {
+      const allowed = new Set(existing.items.filter(i => !i.productId).map(i => (i.customName ?? '').toLowerCase()))
+      if (newItems.some(i => !i.productId && !allowed.has((i.customName ?? '').toLowerCase()))) {
+        return reply.status(400).send({ error: 'Solo se pueden vender productos del catálogo. Los productos fuera del catálogo van por cotización.' })
+      }
+    }
 
     // Cambiar el método de pago desde/hacia CREDITO es más que una
     // etiqueta — también mueve saleType y el saldo de crédito del cliente
@@ -562,7 +623,7 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     // transaction causes nested transactions on SQL Server → deadlock. Run inventory updates
     // before and after the DB transaction instead.
     if (newItems) {
-      for (const oldItem of existing.items) {
+      for (const oldItem of catalogItems(existing.items)) {
         const convFactor = Number(oldItem.variation?.conversionFactor ?? 1)
         await updateStock(oldItem.productId, existing.branchId, Number(oldItem.quantity) * convFactor, {
           type: 'RETURN',
@@ -573,19 +634,30 @@ export default async function salesRoutes(fastify: FastifyInstance) {
       }
     }
 
+    // Editing a sale re-creates its lines: a line that was already there
+    // keeps the cost it was sold at; only a newly added line takes today's.
+    const keptCosts = new Map((existing.items ?? []).filter((i: any) => i.unitCost != null)
+      .map((i: any) => [`${i.productId}:${i.variationId ?? ''}`, Number(i.unitCost)]))
+    const todayCosts = newItems ? await currentUnitCosts(catalogItems(newItems)) : new Map<string, number>()
+
     await prisma.$transaction(async (tx) => {
       if (newItems) {
         await tx.saleItem.deleteMany({ where: { saleId: id } })
         await tx.saleItem.createMany({
-          data: newItems.map(item => ({
-            saleId: id,
-            productId: item.productId,
-            variationId: item.variationId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            discount: item.discount,
-            total: item.total,
-          })),
+          data: newItems.map(item => {
+            const key = `${item.productId}:${item.variationId ?? ''}`
+            return {
+              saleId: id,
+              productId: item.productId ?? null,
+              customName: item.productId ? null : item.customName!,
+              variationId: item.productId ? (item.variationId ?? null) : null,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              discount: item.discount,
+              total: item.total,
+              unitCost: item.productId ? (keptCosts.get(key) ?? todayCosts.get(key) ?? 0) : (item.unitCost ?? 0),
+            }
+          }),
         })
       }
       await tx.sale.update({
@@ -609,7 +681,7 @@ export default async function salesRoutes(fastify: FastifyInstance) {
 
     if (newItems) {
       const editConvFactors = await getConversionFactors(newItems.map(i => i.variationId))
-      for (const item of newItems) {
+      for (const item of catalogItems(newItems)) {
         const convFactor = item.variationId ? (editConvFactors.get(item.variationId) ?? 1) : 1
         await updateStock(item.productId, existing.branchId, -(item.quantity * convFactor), {
           type: 'SALE',
@@ -678,6 +750,7 @@ export default async function salesRoutes(fastify: FastifyInstance) {
       include: { items: { include: { variation: { select: { conversionFactor: true } } } } },
     })
     if (!sale) return reply.status(404).send({ error: 'Venta no encontrada' })
+    if (!canAccessBranch(request, sale.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
     if (sale.isVoided) return reply.status(400).send({ error: 'La venta ya fue anulada' })
 
     // Conditional claim (WHERE isVoided = false): two near-simultaneous
@@ -694,7 +767,7 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     })
     if (claimed.count === 0) return reply.status(400).send({ error: 'La venta ya fue anulada' })
 
-    for (const item of sale.items) {
+    for (const item of catalogItems(sale.items)) {
       const convFactor = Number(item.variation?.conversionFactor ?? 1)
       await updateStock(item.productId, sale.branchId, Number(item.quantity) * convFactor, {
         type: 'RETURN',
@@ -746,6 +819,14 @@ export default async function salesRoutes(fastify: FastifyInstance) {
       cashRegisterId: z.string().optional(),
     }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+
+    // Same stale-session guard as sale creation — a cash abono saved
+    // against an already-closed session is counted by no close.
+    if (body.data.cashRegisterId) {
+      const resolved = await resolveOpenRegisterId(body.data.cashRegisterId)
+      if (!resolved) return reply.status(409).send({ error: 'La caja seleccionada ya fue cerrada — selecciona una caja abierta', code: 'REGISTER_CLOSED' })
+      body.data.cashRegisterId = resolved.id
+    }
 
     const sale = await prisma.sale.findUnique({
       where: { id },

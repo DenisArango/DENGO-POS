@@ -1,0 +1,41 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Outfit", sans-serif; color: #121826; }
+    #otras-row { position: absolute; left: 80px; top: 200px; width: 920px; height: 273.7px; border-radius: 10px; box-shadow: 0 24px 60px rgba(18, 24, 38, 0.16); }
+    #otras-btnring { position: absolute; left: 494px; top: 382px; width: 276px; height: 66px; border: 5px solid #e07a5f; border-radius: 10px; opacity: 0; }
+    #otras-title { position: absolute; left: 80px; top: 520px; }
+    .otras-mask { display: block; overflow: hidden; }
+    .otras-mask span { display: block; font-size: 100px; font-weight: 700; color: #1e4d68; letter-spacing: -0.02em; line-height: 1.08; }
+    #otras-21 { color: #cf5f43; }
+    #otras-modal { position: absolute; left: 100px; top: 770px; width: 880px; height: 540.8px; border-radius: 14px; box-shadow: 0 30px 70px rgba(18, 24, 38, 0.2); }
+    #otras-ring { position: absolute; left: 146px; top: 972px; width: 783px; height: 95px; border: 6px solid #e07a5f; border-radius: 14px; opacity: 0; }
+    #otras-cursor { position: absolute; left: 0; top: 0; width: 72px; height: 72px; }
+  </style>
+  <div id="root" data-composition-id="otras" data-width="1080" data-height="1920">
+    <img id="otras-row" src="assets/redrow_v.png" alt="Línea sin stock con botón Otras sucursales" />
+    <div id="otras-btnring"></div>
+    <div id="otras-title">
+      <div class="otras-mask"><span id="otras-t1">Pero en Central</span></div>
+      <div class="otras-mask"><span id="otras-t2">hay <b id="otras-21">21</b>.</span></div>
+    </div>
+    <img id="otras-modal" src="assets/otras.png" alt="Inventario en otras sucursales" />
+    <div id="otras-ring"></div>
+    <svg id="otras-cursor" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 2 L3 19 L7.6 14.8 L10.6 21.4 L13.6 20 L10.7 13.6 L17 13.4 Z" fill="#fff" stroke="#121826" stroke-width="1.6" stroke-linejoin="round" />
+    </svg>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#otras-cursor", { x: 900, y: 1500 }, { x: 622, y: 404, duration: 0.8, ease: "power3.inOut" }, 0.2);
+    tl.fromTo("#otras-cursor", { scale: 1, transformOrigin: "10% 10%" }, { scale: 0.82, duration: 0.08, ease: "power1.in" }, 1.02);
+    tl.to("#otras-cursor", { scale: 1, duration: 0.14, ease: "power1.out" }, 1.1);
+    tl.fromTo("#otras-btnring", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.16, ease: "power2.out" }, 1.06);
+    tl.to("#otras-btnring", { opacity: 0, duration: 0.3 }, 1.5);
+    tl.to("#otras-cursor", { x: 1150, y: 1700, duration: 0.6, ease: "power2.in" }, 1.3);
+    tl.fromTo("#otras-modal", { opacity: 0, scale: 0.92, transformOrigin: "50% 30%" }, { opacity: 1, scale: 1, duration: 0.45, ease: "expo.out" }, 1.12);
+    tl.fromTo("#otras-t1", { yPercent: 110 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, 1.5);
+    tl.fromTo("#otras-t2", { yPercent: 110 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, 1.62);
+    tl.fromTo("#otras-ring", { opacity: 0, scale: 1.05 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, 2.0);
+    window.__timelines["otras"] = tl;
+  </script>
+</template>

@@ -1,6 +1,7 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
+import compress from '@fastify/compress'
 import rateLimit from '@fastify/rate-limit'
 import { config } from './config.js'
 import authPlugin from './plugins/auth.plugin.js'
@@ -35,6 +36,10 @@ import portalAdminRoutes from './routes/portal-admin.js'
 import messagesRoutes from './routes/messages.js'
 
 const fastify = Fastify({
+  // Behind Caddy on the same machine: trust X-Forwarded-For only from the
+  // loopback proxy, so request.ip is the real client (login rate limit and
+  // login history) instead of 127.0.0.1 for everyone.
+  trustProxy: '127.0.0.1,::1',
   logger: {
     level: config.isDev ? 'info' : 'warn',
     transport: config.isDev ? { target: 'pino-pretty', options: { colorize: true } } : undefined,
@@ -44,6 +49,12 @@ const fastify = Fastify({
 async function bootstrap() {
   // Security
   await fastify.register(helmet, { contentSecurityPolicy: false })
+
+  // Compress JSON responses (brotli/gzip, whichever the browser accepts).
+  // Product/customer/report lists are tens to hundreds of KB of repetitive
+  // JSON — this cuts them to roughly a tenth over the wire, which matters on
+  // a store's shared connection or a teacher's phone. Small bodies skipped.
+  await fastify.register(compress, { global: true, threshold: 1024, encodings: ['br', 'gzip'] })
 
   // CORS
   await fastify.register(cors, {
@@ -66,7 +77,16 @@ async function bootstrap() {
   await fastify.register(rateLimit, {
     max: config.rateLimit.max,
     timeWindow: config.rateLimit.windowMs,
-    keyGenerator: (request) => request.headers.authorization ?? request.ip,
+    keyGenerator: (request) => {
+      const auth = request.headers.authorization
+      if (auth?.startsWith('Bearer ')) {
+        try {
+          const u = fastify.jwt.verify<{ id?: string }>(auth.slice(7))
+          if (u?.id) return `u:${u.id}`
+        } catch { /* invalid/expired token: falls back to the IP */ }
+      }
+      return `ip:${request.ip}`
+    },
     // Must return a real Error with .statusCode set (429, matching the
     // library's own default — see its defaultErrorResponse) — the previous
     // version returned a plain {error: string} object, which has no

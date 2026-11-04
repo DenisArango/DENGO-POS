@@ -1,0 +1,576 @@
+{
+  "ok": false,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "filesScanned": 8
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": false,
+    "errorCount": 1,
+    "warningCount": 0,
+    "infoCount": 9,
+    "findings": [
+      {
+        "code": "text_box_overflow",
+        "severity": "error",
+        "time": 18.028,
+        "selector": "#ia-time",
+        "message": "Text extends outside its nearest visual/container box.",
+        "rect": {
+          "left": 80,
+          "top": 223,
+          "right": 608.38,
+          "bottom": 338,
+          "width": 528.38,
+          "height": 115
+        },
+        "containerSelector": "#ia-head > div:nth-of-type(1)",
+        "text": "9:00 p.m.",
+        "fixHint": "Text is 528px x 115px inside 722px x 134px and overflows by up to 4px; increase the container height to at least ~138px, or allow wrapping with max-width/fitTextFontSize.",
+        "containerRect": {
+          "left": 80,
+          "top": 200,
+          "right": 801.92,
+          "bottom": 333.91,
+          "width": 721.92,
+          "height": 133.91
+        },
+        "overflow": {
+          "bottom": 4.09
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/ia.html",
+        "bbox": {
+          "x": 80,
+          "y": 223,
+          "width": 528.38,
+          "height": 115
+        },
+        "firstSeen": 18.028,
+        "lastSeen": 21.306,
+        "occurrences": 2,
+        "heldMs": 0,
+        "times": [
+          18.028,
+          21.306
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 4.917,
+        "selector": "#pos-t2",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 80,
+          "top": 713,
+          "right": 541.45,
+          "bottom": 854,
+          "width": 461.45,
+          "height": 141
+        },
+        "containerSelector": "#pos-shot",
+        "text": "en Mixco.",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "compositions/pos.html",
+        "bbox": {
+          "x": 80,
+          "y": 713,
+          "width": 461.45,
+          "height": 141
+        },
+        "firstSeen": 4.917,
+        "lastSeen": 4.917,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.917
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 4.917,
+        "selector": "#pos-t1",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 80,
+          "top": 603.05,
+          "right": 541.45,
+          "bottom": 724,
+          "width": 461.45,
+          "height": 120.95
+        },
+        "containerSelector": "#pos-title > div:nth-of-type(1)",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 80,
+          "top": 470,
+          "right": 541.45,
+          "bottom": 590.95,
+          "width": 461.45,
+          "height": 120.95
+        },
+        "overflow": {
+          "bottom": 133.05
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/pos.html",
+        "bbox": {
+          "x": 80,
+          "y": 603.05,
+          "width": 461.45,
+          "height": 120.95
+        },
+        "firstSeen": 4.917,
+        "lastSeen": 4.917,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.917
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 4.917,
+        "selector": "#pos-t2",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 80,
+          "top": 724,
+          "right": 541.45,
+          "bottom": 844.95,
+          "width": 461.45,
+          "height": 120.95
+        },
+        "containerSelector": "#pos-title > div:nth-of-type(2)",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 80,
+          "top": 590.95,
+          "right": 541.45,
+          "bottom": 711.91,
+          "width": 461.45,
+          "height": 120.95
+        },
+        "overflow": {
+          "bottom": 133.04
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/pos.html",
+        "bbox": {
+          "x": 80,
+          "y": 724,
+          "width": 461.45,
+          "height": 120.95
+        },
+        "firstSeen": 4.917,
+        "lastSeen": 4.917,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.917
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 4.917,
+        "selector": "#pos-s1",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 80,
+          "top": 1243,
+          "right": 1000,
+          "bottom": 1373,
+          "width": 920,
+          "height": 130
+        },
+        "containerSelector": "#pos-sub",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 80,
+          "top": 1100,
+          "right": 1000,
+          "bottom": 1230,
+          "width": 920,
+          "height": 130
+        },
+        "overflow": {
+          "bottom": 143
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/pos.html",
+        "bbox": {
+          "x": 80,
+          "y": 1243,
+          "width": 920,
+          "height": 130
+        },
+        "firstSeen": 4.917,
+        "lastSeen": 4.917,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.917
+        ]
+      },
+      {
+        "code": "text_box_overflow",
+        "severity": "info",
+        "time": 8.194,
+        "selector": "#pos-t1",
+        "message": "Text extends outside its nearest visual/container box.",
+        "rect": {
+          "left": 80,
+          "top": 489,
+          "right": 425.53,
+          "bottom": 594,
+          "width": 345.53,
+          "height": 105
+        },
+        "containerSelector": "#pos-title > div:nth-of-type(1)",
+        "text": "No hay",
+        "fixHint": "Text is 346px x 105px inside 461px x 121px and overflows by up to 3px; increase the container height to at least ~124px, or allow wrapping with max-width/fitTextFontSize.",
+        "containerRect": {
+          "left": 80,
+          "top": 470,
+          "right": 541.45,
+          "bottom": 590.95,
+          "width": 461.45,
+          "height": 120.95
+        },
+        "overflow": {
+          "bottom": 3.05
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/pos.html",
+        "bbox": {
+          "x": 80,
+          "y": 489,
+          "width": 345.53,
+          "height": 105
+        },
+        "firstSeen": 8.194,
+        "lastSeen": 8.194,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          8.194
+        ]
+      },
+      {
+        "code": "text_box_overflow",
+        "severity": "info",
+        "time": 11.472,
+        "selector": "#otras-t2",
+        "message": "Text extends outside its nearest visual/container box.",
+        "rect": {
+          "left": 80,
+          "top": 646,
+          "right": 383.92,
+          "bottom": 740,
+          "width": 303.92,
+          "height": 94
+        },
+        "containerSelector": "#otras-title > div:nth-of-type(2)",
+        "text": "hay .",
+        "fixHint": "Text is 304px x 94px inside 681px x 108px and overflows by up to 4px; increase the container height to at least ~112px, or allow wrapping with max-width/fitTextFontSize.",
+        "containerRect": {
+          "left": 80,
+          "top": 628,
+          "right": 760.5,
+          "bottom": 736,
+          "width": 680.5,
+          "height": 108
+        },
+        "overflow": {
+          "bottom": 4
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/otras.html",
+        "bbox": {
+          "x": 80,
+          "y": 646,
+          "width": 303.92,
+          "height": 94
+        },
+        "firstSeen": 11.472,
+        "lastSeen": 11.472,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          11.472
+        ]
+      },
+      {
+        "code": "text_box_overflow",
+        "severity": "info",
+        "time": 14.75,
+        "selector": "#cj-time",
+        "message": "Text extends outside its nearest visual/container box.",
+        "rect": {
+          "left": 80,
+          "top": 223,
+          "right": 589.41,
+          "bottom": 338,
+          "width": 509.41,
+          "height": 115
+        },
+        "containerSelector": "#cj-head > div:nth-of-type(1)",
+        "text": "7:30 p.m.",
+        "fixHint": "Text is 509px x 115px inside 509px x 134px and overflows by up to 4px; increase the container height to at least ~138px, or allow wrapping with max-width/fitTextFontSize.",
+        "containerRect": {
+          "left": 80,
+          "top": 200,
+          "right": 589.41,
+          "bottom": 333.91,
+          "width": 509.41,
+          "height": 133.91
+        },
+        "overflow": {
+          "bottom": 4.09
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/caja.html",
+        "bbox": {
+          "x": 80,
+          "y": 223,
+          "width": 509.41,
+          "height": 115
+        },
+        "firstSeen": 14.75,
+        "lastSeen": 14.75,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          14.75
+        ]
+      },
+      {
+        "code": "text_box_overflow",
+        "severity": "info",
+        "time": 14.75,
+        "selector": "#cj-t2",
+        "message": "Text extends outside its nearest visual/container box.",
+        "rect": {
+          "left": 80,
+          "top": 371.07,
+          "right": 571.84,
+          "bottom": 438.07,
+          "width": 491.84,
+          "height": 67
+        },
+        "containerSelector": "#cj-head > div:nth-of-type(2)",
+        "text": "La caja cuadra.",
+        "fixHint": "Text is 492px x 67px inside 509px x 94px and overflows by up to 11px; increase the container height to at least ~104px, or allow wrapping with max-width/fitTextFontSize.",
+        "containerRect": {
+          "left": 80,
+          "top": 333.91,
+          "right": 589.41,
+          "bottom": 427.5,
+          "width": 509.41,
+          "height": 93.59
+        },
+        "overflow": {
+          "bottom": 10.57
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/caja.html",
+        "bbox": {
+          "x": 80,
+          "y": 371.07,
+          "width": 491.84,
+          "height": 67
+        },
+        "firstSeen": 14.75,
+        "lastSeen": 14.75,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          14.75
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 14.75,
+        "selector": "#cj-t2",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 80,
+          "top": 350.07,
+          "right": 589.41,
+          "bottom": 443.66,
+          "width": 509.41,
+          "height": 93.59
+        },
+        "containerSelector": "#cj-head > div:nth-of-type(2)",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 80,
+          "top": 333.91,
+          "right": 589.41,
+          "bottom": 427.5,
+          "width": 509.41,
+          "height": 93.59
+        },
+        "overflow": {
+          "bottom": 16.16
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/caja.html",
+        "bbox": {
+          "x": 80,
+          "y": 350.07,
+          "width": 509.41,
+          "height": 93.59
+        },
+        "firstSeen": 14.75,
+        "lastSeen": 14.75,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          14.75
+        ]
+      }
+    ],
+    "duration": 29.5,
+    "samples": [
+      1.639,
+      4.917,
+      8.194,
+      11.472,
+      14.75,
+      18.028,
+      21.306,
+      24.583,
+      27.861
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 10,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      1.639,
+      8.194,
+      14.75,
+      21.306,
+      27.861
+    ],
+    "checked": 18,
+    "passed": 18
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 2,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "film_silent",
+        "severity": "warning",
+        "message": "This 30 s film has no sound source (no <audio>, no <video> with sound): add a music bed and sounds on the visible actions unless the person asked for silence; see references/sound.md.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      },
+      {
+        "code": "line_unread",
+        "severity": "warning",
+        "message": "\"La línea sale en rojo, pero no se pierde la venta.\" (11 words) is on screen 2.56 s (±0.01 s), under its 2.85 s floor: hold it about 0.5 s + 0.3 s a word (3.80 s here) before it leaves or changes; see references/motion.md.",
+        "text": "La línea sale en rojo, pero no se pierde la venta.",
+        "selector": "#pos-s1",
+        "dataAttributes": {},
+        "sourceFile": "compositions/pos.html",
+        "bbox": {
+          "x": 80,
+          "y": 1137.1,
+          "width": 887.41,
+          "height": 92.90000000000009
+        },
+        "time": 5.938,
+        "words": 11,
+        "seconds": 2.563,
+        "floorSeconds": 2.85
+      }
+    ],
+    "enabled": true,
+    "step": 0.125,
+    "samples": 236
+  },
+  "audio": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 1,
+    "findings": [
+      {
+        "code": "audio_none",
+        "severity": "info",
+        "message": "The film has no sound: no clip in it plays audio.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      }
+    ]
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

@@ -58,7 +58,7 @@ export default function DailySalesReport() {
   const prodMap: Record<string, { name: string; quantity: number; revenue: number }> = {}
   for (const sale of sales) {
     for (const item of sale.items ?? []) {
-      const name = item.product?.name ?? item.productName ?? '–'
+      const name = item.product?.name ?? item.customName ?? item.productName ?? '–'
       if (!prodMap[name]) prodMap[name] = { name, quantity: 0, revenue: 0 }
       prodMap[name]!.quantity += Number(item.quantity); prodMap[name]!.revenue += Number(item.total)
     }

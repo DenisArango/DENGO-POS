@@ -1,9 +1,11 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { prisma } from '../lib/prisma.js'
 import { getBusinessDayBounds, toBusinessDateKey, getBusinessHour, parseBusinessDateParam } from '../lib/timezone.js'
-import { computeSales } from './cash-registers.js'
+import { computeSales, sessionTotals } from './cash-registers.js'
 import { resolveBranchScope } from '../lib/branch-scope.js'
 import { runReportQuery, type ReportQueryInput } from '../lib/reportQuery.js'
+import { saleLineCost, saleBaseUnitCost } from '../lib/saleCost.js'
+import { hasPermission } from '../lib/permissions.js'
 
 // Expected cash currently sitting in a branch's open register(s): opening
 // float + cash sales (incl. cash abonos, via computeSales) + income
@@ -60,7 +62,25 @@ function buildSaleFilter(
   }
 }
 
+// Label for products sold that aren't in the catalog (SaleItem.customName).
+const CUSTOM_CATEGORY = 'Fuera del catálogo'
+
 export default async function reportRoutes(fastify: FastifyInstance) {
+  // Every report except the three the home Dashboard shows to all staff
+  // needs a reports.* permission. The sidebar already hid them, but the API
+  // answered anyone logged in (e.g. a cashier calling the URL directly).
+  const DASHBOARD_PATHS = new Set(['/dashboard', '/daily-sales', '/sales-by-branch'])
+  const REPORT_PERMISSIONS = ['reports.sales', 'reports.inventory', 'reports.financial', 'reports.audit'] as const
+  fastify.addHook('preHandler', async (request, reply) => {
+    await fastify.authenticate(request, reply)
+    if (reply.sent) return
+    const sub = (request.routeOptions.url ?? '').replace(/^\/api\/reports/, '')
+    if (DASHBOARD_PATHS.has(sub)) return
+    if (!REPORT_PERMISSIONS.some(k => hasPermission(request, k))) {
+      return reply.status(403).send({ error: 'No tienes permiso para ver reportes' })
+    }
+  })
+
   // GET /api/reports/query — the flexible "group sales/inventory/cash by X,
   // show me Y" engine behind the AI reporting chat (see lib/reportQuery.ts
   // and routes/ai.ts for the full rationale). Not meant to be hand-built by
@@ -122,7 +142,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       prisma.saleItem.findMany({
         where: { sale: { branchId, isVoided: false, createdAt: { gte: startOfDay, lte: endOfDay } } },
         select: {
-          total: true, quantity: true,
+          total: true, quantity: true, unitCost: true,
           product: { select: { cost: true, category: { select: { name: true } } } },
           variation: { select: { conversionFactor: true } },
         },
@@ -176,10 +196,9 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     const catRevenue: Record<string, number> = {}
     let dailyCost = 0
     for (const item of todaySaleItems) {
-      const cat = item.product.category?.name ?? 'Sin categoría'
+      const cat = item.product ? (item.product.category?.name ?? 'Sin categoría') : CUSTOM_CATEGORY
       catRevenue[cat] = (catRevenue[cat] ?? 0) + Number(item.total)
-      const convFactor = Number(item.variation?.conversionFactor ?? 1)
-      dailyCost += Number(item.product.cost ?? 0) * convFactor * Number(item.quantity)
+      dailyCost += saleLineCost(item)
     }
     const topCategoriesToday = Object.entries(catRevenue)
       .map(([name, amount]) => ({ name, amount }))
@@ -257,11 +276,10 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     const enriched = sales.map(sale => ({
       ...sale,
       items: sale.items.map(item => {
-        const cost = Number(item.product.cost ?? 0)
+        const cost = saleBaseUnitCost(item)
         const convFactor = Number((item.variation as any)?.conversionFactor ?? 1)
-        const qty = Number(item.quantity)
         const revenue = Number(item.total)
-        const totalCost = cost * convFactor * qty
+        const totalCost = saleLineCost(item)
         return { ...item, cost, convFactor, totalCost, profit: revenue - totalCost }
       }),
       // Item totals sum to the pre-header-discount subtotal, so the sale-level
@@ -269,11 +287,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       // folded into item.total) must be subtracted once here — otherwise this
       // overstates profit relative to `sale.total` (= subtotal − discount + tax)
       // whenever a sale carries a header-level discount.
-      saleProfit: sale.items.reduce((acc, item) => {
-        const cost = Number(item.product.cost ?? 0)
-        const convFactor = Number((item.variation as any)?.conversionFactor ?? 1)
-        return acc + Number(item.total) - cost * convFactor * Number(item.quantity)
-      }, 0) - Number(sale.discount ?? 0),
+      saleProfit: sale.items.reduce((acc, item) => acc + Number(item.total) - saleLineCost(item), 0) - Number(sale.discount ?? 0),
     }))
 
     return reply.send(enriched)
@@ -354,10 +368,14 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     })
     const map = new Map<string, { name: string; category: string; quantity: number; revenue: number }>()
     for (const item of items) {
-      if (!map.has(item.productId)) {
-        map.set(item.productId, { name: item.product.name, category: item.product.category?.name ?? '', quantity: 0, revenue: 0 })
+      // Products typed in at the POS (not in the catalog) group by their name.
+      const key = item.productId ?? `custom:${(item.customName ?? '').toLowerCase()}`
+      if (!map.has(key)) {
+        map.set(key, item.product
+          ? { name: item.product.name, category: item.product.category?.name ?? '', quantity: 0, revenue: 0 }
+          : { name: item.customName ?? 'Producto libre', category: CUSTOM_CATEGORY, quantity: 0, revenue: 0 })
       }
-      const p = map.get(item.productId)!
+      const p = map.get(key)!
       // Base units — 1 "resma de 500" is 500 hojas, not 1.
       p.quantity += Number(item.quantity) * Number(item.variation?.conversionFactor ?? 1)
       p.revenue += Number(item.total)
@@ -405,11 +423,10 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     ])
     if (!product) return reply.status(404).send({ error: 'Producto no encontrado' })
 
-    const cost = Number(product.cost ?? 0)
     const rows = items.map(item => {
       const convFactor = Number(item.variation?.conversionFactor ?? 1)
       const qty = Number(item.quantity)
-      const itemCost = cost * convFactor * qty
+      const itemCost = saleLineCost({ ...item, product })
       const revenue = Number(item.total)
       return {
         saleId: item.sale.id,
@@ -473,14 +490,13 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       const items = await prisma.saleItem.findMany({
         where: { saleId: { in: sales.map(s => s.id) } },
         select: {
-          saleId: true, quantity: true,
+          saleId: true, quantity: true, unitCost: true,
           product: { select: { cost: true } },
           variation: { select: { conversionFactor: true } },
         },
       })
       for (const item of items) {
-        const convFactor = Number(item.variation?.conversionFactor ?? 1)
-        const itemCost = Number(item.product.cost ?? 0) * convFactor * Number(item.quantity)
+        const itemCost = saleLineCost(item)
         costBySaleId.set(item.saleId, (costBySaleId.get(item.saleId) ?? 0) + itemCost)
       }
     }
@@ -599,24 +615,25 @@ export default async function reportRoutes(fastify: FastifyInstance) {
 
     const map = new Map<string, { name: string; category: string; sku: string; cost: number; quantitySold: number; revenue: number; totalCostAcc: number }>()
     for (const item of items) {
-      if (!map.has(item.productId)) {
-        map.set(item.productId, {
-          name: item.product.name,
-          category: item.product.category?.name ?? 'Sin categoría',
-          sku: item.product.barcode ?? item.product.sku ?? '',
-          cost: Number(item.product.cost ?? 0),
+      const key = item.productId ?? `custom:${(item.customName ?? '').toLowerCase()}`
+      if (!map.has(key)) {
+        map.set(key, {
+          name: item.product?.name ?? item.customName ?? 'Producto libre',
+          category: item.product ? (item.product.category?.name ?? 'Sin categoría') : CUSTOM_CATEGORY,
+          sku: item.product?.barcode ?? item.product?.sku ?? '',
+          cost: Number(item.product?.cost ?? item.unitCost ?? 0),
           quantitySold: 0,
           revenue: 0,
           totalCostAcc: 0,
         })
       }
-      const p = map.get(item.productId)!
+      const p = map.get(key)!
       const convFactor = Number(item.variation?.conversionFactor ?? 1)
       const qty = Number(item.quantity)
       // Base units, so presentations of the same product add up correctly.
       p.quantitySold += qty * convFactor
       p.revenue += Number(item.total)
-      p.totalCostAcc += p.cost * convFactor * qty
+      p.totalCostAcc += saleLineCost(item)
     }
 
     const result = Array.from(map.entries())
@@ -668,20 +685,31 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     if (q.page) {
       const page = Math.max(1, parseInt(q.page, 10) || 1)
       const limit = Math.min(200, Math.max(1, parseInt(q.limit ?? '30', 10) || 30))
-      const [data, total, totalsAgg, dailyRows] = await Promise.all([
+      const [rawData, total, allRows] = await Promise.all([
         prisma.cashRegister.findMany({ where, include, orderBy: { openedAt: 'desc' }, skip: (page - 1) * limit, take: limit }),
         prisma.cashRegister.count({ where }),
-        prisma.cashRegister.aggregate({ where, _sum: { totalSales: true, cashSales: true, cardSales: true, transferSales: true } }),
-        prisma.cashRegister.findMany({ where, select: { openedAt: true, cashSales: true, cardSales: true, transferSales: true } }),
+        prisma.cashRegister.findMany({
+          where,
+          select: { id: true, branchId: true, openedAt: true, status: true, totalSales: true, salesCount: true, cashSales: true, cardSales: true, transferSales: true },
+        }),
       ])
-
+      // Closed sessions carry their totals (written at close); open ones are
+      // computed live — see sessionTotals in cash-registers.ts.
+      const totalsById = new Map(await Promise.all(allRows.map(async r => [r.id, await sessionTotals(r)] as const)))
+      const data = rawData.map(r => ({ ...r, ...(totalsById.get(r.id) ?? {}) }))
+      const totalsAgg = { _sum: { totalSales: 0, cashSales: 0, cardSales: 0, transferSales: 0 } }
       const byDay = new Map<string, { cash: number; card: number; transfer: number }>()
-      for (const r of dailyRows) {
-        const key = r.openedAt.toISOString().slice(0, 10)
+      for (const r of allRows) {
+        const t = totalsById.get(r.id)!
+        totalsAgg._sum.totalSales += t.totalSales
+        totalsAgg._sum.cashSales += t.cashSales
+        totalsAgg._sum.cardSales += t.cardSales
+        totalsAgg._sum.transferSales += t.transferSales
+        const key = toBusinessDateKey(r.openedAt)
         const bucket = byDay.get(key) ?? { cash: 0, card: 0, transfer: 0 }
-        bucket.cash += Number(r.cashSales)
-        bucket.card += Number(r.cardSales)
-        bucket.transfer += Number(r.transferSales)
+        bucket.cash += t.cashSales
+        bucket.card += t.cardSales
+        bucket.transfer += t.transferSales
         byDay.set(key, bucket)
       }
       const chartData = [...byDay.entries()]
@@ -735,6 +763,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     // "resma" otherwise looked like it barely moved.
     const salesMap = new Map<string, number>()
     for (const si of saleItems) {
+      if (!si.productId) continue // typed-in products have no stock to rotate
       const base = Number(si.quantity) * Number(si.variation?.conversionFactor ?? 1)
       salesMap.set(si.productId, (salesMap.get(si.productId) ?? 0) + base)
     }

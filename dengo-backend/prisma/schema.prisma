@@ -196,6 +196,7 @@ model UserBranch {
   branch Branch @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([userId, branchId])
+  @@index([branchId])
   @@map("USER_BRANCHES")
 }
 
@@ -233,6 +234,7 @@ model ProductBarcode {
 
   product Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([productId])
   @@map("PRODUCT_BARCODES")
 }
 
@@ -282,6 +284,7 @@ model Product {
   purchaseTracking    PortalPurchaseTracking[]
   inventoryCountItems InventoryCountItem[]
 
+  @@index([categoryId])
   @@map("PRODUCTS")
 }
 
@@ -300,6 +303,7 @@ model ProductVariation {
   quotationItems QuotationItem[]
   transferItems  TransferItem[]
 
+  @@index([productId])
   @@map("PRODUCT_VARIATIONS")
 }
 
@@ -327,6 +331,7 @@ model Inventory {
   branch  Branch  @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([productId, branchId])
+  @@index([branchId])
   @@map("INVENTORY")
 }
 
@@ -359,6 +364,8 @@ model StockMovement {
   performedBy User      @relation(fields: [performedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   supplier    Supplier? @relation(fields: [supplierId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([productId, createdAt])
+  @@index([branchId, createdAt])
   @@map("STOCK_MOVEMENTS")
 }
 
@@ -414,7 +421,10 @@ model InventoryCountItem {
 
 model Customer {
   id          String    @id @default(cuid()) @map("ID") @db.VarChar(36)
-  nit         String    @unique @map("NIT") @db.VarChar(30)
+  // Optional: a customer can be created with just a name in a busy sale and
+  // completed later (Clientes → "Datos incompletos"). Null = consumidor final
+  // on documents. Still unique when present.
+  nit         String?   @unique @map("NIT") @db.VarChar(30)
   name        String    @map("NAME") @db.VarChar(150)
   email       String?   @map("EMAIL") @db.VarChar(150)
   phone       String?   @map("PHONE") @db.VarChar(30)
@@ -533,6 +543,7 @@ model CashRegister {
   sales     Sale[]
   creditPayments CreditPayment[]
 
+  @@index([branchId, status])
   @@map("CASH_REGISTERS")
 }
 
@@ -550,6 +561,7 @@ model CashMovement {
   cashRegister CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   performedBy  User         @relation(fields: [performedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([cashRegisterId])
   @@map("CASH_MOVEMENTS")
 }
 
@@ -652,6 +664,10 @@ model Sale {
   creditPayments  CreditPayment[]
   quotation       Quotation?
 
+  @@index([branchId, createdAt])
+  @@index([cashRegisterId])
+  @@index([customerId])
+  @@index([createdAt])
   @@map("SALES")
 }
 
@@ -685,23 +701,37 @@ model CreditPayment {
   paidBy       User          @relation(fields: [paidById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   cashRegister CashRegister? @relation(fields: [cashRegisterId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([saleId])
+  @@index([customerId])
+  @@index([cashRegisterId])
   @@map("CREDIT_PAYMENTS")
 }
 
 model SaleItem {
   id          String   @id @default(cuid()) @map("ID") @db.VarChar(36)
   saleId      String   @map("SALE_ID") @db.VarChar(36)
-  productId   String   @map("PRODUCT_ID") @db.VarChar(36)
+  // Null = a product sold that isn't in the catalog (typed in at the POS,
+  // or a custom quotation line). It has no stock or per-product tracking;
+  // customName is its name. Never creates a Product row.
+  productId   String?  @map("PRODUCT_ID") @db.VarChar(36)
+  customName  String?  @map("CUSTOM_NAME") @db.VarChar(200)
   variationId String?  @map("VARIATION_ID") @db.VarChar(36)
   quantity    Decimal  @map("QUANTITY") @db.Decimal(18, 4)
   unitPrice   Decimal  @map("UNIT_PRICE") @db.Decimal(18, 2)
   discount    Decimal  @default(0) @map("DISCOUNT") @db.Decimal(5, 4)
   total       Decimal  @map("TOTAL") @db.Decimal(18, 2)
+  // Cost of ONE sold unit (product cost × presentation factor) frozen at
+  // sale time, so editing a product's cost later never rewrites past
+  // profit. Null on sales made before this column existed — reports fall
+  // back to the product's current cost for those (see lib/saleCost.ts).
+  unitCost    Decimal? @map("UNIT_COST") @db.Decimal(18, 4)
 
   sale      Sale              @relation(fields: [saleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  product   Product           @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product   Product?          @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   variation ProductVariation? @relation(fields: [variationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([saleId])
+  @@index([productId])
   @@map("SALE_ITEMS")
 }
 
@@ -730,6 +760,8 @@ model Transfer {
   cancelledBy User?          @relation("CancelledTransfers", fields: [cancelledById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   items       TransferItem[]
 
+  @@index([fromBranchId, createdAt])
+  @@index([toBranchId, createdAt])
   @@map("TRANSFERS")
 }
 
@@ -754,6 +786,7 @@ model TransferItem {
   product   Product           @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   variation ProductVariation? @relation(fields: [variationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([transferId])
   @@map("TRANSFER_ITEMS")
 }
 
@@ -781,6 +814,8 @@ model Quotation {
   items           QuotationItem[]
   portalOrder     PortalOrder?
 
+  @@index([branchId, createdAt])
+  @@index([customerId])
   @@map("QUOTATIONS")
 }
 
@@ -806,6 +841,7 @@ model QuotationItem {
   product   Product?          @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   variation ProductVariation? @relation(fields: [variationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([quotationId])
   @@map("QUOTATION_ITEMS")
 }
 
@@ -823,6 +859,8 @@ model AuditLog {
 
   user User? @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([entity, entityId])
+  @@index([userId])
   @@map("AUDIT_LOGS")
 }
 
@@ -838,6 +876,7 @@ model LoginHistory {
 
   user User? @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([userId])
   @@map("LOGIN_HISTORY")
 }
 
@@ -853,6 +892,7 @@ model PriceHistory {
   product   Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   changedBy User    @relation(fields: [changedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([productId, createdAt])
   @@map("PRICE_HISTORY")
 }
 
@@ -913,6 +953,7 @@ model Teacher {
   schools TeacherSchool[]
   orders  PortalOrder[]
   messages PortalMessage[]
+  pushSubscriptions PushSubscription[]
 
   @@map("TEACHERS")
 }
@@ -930,6 +971,7 @@ model TeacherSchool {
   school  School  @relation(fields: [schoolId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([teacherId, schoolId, grade])
+  @@index([schoolId])
   @@map("TEACHER_SCHOOLS")
 }
 
@@ -941,6 +983,10 @@ model ProgramConfig {
   maxAmountPerTeacher Decimal? @map("MAX_AMOUNT_PER_TEACHER") @db.Decimal(18, 2)
   limitPerStudent     Decimal? @map("LIMIT_PER_STUDENT") @db.Decimal(18, 2)
   allowedCategoryIds  String?  @map("ALLOWED_CATEGORY_IDS")
+  // Each student gets their own kit: the teacher builds ONE student's kit and
+  // the order is that kit × the number of students. Null = by type (útiles
+  // and alimentación are kits) — see lib/portalOrders.ts.
+  perStudent          Boolean? @map("PER_STUDENT")
   isActive            Boolean  @default(true) @map("IS_ACTIVE")
   createdAt           DateTime @default(now()) @map("CREATED_AT")
   updatedAt           DateTime @updatedAt @map("UPDATED_AT")
@@ -973,6 +1019,8 @@ model PortalOrder {
   // so generating an invoice for that sale can flip this order's status to
   // INVOICED instead of leaving it stuck at QUOTED forever.
   quotationId   String?   @unique @map("QUOTATION_ID") @db.VarChar(36)
+  // Last time the provider corrected the order's products or student counts.
+  adjustedAt    DateTime? @map("ADJUSTED_AT")
   createdAt     DateTime  @default(now()) @map("CREATED_AT")
   updatedAt     DateTime  @updatedAt @map("UPDATED_AT")
 
@@ -984,22 +1032,36 @@ model PortalOrder {
   grades     PortalOrderGrade[]
   messages   PortalMessage[]
 
+  @@index([teacherId])
+  @@index([schoolId])
+  @@index([status, createdAt])
   @@map("PORTAL_ORDERS")
 }
 
 model PortalOrderItem {
   id            String  @id @default(cuid()) @map("ID") @db.VarChar(36)
   portalOrderId String  @map("PORTAL_ORDER_ID") @db.VarChar(36)
-  productId     String  @map("PRODUCT_ID") @db.VarChar(36)
+  // Null = a product the provider typed in that isn't in the catalog
+  // (productName is its name). Becomes a custom line on the quotation.
+  productId     String? @map("PRODUCT_ID") @db.VarChar(36)
   productName   String  @map("PRODUCT_NAME") @db.VarChar(200)
   quantity      Decimal @map("QUANTITY") @db.Decimal(18, 4)
   unitPrice     Decimal @map("UNIT_PRICE") @db.Decimal(18, 2)
   total         Decimal @map("TOTAL") @db.Decimal(18, 2)
+  // Per-student kit orders: units of this product in ONE student's kit.
+  // `quantity` is always the full amount (kit × students) — what gets
+  // quoted, invoiced and bought; this is what the packing sheet shows.
+  qtyPerStudent Decimal? @map("QTY_PER_STUDENT") @db.Decimal(18, 4)
+  // Cost of one unit, frozen when the line is created/corrected (catalog
+  // cost, or what the provider typed). PROVIDER ONLY — never sent to the
+  // teacher portal. Feeds the school/program profit reports.
+  unitCost      Decimal? @map("UNIT_COST") @db.Decimal(18, 4)
   notes         String? @map("NOTES") @db.VarChar(500)
 
   portalOrder PortalOrder @relation(fields: [portalOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  product     Product     @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product     Product?    @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([portalOrderId])
   @@map("PORTAL_ORDER_ITEMS")
 }
 
@@ -1029,6 +1091,7 @@ model ProgramOptionItem {
   programOption ProgramOption @relation(fields: [programOptionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   product       Product       @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([programOptionId])
   @@map("PROGRAM_OPTION_ITEMS")
 }
 
@@ -1050,6 +1113,7 @@ model PortalOrderGrade {
 
   portalOrder PortalOrder @relation(fields: [portalOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([portalOrderId])
   @@map("PORTAL_ORDER_GRADES")
 }
 
@@ -1075,6 +1139,11 @@ model PortalMessage {
   portalOrderId String?  @map("PORTAL_ORDER_ID") @db.VarChar(36)
   teacherId     String   @map("TEACHER_ID") @db.VarChar(36)
   senderRole    String   @map("SENDER_ROLE") @db.VarChar(10)
+  // TEXT, or a document sent through the inbox: QUOTATION (quotationId) or
+  // INVOICE (saleId) — the teacher opens it from the message.
+  kind          String   @default("TEXT") @map("KIND") @db.VarChar(20)
+  quotationId   String?  @map("QUOTATION_ID") @db.VarChar(36)
+  saleId        String?  @map("SALE_ID") @db.VarChar(36)
   body          String   @map("BODY")
   isRead        Boolean  @default(false) @map("IS_READ")
   createdAt     DateTime @default(now()) @map("CREATED_AT")
@@ -1082,7 +1151,36 @@ model PortalMessage {
   portalOrder PortalOrder? @relation(fields: [portalOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   teacher     Teacher      @relation(fields: [teacherId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([teacherId, createdAt])
   @@map("PORTAL_MESSAGES")
+}
+
+// A teacher's phone/computer that accepted notifications (Web Push).
+model PushSubscription {
+  id         String   @id @default(cuid()) @map("ID") @db.VarChar(36)
+  teacherId  String   @map("TEACHER_ID") @db.VarChar(36)
+  endpoint   String   @unique @map("ENDPOINT") @db.VarChar(1000)
+  p256dh     String   @map("P256DH") @db.VarChar(200)
+  auth       String   @map("AUTH") @db.VarChar(100)
+  userAgent  String?  @map("USER_AGENT") @db.VarChar(300)
+  createdAt  DateTime @default(now()) @map("CREATED_AT")
+  lastUsedAt DateTime? @map("LAST_USED_AT")
+
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([teacherId])
+  @@map("PUSH_SUBSCRIPTIONS")
+}
+
+// The server's Web Push key pair, generated once on first use (or taken
+// from VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY in .env when set).
+model WebPushConfig {
+  id         String   @id @default(cuid()) @map("ID") @db.VarChar(36)
+  publicKey  String   @map("PUBLIC_KEY") @db.VarChar(200)
+  privateKey String   @map("PRIVATE_KEY") @db.VarChar(200)
+  createdAt  DateTime @default(now()) @map("CREATED_AT")
+
+  @@map("WEB_PUSH_CONFIG")
 }
 
 // ── Global system settings (single-instance today; if this ever becomes a
@@ -1199,5 +1297,6 @@ model InternalMessage {
   fromUser User @relation("SentMessages", fields: [fromUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   toUser   User @relation("ReceivedMessages", fields: [toUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([toUserId])
   @@map("INTERNAL_MESSAGES")
 }

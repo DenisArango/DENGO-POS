@@ -9,6 +9,8 @@ const NewOrder = lazy(() => import('./pages/orders/NewOrder'))
 const OrderHistory = lazy(() => import('./pages/orders/OrderHistory'))
 const OrderDetail = lazy(() => import('./pages/orders/OrderDetail'))
 const Messages = lazy(() => import('./pages/Messages'))
+const Notifications = lazy(() => import('./pages/Notifications'))
+const DocumentView = lazy(() => import('./pages/DocumentView'))
 
 function Spinner() {
   return (
@@ -29,6 +31,8 @@ export default function Router() {
         <Route path="/orders" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />
         <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
         <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+        <Route path="/documents/:kind/:id" element={<ProtectedRoute><DocumentView /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

@@ -1,20 +1,12 @@
 import { type ReactNode, useEffect, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { LogOut, GraduationCap, LayoutDashboard, ClipboardList, Plus, MessageSquare } from 'lucide-react'
+import { LogOut, LayoutDashboard, ClipboardList, Plus, MessageSquare, Bell } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '../../store/authStore'
 import { api } from '../../lib/api'
-
-function getBusinessName(): string {
-  try {
-    const raw = localStorage.getItem('portal-config')
-    if (raw) {
-      const cfg = JSON.parse(raw)
-      if (cfg?.businessName) return cfg.businessName
-    }
-  } catch { /* ignore */ }
-  return 'Variedades Dayana'
-}
+import { BrandMark, usePortalConfig } from '../../lib/usePortalConfig'
+import { FALLBACK_NAME } from '../../lib/brand'
+import { resyncPush } from '../../lib/push'
 
 function useUnread() {
   const { user } = useAuthStore()
@@ -39,8 +31,11 @@ function useUnread() {
 export default function PortalLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
-  const businessName = getBusinessName()
+  const { config } = usePortalConfig()
+  const businessName = config?.businessName || FALLBACK_NAME
   const unread = useUnread()
+  // A device that already allowed notifications follows whoever logs in on it.
+  useEffect(() => { if (user) void resyncPush() }, [user])
 
   const handleLogout = () => {
     logout()
@@ -49,16 +44,14 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-gray-200">
+    <div className="min-h-screen bg-gray-50 print:bg-white">
+      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-gray-200 print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center text-white">
-              <GraduationCap size={20} />
-            </div>
+            <BrandMark logoUrl={config?.logoUrl} size={36} />
             <div className="leading-tight">
               <p className="font-extrabold text-gray-800 text-sm sm:text-base">{businessName}</p>
-              <p className="text-[11px] text-brand-600 font-medium">Portal de Maestros</p>
+              <p className="text-xs text-brand-700 font-medium">Portal de maestros</p>
             </div>
           </Link>
 
@@ -71,6 +64,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
             </NavLink>
             <NavLink
               to="/orders"
+              end
               className={({ isActive }) => `px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 ${isActive ? 'bg-brand-50 text-brand-600' : 'text-gray-600 hover:bg-brand-50 hover:text-brand-600'}`}
             >
               <ClipboardList size={16} /> Mis Pedidos
@@ -99,7 +93,10 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
             </Link>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 sm:gap-3">
+            <Link to="/notifications" title="Notificaciones en tu celular" aria-label="Notificaciones" className="p-2 text-gray-600 hover:text-brand-600">
+              <Bell size={20} />
+            </Link>
             {/* Mobile messages badge */}
             <Link to="/messages" className="relative md:hidden p-2 text-gray-600 hover:text-brand-600">
               <MessageSquare size={20} />
@@ -127,7 +124,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">{children}</main>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 print:p-0 print:max-w-none">{children}</main>
     </div>
   )
 }

@@ -1,0 +1,46 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Outfit", sans-serif; color: #121826; }
+    .mask { display: block; overflow: hidden; }
+    .mask > span { display: block; }
+    .time { position: absolute; left: 80px; top: 84px; }
+    .time > span { font-size: 84px; font-weight: 700; color: #1e4d68; letter-spacing: -0.02em; line-height: 1.12; }
+    .ui { position: absolute; display: block; height: auto; border-radius: 14px; border: 1px solid #e3e8ee; background: #fff; box-shadow: 0 22px 56px rgba(18, 24, 38, 0.14); }
+    .ring { position: absolute; border: 5px solid #e07a5f; border-radius: 12px; opacity: 0; }
+    .h { font-weight: 700; color: #1e4d68; letter-spacing: -0.02em; line-height: 1.1; }
+    .card { position: absolute; background: #fff; border: 1px solid #e3e8ee; border-radius: 18px; box-shadow: 0 22px 56px rgba(18, 24, 38, 0.12); }
+
+    #c15-b { opacity: 0; }
+    .c15-st { position: absolute; left: 640px; top: 300px; width: 1200px; display: flex; align-items: center; gap: 50px; }
+    .c15-st svg { width: 220px; height: 220px; flex: none; }
+    .c15-st .h { font-size: 92px; }
+    .c15-st p { font-size: 46px; margin-top: 14px; }
+
+  </style>
+  <div id="root" data-composition-id="c15" data-width="1920" data-height="1080" data-layout-allow-overflow>
+    <div class="time mask"><span id="c15-time">DENGO</span></div>
+
+    <div class="c15-st" id="c15-a"><svg viewBox="0 0 24 24"><path d="M10 3 h4 v3 a2 2 0 0 0 4 0 v-1 h3 v6 h-1 a2 2 0 0 0 0 4 h1 v6 h-6 v-1 a2 2 0 0 0 -4 0 v1 H3 v-6 h1 a2 2 0 0 0 0 -4 H3 V5 h7 Z" fill="#f4c542" stroke="#1e4d68" stroke-width="1.4" stroke-linejoin="round"/></svg><div><div class="mask"><span class="h" id="c15-a1">A su medida</span></div><div class="mask"><p id="c15-a2">Si su negocio necesita algo distinto, lo adecuamos.</p></div></div></div>
+    <div class="c15-st" id="c15-b"><svg viewBox="0 0 24 24"><path d="M12 22 C12 22 4.5 14.6 4.5 9.4 A7.5 7.5 0 0 1 19.5 9.4 C19.5 14.6 12 22 12 22 Z" fill="#e07a5f" stroke="#1e4d68" stroke-width="1.4"/><circle cx="12" cy="9.4" r="2.8" fill="#fff"/></svg><div><div class="mask"><span class="h" id="c15-b1">Hecho en Guatemala</span></div><div class="mask"><p id="c15-b2">Para emprendedores como usted.</p></div></div></div>
+
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const K = 1.0000;
+    const at = (t) => t * K;
+    const rise = (s, t, d = 0.5) => tl.fromTo(s, { yPercent: 115 }, { yPercent: 0, duration: d, ease: "expo.out" }, at(t));
+    const wipe = (s, t, d = 0.6) => tl.fromTo(s, { clipPath: "inset(0 0 100% 0 round 14px)" }, { clipPath: "inset(0 0 0% 0 round 14px)", duration: d, ease: "power3.out" }, at(t));
+    const wipeX = (s, t, d = 0.7) => tl.fromTo(s, { clipPath: "inset(0 100% 0 0 round 14px)" }, { clipPath: "inset(0 0% 0 0 round 14px)", duration: d, ease: "power2.inOut" }, at(t));
+    const pop = (s, t) => tl.fromTo(s, { opacity: 0, scale: 0.86 }, { opacity: 1, scale: 1, duration: 0.42, ease: "back.out(1.8)" }, at(t));
+    const slide = (s, t, x = -120) => tl.fromTo(s, { x: x, opacity: 0 }, { x: 0, opacity: 1, duration: 0.6, ease: "expo.out" }, at(t));
+    const gone = (s, t, d = 0.35) => tl.to(s, { opacity: 0, scale: 0.97, duration: d, ease: "power2.in" }, at(t));
+    const ring = (s, t) => tl.fromTo(s, { opacity: 0, scale: 1.06 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, at(t));
+    rise("#c15-time", 0.05);
+
+    pop("#c15-a svg", 0.3); rise("#c15-a1", 0.6); rise("#c15-a2", 1.6);
+    gone("#c15-a", 4.15);
+    tl.set("#c15-b", { opacity: 1 }, at(4.3)); pop("#c15-b svg", 4.3); rise("#c15-b1", 4.9); rise("#c15-b2", 6.0);
+
+    window.__timelines["c15"] = tl;
+  </script>
+</template>

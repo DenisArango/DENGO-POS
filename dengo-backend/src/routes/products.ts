@@ -250,6 +250,42 @@ export default async function productRoutes(fastify: FastifyInstance) {
     return reply.send({ message: `${result.count} producto(s) reasignado(s)`, count: result.count })
   })
 
+  // POST /api/products/bulk-delete — same soft delete as DELETE /:id, for a
+  // whole selection at once. dryRun only reports which of them still hold
+  // stock, so the UI can ask the clearInventory question once for the batch.
+  fastify.post('/bulk-delete', { preHandler: [fastify.authenticate, requirePermission('inventory.delete')] }, async (request, reply) => {
+    const body = z.object({
+      productIds: z.array(z.string()).min(1).max(500),
+      clearInventory: z.boolean().optional(),
+      dryRun: z.boolean().optional(),
+    }).safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+    const { productIds, clearInventory, dryRun } = body.data
+
+    const stockRows = await prisma.inventory.findMany({
+      where: { productId: { in: productIds }, quantity: { gt: 0 } },
+      select: { productId: true, branchId: true, quantity: true },
+    })
+    if (dryRun) {
+      const withStock = new Set(stockRows.map(r => r.productId))
+      const totalUnits = stockRows.reduce((s, r) => s + Number(r.quantity), 0)
+      return reply.send({ productsWithStock: withStock.size, totalUnits })
+    }
+
+    const result = await prisma.product.updateMany({ where: { id: { in: productIds }, isActive: true }, data: { isActive: false } })
+    if (clearInventory) {
+      for (const row of stockRows) {
+        await setStock(row.productId, row.branchId, 0, {
+          type: 'ADJUSTMENT',
+          reason: 'Inventario puesto en 0 al eliminar el producto',
+          performedById: request.user.id,
+        })
+      }
+    }
+    await log({ userId: request.user.id, action: 'BULK_DELETE', entity: 'Product', entityId: productIds[0]!, newValues: { productIds, clearInventory: !!clearInventory } })
+    return reply.send({ message: `${result.count} producto(s) eliminado(s)`, count: result.count })
+  })
+
   // PUT /api/products/:id
   fastify.put('/:id', { preHandler: [fastify.authenticate, requirePermission('inventory.edit')] }, async (request, reply) => {
     const { id } = request.params as { id: string }

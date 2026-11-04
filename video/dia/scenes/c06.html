@@ -1,0 +1,15 @@
+
+    #c06-otras, #c06-tr { opacity: 0; }
+    #c06-row { left: 640px; top: 170px; width: 1200px; }
+    #c06-otras { left: 900px; top: 370px; width: 720px; }
+    #c06-ring { left: 940px; top: 527px; width: 640px; height: 78px; }
+    #c06-tr { left: 640px; top: 860px; width: 1200px; }
+<!--markup-->
+    <img id="c06-row" class="ui" src="assets/redrow.png" alt="Sin stock en Mixco" />
+    <img id="c06-otras" class="ui" src="assets/otras.png" alt="Inventario en otras sucursales" />
+    <div id="c06-ring" class="ring"></div>
+    <img id="c06-tr" class="ui" src="assets/traslado_row.png" alt="Traslado pendiente" />
+<!--script-->
+    wipe("#c06-row", 0.9);
+    pop("#c06-otras", 7.0); ring("#c06-ring", 7.9);
+    slide("#c06-tr", 9.1, -200);

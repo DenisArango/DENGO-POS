@@ -19,6 +19,8 @@ import type { FastifyRequest } from 'fastify'
 import { prisma } from './prisma.js'
 import { resolveBranchScope } from './branch-scope.js'
 import { parseBusinessDateParam, toBusinessDateKey, toBusinessWeekKey, toBusinessMonthKey } from './timezone.js'
+import { sessionTotals } from '../routes/cash-registers.js'
+import { saleLineCost } from './saleCost.js'
 
 // 'recent' is not an aggregation like the others — it's "list the individual
 // sale items themselves, most recent first", for questions like "¿cuáles
@@ -199,7 +201,7 @@ async function runSalesQuery(request: FastifyRequest, q: ReportQueryInput): Prom
       take: limit,
     })
     const rows = items.map(item => ({
-      group: item.product.name + (item.variation ? ` (${item.variation.name})` : ''),
+      group: (item.product?.name ?? item.customName ?? 'Producto libre') + (item.variation ? ` (${item.variation.name})` : ''),
       quantity: Math.round(Number(item.quantity) * 100) / 100,
       revenue: Math.round(Number(item.total) * 100) / 100,
       soldAt: item.sale.createdAt,
@@ -257,8 +259,8 @@ async function runSalesQuery(request: FastifyRequest, q: ReportQueryInput): Prom
     const buckets = new Map<string, { label: string; revenue: number; quantity: number; cost: number; saleIds: Set<string> }>()
     for (const item of items) {
       let key: string, label: string
-      if (dimension === 'product') { key = label = item.product.name }
-      else if (dimension === 'category') { key = label = item.product.category?.name ?? 'Sin categoría' }
+      if (dimension === 'product') { key = label = item.product?.name ?? item.customName ?? 'Producto libre' }
+      else if (dimension === 'category') { key = label = item.product ? (item.product.category?.name ?? 'Sin categoría') : 'Fuera del catálogo' }
       else { ({ key, label } = dimensionKeyForSale(item.sale, dimension)) }
       if (!buckets.has(key)) buckets.set(key, { label, revenue: 0, quantity: 0, cost: 0, saleIds: new Set() })
       const b = buckets.get(key)!
@@ -266,7 +268,7 @@ async function runSalesQuery(request: FastifyRequest, q: ReportQueryInput): Prom
       const qty = Number(item.quantity)
       b.revenue += Number(item.total)
       b.quantity += qty
-      b.cost += Number(item.product.cost ?? 0) * convFactor * qty
+      b.cost += saleLineCost(item)
       b.saleIds.add(item.saleId)
     }
     const rows = [...buckets.values()].map(b => buildRow(b.label, metrics, {
@@ -297,12 +299,12 @@ async function runSalesQuery(request: FastifyRequest, q: ReportQueryInput): Prom
   if (needsItemData && sales.length) {
     const items = await prisma.saleItem.findMany({
       where: { saleId: { in: sales.map(s => s.id) } },
-      select: { saleId: true, quantity: true, product: { select: { cost: true } }, variation: { select: { conversionFactor: true } } },
+      select: { saleId: true, quantity: true, unitCost: true, product: { select: { cost: true } }, variation: { select: { conversionFactor: true } } },
     })
     for (const item of items) {
       const convFactor = Number(item.variation?.conversionFactor ?? 1)
       const qty = Number(item.quantity)
-      costBySale.set(item.saleId, (costBySale.get(item.saleId) ?? 0) + Number(item.product.cost ?? 0) * convFactor * qty)
+      costBySale.set(item.saleId, (costBySale.get(item.saleId) ?? 0) + saleLineCost(item))
       qtyBySale.set(item.saleId, (qtyBySale.get(item.saleId) ?? 0) + qty)
     }
   }
@@ -372,11 +374,14 @@ async function runCashQuery(request: FastifyRequest, q: ReportQueryInput): Promi
 
   const sessions = await prisma.cashRegister.findMany({
     where: { ...(branchId ? { branchId } : {}), ...dateFilterFrom(q.from, q.to, 'openedAt') },
-    select: { id: true, branchId: true, branch: { select: { name: true } }, status: true, openedAt: true, totalSales: true, cashSales: true, cardSales: true, transferSales: true },
+    select: { id: true, branchId: true, branch: { select: { name: true } }, status: true, openedAt: true, totalSales: true, salesCount: true, cashSales: true, cardSales: true, transferSales: true },
   })
+  // Open sessions have no stored totals yet — see sessionTotals.
+  const totals = await Promise.all(sessions.map(sessionTotals))
 
   const buckets = new Map<string, { label: string; totalSales: number; cashSales: number; cardSales: number; transferSales: number; count: number }>()
-  for (const s of sessions) {
+  for (const [i, s] of sessions.entries()) {
+    const t = totals[i]!
     const key = dimension === 'day' ? toBusinessDateKey(s.openedAt)
       : dimension === 'branch' ? s.branchId
       : dimension === 'status' ? s.status
@@ -387,10 +392,10 @@ async function runCashQuery(request: FastifyRequest, q: ReportQueryInput): Promi
       : 'Total'
     if (!buckets.has(key)) buckets.set(key, { label, totalSales: 0, cashSales: 0, cardSales: 0, transferSales: 0, count: 0 })
     const b = buckets.get(key)!
-    b.totalSales += Number(s.totalSales)
-    b.cashSales += Number(s.cashSales)
-    b.cardSales += Number(s.cardSales)
-    b.transferSales += Number(s.transferSales)
+    b.totalSales += t.totalSales
+    b.cashSales += t.cashSales
+    b.cardSales += t.cardSales
+    b.transferSales += t.transferSales
     b.count += 1
   }
 

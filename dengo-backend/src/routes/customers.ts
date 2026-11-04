@@ -1,13 +1,29 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
+import { resolveOpenRegisterId } from './cash-registers.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
 import { log } from '../services/audit.service.js'
 import { multiWordSearch } from '../lib/search.js'
 
+// Only the name is required: in a busy sale the cashier creates the customer
+// with just a name and completes the rest later. An empty NIT (or "CF") is
+// stored as null — consumidor final — so many customers can lack one.
+const nitField = z.string().trim().max(30).optional().nullable()
+  .transform(v => (v === undefined ? undefined : !v || /^c\/?f$/i.test(v) ? null : v.toUpperCase()))
+
+// What counts as "datos incompletos" in Clientes: no NIT or no phone.
+// The generic walk-in customer (default of a branch / "Consumidor Final")
+// is never "incomplete": it has no NIT or phone by design.
+const INCOMPLETE_WHERE = {
+  OR: [{ nit: null }, { nit: '' }, { phone: null }, { phone: '' }],
+  defaultForBranches: { none: {} },
+  NOT: { name: { equals: 'Consumidor Final', mode: 'insensitive' as const } },
+}
+
 const schema = z.object({
-  nit: z.string().min(1),
-  name: z.string().min(1),
+  nit: nitField,
+  name: z.string().trim().min(1, 'El nombre es requerido'),
   // union with '': the edit form round-trips a fetched customer straight
   // back into this payload, and a customer with no email sends '' (e.g. the
   // default "Consumidor Final" walk-in) — plain .email() rejects that.
@@ -99,13 +115,14 @@ function withCreditFields<T extends { creditEnabled: boolean; creditLimitEnabled
 
 export default async function customerRoutes(fastify: FastifyInstance) {
   fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('customers.view')] }, async (request, reply) => {
-    const q = request.query as { search?: string; isActive?: string; hasCredit?: string; page?: string; limit?: string; sortBy?: string }
+    const q = request.query as { search?: string; isActive?: string; hasCredit?: string; incomplete?: string; page?: string; limit?: string; sortBy?: string }
     // Default (param absent) stays active-only, same opt-in pattern as
     // suppliers — 'all'/'false' are explicit choices, not the old hardcoded
     // isActive:true that made the page's own "Inactivos"/"Todos" filters a no-op.
     const where = {
       ...(q.isActive === 'all' ? {} : { isActive: q.isActive === 'false' ? false : true }),
       ...(q.hasCredit === 'true' ? { creditLimit: { gt: 0 } } : {}),
+      ...(q.incomplete === 'true' ? { AND: [INCOMPLETE_WHERE] } : {}),
       ...(q.search ? multiWordSearch(q.search, word => [
         { name: { contains: word, mode: 'insensitive' as const } },
         { nit: { contains: word, mode: 'insensitive' as const } },
@@ -121,20 +138,21 @@ export default async function customerRoutes(fastify: FastifyInstance) {
       const page = Math.max(1, parseInt(q.page, 10) || 1)
       const limit = Math.min(200, Math.max(1, parseInt(q.limit ?? '50', 10) || 50))
       const statusWhere = q.isActive === 'all' ? {} : { isActive: q.isActive === 'false' ? false : true }
-      const [customers, total, statusTotal, active, withCredit, creditAgg] = await Promise.all([
+      const [customers, total, statusTotal, active, withCredit, creditAgg, incomplete] = await Promise.all([
         prisma.customer.findMany({ where, orderBy: { name: 'asc' }, skip: (page - 1) * limit, take: limit }),
         prisma.customer.count({ where }),
         prisma.customer.count({ where: statusWhere }),
         prisma.customer.count({ where: { ...statusWhere, isActive: true } }),
         prisma.customer.count({ where: { ...statusWhere, creditLimit: { gt: 0 } } }),
         prisma.customer.aggregate({ where: statusWhere, _sum: { creditUsed: true } }),
+        prisma.customer.count({ where: { ...statusWhere, ...INCOMPLETE_WHERE } }),
       ])
       return reply.send({
         data: sortCustomers(await attachPurchaseStats(customers.map(withCreditFields)), q.sortBy),
         total,
         page,
         limit,
-        stats: { total: statusTotal, active, withCredit, totalCreditUsed: Number(creditAgg._sum.creditUsed ?? 0) },
+        stats: { total: statusTotal, active, withCredit, incomplete, totalCreditUsed: Number(creditAgg._sum.creditUsed ?? 0) },
       })
     }
 
@@ -177,6 +195,24 @@ export default async function customerRoutes(fastify: FastifyInstance) {
     }
   })
 
+  // POST /api/customers/bulk-delete — same soft delete as DELETE /:id for a
+  // selection. Customers still owing credit are skipped (and reported back):
+  // hiding them would hide a real receivable from Créditos / abonos.
+  fastify.post('/bulk-delete', { preHandler: [fastify.authenticate, requirePermission('customers.delete')] }, async (request, reply) => {
+    const body = z.object({ customerIds: z.array(z.string()).min(1).max(500) }).safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+    const rows = await prisma.customer.findMany({
+      where: { id: { in: body.data.customerIds } },
+      select: { id: true, name: true, creditUsed: true },
+    })
+    const owing = rows.filter(c => Number(c.creditUsed ?? 0) > 0.009)
+    const deletable = rows.filter(c => !owing.includes(c)).map(c => c.id)
+    const result = deletable.length
+      ? await prisma.customer.updateMany({ where: { id: { in: deletable } }, data: { isActive: false } })
+      : { count: 0 }
+    return reply.send({ count: result.count, skipped: owing.map(c => ({ id: c.id, name: c.name, creditUsed: Number(c.creditUsed) })) })
+  })
+
   fastify.delete('/:id', { preHandler: [fastify.authenticate, requirePermission('customers.delete')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     try {
@@ -211,6 +247,14 @@ export default async function customerRoutes(fastify: FastifyInstance) {
       cashRegisterId: z.string().optional(),
     }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+
+    // Same stale-session guard as sale creation — a cash abono saved
+    // against an already-closed session is counted by no close.
+    if (body.data.cashRegisterId) {
+      const resolved = await resolveOpenRegisterId(body.data.cashRegisterId)
+      if (!resolved) return reply.status(409).send({ error: 'La caja seleccionada ya fue cerrada — selecciona una caja abierta', code: 'REGISTER_CLOSED' })
+      body.data.cashRegisterId = resolved.id
+    }
 
     const customer = await prisma.customer.findUnique({ where: { id } })
     if (!customer) return reply.status(404).send({ error: 'Cliente no encontrado' })

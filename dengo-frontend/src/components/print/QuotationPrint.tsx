@@ -79,7 +79,7 @@ export function QuotationPrint({ data, variant = 'print' }: { data: QuotationPri
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {data.logo && <img src={data.logo} alt="" style={{ height: '56px', width: '56px', objectFit: 'contain' }} />}
           <div>
-            <div style={{ fontSize: '17px', fontWeight: 'bold' }}>{data.companyName || 'DENGO POS'}</div>
+            <div style={{ fontSize: '17px', fontWeight: 'bold' }}>{data.companyName || ''}</div>
             {data.companyTagline && <div style={{ fontSize: '11px', color: '#6b7280' }}>{data.companyTagline}</div>}
             {data.companyTaxId && <div style={{ fontSize: '11px', color: '#6b7280' }}>NIT: {data.companyTaxId}</div>}
             {data.branchAddress && <div style={{ fontSize: '11px', color: '#6b7280' }}>{data.branchAddress}</div>}

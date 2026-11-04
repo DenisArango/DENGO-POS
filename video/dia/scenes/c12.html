@@ -1,0 +1,13 @@
+
+    #c12-met { opacity: 0; }
+    #c12-per { left: 640px; top: 140px; width: 1150px; }
+    #c12-mar { left: 640px; top: 560px; width: 1150px; }
+    #c12-met { left: 640px; top: 230px; width: 1150px; }
+<!--markup-->
+    <img id="c12-per" class="ui" src="assets/periodo.png" alt="Ventas por período" />
+    <img id="c12-mar" class="ui" src="assets/margen.png" alt="Márgenes de ganancia por producto" />
+    <img id="c12-met" class="ui" src="assets/metas.png" alt="Cumplimiento de metas por sucursal" />
+<!--script-->
+    wipe("#c12-per", 2.2); wipe("#c12-mar", 3.8);
+    gone("#c12-per", 5.3); gone("#c12-mar", 5.3);
+    tl.set("#c12-met", { opacity: 1 }, at(5.5)); wipe("#c12-met", 5.5);

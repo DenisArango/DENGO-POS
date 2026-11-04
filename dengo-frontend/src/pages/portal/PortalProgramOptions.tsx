@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import { Plus, Trash2, X, ChevronDown, ChevronUp, Package, Edit2, Search } from 'lucide-react'
+import { Plus, Trash2, X, ChevronDown, ChevronUp, Package, Edit2, Search, Lightbulb } from 'lucide-react'
 import { api } from '../../lib/api'
 
 const PROGRAM_TYPES = [
@@ -17,6 +17,7 @@ const money = (v: number | string) =>
 interface OptionItem { id: string; productId: string; productName: string; quantity: number; basePrice: number; imageUrl?: string | null }
 interface ProgramOption { id: string; programType: string; name: string; description?: string | null; isActive: boolean; sortOrder: number; levels: string[]; items: OptionItem[] }
 interface Product { id: string; name: string; brand?: string; basePrice: number; imageUrl?: string | null }
+interface Suggestion { orderCount: number; years: number[]; items: { productId: string; productName: string; quantity: number; basePrice: number }[] }
 
 const LEVELS = [
   { value: 'CEIN_PAIN', label: 'CEIN / PAIN' },
@@ -48,6 +49,34 @@ export default function PortalProgramOptions() {
   const [addingProductId, setAddingProductId] = useState<string | null>(null)
   const [itemQty, setItemQty] = useState<Record<string, string>>({})
   const [removingItemId, setRemovingItemId] = useState<string | null>(null)
+
+  // Kits teachers ordered before: offered quietly (collapsed), never pushed.
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [convertingIdx, setConvertingIdx] = useState<number | null>(null)
+  const fetchSuggestions = () => {
+    api.get<Suggestion[]>(`/api/portal-admin/program-options/suggestions?programType=${activeType}`)
+      .then(setSuggestions)
+      .catch(() => setSuggestions([]))
+  }
+  useEffect(() => { fetchSuggestions() }, [activeType])
+
+  const convertSuggestion = async (sg: Suggestion, idx: number) => {
+    setConvertingIdx(idx)
+    try {
+      const name = `Kit pedido ${sg.orderCount} ${sg.orderCount === 1 ? 'vez' : 'veces'} (${sg.years.join(', ')})`
+      const created = await api.post<{ id: string }>('/api/portal-admin/program-options', { programType: activeType, name, isActive: false, sortOrder: 0, levels: [] })
+      for (const it of sg.items) {
+        await api.post(`/api/portal-admin/program-options/${created.id}/items`, { productId: it.productId, quantity: it.quantity })
+      }
+      toast.success('Paquete creado como inactivo: revísalo, ponle nombre y actívalo')
+      fetchOptions()
+      fetchSuggestions()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No se pudo crear el paquete')
+    } finally {
+      setConvertingIdx(null)
+    }
+  }
 
   const fetchOptions = () => {
     setLoading(true)
@@ -205,8 +234,40 @@ export default function PortalProgramOptions() {
             ? <p>Los maestros <strong>deben seleccionar obligatoriamente</strong> uno de estos paquetes. El pedido se creará con exactamente los productos del paquete elegido.</p>
             : <p>Estos paquetes son <strong>sugerencias opcionales</strong>. El maestro puede seleccionar uno para pre-llenar su carrito, pero luego puede agregar o quitar productos libremente.</p>
           }
+          <p className="mt-1 opacity-80">Si el programa es de <strong>kit por alumno</strong>, pon las cantidades de <strong>un</strong> alumno: el pedido las multiplica por los alumnos del maestro.</p>
         </div>
       </div>
+
+      {suggestions.length > 0 && (
+        <details className="bg-white rounded-xl border border-gray-200 group">
+          <summary className="cursor-pointer list-none p-4 flex items-center gap-2 text-sm text-gray-700">
+            <Lightbulb size={16} className="text-amber-500" />
+            <span><strong>Ideas de pedidos anteriores</strong> · {suggestions.length} {suggestions.length === 1 ? 'kit' : 'kits'} que los maestros ya pidieron</span>
+            <ChevronDown size={16} className="ml-auto text-gray-400 group-open:rotate-180 transition-transform" />
+          </summary>
+          <div className="border-t border-gray-100 p-4 grid md:grid-cols-2 gap-3">
+            {suggestions.map((sg, idx) => {
+              const total = sg.items.reduce((s, i) => s + i.basePrice * i.quantity, 0)
+              return (
+                <div key={idx} className="rounded-lg border border-gray-200 p-3 text-sm flex flex-col">
+                  <p className="text-xs text-gray-500 mb-2">Pedido {sg.orderCount} {sg.orderCount === 1 ? 'vez' : 'veces'} · {sg.years.join(', ')}</p>
+                  <ul className="space-y-1 mb-3">
+                    {sg.items.map(i => (
+                      <li key={i.productId} className="flex justify-between gap-2"><span className="text-gray-700 truncate">{i.productName}</span><span className="text-gray-500">×{i.quantity}</span></li>
+                    ))}
+                  </ul>
+                  <div className="mt-auto flex items-center justify-between">
+                    <span className="font-semibold text-primary-600">{money(total)}</span>
+                    <button onClick={() => convertSuggestion(sg, idx)} disabled={convertingIdx !== null} className="text-primary-600 hover:text-primary-700 font-semibold text-sm disabled:opacity-50">
+                      {convertingIdx === idx ? 'Creando…' : 'Convertir en paquete'}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </details>
+      )}
 
       {/* Options list */}
       {loading ? (

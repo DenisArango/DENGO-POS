@@ -42,7 +42,15 @@ export interface Program {
   maxAmountPerTeacher?: number | null
   limitPerStudent?: number | null
   allowedCategoryIds?: string[] | null
+  /** One kit per student: the teacher builds one student's kit, × students. */
+  perStudent?: boolean
   isActive: boolean
+}
+
+export interface BlockedProgram {
+  schoolId: string
+  programType: string
+  orderNumber: string
 }
 
 export interface ProgramOptionItem {
@@ -87,6 +95,7 @@ export interface PortalOrderItem {
   quantity: number
   unitPrice: number
   total: number
+  qtyPerStudent?: number | null
   notes?: string
 }
 
@@ -101,6 +110,9 @@ export interface PortalMessage {
   portalOrderId: string | null
   teacherId: string
   senderRole: 'TEACHER' | 'ADMIN'
+  kind?: 'TEXT' | 'QUOTATION' | 'INVOICE'
+  quotationId?: string | null
+  saleId?: string | null
   body: string
   isRead: boolean
   createdAt: string
@@ -123,8 +135,26 @@ export interface PortalOrder {
   deliveryDate?: string | null
   deliveryTime?: string | null
   deliveryNotes?: string | null
+  adjustedAt?: string | null
   createdAt: string
   school?: { name: string }
   items?: PortalOrderItem[]
   grades?: PortalOrderGrade[]
+}
+
+export interface PortalDocument {
+  kind: 'QUOTATION' | 'INVOICE'
+  number: string
+  date: string
+  validUntil?: string
+  issuer: { name: string; tradeName: string; taxId: string | null; address: string | null; city: string | null; phone: string | null; email: string | null; logo: string | null }
+  order: { orderNumber: string; school: string; grades: string | null } | null
+  customer: { name: string; nit: string }
+  items: { description: string; quantity: number; unitPrice: number; total: number }[]
+  subtotal: number
+  discount: number
+  tax: number
+  total: number
+  notes?: string | null
+  fel?: { status: string; uuid: string | null; authNumber: string | null; certifiedAt: string | null }
 }

@@ -1,0 +1,18 @@
+<!-- Dark Card Background -->
+<rect width="1000" height="300" rx="16" fill="#121826"/>
+
+<!-- Centered Content Group -->
+<g transform="translate(300, 85)">
+  <!-- Isotype -->
+  <g transform="translate(0, 0)">
+    <!-- Hexagon Outer Outline (D Shape) - Inverted White -->
+    <path d="M 65,15 L 115,44 L 115,101 L 65,130 L 15,101 L 15,44 Z" fill="none" stroke="#FFFFFF" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- Diagonal Line -->
+    <line x1="15" y1="101" x2="115" y2="44" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+    <!-- Ascending 'A' Chevron -->
+    <path d="M 28,107 L 65,42 L 102,107" fill="none" stroke="#E07A5F" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+
+  <!-- Wordmark "DENGO" - Inverted White -->
+  <text x="160" y="98" fill="#FFFFFF" class="brand-text" font-size="78">DENGO</text>
+</g>

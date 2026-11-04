@@ -1,0 +1,26 @@
+
+    #c03-k { position: absolute; left: 640px; top: 150px; font-size: 44px; color: #121826; }
+    #c03-big { position: absolute; left: 640px; top: 205px; }
+    #c03-big span { font-size: 170px; }
+    #c03-track { position: absolute; left: 640px; top: 440px; width: 1200px; height: 46px; border-radius: 23px; background: #e3ebf0; overflow: hidden; }
+    #c03-fill { width: 100%; height: 100%; background: #1e4d68; border-radius: 23px; }
+    #c03-pct { position: absolute; left: 640px; top: 510px; font-size: 58px; font-weight: 700; color: #1e4d68; }
+    #c03-pct small { font-size: 40px; font-weight: 400; color: #121826; margin-left: 18px; }
+    #c03-pos { left: 640px; top: 650px; width: 1200px; }
+    #c03-ring { left: 632px; top: 692px; width: 1216px; height: 58px; }
+    #c03-team { position: absolute; left: 640px; top: 880px; display: flex; gap: 26px; }
+    .c03-av { width: 96px; height: 96px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 44px; font-weight: 700; color: #fff; }
+<!--markup-->
+    <div id="c03-k" class="mask"><span id="c03-k1">Meta de octubre · Mixco</span></div>
+    <div id="c03-big" class="mask"><span id="c03-b1" class="h">Q137,000</span></div>
+    <div id="c03-track"><div id="c03-fill"></div></div>
+    <div id="c03-pct" class="mask"><span id="c03-p1">86% <small>Q117,932 vendidos</small></span></div>
+    <img id="c03-pos" class="ui" src="assets/pos_top.png" alt="La meta en el punto de venta" />
+    <div id="c03-ring" class="ring"></div>
+    <div id="c03-team"><div class="c03-av" id="c03-a1" style="background:#1e4d68">A</div><div class="c03-av" id="c03-a2" style="background:#e07a5f">C</div><div class="c03-av" id="c03-a3" style="background:#2f9e77">L</div><div class="c03-av" id="c03-a4" style="background:#f4c542;color:#1e4d68">K</div></div>
+<!--script-->
+    rise("#c03-k1", 0.2); rise("#c03-b1", 2.2, 0.6);
+    tl.fromTo("#c03-fill", { scaleX: 0, transformOrigin: "0 50%" }, { scaleX: 0.86, duration: 1.3, ease: "power2.inOut" }, at(4.4));
+    rise("#c03-p1", 5.2);
+    wipe("#c03-pos", 7.0); ring("#c03-ring", 7.8);
+    ["#c03-a1", "#c03-a2", "#c03-a3", "#c03-a4"].forEach((s, i) => pop(s, 10.0 + i * 0.15));

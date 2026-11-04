@@ -58,7 +58,7 @@ function Header({ logo, companyName, branchName, registerLabel }: { logo?: strin
   return (
     <div style={{ textAlign: 'center', marginBottom: '4px' }}>
       {logo && <img src={logo} alt="" style={{ maxHeight: '44px', maxWidth: '80%', margin: '0 auto 2px', objectFit: 'contain' }} />}
-      <div style={{ fontWeight: 'bold', fontSize: '18px' }}>{companyName || 'DENGO POS'}</div>
+      <div style={{ fontWeight: 'bold', fontSize: '18px' }}>{companyName || branchName}</div>
       <div>{branchName}</div>
       <div>{registerLabel}</div>
     </div>

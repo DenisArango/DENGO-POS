@@ -1,0 +1,19 @@
+
+    #c02-kpis, #c02-hora { opacity: 0; }
+    #c02-full { left: 640px; top: 150px; width: 1200px; }
+    #c02-kpis { left: 640px; top: 170px; width: 1200px; }
+    #c02-hora { left: 640px; top: 340px; width: 700px; }
+    #c02-ring { left: 1244px; top: 162px; width: 302px; height: 128px; }
+    #c02-note { position: absolute; left: 1380px; top: 380px; width: 460px; font-size: 46px; font-weight: 700; color: #1e4d68; line-height: 1.2; }
+<!--markup-->
+    <img id="c02-full" class="ui" src="assets/dash_full.png" alt="Dashboard de DENGO" />
+    <img id="c02-kpis" class="ui" src="assets/dash_kpis.png" alt="Ventas del día, transacciones, stock bajo y caja" />
+    <img id="c02-hora" class="ui" src="assets/dash_hora.png" alt="Ventas por hora" />
+    <div id="c02-ring" class="ring"></div>
+    <div id="c02-note" class="mask"><span id="c02-n1">6 productos por pedir</span></div>
+<!--script-->
+    wipe("#c02-full", 1.2);
+    gone("#c02-full", 2.8);
+    tl.set("#c02-kpis", { opacity: 1 }, at(3.0)); wipeX("#c02-kpis", 3.0);
+    tl.set("#c02-hora", { opacity: 1 }, at(4.2)); wipe("#c02-hora", 4.2);
+    ring("#c02-ring", 5.8); rise("#c02-n1", 6.4);

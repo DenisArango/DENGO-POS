@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Guía de números · DENGO</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: Letter; margin: 18mm 17mm 20mm; }
+  :root { --navy: #1E4D68; --orange: #E07A5F; --ink: #1f2933; --muted: #5b6670; --line: #dfe4e8; --soft: #f4f7f9; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, Arial, sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.5; }
+  h1, h2, h3 { font-family: Montserrat, Arial, sans-serif; color: var(--navy); line-height: 1.2; }
+  h2 { font-size: 17pt; margin: 0 0 4px; padding-top: 2px; }
+  h2 + .lead { margin-top: 0; }
+  h2, h3, .lead { break-after: avoid; }
+  table { break-inside: auto; }
+  h3 { font-size: 11.5pt; margin: 18px 0 6px; }
+  .lead { color: var(--muted); margin: 0 0 12px; }
+  section { break-inside: auto; margin-bottom: 22px; }
+  .page-break { break-before: page; }
+
+  /* Cover */
+  .cover { height: 238mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .cover img.logo { width: 230px; }
+  .cover h1 { font-size: 40pt; margin: 0; letter-spacing: -0.5px; }
+  .cover .sub { font-size: 15pt; color: var(--muted); margin: 10px 0 0; max-width: 140mm; }
+  .cover .band { height: 10px; width: 120px; background: var(--orange); margin-bottom: 26px; }
+  .cover .meta { border-top: 2px solid var(--navy); padding-top: 12px; display: flex; justify-content: space-between; color: var(--muted); font-size: 10pt; }
+  .cover .meta strong { color: var(--ink); display: block; font-size: 11pt; }
+
+  /* Rules */
+  ol.rules { list-style: none; padding: 0; margin: 0; counter-reset: r; }
+  ol.rules li { counter-increment: r; position: relative; padding: 8px 0 8px 40px; border-bottom: 1px solid var(--line); break-inside: avoid; }
+  ol.rules li::before { content: counter(r); position: absolute; left: 0; top: 8px; width: 26px; height: 26px; border-radius: 50%; background: var(--navy); color: #fff; font-weight: 700; font-size: 10pt; display: flex; align-items: center; justify-content: center; }
+  ol.rules strong { color: var(--navy); }
+
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 4px; font-size: 10pt; }
+  th { text-align: left; background: var(--navy); color: #fff; font-weight: 600; padding: 7px 10px; }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr { break-inside: avoid; }
+  td:first-child { font-weight: 600; color: var(--navy); width: 30%; }
+  table.three td:first-child { width: 18%; }
+  table.three td:nth-child(2) { font-weight: 600; color: var(--navy); width: 26%; }
+
+  .note { background: var(--soft); border-left: 4px solid var(--orange); padding: 10px 14px; margin: 10px 0; break-inside: avoid; }
+  .note strong { color: var(--navy); }
+  .example { background: #fff7f0; border: 1px solid #f3d6bf; border-radius: 8px; padding: 10px 14px; margin: 10px 0; break-inside: avoid; }
+  .example .t { font-weight: 700; color: var(--orange); font-size: 9pt; text-transform: none; margin-bottom: 2px; }
+  ul.diff { padding-left: 18px; margin: 6px 0; }
+  ul.diff li { margin-bottom: 8px; break-inside: avoid; }
+  .end { margin-top: 30px; display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 9.5pt; border-top: 1px solid var(--line); padding-top: 14px; }
+  .end img { width: 110px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div><img class="logo" src="../brand/dengo-logo.png" alt="DENGO"></div>
+  <div>
+    <div class="band"></div>
+    <h1>Guía de números</h1>
+    <p class="sub">De dónde sale cada monto que ves en DENGO: ventas, caja, metas, inventario, reportes y portal de maestros.</p>
+  </div>
+  <div class="meta">
+    <div><strong>Preparada para</strong>Variedades Dayana</div>
+    <div style="text-align:right"><strong>Noviembre 2026</strong>Versión 1</div>
+  </div>
+</div>
+
+<section class="page-break">
+  <h2>Reglas que aplican a todo</h2>
+  <p class="lead">Estas siete reglas explican la mayoría de las dudas. Si un número no te cuadra, revisa primero estas.</p>
+  <ol class="rules">
+    <li><strong>Las ventas anuladas nunca cuentan.</strong> Ningún total, ganancia ni meta incluye una venta anulada.</li>
+    <li><strong>El día es el de Guatemala.</strong> Cada día va de 00:00 a 23:59, hora de Guatemala.</li>
+    <li><strong>Total de una venta = subtotal − descuento general + impuesto.</strong> Los descuentos de cada producto ya vienen restados en su línea.</li>
+    <li><strong>Las ventas al crédito cuentan el día que se hacen</strong>, aunque el dinero llegue después. Por eso "Ventas de hoy" puede ser mayor que el efectivo que hay en caja.</li>
+    <li><strong>Cada venta guarda su precio y su costo del momento.</strong> Si después cambias el precio o el costo de un producto, solo afecta a las ventas nuevas. Los totales y las ganancias de ventas pasadas no se mueven.</li>
+    <li><strong>Las presentaciones se convierten a unidades.</strong> Vender "1 caja de 12" descuenta 12 unidades del inventario, y su costo es el costo unitario × 12.</li>
+    <li><strong>Cada sucursal ve lo suyo.</strong> Un usuario que no es administrador solo ve los números de las sucursales que tiene asignadas.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>Dashboard (pantalla de inicio)</h2>
+  <p class="lead">Lo que ves al entrar, siempre del día de hoy y de la sucursal seleccionada.</p>
+  <table>
+    <tr><th>Número</th><th>Cómo se calcula</th></tr>
+    <tr><td>Ventas de hoy</td><td>Suma de todas las ventas de hoy, incluidas las de crédito.</td></tr>
+    <tr><td>Transacciones</td><td>Cuántas ventas se hicieron hoy.</td></tr>
+    <tr><td>Costo de hoy</td><td>Lo que costaron los productos vendidos hoy, con el costo guardado en cada venta.</td></tr>
+    <tr><td>Ganancia de hoy</td><td>Ventas de hoy − costo de hoy.</td></tr>
+    <tr><td>Efectivo en caja</td><td>En las cajas abiertas: fondo inicial + ventas en efectivo + abonos en efectivo + ingresos − egresos. <strong>Este sí incluye el fondo inicial.</strong></td></tr>
+    <tr><td>Ventas por hora</td><td>Cuánto se vendió en cada hora del día.</td></tr>
+    <tr><td>Top categorías</td><td>Lo vendido hoy, agrupado por categoría de producto.</td></tr>
+    <tr><td>Alertas de stock</td><td>Productos con existencia igual o menor al mínimo. "Agotado" es 0; "crítico" es 30% del mínimo o menos.</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Caja</h2>
+  <p class="lead">Desde que se abre una caja hasta que se cierra.</p>
+  <table>
+    <tr><th>Número</th><th>Cómo se calcula</th></tr>
+    <tr><td>Ventas de la caja</td><td>Todas las ventas hechas en esa caja desde que se abrió.</td></tr>
+    <tr><td>Efectivo</td><td>Ventas en efectivo + la parte en efectivo de los pagos mixtos + abonos en efectivo cobrados en esa caja (también de créditos de días anteriores).</td></tr>
+    <tr><td>Tarjeta / Transferencia</td><td>Ventas con ese método + su parte de los pagos mixtos.</td></tr>
+    <tr><td>Crédito</td><td>Ventas al crédito de la caja. <strong>No es efectivo</strong>: no entra en el efectivo esperado.</td></tr>
+    <tr><td>Efectivo esperado (al cerrar)</td><td>Efectivo + ingresos − egresos. <strong>No incluye el fondo inicial</strong>, porque el fondo se queda en la caja.</td></tr>
+    <tr><td>Diferencia</td><td>Efectivo entregado − efectivo esperado. Negativo: falta dinero. Positivo: sobra.</td></tr>
+  </table>
+  <div class="note"><strong>Dos personas en la misma caja.</strong> Si dos cajeros venden en dispositivos distintos con la misma caja (por ejemplo "Caja 1"), todas sus ventas suman juntas en esa caja. La pantalla de Caja se actualiza sola cada 20 segundos y justo antes de cerrar, para que el efectivo esperado incluya las ventas de todos los dispositivos.</div>
+  <div class="note"><strong>Si un dispositivo cierra la caja mientras otro sigue vendiendo,</strong> las ventas siguientes pasan a la caja que esté abierta con ese mismo número. Si no hay ninguna abierta, DENGO pide abrirla antes de vender.</div>
+
+  <h2 style="margin-top:22px">Metas</h2>
+  <table>
+    <tr><th>Número</th><th>Cómo se calcula</th></tr>
+    <tr><td>Vendido</td><td>Ventas del mes en la sucursal, incluidas las de crédito. Si la meta es por cajas, solo cuenta esas cajas.</td></tr>
+    <tr><td>% de avance</td><td>Vendido ÷ meta × 100 (se muestra hasta 100%).</td></tr>
+    <tr><td>Debo vender por día</td><td>(Meta − vendido) ÷ días que faltan del mes, contando hoy.</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Inventario y productos</h2>
+  <table class="three">
+    <tr><th>Pantalla</th><th>Número</th><th>Cómo se calcula</th></tr>
+    <tr><td>Inventario</td><td>Costo total</td><td>Existencia × costo actual de cada producto. Es lo que vale tu inventario a precio de compra.</td></tr>
+    <tr><td>Inventario</td><td>Valor de venta total</td><td>Existencia × precio de venta. Lo que recibirías si lo vendieras todo a precio normal.</td></tr>
+    <tr><td>Productos</td><td>Valor de venta inventario</td><td>El mismo cálculo que "Valor de venta total" de Inventario.</td></tr>
+    <tr><td>Ambas</td><td>Stock</td><td>Existencias en las sucursales que puedes ver. Un administrador sin sucursal elegida ve la suma de todas.</td></tr>
+    <tr><td>Ambas</td><td>Stock bajo / Sin stock</td><td>Existencia igual o menor al mínimo / existencia en 0.</td></tr>
+    <tr><td>Reporte de inventario a una fecha</td><td>Stock a esa fecha</td><td>Lo que quedaba después del último movimiento de ese día. <strong>El costo y el precio son los de hoy.</strong></td></tr>
+    <tr><td>Compras</td><td>Costo de una compra</td><td>Cantidad × costo unitario. Si compras por presentación, se guarda el costo por unidad.</td></tr>
+    <tr><td>Rotación</td><td>Venta diaria promedio</td><td>Unidades vendidas en los últimos 30 días ÷ 30.</td></tr>
+    <tr><td>Rotación</td><td>Días de inventario</td><td>Existencia ÷ venta diaria promedio. Si no se vendió nada, aparece 999.</td></tr>
+  </table>
+
+  <h2 style="margin-top:22px">Reportes de ventas</h2>
+  <table class="three">
+    <tr><th>Reporte</th><th>Número</th><th>Cómo se calcula</th></tr>
+    <tr><td>Historial de ventas</td><td>Total y ganancia</td><td>Suma de cada venta / ventas − costo guardado − descuentos. <strong>Muestra hasta 500 ventas</strong>; para meses completos usa "Ventas por día" o "Márgenes".</td></tr>
+    <tr><td>Ventas por día</td><td>Total, efectivo, tarjeta…</td><td>Ventas agrupadas por día. Ganancia = total − costo.</td></tr>
+    <tr><td>Top productos</td><td>Ingresos</td><td>Suma de las líneas de cada producto. No resta el descuento general de la venta.</td></tr>
+    <tr><td>Márgenes</td><td>Margen %</td><td>(Ingresos − costo) ÷ ingresos × 100.</td></tr>
+    <tr><td>Créditos</td><td>Pendiente</td><td>Total de la venta − lo abonado.</td></tr>
+    <tr><td>Flujo de caja</td><td>Totales por caja</td><td>Cajas cerradas: el total guardado al cerrar. Cajas abiertas: se calcula en el momento.</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Portal de maestros</h2>
+  <p class="lead">Pedidos escolares: cómo se calculan los montos, el cuadre y la ganancia.</p>
+  <table>
+    <tr><th>Número</th><th>Cómo se calcula</th></tr>
+    <tr><td>Monto del programa</td><td>Útiles y alimentación: monto por alumno × número de alumnos. Valija didáctica: monto fijo por maestro. Gratuidad: un pedido general para la escuela.</td></tr>
+    <tr><td>Kit por alumno</td><td>El maestro arma lo que lleva <strong>un</strong> alumno y DENGO lo multiplica por sus alumnos. La cotización y la factura salen por el total.</td></tr>
+    <tr><td>Cuadre</td><td>Total del pedido comparado con lo que permite el programa. "Faltan Q…": no se usó todo el monto. "Sobran Q…": se pasa del monto. Los pedidos que no cuadran aparecen marcados en color.</td></tr>
+    <tr><td>Costo del pedido</td><td>El costo de cada producto al momento de hacer o corregir el pedido. En los productos fuera del catálogo, es el que tú escribes. <strong>El maestro nunca lo ve.</strong></td></tr>
+    <tr><td>Rentabilidad</td><td>Venta − costo, por escuela, programa, maestro, mes y producto. Los pedidos rechazados no cuentan; los que están en revisión se muestran aparte.</td></tr>
+  </table>
+  <div class="example">
+    <div class="t">Ejemplo</div>
+    Útiles escolares a Q85 por alumno, con 100 alumnos: el pedido debe sumar <strong>Q8,500</strong>. Si el kit de un alumno tiene 3 cuadernos, se preparan <strong>300 cuadernos</strong>. Si el kit cuesta Q80, el pedido suma Q8,000 y aparece con "Faltan Q500".
+  </div>
+</section>
+
+<section class="page-break">
+  <h2>Diferencias que puedes notar (y por qué son correctas)</h2>
+  <ul class="diff">
+    <li><strong>"Ventas de hoy" es mayor que el efectivo de la caja.</strong> Las ventas incluyen crédito, tarjeta y transferencia; la caja solo cuenta el efectivo.</li>
+    <li><strong>"Efectivo en caja" (Dashboard) es distinto del "Efectivo esperado" (cierre).</strong> El primero incluye el fondo inicial y el segundo no.</li>
+    <li><strong>Top productos no coincide con el Historial de ventas.</strong> Top productos no resta el descuento general de cada venta.</li>
+    <li><strong>El Historial no cuadra con "Ventas por día" en un mes completo.</strong> El Historial muestra como máximo 500 ventas.</li>
+    <li><strong>El inventario a una fecha pasada muestra el valor de hoy.</strong> La cantidad es la de esa fecha, pero el costo y el precio son los actuales.</li>
+  </ul>
+  <div class="end"><img src="../brand/dengo-logo.png" alt="DENGO"><span>¿Tienes dudas con algún número? Escríbenos y lo revisamos contigo.</span></div>
+</section>
+
+</body>
+</html>

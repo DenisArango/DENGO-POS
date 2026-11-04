@@ -43,6 +43,8 @@ export default defineConfig({
         // Only precache the built app shell; every /api/* request bypasses
         // the service worker entirely (see comment above).
         navigateFallbackDenylist: [/^\/api\//],
+        // Web Push handlers (public/push-sw.js) run inside the generated SW.
+        importScripts: ['/push-sw.js'],
         runtimeCaching: [
           {
             urlPattern: /^\/api\//,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Bell, Mail, Smartphone, Package, AlertTriangle, Users, TrendingDown, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, Bell, Mail, Smartphone, Package, AlertTriangle, Users, TrendingDown, MessageSquare, ArrowLeftRight, Truck, type LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
@@ -13,6 +13,21 @@ interface NotificationPref {
 }
 
 const EVENT_INFO: Record<string, { title: string; description: string; icon: LucideIcon }> = {
+  internal_message: {
+    title: 'Mensajes internos',
+    description: 'Aviso cuando un compañero te escribe por Mensajes',
+    icon: MessageSquare,
+  },
+  transfer_pending: {
+    title: 'Traslado por aprobar',
+    description: 'Aviso a quien aprueba traslados en la sucursal de origen',
+    icon: ArrowLeftRight,
+  },
+  transfer_incoming: {
+    title: 'Traslado en camino',
+    description: 'Aviso a la sucursal de destino cuando se aprueba un traslado',
+    icon: Truck,
+  },
   low_stock: {
     title: 'Stock Bajo',
     description: 'Alerta cuando un producto está por debajo del stock mínimo',
@@ -230,7 +245,8 @@ export default function Notifications() {
             <div>
               <h3 className="font-medium text-purple-900 mb-1">Push</h3>
               <p className="text-sm text-purple-700">
-                Notificaciones en tiempo real en la aplicación
+                Avisos al celular o la computadora, aunque el POS esté cerrado. Cada persona los activa en su
+                dispositivo desde la campana de arriba.
               </p>
             </div>
           </div>
@@ -251,8 +267,8 @@ export default function Notifications() {
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
         <p className="text-sm text-yellow-800">
-          <strong>Nota:</strong> estas preferencias ya se guardan. El envío real por email/SMS aún no está conectado a
-          un proveedor (SMTP, Twilio, etc.) — hoy solo queda registrado qué canales deberían usarse para cada alerta.
+          <strong>Nota:</strong> los avisos <strong>Push</strong> ya se envían según esta tabla. Email y SMS solo
+          guardan la preferencia: aún no están conectados a un proveedor (SMTP, Twilio, etc.).
         </p>
       </div>
       </>

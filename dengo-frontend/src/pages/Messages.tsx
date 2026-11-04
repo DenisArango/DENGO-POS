@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { MessageSquare, Send, User2, Search } from 'lucide-react'
 import { api } from '../lib/api'
+import { useSearchParams } from 'react-router-dom'
 
 interface StaffUser {
   id: string
@@ -78,6 +79,18 @@ export default function Messages() {
       .catch(e => toast.error(e.message))
       .finally(() => setLoadingMsgs(false))
   }
+
+  // Opened from a push notification (/messages?user=<id>): go straight to
+  // that conversation once the list is in.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const wantedUser = searchParams.get('user')
+  useEffect(() => {
+    if (!wantedUser || threads.length === 0) return
+    const entry = threads.find(t => t.user.id === wantedUser)
+    setSearchParams({}, { replace: true })
+    if (entry) openThread(entry.user)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantedUser, threads])
 
   const sendMessage = async () => {
     if (!selected || !msgInput.trim()) return

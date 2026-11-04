@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js'
+import { alertStockChange } from '../lib/staffAlerts.js'
 
 type MovementType = 'IN' | 'OUT' | 'ADJUSTMENT' | 'TRANSFER' | 'SALE' | 'RETURN'
 
@@ -32,6 +33,7 @@ async function applyStockChange(
   loggedQuantity: (before: number, after: number) => number,
   options: UpdateStockOptions,
 ): Promise<void> {
+  let change: { before: number; after: number } | null = null
   await prisma.$transaction(async (tx) => {
     // Raw SELECT ... FOR UPDATE (not a plain Prisma findUnique) takes a row lock
     // on read, so two concurrent stock changes for the same product+branch
@@ -68,6 +70,7 @@ async function applyStockChange(
     }
 
     const quantity = loggedQuantity(before, after)
+    change = { before, after }
 
     await tx.stockMovement.create({
       data: {
@@ -91,6 +94,9 @@ async function applyStockChange(
       })
     }
   })
+  // After the commit: a rolled-back change must not alert.
+  const c = change as { before: number; after: number } | null
+  if (c) alertStockChange(productId, branchId, c.before, c.after)
 }
 
 export async function updateStock(

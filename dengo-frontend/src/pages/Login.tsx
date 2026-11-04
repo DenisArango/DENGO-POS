@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { LogIn, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '../store'
+import { resyncPush } from '../lib/push'
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -82,6 +83,7 @@ export default function Login() {
         createdAt: u.createdAt,
         updatedAt: u.updatedAt,
       }, token)
+      void resyncPush()
 
       toast.success(`¡Bienvenido, ${u.name}!`)
       navigate('/pos')

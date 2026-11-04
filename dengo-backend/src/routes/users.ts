@@ -5,6 +5,7 @@ import { hashPassword } from '../services/auth.service.js'
 import { log } from '../services/audit.service.js'
 import { requirePermission } from '../lib/permissions.js'
 import { forgetUserSession } from '../plugins/auth.plugin.js'
+import { alertNewUser } from '../lib/staffAlerts.js'
 
 const userSchema = z.object({
   email: z.string().email(),
@@ -72,6 +73,7 @@ export default async function userRoutes(fastify: FastifyInstance) {
         await syncAdditionalBranches(user.id, user.branchId, additionalBranchIds)
       }
       await log({ userId: request.user.id, action: 'CREATE', entity: 'User', entityId: user.id })
+      alertNewUser(user.name, request.user.id)
       const withBranches = additionalBranchIds?.length
         ? await prisma.user.findUnique({ where: { id: user.id }, include: userInclude })
         : user

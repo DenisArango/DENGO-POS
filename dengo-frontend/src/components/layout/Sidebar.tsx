@@ -32,6 +32,7 @@ import { usePendingPortalOrders } from '../../hooks/usePendingPortalOrders'
 import { useUnreadMessages } from '../../hooks/useUnreadMessages'
 import { useUnreadPortalMessages } from '../../hooks/useUnreadPortalMessages'
 import { userHasPermission } from '../../hooks/usePermissions'
+import { forgetDeviceOnLogout } from '../../lib/push'
 
 // `roles` keeps the legacy base-role gate (still how the 4 built-in roles
 // see the menu they always saw). `permissions` is an any-of fallback so a
@@ -70,6 +71,8 @@ const portalItems = [
 export default function Sidebar({ offlineRestricted = false, allowedPaths = [] }: { offlineRestricted?: boolean; allowedPaths?: string[] }) {
   const { isSidebarCollapsed, toggleSidebar } = useAppStore()
   const { user, logout } = useAuthStore()
+  // Unlink this device's notifications first (needs the token), then log out.
+  const handleLogout = () => { void forgetDeviceOnLogout().finally(logout) }
   const maestrosEnabled = useLicenseStore(s => s.maestrosEnabled)
   const pendingPortalOrders = usePendingPortalOrders()
   const unreadMessages = useUnreadMessages()
@@ -238,7 +241,7 @@ export default function Sidebar({ offlineRestricted = false, allowedPaths = [] }
               </span>
             </div>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-secondary-600"
               title="Cerrar sesión"
             >
@@ -259,7 +262,7 @@ export default function Sidebar({ offlineRestricted = false, allowedPaths = [] }
               </div>
             </div>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-secondary-600"
               title="Cerrar sesión"
             >

@@ -4,6 +4,7 @@ import { Bell, AlertTriangle, ArrowUpDown, FileText, X, Package, CheckCircle, Gr
 import { api } from '../../lib/api'
 import { useNavigate } from 'react-router-dom'
 import { useLicenseStore } from '../../store'
+import PushToggle from './PushToggle'
 
 interface Notification {
   id: string
@@ -250,6 +251,8 @@ export default function NotificationPanel({ branchId }: NotificationPanelProps) 
                 </div>
               ))}
             </div>
+
+            <PushToggle />
 
             <div className="px-4 py-2 border-t bg-gray-50 text-center">
               <button

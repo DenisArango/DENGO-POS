@@ -11,6 +11,7 @@ import { looksLikeRealNit } from '../lib/nit.js'
 import { parseBusinessDateParam } from '../lib/timezone.js'
 import { resolveOpenRegisterId } from './cash-registers.js'
 import { saleLineCost, saleBaseUnitCost, currentUnitCosts } from '../lib/saleCost.js'
+import { alertNewSale } from '../lib/staffAlerts.js'
 
 // A line is a catalog product (productId) OR a product typed in that isn't
 // in the catalog (customName): no stock movement, no per-product tracking,
@@ -551,6 +552,7 @@ export default async function salesRoutes(fastify: FastifyInstance) {
       await prisma.sale.update({ where: { id: sale.id }, data: felData })
     }
 
+    alertNewSale(sale, request.user.id)
     return reply.status(201).send({ ...sale, felStatus: felResult?.status ?? sale.felStatus })
   })
 

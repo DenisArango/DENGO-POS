@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
+import { alertInternalMessage } from '../lib/staffAlerts.js'
 
 const sendSchema = z.object({ body: z.string().min(1).max(2000) })
 
@@ -118,6 +119,8 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
     const msg = await prisma.internalMessage.create({
       data: { fromUserId: me, toUserId: userId, body: parsed.data.body },
     })
+    const sender = await prisma.user.findUnique({ where: { id: me }, select: { name: true } })
+    alertInternalMessage(userId, sender?.name ?? 'Un compañero', parsed.data.body, me)
 
     return reply.status(201).send(msg)
   })

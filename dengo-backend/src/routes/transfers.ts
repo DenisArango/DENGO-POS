@@ -5,6 +5,7 @@ import { updateStock } from '../services/inventory.service.js'
 import { log } from '../services/audit.service.js'
 import { canAccessBranch, allowedBranchIds } from '../lib/branch-scope.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
+import { alertTransferPending, alertTransferIncoming } from '../lib/staffAlerts.js'
 
 const include = {
   fromBranch: true, toBranch: true,
@@ -262,6 +263,7 @@ export default async function transferRoutes(fastify: FastifyInstance) {
       include,
     })
     await log({ userId: request.user.id, action: 'CREATE', entity: 'Transfer', entityId: t.id })
+    alertTransferPending(t, request.user.id)
     return reply.status(201).send(t)
   })
 
@@ -289,6 +291,7 @@ export default async function transferRoutes(fastify: FastifyInstance) {
 
     const updated = await prisma.transfer.findUnique({ where: { id }, include })
     await log({ userId: request.user.id, action: 'APPROVE', entity: 'Transfer', entityId: id })
+    if (updated) alertTransferIncoming(updated, request.user.id)
     return reply.send(updated)
   })
 

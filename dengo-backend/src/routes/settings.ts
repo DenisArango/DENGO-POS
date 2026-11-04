@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { requirePermission } from '../lib/permissions.js'
+import { DEFAULT_NOTIFICATIONS } from '../lib/staffAlerts.js'
 
 // Defaults returned the first time a value is read, before an admin has ever
 // saved one — lets the frontend render something sensible without a manual
@@ -16,12 +17,6 @@ const DEFAULT_PAYMENT_METHODS = [
   { method: 'MIXED', enabled: false, commission: 0 },
 ]
 
-const DEFAULT_NOTIFICATIONS = [
-  { event: 'low_stock', email: true, push: true, sms: false },
-  { event: 'out_of_stock', email: true, push: true, sms: true },
-  { event: 'new_sale', email: false, push: false, sms: false },
-  { event: 'new_user', email: true, push: false, sms: false },
-]
 
 const companySchema = z.object({
   name: z.string().min(1),
@@ -101,7 +96,7 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
 
   fastify.put('/notifications', { preHandler: [fastify.authenticate, requirePermission('settings.system')] }, async (request, reply) => {
     const body = z.array(z.object({
-      event: z.enum(['low_stock', 'out_of_stock', 'new_sale', 'new_user']),
+      event: z.enum(['internal_message', 'transfer_pending', 'transfer_incoming', 'low_stock', 'out_of_stock', 'new_sale', 'new_user']),
       email: z.boolean(),
       push: z.boolean(),
       sms: z.boolean(),

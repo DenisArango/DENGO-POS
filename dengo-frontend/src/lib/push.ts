@@ -22,7 +22,14 @@ export async function getPushState(): Promise<PushState> {
   if (Notification.permission === 'denied') return 'denied'
   const reg = await navigator.serviceWorker.getRegistration()
   const sub = await reg?.pushManager.getSubscription()
-  return sub && Notification.permission === 'granted' ? 'on' : 'off'
+  if (!sub || Notification.permission !== 'granted') return 'off'
+  // The browser keeping a subscription doesn't mean the server still has it
+  // for this user: ask, so the switch never says "on" while nothing arrives.
+  try {
+    const r = await api.get<{ thisDevice?: boolean }>(`/api/push/status?endpoint=${encodeURIComponent(sub.endpoint)}`)
+    if (r.thisDevice === false) return 'off'
+  } catch { /* offline: trust the browser */ }
+  return 'on'
 }
 
 function urlBase64ToUint8Array(base64: string) {
@@ -40,10 +47,34 @@ export async function enablePush(): Promise<PushState> {
   // The service worker is registered by vite-plugin-pwa on load.
   const reg = await navigator.serviceWorker.ready
   const { publicKey } = await api.get<{ publicKey: string }>('/api/push/public-key')
-  let sub = await reg.pushManager.getSubscription()
-  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) })
+  const key = urlBase64ToUint8Array(publicKey)
+  // Always start from a fresh subscription when the user turns this on: an
+  // old one may be dead (e.g. created by Brave before Google push was
+  // enabled) and the push service would silently reject every send.
+  await (await reg.pushManager.getSubscription())?.unsubscribe().catch(() => {})
+  let sub: PushSubscription | null = null
+  try {
+    sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
+  } catch {
+    // "Registration failed - push service error": the BROWSER couldn't
+    // reach its own push service (Brave with Google push off, a firewall
+    // or VPN blocking it, a stale registration). Retry once from clean.
+    await (await reg.pushManager.getSubscription())?.unsubscribe().catch(() => {})
+    await new Promise(r => setTimeout(r, 1500))
+    try {
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
+    } catch {
+      throw new Error(isBrave()
+        ? 'Brave tiene apagados los avisos: abre brave://settings/privacy, activa "Usar los servicios de Google para mensajes push" y reinicia Brave.'
+        : 'El navegador no pudo conectarse a su servicio de avisos. Cierra y vuelve a abrir el navegador; si sigue, revisa que un antivirus, firewall o VPN no lo esté bloqueando, o prueba con Chrome o Edge.')
+    }
+  }
   await api.post('/api/push/subscribe', sub.toJSON())
   return 'on'
+}
+
+function isBrave() {
+  return !!(navigator as unknown as { brave?: unknown }).brave
 }
 
 export async function disablePush(): Promise<PushState> {

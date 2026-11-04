@@ -29,7 +29,13 @@ export default function PushToggle() {
       setState(next)
       if (next === 'on') {
         const r = await sendTestPush().catch(() => null)
-        toast.success(r?.sent ? 'Avisos activados. Te enviamos uno de prueba.' : 'Avisos activados en este dispositivo')
+        if (r && r.sent === 0) {
+          // The push service rejected this device right away.
+          setState(await getPushState())
+          toast.error('El navegador aceptó, pero su servicio de avisos rechazó este dispositivo. Cierra y abre el navegador e inténtalo de nuevo.')
+        } else {
+          toast.success('Avisos activados. Te enviamos uno de prueba.')
+        }
       } else if (next === 'off' && on) {
         toast('Avisos desactivados en este dispositivo')
       } else if (HELP[next]) {

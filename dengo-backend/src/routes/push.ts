@@ -38,9 +38,16 @@ export default async function pushRoutes(fastify: FastifyInstance) {
     return reply.send({ ok: true })
   })
 
+  // ?endpoint= tells the device whether the SERVER still has it for this
+  // user (it's dropped when the push service rejects it, or when another
+  // user logs in on that device) — the browser alone can't know that.
   fastify.get('/status', auth, async (request, reply) => {
+    const { endpoint } = request.query as { endpoint?: string }
     const devices = await prisma.userPushSubscription.count({ where: { userId: request.user.id } })
-    return reply.send({ devices })
+    const thisDevice = endpoint
+      ? (await prisma.userPushSubscription.count({ where: { userId: request.user.id, endpoint } })) > 0
+      : undefined
+    return reply.send({ devices, thisDevice })
   })
 
   fastify.post('/test', { ...auth, config: { rateLimit: { max: 5, timeWindow: 60_000 } } }, async (request, reply) => {

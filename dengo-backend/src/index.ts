@@ -83,6 +83,11 @@ async function bootstrap() {
   await fastify.register(rateLimit, {
     max: config.rateLimit.max,
     timeWindow: config.rateLimit.windowMs,
+    // Requests from this machine itself skip the limit: that's the website
+    // (dengo-web renders on the server and calls the API over loopback), so
+    // every visitor would otherwise share ONE bucket. Real clients never look
+    // local: trustProxy turns Caddy's X-Forwarded-For into their own IP.
+    allowList: (request) => request.ip === '127.0.0.1' || request.ip === '::1',
     keyGenerator: (request) => {
       const auth = request.headers.authorization
       if (auth?.startsWith('Bearer ')) {
@@ -127,11 +132,16 @@ async function bootstrap() {
   await fastify.register(authPlugin)
 
   // Health check
-  fastify.get('/health', async () => ({
-    status: 'ok',
-    version: '1.0.0',
-    timestamp: new Date().toISOString(),
-  }))
+  // Exempt from the rate limit: every cashier device pings this to know it's
+  // online, and devices in one store share an IP (an unauthenticated request
+  // is keyed by IP), so a busy store could get its own pings refused and every
+  // till would flip to "Sin conexión" at once.
+  const health = async () => ({ status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() })
+  fastify.get('/health', { config: { rateLimit: false } }, health)
+  // Same, under /api: Caddy only forwards /api/* to the backend, so this is the
+  // one the POS can reach on its own domain to tell "online" (no database touched,
+  // so a slow report can't make it time out).
+  fastify.get('/api/health', { config: { rateLimit: false } }, health)
 
   // API routes
   await fastify.register(authRoutes,         { prefix: '/api/auth' })

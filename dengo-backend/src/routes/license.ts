@@ -20,7 +20,9 @@ export async function getLicense() {
 export default async function licenseRoutes(fastify: FastifyInstance) {
   // GET /api/license — public (no auth): the portal's own login page needs this
   // before a user is authenticated, to decide whether to show its branded landing.
-  fastify.get('/', async (_request, reply) => {
+  // Not rate-limited: every POS and portal page load asks for it (unauthenticated, so keyed by
+  // the store's shared IP), and older POS builds also use it as their connectivity ping.
+  fastify.get('/', { config: { rateLimit: false } }, async (_request, reply) => {
     return reply.send(await getLicense())
   })
 

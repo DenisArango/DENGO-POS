@@ -68,16 +68,31 @@ export async function getLocallyClosingRegisterIds(): Promise<Set<string>> {
 // A cheap, unauthenticated GET — the real signal of "can we reach our
 // backend", which `navigator.onLine` doesn't actually guarantee (it only
 // means "has *a* network interface up").
-async function pingBackend(): Promise<boolean> {
+//
+// It used to ask /api/license with a 4 s limit and call the till offline on
+// the first miss — which kicked the cashier out of whatever screen they were
+// on (MainLayout sends offline devices to /pos) whenever the server was merely
+// busy for a moment, or when the store's shared IP ran out of unauthenticated
+// requests (that ping was rate-limited, by IP). Now: /api/health (no database
+// work, exempt from the limit), 8 s, and only offline after a second miss.
+async function pingOnce(ms: number): Promise<boolean> {
+  const ctrl = new AbortController()
+  const timeout = setTimeout(() => ctrl.abort(), ms)
   try {
-    const ctrl = new AbortController()
-    const timeout = setTimeout(() => ctrl.abort(), 4000)
-    const res = await fetch(`${BASE_URL}/api/license`, { signal: ctrl.signal })
-    clearTimeout(timeout)
-    return res.ok || res.status === 404 // 404 is a valid response from this endpoint too (license off)
+    const res = await fetch(`${BASE_URL}/api/health`, { signal: ctrl.signal, cache: 'no-store' })
+    // any answer from the backend proves it's reachable; only a gateway error (Caddy can't reach it) doesn't
+    return res.status !== 502 && res.status !== 503 && res.status !== 504
   } catch {
     return false
+  } finally {
+    clearTimeout(timeout)
   }
+}
+
+async function pingBackend(): Promise<boolean> {
+  if (await pingOnce(8000)) return true
+  await new Promise(r => setTimeout(r, 1500))
+  return pingOnce(8000)
 }
 
 type PostResult = { ok: true } | { ok: false; networkError: boolean; message: string }

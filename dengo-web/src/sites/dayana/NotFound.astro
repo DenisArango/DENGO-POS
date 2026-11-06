@@ -1,0 +1,43 @@
+---
+// 404: a pink field, the number in crayon colours hopping, Roja surprised and
+// Azul searching the shelves for the page with a book.
+import Layout from './Layout.astro'
+import Crayon from './Crayon.astro'
+import type { SiteContent } from '../../core/types'
+const { content } = Astro.props as { content: SiteContent }
+---
+<Layout content={content} title="Página no encontrada" noindex credits={false}>
+  <section class="nf" aria-labelledby="h-nf">
+    <div class="nf__art" aria-hidden="true">
+      <p class="nf__n"><span style="--c:var(--red); --d:0s">4</span><span style="--c:var(--yellow); --d:.15s">0</span><span style="--c:var(--sky); --d:.3s">4</span></p>
+      <div class="nf__crew">
+        <Crayon who="roja" face="o" />
+        <Crayon who="azul" pose="read" acc={['glasses', 'book']} style="--book:#ffb800" />
+      </div>
+    </div>
+    <div class="nf__copy">
+      <p class="nf__kick dy-hand" data-in>¡Ups!</p>
+      <h1 id="h-nf" class="nf__title" data-in style="--i:1">Esta página se nos borró</h1>
+      <p class="nf__sub" data-in style="--i:2">Roja la buscó en todos los estantes y Azul revisó cada libro, pero no está. Lo que buscas seguro está en la portada o entre las ofertas.</p>
+      <p class="nf__act" data-in style="--i:3"><a class="dy-btn" href="/">Ir a la portada</a><a class="dy-btn dy-btn--yellow" href="/ofertas">Ver ofertas</a></p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .nf { min-height: 100svh; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: clamp(30px, 5vw, 80px); padding: clamp(130px, 16vh, 170px) var(--m) clamp(70px, 9vw, 120px); background: var(--pink); overflow: hidden;
+    background-image: radial-gradient(circle at 1px 1px, rgb(26 20 51 / 0.14) 1.5px, transparent 2px); background-size: 24px 24px; }
+  .nf__art { display: grid; justify-items: center; }
+  .nf__n { display: flex; font: 900 clamp(7rem, 20vw, 19rem)/0.8 var(--display); font-variation-settings: var(--soft); letter-spacing: -0.04em; }
+  .nf__n span { display: inline-block; color: var(--c); -webkit-text-stroke: 4px var(--ink); paint-order: stroke; text-shadow: 0 10px 0 var(--ink); animation: nf-hop 1.8s var(--ease-spring) var(--d) infinite; }
+  @keyframes nf-hop { 0%, 60%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-0.12em) rotate(-6deg); } }
+  .nf__crew { display: flex; align-items: end; gap: 10px; margin-top: -0.6em; width: clamp(240px, 28vw, 420px); }
+  .nf__crew > :global(svg) { flex: 1 1 0; width: auto; min-width: 0; }
+  .nf__copy { display: grid; gap: 18px; justify-items: start; }
+  .nf__kick { font-size: clamp(2.2rem, 1.6rem + 2vw, 3.4rem); font-weight: 700; color: var(--red); line-height: 1; transform: rotate(-4deg); }
+  .nf__title { font-size: clamp(2.8rem, 1.4rem + 4.4vw, 5.6rem); }
+  .nf__sub { font-size: var(--step-lead); line-height: 1.35; max-width: 34ch; }
+  .nf__act { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; }
+  @media (max-width: 860px) { .nf { grid-template-columns: 1fr; text-align: left; } }
+  @media (prefers-reduced-motion: reduce) { .nf__n span { animation: none; } }
+</style>

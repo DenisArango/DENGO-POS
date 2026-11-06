@@ -1,0 +1,857 @@
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 7,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "nested_media_start_basis_ambiguous",
+        "severity": "warning",
+        "message": "<video id=\"w02-sv\"> has data-start=\"12.584\" inside a sub-composition. Nested media timing is local to its composition by default; a nonzero value can be confused with a legacy root-global timestamp.",
+        "selector": "#w02-sv",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v1_web\\compositions\\w02.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Keep data-start=\"12.584\" if it is composition-local. If this is a legacy root-global timestamp, add data-hf-media-start-basis=\"global\"; otherwise convert it to local time by subtracting the host start."
+      },
+      {
+        "code": "overlapping_gsap_tweens",
+        "severity": "warning",
+        "message": "GSAP tweens overlap on \"#w05-r4\" for opacity between 11.56s and 11.81s.",
+        "selector": "#w05-r4",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v1_web\\compositions\\w05.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Shorten the earlier tween, move the later tween, or add `overwrite: \"auto\"`."
+      },
+      {
+        "code": "nested_media_start_basis_ambiguous",
+        "severity": "warning",
+        "message": "<video id=\"w06-ph-v\"> has data-start=\"2.857\" inside a sub-composition. Nested media timing is local to its composition by default; a nonzero value can be confused with a legacy root-global timestamp.",
+        "selector": "#w06-ph-v",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v1_web\\compositions\\w06.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Keep data-start=\"2.857\" if it is composition-local. If this is a legacy root-global timestamp, add data-hf-media-start-basis=\"global\"; otherwise convert it to local time by subtracting the host start."
+      },
+      {
+        "code": "nested_media_start_basis_ambiguous",
+        "severity": "warning",
+        "message": "<video id=\"w07-pos-v\"> has data-start=\"2.431\" inside a sub-composition. Nested media timing is local to its composition by default; a nonzero value can be confused with a legacy root-global timestamp.",
+        "selector": "#w07-pos-v",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v1_web\\compositions\\w07.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Keep data-start=\"2.431\" if it is composition-local. If this is a legacy root-global timestamp, add data-hf-media-start-basis=\"global\"; otherwise convert it to local time by subtracting the host start."
+      },
+      {
+        "code": "overlapping_gsap_tweens",
+        "severity": "warning",
+        "message": "GSAP tweens overlap on \"#w07-r2\" for opacity between 9.94s and 10.19s.",
+        "selector": "#w07-r2",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v1_web\\compositions\\w07.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Shorten the earlier tween, move the later tween, or add `overwrite: \"auto\"`."
+      },
+      {
+        "code": "overlapping_gsap_tweens",
+        "severity": "warning",
+        "message": "GSAP tweens overlap on \"#w08-r4\" for opacity between 7.68s and 7.93s.",
+        "selector": "#w08-r4",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v1_web\\compositions\\w08.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Shorten the earlier tween, move the later tween, or add `overwrite: \"auto\"`."
+      },
+      {
+        "code": "overlapping_gsap_tweens",
+        "severity": "warning",
+        "message": "GSAP tweens overlap on \"#w09-r3\" for opacity between 5.92s and 6.17s.",
+        "selector": "#w09-r3",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v1_web\\compositions\\w09.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Shorten the earlier tween, move the later tween, or add `overwrite: \"auto\"`."
+      }
+    ],
+    "filesScanned": 12
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 15,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-0\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-1\" is 0.37s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.37s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-2\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-3\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-4\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-5\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-7\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-8\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-9\" is 0.37s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.37s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-12\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-13\" is 0.37s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.37s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-14\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-15\" is 0.37s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.37s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-16\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-17\" is 0.57s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.57s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      }
+    ]
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 1,
+    "findings": [
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 7.261,
+        "selector": "#w01-sign > b:nth-of-type(1)",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 1388.95,
+          "top": 183.83,
+          "right": 1812.58,
+          "bottom": 317.85,
+          "width": 423.63,
+          "height": 134.02
+        },
+        "containerSelector": "#w01-camv",
+        "text": "¡OFERTAS!",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 0.11,
+        "dataAttributes": {},
+        "sourceFile": "compositions/w01.html",
+        "bbox": {
+          "x": 1388.95,
+          "y": 183.83,
+          "width": 423.63,
+          "height": 134.02
+        },
+        "firstSeen": 7.261,
+        "lastSeen": 7.261,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          7.261
+        ]
+      }
+    ],
+    "duration": 130.69,
+    "samples": [
+      7.261,
+      21.782,
+      36.303,
+      50.824,
+      65.345,
+      79.866,
+      94.387,
+      108.908,
+      123.429
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 1,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 1,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "contrast_aa_failure",
+        "severity": "warning",
+        "message": "Contrast is 2.9:1; WCAG AA requires 3:1.",
+        "text": "¡OFERTAS!",
+        "fg": "rgb(224,122,95)",
+        "bg": "rgb(255,253,247)",
+        "ratio": 2.9,
+        "requiredRatio": 3,
+        "suggestedColor": "rgb(219,119,93)",
+        "large": true,
+        "selector": "div > div:nth-of-type(2) > div > div:nth-of-type(1) > b",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w01.html",
+        "bbox": {
+          "x": 1389.6961669921875,
+          "y": 199.50416564941406,
+          "width": 352.888916015625,
+          "height": 107.36988830566406
+        },
+        "time": 7.261,
+        "times": [
+          7.261
+        ]
+      }
+    ],
+    "enabled": true,
+    "samples": [
+      7.261,
+      36.303,
+      65.345,
+      94.387,
+      123.429
+    ],
+    "checked": 18,
+    "passed": 17
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 7,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "first_frame_empty",
+        "severity": "warning",
+        "message": "Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and \"libreriaaurora.gt\" renders at 26 px for 14.18 s: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "libreriaaurora.gt",
+        "selector": "#w02-web > div:nth-of-type(1) > span:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w02.html",
+        "bbox": {
+          "x": 219.81,
+          "y": 161.96,
+          "width": 191.07,
+          "height": 32.8
+        },
+        "time": 11.564,
+        "times": [
+          11.564
+        ],
+        "fontPx": 25.84,
+        "floorPx": 28,
+        "seconds": 14.181,
+        "elements": [
+          {
+            "selector": "#w02-web > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "libreriaaurora.gt",
+            "fontPx": 25.84,
+            "time": 11.564,
+            "seconds": 14.181
+          }
+        ]
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and 6 text elements stay under it for 0.5 s or more, the smallest \"3:12 p.m.\" at 22 px: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "3:12 p.m.",
+        "selector": "#w04-m1 > small:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w04.html",
+        "bbox": {
+          "x": 569.02,
+          "y": 383.28,
+          "width": 87.93,
+          "height": 28.68
+        },
+        "time": 37.309,
+        "times": [
+          36.436,
+          37.309,
+          37.309,
+          38.4,
+          38.4,
+          39.272
+        ],
+        "fontPx": 22,
+        "floorPx": 28,
+        "seconds": 10.909,
+        "elements": [
+          {
+            "selector": "#w04-m1 > small:nth-of-type(1)",
+            "text": "3:12 p.m.",
+            "fontPx": 22,
+            "time": 37.309,
+            "seconds": 10.909
+          },
+          {
+            "selector": "#w04-m2 > small:nth-of-type(1)",
+            "text": "3:15 p.m.",
+            "fontPx": 22,
+            "time": 38.4,
+            "seconds": 9.818
+          },
+          {
+            "selector": "div.head > div:nth-of-type(2) > span:nth-of-type(1)",
+            "text": "WhatsApp · en línea",
+            "fontPx": 23.78,
+            "time": 36.436,
+            "seconds": 11.782
+          },
+          {
+            "selector": "#w04-web > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "libreriaaurora.gt",
+            "fontPx": 25.92,
+            "time": 39.272,
+            "seconds": 8.946
+          },
+          {
+            "selector": "#w04-m1",
+            "text": "Hola, quiero una página que se sienta como mi librería, con mis colores.",
+            "fontPx": 26,
+            "time": 37.309,
+            "seconds": 10.909
+          },
+          {
+            "selector": "#w04-m2",
+            "text": "¡Claro, María José! Le armamos un diseño a su medida. ¿Nos manda su logo y su historia?",
+            "fontPx": 26,
+            "time": 38.4,
+            "seconds": 9.818
+          }
+        ]
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and 6 text elements stay under it for 0.5 s or more, the smallest \"Publicación · 9:12 p.m.\" at 22 px: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "Publicación · 9:12 p.m.",
+        "selector": "div.top > div:nth-of-type(2) > span:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w06.html",
+        "bbox": {
+          "x": 261.55,
+          "y": 251.94,
+          "width": 227.77,
+          "height": 29.92
+        },
+        "time": 64.145,
+        "times": [
+          64.145,
+          64.145,
+          64.145,
+          64.145,
+          64.145,
+          67.2
+        ],
+        "fontPx": 22.08,
+        "floorPx": 28,
+        "seconds": 12.872,
+        "elements": [
+          {
+            "selector": "div.top > div:nth-of-type(2) > span:nth-of-type(1)",
+            "text": "Publicación · 9:12 p.m.",
+            "fontPx": 22.08,
+            "time": 64.145,
+            "seconds": 12.872
+          },
+          {
+            "selector": "#w06-post > p:nth-of-type(1)",
+            "text": "¡Regreso a clases! 15% en cuadernos en nuestras tres tiendas. Recorte su cupón en la página.",
+            "fontPx": 23.92,
+            "time": 64.145,
+            "seconds": 12.872
+          },
+          {
+            "selector": "div.act > span:nth-of-type(1)",
+            "text": "Me gusta",
+            "fontPx": 23.92,
+            "time": 64.145,
+            "seconds": 12.872
+          },
+          {
+            "selector": "div.act > span:nth-of-type(2)",
+            "text": "Comentar",
+            "fontPx": 23.92,
+            "time": 64.145,
+            "seconds": 12.872
+          },
+          {
+            "selector": "div.act > span:nth-of-type(3)",
+            "text": "Compartir",
+            "fontPx": 23.92,
+            "time": 64.145,
+            "seconds": 12.872
+          },
+          {
+            "selector": "div.top > div:nth-of-type(2) > b:nth-of-type(1)",
+            "text": "Librería Aurora",
+            "fontPx": 25.76,
+            "time": 67.2,
+            "seconds": 9.817
+          }
+        ]
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and \"DENGO POS · Caja principal #1 · Central Zona 1\" renders at 26 px for 10.04 s: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "DENGO POS · Caja principal #1 · Central Zona 1",
+        "selector": "#w07-pos > div:nth-of-type(1) > span:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w07.html",
+        "bbox": {
+          "x": 742.22,
+          "y": 192.23,
+          "width": 531.47,
+          "height": 32.92
+        },
+        "time": 79.418,
+        "times": [
+          79.418
+        ],
+        "fontPx": 25.94,
+        "floorPx": 28,
+        "seconds": 10.036,
+        "elements": [
+          {
+            "selector": "#w07-pos > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "DENGO POS · Caja principal #1 · Central Zona 1",
+            "fontPx": 25.94,
+            "time": 79.418,
+            "seconds": 10.036
+          }
+        ]
+      },
+      {
+        "code": "line_unread",
+        "severity": "warning",
+        "message": "\"Un solo uso · a nombre de Carmen López\" (8 words) is on screen 1.98 s (±0.01 s), under its 2.17 s floor: hold it about 0.5 s + 0.3 s a word (2.90 s here) before it leaves or changes; see references/motion.md.",
+        "text": "Un solo uso · a nombre de Carmen López",
+        "selector": "#w07-p1",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w07.html",
+        "bbox": {
+          "x": 1118.3,
+          "y": 976.58,
+          "width": 593.79,
+          "height": 41.84000000000003
+        },
+        "time": 87.435,
+        "words": 8,
+        "seconds": 1.978,
+        "floorSeconds": 2.175
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and \"libreriaaurora.gt/ingresar\" renders at 26 px for 9.82 s: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "libreriaaurora.gt/ingresar",
+        "selector": "#w09-web > div:nth-of-type(1) > span:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w09.html",
+        "bbox": {
+          "x": 595.27,
+          "y": 134.95,
+          "width": 296.35,
+          "height": 32.75
+        },
+        "time": 104.072,
+        "times": [
+          104.072
+        ],
+        "fontPx": 25.81,
+        "floorPx": 28,
+        "seconds": 9.818,
+        "elements": [
+          {
+            "selector": "#w09-web > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "libreriaaurora.gt/ingresar",
+            "fontPx": 25.81,
+            "time": 104.072,
+            "seconds": 9.818
+          }
+        ]
+      }
+    ],
+    "enabled": true,
+    "step": 0.21800000000000352,
+    "samples": 599
+  },
+  "audio": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

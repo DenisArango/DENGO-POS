@@ -1,0 +1,67 @@
+---
+// 404: the page got erased. A crayon "404" sits on ruled paper and an eraser
+// rubs across it, fading each digit and leaving crumbs, then the way back.
+import Layout from './Layout.astro'
+import type { SiteContent } from '../../core/types'
+const { content } = Astro.props as { content: SiteContent }
+const first = content.promotions.find(p => p.featured) ?? content.promotions[0]
+---
+<Layout content={content} title="Página no encontrada" noindex>
+  <section class="nf" data-nf>
+    <div class="nf__paper">
+      <p class="nf__num" aria-hidden="true" data-num><span style="--c:var(--red)">4</span><span style="--c:var(--blue)">0</span><span style="--c:var(--green)">4</span></p>
+      <span class="nf__eraser" aria-hidden="true" data-eraser><span></span></span>
+      <span class="nf__crumbs" aria-hidden="true" data-crumbs></span>
+    </div>
+    <div class="nf__copy">
+      <h1 class="nf__title">Esta página se borró.</h1>
+      <p class="nf__sub">O nunca la escribimos. Lo que buscabas seguro está en la portada o entre las ofertas.</p>
+      <p class="nf__actions">
+        <a class="a-btn a-btn--go" href="/" data-magnet>Ir a la portada</a>
+        {first && <a class="a-btn a-btn--yellow" href="/ofertas" data-magnet>Ver ofertas</a>}
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import gsap from 'gsap'
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const run = () => {
+    if (reduce) return
+    const digits = gsap.utils.toArray<HTMLElement>('[data-num] span')
+    const crumbs = document.querySelector<HTMLElement>('[data-crumbs]')!
+    const tl = gsap.timeline({ delay: 0.2 })
+    tl.from(digits, { yPercent: 120, rotate: () => gsap.utils.random(-30, 30), duration: 1, ease: 'back.out(1.8)', stagger: 0.12 })
+      .fromTo('[data-eraser]', { left: '-30%', rotate: -18 }, { left: '105%', rotate: -6, duration: 1.6, ease: 'power2.inOut' }, 1)
+      // each digit fades to a rubbed-out ghost as the eraser passes over it
+      .to(digits, { opacity: 0.2, filter: 'blur(1.5px)', scale: 0.97, duration: 0.35, ease: 'power1.out', stagger: 0.4 }, 1.3)
+    // crumbs fall off the eraser as it rubs
+    for (let i = 0; i < 26; i++) {
+      const c = document.createElement('i'); crumbs.appendChild(c)
+      gsap.set(c, { left: `${(i / 26) * 100}%`, top: '55%', opacity: 0 })
+      tl.to(c, { opacity: 1, duration: 0.05 }, 1 + (i / 26) * 1.5)
+        .to(c, { y: gsap.utils.random(60, 160), x: gsap.utils.random(-30, 30), rotate: gsap.utils.random(-180, 180), duration: 0.9, ease: 'power2.in' }, 1 + (i / 26) * 1.5)
+    }
+    tl.from('.nf__copy > *', { opacity: 0, y: 30, duration: 0.8, ease: 'power3.out', stagger: 0.1 }, 1.4)
+  }
+  if ((window as unknown as { __auroraReady?: boolean }).__auroraReady) run()
+  else addEventListener('aurora:ready', run, { once: true })
+</script>
+
+<style>
+  .nf { min-height: 100svh; display: grid; grid-template-columns: 1.1fr 0.9fr; align-items: center; gap: clamp(28px, 5vw, 80px); padding: clamp(130px, 16vh, 170px) var(--m) clamp(70px, 9vw, 120px); background: var(--bg); }
+  .nf__paper { position: relative; aspect-ratio: 4 / 3; background: var(--paper); border: 3px solid var(--ink); border-radius: 26px; box-shadow: 0 16px 0 var(--ink); overflow: hidden; rotate: -2deg; display: grid; place-items: center;
+    background-image: linear-gradient(90deg, transparent 11%, rgb(255 65 48 / 0.5) 11% 11.4%, transparent 11.4%), repeating-linear-gradient(transparent 0 33px, rgb(47 91 255 / 0.22) 33px 35px); }
+  .nf__num { display: flex; font-size: clamp(8rem, 4rem + 14vw, 20rem); font-weight: 800; letter-spacing: -0.08em; line-height: 0.8; font-variation-settings: 'wdth' 80; }
+  .nf__num span { display: inline-block; color: var(--c); }
+  .nf__eraser { position: absolute; top: 34%; left: -30%; width: clamp(120px, 18vw, 220px); height: clamp(60px, 8vw, 100px); border-radius: 14px; background: var(--pink); border: 3px solid var(--ink); box-shadow: 0 8px 0 var(--ink); }
+  .nf__eraser span { position: absolute; right: 0; top: 0; bottom: 0; width: 42%; background: #fff; border-left: 3px solid var(--ink); border-radius: 0 11px 11px 0; }
+  .nf__crumbs { position: absolute; inset: 0; pointer-events: none; }
+  .nf__crumbs :global(i) { position: absolute; width: 7px; height: 5px; border-radius: 2px; background: #f4b6d2; }
+  .nf__copy { display: grid; gap: 22px; justify-items: start; }
+  .nf__title { font-size: var(--step-head); }
+  .nf__sub { font-size: var(--step-lead); line-height: 1.35; max-width: 32ch; }
+  .nf__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+  @media (max-width: 860px) { .nf { grid-template-columns: 1fr; } }
+</style>

@@ -1,0 +1,17 @@
+    #e10-q, #e10-a { opacity: 0; }
+<!--markup-->
+    <browser id="e10-q" src="ui/x_ia_scroll_0.png" url="DENGO POS · Analista de datos con IA" at="420 110 1420" crop="205 60 1395 785" />
+    <ring id="e10-r1" on="e10-q" box="880 288 378 42" />
+    <browser id="e10-a" src="ui/x_ia_scroll_1.png" url="DENGO POS · Analista de datos con IA" at="420 110 1420" crop="205 60 1395 785" />
+    <ring id="e10-r2" on="e10-a" box="342 562 225 80" />
+    <ring id="e10-r3" on="e10-a" box="583 562 217 80" />
+<!--script-->
+    lift("#e10-q", 0.2);
+    ring("#e10-r1", {T:que:1:-0.2}, 3.0);
+    tl.set("#e10-a", { opacity: 1 }, {T:responde:1:-0.3});
+    tl.fromTo("#e10-a .view img", { y: 60 }, { y: 0, duration: 0.6, ease: "expo.out" }, {T:responde:1:-0.3});
+    ring("#e10-r2", {T:numeros:1:-0.2});
+    ring("#e10-r3", {T:reales:1:-0.1});
+<!--sfx-->
+typing {T:pregunto} 0.3
+pop {T:responde} 0.4

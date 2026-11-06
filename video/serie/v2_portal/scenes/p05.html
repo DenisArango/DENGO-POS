@@ -1,0 +1,48 @@
+    #p05-steps { position: absolute; left: 150px; top: 170px; display: flex; flex-direction: column; gap: 22px; }
+    #p05-steps .s { display: flex; align-items: center; gap: 26px; font-size: 52px; font-weight: 700; color: #b8ae9c; letter-spacing: -0.02em; }
+    #p05-steps .s i { font-style: normal; width: 84px; height: 84px; border-radius: 50%; border: 4px solid #d8cfbf; display: grid; place-items: center; font-size: 40px; color: #b8ae9c; background: #fff; }
+    #p05-web { opacity: 0; z-index: 4; }
+    #p05-ph { opacity: 0; }
+    #p05-kit { opacity: 0; }
+    #p05-p1 { left: 150px; top: 800px; opacity: 0; }
+    #p05-p2 { left: 640px; top: 820px; opacity: 0; }
+<!--markup-->
+    <!--nobadge-->
+    <div id="p05-steps">
+      <div class="s" id="p05-s1"><i>1</i>Escuela</div>
+      <div class="s" id="p05-s2"><i>2</i>Programa</div>
+      <div class="s" id="p05-s3"><i>3</i>Alumnos</div>
+      <div class="s" id="p05-s4"><i>4</i>Productos</div>
+      <div class="s" id="p05-s5"><i>5</i>Confirmar</div>
+    </div>
+    <browser id="p05-web" src="ui/web_aurora_ingresar.png" url="libreriaaurora.gt/ingresar" at="260 160 1300" />
+    <ring id="p05-r0" on="p05-web" box="333 712 332 67" />
+    <phone id="p05-ph" src="rec/m_portal_pedido.mp4" at="1240 22 446" start="2.6" mstart="1.4" />
+    <ring id="p05-r1" on="p05-ph" box="0 790 390 54" pad="4" />
+    <shot id="p05-kit" src="ui/x_programas.png" crop="1150 196 432 324" at="150 200 620" />
+    <div id="p05-p1" class="pill coral">Kit de 1 alumno × sus alumnos</div>
+    <div id="p05-p2" class="pill sun">Se guarda solo</div>
+<!--script-->
+    lift("#p05-web", 0.1); ring("#p05-r0", {T:pagina}, 1.0);
+    tl.to("#p05-web", { opacity: 0, x: -200, scale: 0.9, duration: 0.5, ease: "power2.in" }, 2.4);
+    tl.fromTo("#p05-ph", { opacity: 0, x: 120 }, { opacity: 1, x: 0, duration: 0.6, ease: "expo.out" }, 2.5);
+    tl.fromTo("#p05-steps .s", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.4, ease: "expo.out", stagger: 0.08 }, 2.6);
+    const on = (n, t) => {
+      tl.to(`#p05-s${n}`, { color: "#1e4d68", duration: 0.25 }, t);
+      tl.to(`#p05-s${n} i`, { backgroundColor: "#e07a5f", borderColor: "#e07a5f", color: "#ffffff", scale: 1.12, duration: 0.3, ease: "back.out(2)" }, t);
+      if (n > 1) tl.to(`#p05-s${n - 1} i`, { backgroundColor: "#1e4d68", borderColor: "#1e4d68", scale: 1, duration: 0.3 }, t);
+    };
+    on(1, {T:escuela}); on(2, {T:programa}); on(3, {T:alumnos}); on(4, {T:catalogo});
+    ring("#p05-r1", {T:seiscientos:1:-0.3}, 1.8);
+    tl.to("#p05-steps", { opacity: 0, duration: 0.35 }, {T:utiles:1:-0.3});
+    lift("#p05-kit", {T:utiles});
+    pop("#p05-p1", {T:multiplica:1:-0.4});
+    tl.to("#p05-kit, #p05-p1", { opacity: 0, duration: 0.35 }, {T:interrumpen:1:-0.4});
+    tl.to("#p05-steps", { opacity: 1, duration: 0.35 }, {T:interrumpen:1:-0.2});
+    pop("#p05-p2", {T:dejo:1:-0.8});
+    on(5, {T:dejo:1:+0.2});
+<!--sfx-->
+click-soft {T:escuela} 0.4
+click-soft {T:programa} 0.4
+typing {T:alumnos} 0.3
+pop {T:multiplica} 0.4

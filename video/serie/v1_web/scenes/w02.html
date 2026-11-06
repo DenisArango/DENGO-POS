@@ -1,0 +1,25 @@
+    #w02-web { opacity: 0; }
+    #w02-pos { opacity: 0; z-index: 3; }
+    #w02-live { left: 1380px; top: 116px; opacity: 0; }
+    #w02-wa-v { opacity: 1; }
+<!--markup-->
+    <browser id="w02-web" src="ui/web_aurora_home.png" url="libreriaaurora.gt" at="96 140 1180" />
+    <div id="w02-scroll" style="position:absolute;left:96px;top:186px;width:1180px;height:664px;overflow:hidden;border-radius:0 0 18px 18px;z-index:2;opacity:0">
+      <video id="w02-sv" class="clip" src="assets/rec/web_aurora_scroll.mp4" muted playsinline data-start="{T:linea:1:-0.6}" data-duration="5.000" style="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover"></video>
+    </div>
+    <shot id="w02-pos" src="ui/pw_sitio.png" crop="256 60 1344 600" at="900 330 960" />
+    <ring id="w02-r1" on="w02-pos" box="1256 225 320 72" />
+    <ring id="w02-r2" on="w02-pos" box="300 380 82 82" />
+    <div id="w02-live" class="pill coral">● En línea</div>
+<!--script-->
+    lift("#w02-web", 0.2);
+    pan("#w02-web-i", 0.4, { scale: 1.06, transformOrigin: "50% 0%" }, 6);
+    lift("#w02-pos", {T:dengo:1:-0.2});
+    ring("#w02-r1", {T:activo}, 1.4);
+    ring("#w02-r2", {T:logo}, 1.4);
+    tl.to("#w02-pos", { opacity: 0, y: 40, duration: 0.45, ease: "power2.in" }, {T:linea:1:-0.8});
+    tl.set("#w02-scroll", { opacity: 1 }, {T:linea:1:-0.6});
+    pop("#w02-live", {T:linea:1:-0.3});
+<!--sfx-->
+click-soft {T:activo} 0.5
+pop {T:linea:1:-0.3} 0.45

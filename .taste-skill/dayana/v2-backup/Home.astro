@@ -1,0 +1,516 @@
+---
+// Variedades Dayana — made-to-measure home.
+// Idea: the shop grew the way the house did, room by room. The story is told
+// in one pinned scene whose picture frame grows with the house: the size of
+// one room in 2010, the vitrinas, the whole first floor, the second level,
+// the whole street on the way to Cubulco, and back to the size of the room,
+// where the tiendita still is. The same move, a picture that answers what you
+// are reading, comes back in other forms: the featured lines change their
+// photo with each choice, and a service brings its picture under the cursor.
+// Live things: the Black November countdown with the coupon taken right on
+// the page, and the stores that say whether they are open right now.
+import Layout from './Layout.astro'
+import './home.css'
+import Arrow from './Arrow.astro'
+import Cap from './Cap.astro'
+import House from './House.astro'
+import CouponForm from '../../core/CouponForm.astro'
+import { title, BRAND, PHOTOS, STORY, FEATURED, SHELVES, SERVICES, MISSION, isMain, visibleBranches } from './data'
+import { offerHeadline, fmtDay, mapsLink, waLink, canLogin } from '../../core/api'
+import { openState } from '../../core/hours'
+import type { SiteContent } from '../../core/types'
+
+const { content } = Astro.props as { content: SiteContent }
+const login = canLogin(content)
+const branches = visibleBranches(content.branches)
+const offer = content.promotions.find(p => p.featured) ?? content.promotions[0]
+const phone = content.contact.whatsapp || BRAND.whatsapp
+const wa = waLink(phone, 'Hola Variedades Dayana, tengo una consulta.')
+const social = [
+  { k: 'Facebook', label: BRAND.facebook.label, url: content.contact.facebook || BRAND.facebook.url },
+  { k: 'Instagram', label: BRAND.instagram.label, url: content.contact.instagram || BRAND.instagram.url },
+  { k: 'TikTok', label: BRAND.tiktok.label, url: content.contact.tiktok || BRAND.tiktok.url },
+]
+const towns = [...new Set(branches.map(b => b.city.split(',')[0]!.trim()).filter(Boolean))]
+const words = (t: string) => t.split(/\s+/)
+const pile = [
+  { p: PHOTOS.backpack, x: 46, y: 4, r: -7, z: 1.4, w: 34 },
+  { p: PHOTOS.ballpoints, x: 2, y: 30, r: 5, z: 0.7, w: 46 },
+  { p: PHOTOS.paint, x: 54, y: 52, r: 4, z: 1.1, w: 44 },
+  { p: PHOTOS.notebooks, x: 10, y: 62, r: -4, z: 0.5, w: 38 },
+  { p: PHOTOS.bread, x: 28, y: 18, r: -2, z: 1, w: 36 },
+]
+const band = ['Totto', 'Parker', 'Sheaffer', 'Fast', 'Maped', 'Útiles escolares', 'Oficina', 'Acrílicos', 'Leyes y obras', 'Fotocopias']
+const openNow = branches.filter(b => openState(b.openTime, b.closeTime).open).length
+---
+<Layout content={content} home>
+  <!-- A compact bar that comes in once the first screen is gone. -->
+  <header class="d-float" data-float aria-label="Navegación">
+    <a class="d-float__logo" href="#top" aria-label={`${BRAND.name}, inicio`}><img src="/sites/dayana/logo.svg" alt="" width="40" height="40" /></a>
+    <nav class="d-float__nav" aria-label="Secciones">
+      <a href="#historia">Historia</a><a href="#destacados">Destacados</a><a href="#servicios">Servicios</a><a href="#tiendas">Tiendas</a>
+    </nav>
+    {offer ? <a class="d-btn d-btn--sm" href="#ofertas">Black November</a> : <a class="d-btn d-btn--sm" href="#contacto">Escríbenos</a>}
+  </header>
+
+  <!-- ═══ HERO: the name, the slogan, a pile of what's on the shelves ═══ -->
+  <section class="d-hero" id="top" data-hero aria-labelledby="h-hero">
+    <header class="d-top">
+      <a class="d-top__logo" href="/" aria-label={`${BRAND.name}, inicio`}><img src="/sites/dayana/logo.svg" alt="" width="64" height="64" /></a>
+      {branches.length > 0 && (
+        <p class="d-hero__open"><span class:list={['d-dot', { 'd-on': openNow > 0 }]} aria-hidden="true"></span>{openNow > 0 ? `${openNow} de ${branches.length} tiendas abiertas ahora` : `Nuestras ${branches.length} tiendas están cerradas ahora`}</p>
+      )}
+      <nav class="d-nav" aria-label="Principal">
+        <a href="#historia">Historia</a>
+        <a href="#destacados">Destacados</a>
+        <a href="#servicios">Servicios</a>
+        <a href="#tiendas">Tiendas</a>
+        {login && <a href="/ingresar">Ingresar</a>}
+        {offer ? <a class="d-btn" href={`/ofertas/${offer.slug}`}>Obtener cupón</a> : <a class="d-btn" href="#contacto">Escríbenos</a>}
+        <details class="d-nav__menu">
+          <summary>Menú</summary>
+          <ul>
+            <li><a href="#historia">Historia</a></li>
+            <li><a href="#destacados">Destacados</a></li>
+            {offer && <li><a href="#ofertas">Ofertas</a></li>}
+            <li><a href="#servicios">Servicios</a></li>
+            <li><a href="#tiendas">Tiendas</a></li>
+            {login && <li><a href="/ingresar">Ingresar</a></li>}
+          </ul>
+        </details>
+      </nav>
+    </header>
+
+    <div class="d-hero__copy">
+      <h1 id="h-hero" class="d-hero__slogan"><span class="d-sr-only">Variedades Dayana: </span><span class="d-ln">En servicio y calidad</span> <span class="d-ln d-ln--red">nadie nos gana.</span></h1>
+      <p class="d-hero__sub" data-in style="--i:1">Librería, útiles escolares, oficina y arte en {towns.length ? towns.join(' y ') : 'Rabinal y Cubulco'}, Baja Verapaz. Desde {BRAND.since}, cuando todo cabía en un cuarto.</p>
+      <div class="d-hero__actions" data-in style="--i:2">
+        {offer && <a class="d-btn" href="#ofertas" data-magnet>{offerHeadline(offer)} en Totto <Arrow /></a>}
+        <a class="d-btn d-btn--light" href="#historia" data-magnet>Nuestra historia</a>
+      </div>
+    </div>
+
+    <div class="d-pile" aria-hidden="true" data-pile>
+      {pile.map((c, i) => (
+        <div class="d-pile__card" style={`--x:${c.x}%; --y:${c.y}%; --r:${c.r}deg; --w:${c.w}%; --d:${i * 90}ms`} data-z={c.z}>
+          <img src={c.p.src} width={c.p.w} height={c.p.h} alt="" loading="eager" decoding="async" />
+        </div>
+      ))}
+    </div>
+
+    <p class="d-hero__word" data-word aria-hidden="true">Dayana</p>
+  </section>
+
+  <!-- ═══ The brands, running ═══ -->
+  <div class="d-band" aria-hidden="true">
+    <div class="d-band__track" data-band>
+      {[0, 1].map(() => band.map(w => <span>{w}<i></i></span>))}
+    </div>
+  </div>
+
+  <!-- ═══ STORY: one scene, the frame grows with the house ═══ -->
+  <section class="d-story" id="historia" aria-labelledby="h-story" data-story style={`--n:${STORY.length}`}>
+    <div class="d-story__pin">
+      <div class="d-story__frame" data-frame>
+        {STORY.map((c, i) => (
+          <img class:list={['d-story__img', { 'd-is-on': i === 0 }]} data-img src={PHOTOS[c.photo].src} width={PHOTOS[c.photo].w} height={PHOTOS[c.photo].h} alt="" loading={i === 0 ? 'eager' : 'lazy'} decoding="async" />
+        ))}
+        <span class="d-story__scrim" data-scrim></span>
+      </div>
+      <div class="d-story__col">
+        <h2 id="h-story" class="d-story__h">Esta historia cabe en un cuarto</h2>
+        <div class="d-story__scenes">
+          {STORY.map((c, i) => (
+            <article class:list={['d-scene', { 'd-is-on': i === 0 }]} data-scene aria-label={`${c.mark}: ${c.title}`}>
+              <p class="d-scene__mark">{c.mark}</p>
+              <h3 class="d-scene__t">{c.title}</h3>
+              <p class="d-scene__p">{words(c.text).map(w => <span>{w} </span>)}</p>
+              {i === STORY.length - 1 && <p class="d-scene__sign">La familia de {BRAND.name}</p>}
+            </article>
+          ))}
+        </div>
+      </div>
+      <ol class="d-story__rail" aria-hidden="true">
+        {STORY.map((c, i) => <li class:list={{ 'd-is-on': i === 0 }} data-rail>{c.mark}</li>)}
+      </ol>
+      <p class="d-story__cap" aria-hidden="true">
+        {STORY.map((c, i) => <span class:list={{ 'd-is-on': i === 0 }} data-capt>{PHOTOS[c.photo].ref ? 'Foto de referencia · ' : ''}{PHOTOS[c.photo].caption}</span>)}
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══ FEATURED: cards that stack; each choice brings its picture ═══ -->
+  <section class="d-feat" id="destacados" aria-labelledby="h-feat">
+    <h2 id="h-feat" class="d-feat__h" data-in>Lo que vienen a buscar por nombre</h2>
+    <div class="d-cards">
+      {FEATURED.map((f, i) => (
+        <article class={`d-card d-card--${f.tone}`} style={`--k:${i}`} data-card aria-labelledby={`h-${f.id}`}>
+          <div class="d-card__txt">
+            <h3 id={`h-${f.id}`} class="d-card__brand">{f.brand}</h3>
+            <p class="d-card__t">{f.title}</p>
+            <p class="d-card__x">{f.text}</p>
+            {f.choices.length > 1 && (
+              <div class="d-chips" role="group" aria-label={`Ver ${f.brand}`}>
+                {f.choices.map((c, j) => <button type="button" class="d-chip" aria-pressed={j === 0 ? 'true' : 'false'} data-pick={c.photo}>{c.label}</button>)}
+              </div>
+            )}
+            {f.also && <p class="d-card__also">{f.also}</p>}
+          </div>
+          <div class="d-card__pic">
+            {f.choices.map((c, j) => (
+              <figure class:list={['d-card__fig', { 'd-is-on': j === 0 }]} data-fig={c.photo}>
+                <img src={PHOTOS[c.photo].src} width={PHOTOS[c.photo].w} height={PHOTOS[c.photo].h} alt={PHOTOS[c.photo].alt} loading="lazy" decoding="async" />
+                <Cap photo={PHOTOS[c.photo]} />
+              </figure>
+            ))}
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <!-- ═══ SHELVES: and everything else ═══ -->
+  <section class="d-shelves" aria-labelledby="h-shelves">
+    <div class="d-shelves__head">
+      <h2 id="h-shelves" data-in>Y lo de todos los días</h2>
+      <p data-in style="--i:1">El surtido más amplio de útiles escolares y artículos de oficina de la zona, con las marcas que ya conoces.</p>
+    </div>
+    <div class="d-shelves__grid">
+      {SHELVES.map((s, i) => (
+        <article class="d-shelf" data-in style={`--i:${i}`}>
+          <h3>{s.name}</h3>
+          <p class="d-shelf__note">{s.note}</p>
+          <figure class="d-shelf__fig">
+            <img src={PHOTOS[s.photo].src} width={PHOTOS[s.photo].w} height={PHOTOS[s.photo].h} alt={PHOTOS[s.photo].alt} loading="lazy" decoding="async" />
+            <Cap photo={PHOTOS[s.photo]} />
+          </figure>
+          <ul>{s.items.map(it => <li>{it}</li>)}</ul>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <!-- ═══ BLACK NOVEMBER: the countdown and the coupon, right here ═══ -->
+  {offer && (
+    <section class="d-bn" id="ofertas" aria-labelledby="h-bn" data-bn>
+      <div class="d-bn__top">
+        <p class="d-bn__v" aria-hidden="true" data-bn-v>{offerHeadline(offer)}</p>
+        <div class="d-bn__pics" aria-hidden="true">
+          {[PHOTOS.backpack, PHOTOS.cases].map((p, i) => <img src={p.src} width={p.w} height={p.h} alt="" loading="lazy" decoding="async" style={`--r:${i ? 6 : -5}deg`} />)}
+        </div>
+      </div>
+      <div class="d-bn__grid">
+        <div class="d-bn__copy">
+          <h2 id="h-bn" data-in>{title(offer.name)}</h2>
+          {offer.description && <p class="d-bn__d" data-in style="--i:1">{offer.description}</p>}
+          {offer.endsAt && (
+            <p class="d-clock" data-clock={offer.endsAt} data-in style="--i:3" role="timer" aria-label="Tiempo que le queda a la oferta">
+              <span>Quedan</span> <b data-u="d">–</b> <span data-l="d">días</span> <b data-u="h">–</b> <span data-l="h">horas</span> <b data-u="m">–</b> <span data-l="m">min</span>
+            </p>
+          )}
+          {(offer.startsAt || offer.endsAt) && (
+            <p class="d-bn__when" data-in style="--i:4">
+              {offer.startsAt && offer.endsAt ? `Del ${fmtDay(offer.startsAt)} al ${fmtDay(offer.endsAt)}` : offer.endsAt ? `Hasta el ${fmtDay(offer.endsAt)}` : `Desde el ${fmtDay(offer.startsAt)}`}
+            </p>
+          )}
+        </div>
+        <div class="d-bn__ticket" data-in style="--i:2">
+          <p class="d-bn__tt">Tu cupón, aquí mismo</p>
+          <p class="d-bn__tx">Escribe tu nombre y tu teléfono, guarda el código y preséntalo en caja en cualquiera de las tiendas.</p>
+          <CouponForm slug={offer.slug} formClass="d-form" inputClass="d-input" buttonClass="d-btn" noteClass="d-note" buttonLabel="Obtener mi cupón" />
+          {content.promotions.length > 1 && <a class="d-link d-bn__all" href="/ofertas">Ver las {content.promotions.length} ofertas</a>}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- ═══ SERVICES: each brings its picture under the cursor ═══ -->
+  <section class="d-serv" id="servicios" aria-labelledby="h-serv" data-serv>
+    <h2 id="h-serv" data-in>Servicios en la tienda</h2>
+    <ul class="d-serv__list">
+      {SERVICES.map((s, i) => (
+        <li class="d-serv__row" data-serv-row={i} data-in style={`--i:${i}`}>
+          <span class="d-serv__n">{s.name}</span>
+          <span class="d-serv__x">{s.note}</span>
+          <img class="d-serv__thumb" src={PHOTOS[s.photo].src} width={PHOTOS[s.photo].w} height={PHOTOS[s.photo].h} alt="" loading="lazy" decoding="async" />
+        </li>
+      ))}
+    </ul>
+    <div class="d-serv__float" aria-hidden="true" data-serv-float>
+      {SERVICES.map((s, i) => <img src={PHOTOS[s.photo].src} width={PHOTOS[s.photo].w} height={PHOTOS[s.photo].h} alt="" loading="lazy" decoding="async" data-serv-img={i} />)}
+    </div>
+  </section>
+
+  <!-- ═══ MISSION AND VISION: the words fill in as you read ═══ -->
+  <section class="d-mv" aria-labelledby="h-mv">
+    <h2 id="h-mv" data-in>Lo que nos mueve</h2>
+    <div class="d-mv__grid">
+      <h3>Misión</h3>
+      <p class="d-mv__p" data-fill>
+        {words(MISSION.mission.before.trim()).map(w => <span>{w} </span>)}{words(MISSION.mission.mark).map((w, i, a) => <span class="d-mark-w">{w}{i === a.length - 1 && MISSION.mission.after.startsWith(',') ? ',' : ''} </span>)}{words(MISSION.mission.after.replace(/^,\s*/, '')).map(w => <span>{w} </span>)}
+      </p>
+      <h3>Visión</h3>
+      <p class="d-mv__p" data-fill>{words(MISSION.vision).map(w => <span>{w} </span>)}</p>
+    </div>
+  </section>
+
+  <!-- ═══ STORES: the house builds itself, and the stores say if they are open ═══ -->
+  <section class="d-stores" id="tiendas" aria-labelledby="h-stores">
+    <div class="d-stores__grid">
+      <div class="d-stores__house" data-house-t>
+        <House id="house-t" branches={branches.map(b => b.name)} />
+      </div>
+      <div class="d-stores__list">
+        <h2 id="h-stores" data-in>Nuestras {branches.length} tiendas</h2>
+        <p class="d-stores__sub" data-in style="--i:1">De la casa en Rabinal hasta Cubulco. Pasa a la que te quede más cerca.</p>
+        {branches.map((b, i) => {
+          const st = openState(b.openTime, b.closeTime)
+          return (
+            <article class="d-store" data-in style={`--i:${i % 4}`}>
+              <div class="d-store__top">
+                <h3 class="d-store__n">{b.name}</h3>
+                <p class:list={['d-store__h', { 'd-on': st.open }]}><span class:list={['d-dot', { 'd-on': st.open }]} aria-hidden="true"></span>{st.label || `${b.openTime} a ${b.closeTime}`}</p>
+              </div>
+              <p class="d-store__a">{[b.address, b.city].filter(Boolean).join(', ')}</p>
+              {isMain(b.name) && <p class="d-store__note">Aquí sigue la tiendita, en el mismo cuarto</p>}
+              <a class="d-store__go" href={mapsLink(b)} target="_blank" rel="noopener">Cómo llegar <Arrow /></a>
+            </article>
+          )
+        })}
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CONTACT ═══ -->
+  <section class="d-contact" id="contacto" aria-labelledby="h-contact">
+    <div class="d-contact__top">
+      <h2 id="h-contact" data-in>¿Tienes una pregunta? Escríbenos.</h2>
+      <img class="d-contact__logo" src="/sites/dayana/logo.svg" alt="" width="168" height="158" loading="lazy" />
+    </div>
+    {wa ? (
+      <a class="d-contact__num" href={wa} target="_blank" rel="noopener" aria-label={`Escribir por WhatsApp al ${phone}`} data-in>{phone}</a>
+    ) : <p class="d-contact__num">{phone}</p>}
+    <ul class="d-social">
+      {social.map(s => (
+        <li><a href={s.url} target="_blank" rel="noopener"><span class="d-social__k">{s.k}</span><span class="d-social__l">{s.label}</span><Arrow /></a></li>
+      ))}
+    </ul>
+    <p class="d-contact__slogan" aria-hidden="true">{BRAND.slogan}</p>
+  </section>
+</Layout>
+
+<script>
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const desk = matchMedia('(min-width: 1000px)')
+  const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v))
+  const ease = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+  const tasks: (() => void)[] = []
+  let queued = false
+  const frame = () => { queued = false; for (const t of tasks) t() }
+  const ask = () => { if (!queued) { queued = true; requestAnimationFrame(frame) } }
+  addEventListener('scroll', ask, { passive: true })
+  addEventListener('resize', ask)
+
+  // ── The compact bar.
+  const float = document.querySelector<HTMLElement>('[data-float]')!
+  tasks.push(() => float.classList.toggle('d-is-on', scrollY > innerHeight * 0.85))
+
+  // ── Hero: the pile follows the pointer and opens as the first screen leaves; the name settles.
+  const hero = document.querySelector<HTMLElement>('[data-hero]')!
+  const cards = [...document.querySelectorAll<HTMLElement>('.d-pile__card')]
+  const word = document.querySelector<HTMLElement>('[data-word]')!
+  let mx = 0, my = 0
+  const pile = () => {
+    const p = clamp(scrollY / innerHeight)
+    for (const c of cards) {
+      const z = Number(c.dataset.z)
+      const x = reduce ? 0 : mx * z * 18
+      const y = reduce ? 0 : my * z * 14 - p * z * 160
+      c.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(calc(var(--r) * ${1 + p * 1.5}))`
+    }
+    if (!reduce && desk.matches) word.style.transform = `translateY(${p * -8}vh) scale(${1 - p * 0.08})`
+  }
+  tasks.push(pile)
+  if (!reduce) hero.addEventListener('pointermove', e => {
+    const r = hero.getBoundingClientRect()
+    mx = (e.clientX - r.left) / r.width - 0.5
+    my = (e.clientY - r.top) / r.height - 0.5
+    ask()
+  })
+
+  // ── The band runs, faster while the page scrolls.
+  const band = document.querySelector<HTMLElement>('[data-band]')!
+  if (!reduce) {
+    let x = 0, last = scrollY, v = 0, t0 = performance.now()
+    const run = (t: number) => {
+      const dt = Math.min(64, t - t0); t0 = t
+      v = v * 0.9 + Math.abs(scrollY - last) * 0.1; last = scrollY
+      x -= (0.05 + v * 0.06) * dt
+      const half = band.scrollWidth / 2
+      if (-x > half) x += half
+      band.style.transform = `translate3d(${x}px, 0, 0)`
+      requestAnimationFrame(run)
+    }
+    requestAnimationFrame(run)
+  }
+
+  // ── The story: the frame grows with the house, the words light up as they're read.
+  const story = document.querySelector<HTMLElement>('[data-story]')!
+  const box = story.querySelector<HTMLElement>('[data-frame]')!
+  const imgs = [...story.querySelectorAll<HTMLElement>('[data-img]')]
+  const scenes = [...story.querySelectorAll<HTMLElement>('[data-scene]')]
+  const rails = [...story.querySelectorAll<HTMLElement>('[data-rail]')]
+  const capts = [...story.querySelectorAll<HTMLElement>('[data-capt]')]
+  const scrim = story.querySelector<HTMLElement>('[data-scrim]')!
+  const head = story.querySelector<HTMLElement>('.d-story__h')!
+  const sceneWords = scenes.map(s => [...s.querySelectorAll<HTMLElement>('.d-scene__p span')])
+  // [top, right, bottom, left] in % of the screen: one room, the vitrinas, the first floor, the second level, the street, the room again.
+  const GEO_D = [[30, 12, 30, 66], [24, 7, 24, 58], [15, 4, 15, 50], [5, 3, 5, 45], [0, 0, 0, 0], [30, 12, 30, 66]]
+  const GEO_M = [[13, 30, 59, 30], [11, 18, 55, 18], [9, 8, 51, 8], [7, 4, 47, 4], [0, 0, 0, 0], [13, 30, 59, 30]]
+  const n = scenes.length
+  let active = -1
+  const setActive = (k: number) => {
+    if (k === active) return
+    active = k
+    const on = (list: HTMLElement[]) => list.forEach((el, i) => el.classList.toggle('d-is-on', i === k))
+    on(imgs); on(scenes); on(rails); on(capts)
+    head.classList.toggle('d-is-off', k > 0)
+  }
+  const storyTick = () => {
+    const r = story.getBoundingClientRect()
+    const run = r.height - innerHeight
+    const p = clamp(-r.top / run) * n
+    const i = Math.min(n - 1, Math.floor(p)), t = p - i
+    const geo = desk.matches ? GEO_D : GEO_M
+    const a = geo[i]!, b = geo[Math.min(n - 1, i + 1)]!
+    const m = ease(clamp((t - 0.55) / 0.4))
+    const g = a.map((v, j) => v + (b[j]! - v) * m)
+    const full = 1 - Math.min(1, Math.abs(p - 4.5) / 0.9)
+    box.style.clipPath = `inset(${g[0]}% ${g[1]}% ${g[2]}% ${g[3]}% round ${14 * (1 - full)}px)`
+    scrim.style.opacity = String(clamp(full * 1.4))
+    const k = Math.min(n - 1, Math.floor(p + 0.25))
+    setActive(k)
+    const local = clamp((p - (k - 0.25)) / 0.7)
+    const list = sceneWords[k]!
+    const lit = reduce ? list.length : Math.round(local * list.length * 1.15)
+    list.forEach((w, j) => w.classList.toggle('d-lit', j < lit))
+  }
+  tasks.push(storyTick)
+
+  // ── Featured cards stack: the one underneath steps back.
+  const stack = [...document.querySelectorAll<HTMLElement>('[data-card]')]
+  tasks.push(() => {
+    if (reduce) return
+    stack.forEach((c, i) => {
+      const next = stack[i + 1]
+      if (!next) return
+      const top = c.getBoundingClientRect().top
+      const nt = next.getBoundingClientRect().top
+      const cover = clamp(1 - (nt - top) / innerHeight)
+      c.style.transform = `scale(${1 - cover * 0.06})`
+      c.style.filter = `brightness(${1 - cover * 0.25})`
+      c.classList.toggle('d-under', cover > 0.55)
+    })
+  })
+  // Each choice brings its picture.
+  for (const card of stack) {
+    const chips = [...card.querySelectorAll<HTMLButtonElement>('[data-pick]')]
+    const figs = [...card.querySelectorAll<HTMLElement>('[data-fig]')]
+    for (const chip of chips) chip.addEventListener('click', () => {
+      chips.forEach(c => c.setAttribute('aria-pressed', String(c === chip)))
+      figs.forEach(f => f.classList.toggle('d-is-on', f.dataset.fig === chip.dataset.pick))
+    })
+  }
+
+  // ── Black November: the big number grows into view; the clock counts down.
+  const bn = document.querySelector<HTMLElement>('[data-bn]')
+  const bnv = document.querySelector<HTMLElement>('[data-bn-v]')
+  if (bn && bnv && !reduce) tasks.push(() => {
+    const r = bn.getBoundingClientRect()
+    const p = clamp((innerHeight - r.top) / (innerHeight + r.height * 0.4))
+    bnv.style.transform = `translateX(${(1 - p) * 12}vw) scale(${0.85 + p * 0.15})`
+  })
+  const clock = document.querySelector<HTMLElement>('[data-clock]')
+  if (clock) {
+    const end = new Date(clock.dataset.clock!).getTime()
+    const u = (k: string) => clock.querySelector<HTMLElement>(`[data-u="${k}"]`)!
+    const tick = () => {
+      let s = Math.max(0, Math.floor((end - Date.now()) / 1000))
+      const d = Math.floor(s / 86400); s -= d * 86400
+      const h = Math.floor(s / 3600); s -= h * 3600
+      const m = Math.floor(s / 60)
+      const l = (k: string) => clock.querySelector<HTMLElement>(`[data-l="${k}"]`)!
+      u('d').textContent = String(d); l('d').textContent = d === 1 ? 'día' : 'días'
+      u('h').textContent = String(h); l('h').textContent = h === 1 ? 'hora' : 'horas'
+      u('m').textContent = String(m)
+    }
+    tick(); setInterval(tick, 15000)
+  }
+
+  // ── Services: the picture of the row under the cursor follows it.
+  const serv = document.querySelector<HTMLElement>('[data-serv]')!
+  const fl = serv.querySelector<HTMLElement>('[data-serv-float]')!
+  const fimgs = [...fl.querySelectorAll<HTMLElement>('[data-serv-img]')]
+  let fx = 0, fy = 0, tx = 0, ty = 0, moving = false
+  const follow = () => {
+    fx += (tx - fx) * 0.18; fy += (ty - fy) * 0.18
+    fl.style.transform = `translate3d(${fx}px, ${fy}px, 0) rotate(${(tx - fx) * 0.04}deg)`
+    if (Math.abs(tx - fx) + Math.abs(ty - fy) > 0.5) requestAnimationFrame(follow); else moving = false
+  }
+  serv.querySelectorAll<HTMLElement>('[data-serv-row]').forEach(row => {
+    row.addEventListener('pointerenter', e => {
+      if (e.pointerType !== 'mouse') return
+      fimgs.forEach((im, i) => im.classList.toggle('d-is-on', String(i) === row.dataset.servRow))
+      fl.classList.add('d-is-on')
+    })
+  })
+  serv.addEventListener('pointerleave', () => fl.classList.remove('d-is-on'))
+  serv.addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse') return
+    const r = serv.getBoundingClientRect()
+    tx = e.clientX - r.left; ty = e.clientY - r.top
+    if (reduce) { fx = tx; fy = ty; fl.style.transform = `translate3d(${fx}px, ${fy}px, 0)` }
+    else if (!moving) { moving = true; requestAnimationFrame(follow) }
+  })
+
+  // ── Mission and vision: the words fill in as the paragraph is read.
+  const fills = [...document.querySelectorAll<HTMLElement>('[data-fill]')].map(p => ({ p, w: [...p.querySelectorAll<HTMLElement>('span')] }))
+  tasks.push(() => {
+    for (const { p, w } of fills) {
+      const r = p.getBoundingClientRect()
+      const q = reduce ? 1 : clamp((innerHeight * 0.85 - r.top) / (r.height + innerHeight * 0.35))
+      const lit = Math.round(q * w.length)
+      w.forEach((s, j) => s.classList.toggle('d-lit', j < lit))
+    }
+  })
+
+  // ── Stores: the house builds itself, room by room, when it comes into view.
+  const ht = document.querySelector<HTMLElement>('[data-house-t]')!
+  const svg = ht.querySelector<SVGElement>('[data-house]')!
+  svg.classList.remove('is-all')
+  const io = new IntersectionObserver(([e]) => {
+    if (!e?.isIntersecting) return
+    io.disconnect()
+    let s = 0
+    const step = () => {
+      s++
+      for (let i = 1; i <= 5; i++) svg.classList.toggle(`s${i}`, i <= s)
+      if (s < 5) setTimeout(step, reduce ? 0 : 650)
+    }
+    step()
+  }, { threshold: 0.35 })
+  io.observe(ht)
+
+  // ── Buttons lean toward the pointer.
+  if (!reduce && matchMedia('(hover: hover)').matches) {
+    document.querySelectorAll<HTMLElement>('[data-magnet]').forEach(b => {
+      b.addEventListener('pointermove', e => {
+        const r = b.getBoundingClientRect()
+        b.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * 0.18}px, ${(e.clientY - r.top - r.height / 2) * 0.28}px)`
+      })
+      b.addEventListener('pointerleave', () => { b.style.transform = '' })
+    })
+  }
+
+  frame()
+</script>

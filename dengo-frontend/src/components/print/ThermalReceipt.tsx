@@ -51,6 +51,8 @@ export interface ThermalReceiptData {
   items: ThermalReceiptItem[]
   subtotal: number
   total: number
+  /** Website coupon applied to the sale. */
+  coupon?: { label: string; code: string; amount: number }
   paymentMethodLabel: string
   cashReceived?: number
   change?: number
@@ -64,6 +66,15 @@ export interface ThermalReceiptData {
   buyerNit?: string | null
   buyerName?: string | null
   felStatus?: string | null
+  /** SAT data of the certified DTE (lib/fel on the backend). */
+  felSatSerie?: string | null
+  felSatNumber?: string | null
+  felAuthNumber?: string | null
+  felCertifiedAt?: string | null
+  felCertifierName?: string | null
+  felCertifierNit?: string | null
+  felEnvironment?: string | null
+  felDocType?: string | null
   pendingSync?: boolean
   // Full clientRequestId (see POS.tsx) — printed so a receipt handed out
   // before syncing can still be traced to its real correlativo later:
@@ -71,10 +82,16 @@ export interface ThermalReceiptData {
   offlineRef?: string
 }
 
+const DTE_NAMES: Record<string, string> = {
+  FACT: 'FACTURA', FCAM: 'FACTURA CAMBIARIA', FPEQ: 'FACTURA PEQUEÑO CONTRIBUYENTE',
+  FAPE: 'FACTURA PEQUEÑO CONTRIBUYENTE RÉGIMEN ELECTRÓNICO', FCAP: 'FACTURA CAMBIARIA PEQUEÑO CONTRIBUYENTE',
+}
+
 export default function ThermalReceipt({ data, widthMm }: { data: ThermalReceiptData; widthMm: number }) {
   const originalSubtotal = data.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0)
   const discountTotal = originalSubtotal - data.subtotal
   const isCertified = data.felStatus === 'CERTIFIED'
+  const isTestDte = isCertified && data.felEnvironment !== 'production'
   const row = { display: 'flex' as const, justifyContent: 'space-between' as const }
 
   return (
@@ -98,10 +115,22 @@ export default function ThermalReceipt({ data, widthMm }: { data: ThermalReceipt
       <div style={{ borderTop: '1px dashed #000', borderBottom: '1px dashed #000', padding: '3px 0', margin: '3px 0' }}>
         {data.requiresInvoice ? (
           <>
-            <div style={{ textAlign: 'center', fontWeight: 'bold' }}>FACTURA {isCertified ? 'ELECTRÓNICA' : '(no certificada)'}</div>
-            <div>Serie: {data.invoiceSeries} No. {data.invoiceSeqNumber}</div>
+            {isCertified ? (
+              <>
+                <div style={{ textAlign: 'center', fontWeight: 'bold' }}>DOCUMENTO TRIBUTARIO ELECTRÓNICO</div>
+                <div style={{ textAlign: 'center', fontWeight: 'bold' }}>{DTE_NAMES[data.felDocType ?? 'FACT'] ?? 'FACTURA'}</div>
+                {isTestDte && <div style={{ textAlign: 'center', fontWeight: 'bold' }}>** PRUEBA — SIN VALIDEZ FISCAL **</div>}
+                <div>Serie: {data.felSatSerie}</div>
+                <div>Número: {data.felSatNumber}</div>
+              </>
+            ) : (
+              <>
+                <div style={{ textAlign: 'center', fontWeight: 'bold' }}>FACTURA (no certificada)</div>
+                <div>Serie: {data.invoiceSeries} No. {data.invoiceSeqNumber}</div>
+                <div style={{ fontSize: '12px' }}>* Pendiente de certificación FEL. Solicite su factura certificada.</div>
+              </>
+            )}
             {data.companyTaxId && <div>Emisor NIT: {data.companyTaxId}</div>}
-            {!isCertified && <div style={{ fontSize: '12px' }}>* Pendiente de certificación FEL</div>}
           </>
         ) : (
           <>
@@ -160,6 +189,12 @@ export default function ThermalReceipt({ data, widthMm }: { data: ThermalReceipt
             <div style={row}><span>Descuento</span><span>-Q{discountTotal.toFixed(2)}</span></div>
           </>
         )}
+        {data.coupon && data.coupon.amount > 0 && (
+          <>
+            <div style={row}><span>Cupón {data.coupon.code}</span><span>-Q{data.coupon.amount.toFixed(2)}</span></div>
+            <div style={{ fontSize: '11px' }}>{data.coupon.label}</div>
+          </>
+        )}
         <div style={{ ...row, fontWeight: 'bold', fontSize: '18px' }}>
           <span>TOTAL</span><span>Q{data.total.toFixed(2)}</span>
         </div>
@@ -173,6 +208,17 @@ export default function ThermalReceipt({ data, widthMm }: { data: ThermalReceipt
           </>
         )}
       </div>
+
+      {/* ── Certificación FEL (datos que exige la SAT en la representación impresa) ── */}
+      {data.requiresInvoice && isCertified && (
+        <div style={{ borderTop: '1px dashed #000', marginTop: '6px', paddingTop: '4px', fontSize: '12px', wordBreak: 'break-all' }}>
+          <div>No. de autorización:</div>
+          <div style={{ fontWeight: 'bold' }}>{data.felAuthNumber}</div>
+          {data.felCertifiedAt && <div>Fecha de certificación: {new Date(data.felCertifiedAt).toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'medium' })}</div>}
+          {data.felCertifierName && <div>Certificador: {data.felCertifierName}</div>}
+          {data.felCertifierNit && <div>NIT certificador: {data.felCertifierNit}</div>}
+        </div>
+      )}
 
       {/* ── Agradecimiento, slogan y redes sociales ── */}
       <div style={{ textAlign: 'center', marginTop: '8px' }}>¡Gracias por su compra!</div>

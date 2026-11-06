@@ -1,0 +1,68 @@
+---
+// The "get your coupon" form every design uses. Markup is plain so each
+// design styles it through the class props; the behaviour (validation,
+// honeypot, posting, going to the coupon page) is the same everywhere.
+// Without JavaScript the form still posts to /ofertas/<slug> (server route).
+// On success the form fires "site:coupon" ({ code, reused, url }) and waits
+// `delay` ms before opening the coupon, so a design can animate the cut.
+
+interface Props {
+  slug: string
+  formClass?: string
+  inputClass?: string
+  buttonClass?: string
+  noteClass?: string
+  buttonLabel?: string
+  delay?: number
+}
+const { slug, formClass = '', inputClass = '', buttonClass = '', noteClass = '', buttonLabel = 'Obtener mi cupón', delay = 0 } = Astro.props
+const id = `cf-${slug.replace(/[^a-z0-9]/gi, '').slice(0, 24)}`
+---
+<form class={formClass} method="post" action={`/ofertas/${slug}`} data-coupon-form data-slug={slug} data-delay={delay} novalidate>
+  <label class="sr-only" for={`${id}-n`}>Tu nombre</label>
+  <input id={`${id}-n`} class={inputClass} name="name" autocomplete="name" placeholder="Tu nombre" required minlength="2" maxlength="120" />
+  <label class="sr-only" for={`${id}-p`}>Tu teléfono</label>
+  <input id={`${id}-p`} class={inputClass} name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Tu teléfono (8 dígitos)" required pattern="[0-9 +\-]{8,20}" />
+  <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">
+    <label>No llenar <input name="website" tabindex="-1" autocomplete="off" /></label>
+  </div>
+  <button class={buttonClass} type="submit"><span data-label>{buttonLabel}</span></button>
+  <p class={noteClass} data-note role="status" aria-live="polite">Te damos un código único para presentar en caja. Uno por teléfono.</p>
+</form>
+
+<script>
+  // One handler for every coupon form on the page.
+  for (const form of document.querySelectorAll<HTMLFormElement>('[data-coupon-form]')) {
+    if (form.dataset.bound) continue
+    form.dataset.bound = '1'
+    form.addEventListener('submit', async e => {
+      e.preventDefault()
+      const note = form.querySelector<HTMLElement>('[data-note]')!
+      const label = form.querySelector<HTMLElement>('[data-label]')!
+      const btn = form.querySelector<HTMLButtonElement>('button[type=submit]')!
+      const data = Object.fromEntries(new FormData(form)) as Record<string, string>
+      if ((data.name ?? '').trim().length < 2) { note.textContent = 'Escribe tu nombre.'; form.querySelector<HTMLInputElement>('[name=name]')?.focus(); return }
+      if ((data.phone ?? '').replace(/\D/g, '').length < 8) { note.textContent = 'Escribe tu teléfono de 8 dígitos.'; form.querySelector<HTMLInputElement>('[name=phone]')?.focus(); return }
+      btn.disabled = true
+      const original = label.textContent
+      label.textContent = 'Generando tu cupón…'
+      try {
+        const res = await fetch(`/api/site/promotions/${form.dataset.slug}/coupons`, {
+          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data),
+        })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(body.error || 'No se pudo generar el cupón')
+        const url = `/cupon/${body.code}${body.reused ? '?ya=1' : ''}`
+        form.dataset.state = 'ok'
+        label.textContent = '¡Listo!'
+        form.dispatchEvent(new CustomEvent('site:coupon', { bubbles: true, detail: { ...body, url } }))
+        const wait = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : Number(form.dataset.delay ?? 0)
+        setTimeout(() => { window.location.href = url }, wait)
+      } catch (err) {
+        note.textContent = err instanceof Error ? err.message : 'No se pudo generar el cupón'
+        btn.disabled = false
+        label.textContent = original
+      }
+    })
+  }
+</script>

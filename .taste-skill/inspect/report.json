@@ -1,0 +1,2539 @@
+{
+ "url": "http://127.0.0.1:4322/?diseno=aurora",
+ "at": "2026-11-05T01:47:20.338Z",
+ "allow": [],
+ "viewports": [
+  {
+   "width": 1440,
+   "height": 900,
+   "load": "load",
+   "screens": 10,
+   "filled": [
+    0.88,
+    0.64,
+    0.22,
+    0.28,
+    0.33,
+    0.38,
+    0.65,
+    0.48,
+    0.5,
+    0.82
+   ],
+   "motion": {
+    "elements": 37,
+    "css": 0,
+    "transitions": 5,
+    "scripted": 32,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "page": {
+     "height": 8424,
+     "screens": 9.4,
+     "words": 473,
+     "img": 6,
+     "video": 0,
+     "canvas": 0,
+     "svg": 1,
+     "sections": 7,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 6,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "selection-of-colored-pencils.webp",
+      "selection-of-colored-pencils.webp",
+      "conte-crayons.webp",
+      "2000-notebook-pages-4-5.webp",
+      "colored-pencils-chevre.webp",
+      "apsco-vacuhold-pencil-sharpener-13.webp"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Librería Aurora",
+     "words": 2,
+     "chars": 15,
+     "lines": 2,
+     "size": 80.6,
+     "vw": 5.6,
+     "font": "Zilla Slab",
+     "weight": 600,
+     "tracking": -0.025,
+     "leading": 1,
+     "upper": false,
+     "italic": true,
+     "mono": false,
+     "align": "center",
+     "position": "center",
+     "widthRatio": 0.39,
+     "top": 292,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Librería Aurora",
+     "words": 2,
+     "lines": 2,
+     "size": 80.6,
+     "font": "Zilla Slab"
+    },
+    "headings": [
+     {
+      "text": "Librería Aurora",
+      "words": 2,
+      "chars": 15,
+      "lines": 2,
+      "size": 80.6,
+      "vw": 5.6,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": true,
+      "mono": false,
+      "align": "center",
+      "position": "center",
+      "widthRatio": 0.39,
+      "top": 292,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "Ofertas para recortar",
+      "words": 3,
+      "chars": 21,
+      "lines": 1,
+      "size": 64,
+      "vw": 4.4,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.47,
+      "top": 1118,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "15%",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 69.4,
+      "vw": 4.8,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.2,
+      "top": 1230,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Q149",
+      "words": 1,
+      "chars": 4,
+      "lines": 1,
+      "size": 69.4,
+      "vw": 4.8,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.2,
+      "top": 1230,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "3×2",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 69.4,
+      "vw": 4.8,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.2,
+      "top": 1466,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Q25",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 69.4,
+      "vw": 4.8,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.2,
+      "top": 1466,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "La lista completa",
+      "words": 3,
+      "chars": 17,
+      "lines": 1,
+      "size": 64,
+      "vw": 4.4,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.96,
+      "top": 2736,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Cuadernos",
+      "words": 1,
+      "chars": 9,
+      "lines": 1,
+      "size": 30,
+      "vw": 2.1,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.39,
+      "top": 2872,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "En los estantes",
+      "words": 3,
+      "chars": 15,
+      "lines": 1,
+      "size": 44,
+      "vw": 3.1,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.96,
+      "top": 5488,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Tiendas y horarios",
+      "words": 3,
+      "chars": 18,
+      "lines": 1,
+      "size": 64,
+      "vw": 4.4,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.96,
+      "top": 6799,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Central Zona 1",
+      "words": 3,
+      "chars": 14,
+      "lines": 1,
+      "size": 36,
+      "vw": 2.5,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.28,
+      "top": 6931,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Mixco",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 36,
+      "vw": 2.5,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.28,
+      "top": 6931,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Villa Nueva",
+      "words": 2,
+      "chars": 11,
+      "lines": 1,
+      "size": 36,
+      "vw": 2.5,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.28,
+      "top": 6931,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Recorta tu cupón de 15%",
+      "words": 5,
+      "chars": 23,
+      "lines": 2,
+      "size": 43.2,
+      "vw": 3,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.05,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.28,
+      "top": 7374,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Abrimos temprano para que nadie llegue a clases sin su lista completa.",
+      "words": 12,
+      "chars": 70,
+      "lines": 3,
+      "size": 28,
+      "vw": 1.9,
+      "font": "Zilla Slab",
+      "weight": 500,
+      "tracking": 0,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.29,
+      "top": 8034,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "19:47",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 48,
+      "vw": 3.3,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.02,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.13,
+      "top": 8073,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Librería Aurora",
+      "words": 2,
+      "chars": 15,
+      "lines": 1,
+      "size": 129.6,
+      "vw": 9,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 0.9,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.66,
+      "top": 8258,
+      "tag": "div",
+      "kind": "heading"
+     },
+     {
+      "text": "Pídenos tu lista por WhatsApp",
+      "words": 5,
+      "chars": 29,
+      "lines": 1,
+      "size": 28,
+      "vw": 1.9,
+      "font": "Zilla Slab",
+      "weight": 500,
+      "tracking": 0,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.33,
+      "top": 8258,
+      "tag": "a",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 18,
+     "maxLines": 3,
+     "over2Lines": 0,
+     "statements": 6,
+     "centered": 1,
+     "medianWords": 2,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Zilla Slab",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      14,
+      16,
+      17,
+      18,
+      21,
+      22,
+      24,
+      26,
+      28,
+      30,
+      36,
+      43,
+      44,
+      48,
+      64,
+      69,
+      81,
+      130
+     ],
+     "sizeCount": 18,
+     "notLoaded": [],
+     "body": {
+      "font": "Zilla Slab",
+      "size": 18,
+      "leading": 1.55,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 13.7
+     },
+     "measureChars": 60,
+     "max": {
+      "size": 129.6,
+      "vw": 9,
+      "font": "Zilla Slab",
+      "text": "Librería Aurora"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.1,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#ebe5e3",
+     "bodyBgHsl": {
+      "h": 15,
+      "s": 0.17,
+      "l": 0.91
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#ebe5e3",
+       "top": 0,
+       "hsl": {
+        "h": 15,
+        "s": 0.17,
+        "l": 0.91
+       }
+      },
+      {
+       "color": "#f6f4f3",
+       "top": 228,
+       "hsl": {
+        "h": 20,
+        "s": 0.14,
+        "l": 0.96
+       }
+      },
+      {
+       "color": "#0f7d45",
+       "top": 7326,
+       "hsl": {
+        "h": 149,
+        "s": 0.79,
+        "l": 0.27
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#2b2622",
+       "share": 0.73
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.11
+      },
+      {
+       "color": "#4f4744",
+       "share": 0.08
+      },
+      {
+       "color": "#f6f4f3",
+       "share": 0.08
+      }
+     ],
+     "button": {
+      "bg": "#2b2622",
+      "hsl": {
+       "h": 27,
+       "s": 0.12,
+       "l": 0.15
+      },
+      "fg": "#f6f4f3"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 3,
+     "inHero": 2,
+     "radius": 0,
+     "height": 52,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Obtener cupón",
+      "Recorta tu cupón: 15% de descuento"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 6,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 3,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 6903
+      }
+     ]
+    },
+    "heroMedia": [
+     {
+      "type": "img",
+      "ratio": 0.92
+     }
+    ],
+    "nav": {
+     "links": 5,
+     "fixed": false,
+     "height": 108,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "zilla slab"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "pageH": 8424,
+    "margins": {
+     "left": 28,
+     "right": 42
+    },
+    "sections": [
+     {
+      "sel": "div.a-main",
+      "tag": "div",
+      "top": 0,
+      "height": 7836,
+      "words": 396,
+      "media": 6,
+      "middle": 0,
+      "heading": {
+       "text": "Librería",
+       "size": 81,
+       "tag": "h1"
+      },
+      "left": 28,
+      "right": 28,
+      "textLeft": 28,
+      "textRight": 42,
+      "fullBleed": true,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": true
+     },
+     {
+      "sel": "footer#contacto.a-foot",
+      "tag": "footer",
+      "top": 7836,
+      "height": 588,
+      "words": 71,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Librería Aurora",
+       "size": 130,
+       "tag": "span"
+      },
+      "left": 34,
+      "right": 86,
+      "textLeft": 34,
+      "textRight": 86,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [
+     {
+      "top": 1652,
+      "height": 316
+     },
+     {
+      "top": 7656,
+      "height": 376
+     }
+    ],
+    "h1s": [
+     {
+      "text": "Librería Aurora",
+      "size": 81,
+      "top": 292,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 28,
+      "n": 4
+     },
+     {
+      "x": 460,
+      "n": 3
+     },
+     {
+      "x": 60,
+      "n": 2
+     },
+     {
+      "x": 218,
+      "n": 2
+     },
+     {
+      "x": 727,
+      "n": 2
+     }
+    ],
+    "leftBlocks": 13,
+    "bodySize": 18,
+    "stage": false,
+    "explains": true,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": null,
+   "consoleErrors": []
+  },
+  {
+   "width": 768,
+   "height": 1024,
+   "load": "load",
+   "screens": 9,
+   "filled": [
+    0.89,
+    0.59,
+    0.64,
+    0.89,
+    0.55,
+    0.86,
+    0.71,
+    0.49,
+    0.77
+   ],
+   "motion": {
+    "elements": 28,
+    "css": 0,
+    "transitions": 1,
+    "scripted": 27,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "page": {
+     "height": 9044,
+     "screens": 8.8,
+     "words": 539,
+     "img": 6,
+     "video": 0,
+     "canvas": 0,
+     "svg": 1,
+     "sections": 7,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 6,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "selection-of-colored-pencils.webp",
+      "selection-of-colored-pencils.webp",
+      "conte-crayons.webp",
+      "2000-notebook-pages-4-5.webp",
+      "colored-pencils-chevre.webp",
+      "apsco-vacuhold-pencil-sharpener-13.webp"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Librería Aurora",
+     "words": 2,
+     "chars": 15,
+     "lines": 2,
+     "size": 92.2,
+     "vw": 12,
+     "font": "Zilla Slab",
+     "weight": 600,
+     "tracking": -0.025,
+     "leading": 1,
+     "upper": false,
+     "italic": true,
+     "mono": false,
+     "align": "center",
+     "position": "center",
+     "widthRatio": 0.85,
+     "top": 256,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Librería Aurora",
+     "words": 2,
+     "lines": 2,
+     "size": 92.2,
+     "font": "Zilla Slab"
+    },
+    "headings": [
+     {
+      "text": "Librería Aurora",
+      "words": 2,
+      "chars": 15,
+      "lines": 2,
+      "size": 92.2,
+      "vw": 12,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": true,
+      "mono": false,
+      "align": "center",
+      "position": "center",
+      "widthRatio": 0.85,
+      "top": 256,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "Ofertas para recortar",
+      "words": 3,
+      "chars": 21,
+      "lines": 1,
+      "size": 45.4,
+      "vw": 5.9,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 1140,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "15%",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 52,
+      "vw": 6.8,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 1319,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Q149",
+      "words": 1,
+      "chars": 4,
+      "lines": 1,
+      "size": 52,
+      "vw": 6.8,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 1596,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "3×2",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 52,
+      "vw": 6.8,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 1872,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Q25",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 52,
+      "vw": 6.8,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 2148,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "La lista completa",
+      "words": 3,
+      "chars": 17,
+      "lines": 1,
+      "size": 45.4,
+      "vw": 5.9,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 3086,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Cuadernos",
+      "words": 1,
+      "chars": 9,
+      "lines": 1,
+      "size": 28.5,
+      "vw": 3.7,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.86,
+      "top": 3204,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Lápices y colores",
+      "words": 3,
+      "chars": 17,
+      "lines": 1,
+      "size": 28.5,
+      "vw": 3.7,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.86,
+      "top": 3476,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Arte y manualidades",
+      "words": 3,
+      "chars": 19,
+      "lines": 1,
+      "size": 28.5,
+      "vw": 3.7,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.86,
+      "top": 3748,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Mochilas y loncheras",
+      "words": 3,
+      "chars": 20,
+      "lines": 1,
+      "size": 28.5,
+      "vw": 3.7,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.86,
+      "top": 4020,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Oficina y casa",
+      "words": 3,
+      "chars": 14,
+      "lines": 1,
+      "size": 28.5,
+      "vw": 3.7,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.86,
+      "top": 4292,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "En los estantes",
+      "words": 3,
+      "chars": 15,
+      "lines": 1,
+      "size": 37.9,
+      "vw": 4.9,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 4833,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Tiendas y horarios",
+      "words": 3,
+      "chars": 18,
+      "lines": 1,
+      "size": 45.4,
+      "vw": 5.9,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 6727,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Central Zona 1",
+      "words": 3,
+      "chars": 14,
+      "lines": 1,
+      "size": 30.1,
+      "vw": 3.9,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.39,
+      "top": 6840,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Mixco",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 30.1,
+      "vw": 3.9,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.39,
+      "top": 6840,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Villa Nueva",
+      "words": 2,
+      "chars": 11,
+      "lines": 1,
+      "size": 30.1,
+      "vw": 3.9,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.39,
+      "top": 7085,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Recorta tu cupón de 15%",
+      "words": 5,
+      "chars": 23,
+      "lines": 1,
+      "size": 28,
+      "vw": 3.6,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.05,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.89,
+      "top": 7438,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Librería Aurora",
+      "words": 2,
+      "chars": 15,
+      "lines": 1,
+      "size": 99.8,
+      "vw": 13,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 0.9,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.98,
+      "top": 8261,
+      "tag": "div",
+      "kind": "heading"
+     },
+     {
+      "text": "19:47",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 37.8,
+      "vw": 4.9,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.02,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.93,
+      "top": 9056,
+      "tag": "p",
+      "kind": "statement"
+     }
+    ],
+    "headingSummary": {
+     "count": 20,
+     "maxLines": 2,
+     "over2Lines": 0,
+     "statements": 5,
+     "centered": 1,
+     "medianWords": 3,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Zilla Slab",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      13,
+      16,
+      17,
+      18,
+      19,
+      21,
+      22,
+      23,
+      24,
+      25,
+      28,
+      29,
+      30,
+      38,
+      45,
+      52,
+      92,
+      100
+     ],
+     "sizeCount": 18,
+     "notLoaded": [],
+     "body": {
+      "font": "Zilla Slab",
+      "size": 16,
+      "leading": 1.5,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 13.7
+     },
+     "measureChars": 69,
+     "max": {
+      "size": 99.8,
+      "vw": 13,
+      "font": "Zilla Slab",
+      "text": "Librería Aurora"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.09,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#ebe5e3",
+     "bodyBgHsl": {
+      "h": 15,
+      "s": 0.17,
+      "l": 0.91
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#ebe5e3",
+       "top": 0,
+       "hsl": {
+        "h": 15,
+        "s": 0.17,
+        "l": 0.91
+       }
+      },
+      {
+       "color": "#f6f4f3",
+       "top": 212,
+       "hsl": {
+        "h": 20,
+        "s": 0.14,
+        "l": 0.96
+       }
+      },
+      {
+       "color": "#0f7d45",
+       "top": 7410,
+       "hsl": {
+        "h": 149,
+        "s": 0.79,
+        "l": 0.27
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#2b2622",
+       "share": 0.77
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.1
+      },
+      {
+       "color": "#4f4744",
+       "share": 0.07
+      },
+      {
+       "color": "#f6f4f3",
+       "share": 0.07
+      }
+     ],
+     "button": {
+      "bg": "#2b2622",
+      "hsl": {
+       "h": 27,
+       "s": 0.12,
+       "l": 0.15
+      },
+      "fg": "#f6f4f3"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 3,
+     "inHero": 2,
+     "radius": 0,
+     "height": 52,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Obtener cupón",
+      "Recorta tu cupón: 15% de descuento"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 6,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 3,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 6812
+      }
+     ]
+    },
+    "heroMedia": [
+     {
+      "type": "img",
+      "ratio": 0.95
+     }
+    ],
+    "nav": {
+     "links": 5,
+     "fixed": false,
+     "height": 92,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "zilla slab"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "pageH": 9044,
+    "margins": {
+     "left": 20,
+     "right": 20
+    },
+    "sections": [
+     {
+      "sel": "div.a-main",
+      "tag": "div",
+      "top": 0,
+      "height": 7949,
+      "words": 465,
+      "media": 6,
+      "middle": 0,
+      "heading": {
+       "text": "Librería",
+       "size": 92,
+       "tag": "h1"
+      },
+      "left": 20,
+      "right": 20,
+      "textLeft": 20,
+      "textRight": 34,
+      "fullBleed": true,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "footer#contacto.a-foot",
+      "tag": "footer",
+      "top": 7949,
+      "height": 1096,
+      "words": 61,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Librería Aurora",
+       "size": 100,
+       "tag": "span"
+      },
+      "left": 26,
+      "right": 26,
+      "textLeft": 26,
+      "textRight": 74,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [
+     {
+      "top": 7824,
+      "height": 456
+     }
+    ],
+    "h1s": [
+     {
+      "text": "Librería Aurora",
+      "size": 92,
+      "top": 256,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 44,
+      "n": 12
+     },
+     {
+      "x": 20,
+      "n": 5
+     },
+     {
+      "x": 88,
+      "n": 3
+     }
+    ],
+    "leftBlocks": 20,
+    "bodySize": 16,
+    "stage": false,
+    "explains": true,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": null,
+   "consoleErrors": []
+  },
+  {
+   "width": 390,
+   "height": 844,
+   "load": "load",
+   "screens": 11,
+   "filled": [
+    0.83,
+    0.66,
+    0.61,
+    0.67,
+    0.86,
+    0.54,
+    0.92,
+    0.78,
+    0.61,
+    0.9,
+    0.77
+   ],
+   "motion": {
+    "elements": 28,
+    "css": 0,
+    "transitions": 1,
+    "scripted": 27,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "page": {
+     "height": 8639,
+     "screens": 10.2,
+     "words": 535,
+     "img": 6,
+     "video": 0,
+     "canvas": 0,
+     "svg": 1,
+     "sections": 7,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 6,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "selection-of-colored-pencils.webp",
+      "selection-of-colored-pencils.webp",
+      "conte-crayons.webp",
+      "2000-notebook-pages-4-5.webp",
+      "colored-pencils-chevre.webp",
+      "apsco-vacuhold-pencil-sharpener-13.webp"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Librería Aurora",
+     "words": 2,
+     "chars": 15,
+     "lines": 2,
+     "size": 46.8,
+     "vw": 12,
+     "font": "Zilla Slab",
+     "weight": 600,
+     "tracking": -0.025,
+     "leading": 1,
+     "upper": false,
+     "italic": true,
+     "mono": false,
+     "align": "center",
+     "position": "center",
+     "widthRatio": 0.71,
+     "top": 252,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Librería Aurora",
+     "words": 2,
+     "lines": 2,
+     "size": 46.8,
+     "font": "Zilla Slab"
+    },
+    "headings": [
+     {
+      "text": "A",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": 0,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.12,
+      "top": 20,
+      "tag": "a",
+      "kind": "heading"
+     },
+     {
+      "text": "Librería Aurora",
+      "words": 2,
+      "chars": 15,
+      "lines": 2,
+      "size": 46.8,
+      "vw": 12,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": true,
+      "mono": false,
+      "align": "center",
+      "position": "center",
+      "widthRatio": 0.71,
+      "top": 252,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "Ofertas para recortar",
+      "words": 3,
+      "chars": 21,
+      "lines": 1,
+      "size": 33.3,
+      "vw": 8.5,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 956,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "15%",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 44,
+      "vw": 11.3,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 1144,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Q149",
+      "words": 1,
+      "chars": 4,
+      "lines": 1,
+      "size": 44,
+      "vw": 11.3,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 1452,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "3×2",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 44,
+      "vw": 11.3,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 1738,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Q25",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 44,
+      "vw": 11.3,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 1999,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "El equipo de Librería Aurora",
+      "words": 5,
+      "chars": 28,
+      "lines": 1,
+      "size": 22,
+      "vw": 5.6,
+      "font": "Zilla Slab",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1.55,
+      "upper": false,
+      "italic": true,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.77,
+      "top": 2805,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "La lista completa",
+      "words": 3,
+      "chars": 17,
+      "lines": 1,
+      "size": 33.3,
+      "vw": 8.5,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 3140,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Cuadernos",
+      "words": 1,
+      "chars": 9,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.73,
+      "top": 3245,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Lápices y colores",
+      "words": 3,
+      "chars": 17,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.73,
+      "top": 3517,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Arte y manualidades",
+      "words": 3,
+      "chars": 19,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.73,
+      "top": 3789,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Mochilas y loncheras",
+      "words": 3,
+      "chars": 20,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.73,
+      "top": 4061,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Oficina y casa",
+      "words": 3,
+      "chars": 14,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.73,
+      "top": 4333,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "En los estantes",
+      "words": 3,
+      "chars": 15,
+      "lines": 1,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 4900,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Tiendas y horarios",
+      "words": 3,
+      "chars": 18,
+      "lines": 1,
+      "size": 33.3,
+      "vw": 8.5,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 6074,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Central Zona 1",
+      "words": 3,
+      "chars": 14,
+      "lines": 1,
+      "size": 28,
+      "vw": 7.2,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.75,
+      "top": 6175,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Mixco",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 28,
+      "vw": 7.2,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.75,
+      "top": 6384,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Villa Nueva",
+      "words": 2,
+      "chars": 11,
+      "lines": 1,
+      "size": 28,
+      "vw": 7.2,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.75,
+      "top": 6620,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Recorta tu cupón de 15%",
+      "words": 5,
+      "chars": 23,
+      "lines": 1,
+      "size": 28,
+      "vw": 7.2,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.05,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.77,
+      "top": 6964,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Librería Aurora",
+      "words": 2,
+      "chars": 15,
+      "lines": 1,
+      "size": 50.7,
+      "vw": 13,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 0.9,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.97,
+      "top": 7838,
+      "tag": "div",
+      "kind": "heading"
+     },
+     {
+      "text": "Pídenos tu lista por WhatsApp",
+      "words": 5,
+      "chars": 29,
+      "lines": 1,
+      "size": 22,
+      "vw": 5.6,
+      "font": "Zilla Slab",
+      "weight": 500,
+      "tracking": 0,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.97,
+      "top": 8004,
+      "tag": "a",
+      "kind": "heading"
+     },
+     {
+      "text": "Abrimos temprano para que nadie llegue a clases sin su lista completa.",
+      "words": 12,
+      "chars": 70,
+      "lines": 3,
+      "size": 22,
+      "vw": 5.6,
+      "font": "Zilla Slab",
+      "weight": 500,
+      "tracking": 0,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.87,
+      "top": 8210,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "19:47",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Zilla Slab",
+      "weight": 600,
+      "tracking": -0.02,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.87,
+      "top": 8668,
+      "tag": "p",
+      "kind": "statement"
+     }
+    ],
+    "headingSummary": {
+     "count": 24,
+     "maxLines": 3,
+     "over2Lines": 0,
+     "statements": 7,
+     "centered": 1,
+     "medianWords": 3,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Zilla Slab",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      13,
+      16,
+      17,
+      18,
+      20,
+      22,
+      24,
+      26,
+      28,
+      32,
+      33,
+      44,
+      47,
+      51
+     ],
+     "sizeCount": 14,
+     "notLoaded": [],
+     "body": {
+      "font": "Zilla Slab",
+      "size": 18,
+      "leading": 1.55,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 13.7
+     },
+     "measureChars": 52,
+     "max": {
+      "size": 50.7,
+      "vw": 13,
+      "font": "Zilla Slab",
+      "text": "Librería Aurora"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.09,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#ebe5e3",
+     "bodyBgHsl": {
+      "h": 15,
+      "s": 0.17,
+      "l": 0.91
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#ebe5e3",
+       "top": 0,
+       "hsl": {
+        "h": 15,
+        "s": 0.17,
+        "l": 0.91
+       }
+      },
+      {
+       "color": "#f6f4f3",
+       "top": 208,
+       "hsl": {
+        "h": 20,
+        "s": 0.14,
+        "l": 0.96
+       }
+      },
+      {
+       "color": "#0f7d45",
+       "top": 6936,
+       "hsl": {
+        "h": 149,
+        "s": 0.79,
+        "l": 0.27
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#2b2622",
+       "share": 0.76
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.1
+      },
+      {
+       "color": "#4f4744",
+       "share": 0.07
+      },
+      {
+       "color": "#f6f4f3",
+       "share": 0.07
+      }
+     ],
+     "button": {
+      "bg": "#2b2622",
+      "hsl": {
+       "h": 27,
+       "s": 0.12,
+       "l": 0.15
+      },
+      "fg": "#f6f4f3"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 3,
+     "inHero": 2,
+     "radius": 0,
+     "height": 46,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Obtener cupón",
+      "Recorta tu cupón: 15% de descuento"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 2,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 5,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 3213
+      },
+      {
+       "count": 3,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 6147
+      }
+     ]
+    },
+    "heroMedia": [
+     {
+      "type": "img",
+      "ratio": 0.9
+     }
+    ],
+    "nav": {
+     "links": 2,
+     "fixed": false,
+     "height": 88,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "zilla slab"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "pageH": 8639,
+    "margins": {
+     "left": 20,
+     "right": 20
+    },
+    "sections": [
+     {
+      "sel": "div.a-main",
+      "tag": "div",
+      "top": 0,
+      "height": 7518,
+      "words": 461,
+      "media": 6,
+      "middle": 0,
+      "heading": {
+       "text": "Librería",
+       "size": 47,
+       "tag": "h1"
+      },
+      "left": 6,
+      "right": 6,
+      "textLeft": 20,
+      "textRight": 34,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "footer#contacto.a-foot",
+      "tag": "footer",
+      "top": 7518,
+      "height": 1122,
+      "words": 61,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Librería Aurora",
+       "size": 51,
+       "tag": "span"
+      },
+      "left": 26,
+      "right": 26,
+      "textLeft": 26,
+      "textRight": 35,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [
+     {
+      "top": 7392,
+      "height": 492
+     }
+    ],
+    "h1s": [
+     {
+      "text": "Librería Aurora",
+      "size": 47,
+      "top": 252,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 44,
+      "n": 15
+     },
+     {
+      "x": 20,
+      "n": 5
+     }
+    ],
+    "leftBlocks": 20,
+    "bodySize": 18,
+    "stage": false,
+    "explains": true,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": null,
+   "consoleErrors": []
+  }
+ ],
+ "findings": [
+  {
+   "level": "WARN",
+   "id": "size-count",
+   "width": 1440,
+   "message": "18 different font sizes (14, 16, 17, 18, 21, 22, 24, 26, 28, 30, 36, 43, 44, 48, 64, 69, 81, 130).",
+   "fix": "A page needs about five: display, heading, lead, body, small.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "no-footage",
+   "width": 1440,
+   "message": "No video anywhere on the page.",
+   "fix": "Look for one honest clip with scripts/assets.mjs --video (the place, the material, the process) and use it as a muted loop with a poster frame. Defend its absence only if no clip fits the subject."
+  },
+  {
+   "level": "WARN",
+   "id": "long-pin",
+   "width": 1440,
+   "message": "The same large text stays on screen for 3 screens in a row: \"La lista completa\"",
+   "fix": "A pinned element earns two screens, and something must change at each. Shorten the run or give every screen its own content."
+  },
+  {
+   "level": "WARN",
+   "id": "blank-gap",
+   "width": 768,
+   "message": "A 456px stretch at 7824px holds nothing.",
+   "fix": "Check that it is a deliberate rest (once per page at most); otherwise close it to the normal section gap.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "card-rows",
+   "width": 390,
+   "message": "2 rows of identical boxed cards.",
+   "fix": "Vary the composition; not every section is a card grid."
+  }
+ ],
+ "images": [
+  {
+   "viewport": "desktop",
+   "width": 1440,
+   "fold": "C:\\denis\\DENGO-POS\\.taste-skill\\inspect\\desktop-fold.jpg",
+   "pages": [
+    "C:\\denis\\DENGO-POS\\.taste-skill\\inspect\\desktop-page-01.jpg",
+    "C:\\denis\\DENGO-POS\\.taste-skill\\inspect\\desktop-page-02.jpg",
+    "C:\\denis\\DENGO-POS\\.taste-skill\\inspect\\desktop-page-03.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "tablet",
+   "width": 768,
+   "fold": "C:\\denis\\DENGO-POS\\.taste-skill\\inspect\\tablet-fold.jpg",
+   "pages": [
+    "C:\\denis\\DENGO-POS\\.taste-skill\\inspect\\tablet-page-01.jpg",
+    "C:\\denis\\DENGO-POS\\.taste-skill\\inspect\\tablet-page-02.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "mobile",
+   "width": 390,
+   "fold": "C:\\denis\\DENGO-POS\\.taste-skill\\inspect\\mobile-fold.jpg",
+   "pages": [
+    "C:\\denis\\DENGO-POS\\.taste-skill\\inspect\\mobile-page-01.jpg",
+    "C:\\denis\\DENGO-POS\\.taste-skill\\inspect\\mobile-page-02.jpg"
+   ],
+   "film": []
+  }
+ ]
+}

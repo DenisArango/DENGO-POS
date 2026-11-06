@@ -1,0 +1,8 @@
+    #p10-ph { opacity: 0; }
+<!--markup-->
+    <phone id="p10-ph" src="rec/m_portal_msg.mp4" at="760 22 446" start="{T:escribo:1:-0.6}" mstart="0.6" />
+<!--script-->
+    pip({T:escribo:1:-0.7}, "bl");
+    tl.fromTo("#p10-ph", { opacity: 0, y: 80 }, { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" }, {T:escribo:1:-0.6});
+<!--sfx-->
+typing {T:mensajes} 0.3

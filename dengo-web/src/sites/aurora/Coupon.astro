@@ -1,0 +1,186 @@
+---
+// The coupon itself. A fresh one arrives with a burst of crayon confetti and
+// a "¡Tuyo!" stamp; the ticket drops in on a dark field so the QR reads well
+// at the till. A used / void / expired one gets its stamp instead. A live
+// countdown says how long it is still good for.
+import Layout from './Layout.astro'
+import { qrSvg, barcodeSvg } from '../../core/codes'
+import { offerHeadline, fmtDay } from '../../core/api'
+import type { CouponView, SiteContent } from '../../core/types'
+
+const { content, coupon: c, already } = Astro.props as { content: SiteContent; coupon: CouponView; already?: boolean }
+const usable = c.status === 'ISSUED'
+const stamp = { ISSUED: already ? null : '¡Tuyo!', REDEEMED: 'Usado', VOID: 'Anulado', EXPIRED: 'Vencido' }[c.status]
+const short = content.businessName.replace(/^librer[ií]a\s+/i, '').trim() || content.businessName
+const steps = [
+  { t: 'Guárdalo', x: 'Toma una captura o deja esta página abierta.', c: 'var(--yellow)', i: 'var(--ink)' },
+  { t: 'Muéstralo en caja', x: 'El cajero escanea el QR o escribe el código.', c: 'var(--pink)', i: 'var(--ink)' },
+  { t: 'Listo', x: 'El descuento se aplica solo. Un solo uso.', c: 'var(--green)', i: '#fff' },
+]
+---
+<Layout content={content} title={`Cupón ${c.display}`} noindex dark>
+  <section class="cv" data-cv data-fresh={usable && !already ? '1' : '0'}>
+    <div class="cv__confetti" aria-hidden="true" data-confetti></div>
+    <div class="cv__head" data-cv-in>
+      <p class="cv__hand">{usable ? (already ? `${c.firstName}, ya lo tenías:` : `¡Listo, ${c.firstName}!`) : `${c.firstName}, este cupón ya no sirve.`}</p>
+      <h1 class="cv__title">{usable ? 'Este es tu cupón.' : 'Busca otra oferta.'}</h1>
+    </div>
+
+    <article class:list={['tk', { off: !usable }]} data-tk>
+      <div class="tk__l">
+        <p class="tk__biz"><span class="tk__dot" aria-hidden="true"></span>{content.businessName}</p>
+        <p class="tk__v">{offerHeadline(c.promotion)}</p>
+        <p class="tk__name">{c.promotion.name}</p>
+        <p class="tk__meta">{c.promotion.summary}</p>
+        {usable && c.expiresAt && <p class="tk__left" data-expires={c.expiresAt}>Válido hasta el {fmtDay(c.expiresAt)}</p>}
+        {usable && !c.expiresAt && <p class="tk__left">Válido mientras dure la oferta</p>}
+      </div>
+      <span class="tk__perf" aria-hidden="true"></span>
+      <div class="tk__r">
+        <div class="tk__qr" set:html={qrSvg(c.payload, '#120e2e')} role="img" aria-label={`Código QR del cupón ${c.display}`} />
+        <p class="tk__code">{c.display}</p>
+        <div class="tk__bar" set:html={barcodeSvg(c.payload, '#120e2e')} aria-hidden="true" />
+        <p class="tk__for">Para {c.firstName} · un solo uso</p>
+      </div>
+      {stamp && <p class:list={['tk__stamp', { good: c.status === 'ISSUED' }]} data-stamp>{stamp}</p>}
+    </article>
+
+    {usable && (
+      <ol class="cv__steps">
+        {steps.map((s, i) => (
+          <li style={`--c:${s.c}; --i:${s.i}; --r:${[-2, 1.5, -1][i]}deg`} data-cv-step><b>{i + 1}</b><span><strong>{s.t}</strong>{s.x}</span></li>
+        ))}
+      </ol>
+    )}
+
+    <p class="cv__actions" data-cv-in>
+      {usable && <button class="a-btn a-btn--yellow" type="button" data-share>Guardar o compartir</button>}
+      <button class="a-btn a-btn--light" type="button" onclick="window.print()">Imprimir</button>
+      <a class="a-btn a-btn--go" href="/ofertas">Más ofertas</a>
+    </p>
+    <p class="cv__terms">{c.promotion.terms ?? `Presenta este cupón en cualquier tienda de ${short}.`}</p>
+  </section>
+</Layout>
+
+<script>
+  import gsap from 'gsap'
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const stage = document.querySelector<HTMLElement>('[data-cv]')!
+  const tk = document.querySelector<HTMLElement>('[data-tk]')!
+  const stampEl = document.querySelector<HTMLElement>('[data-stamp]')
+  const fresh = stage.dataset.fresh === '1'
+
+  // Time left, live: "vence en 2 días y 5 horas".
+  const left = document.querySelector<HTMLElement>('[data-expires]')
+  if (left) {
+    const end = new Date(left.dataset.expires!).getTime()
+    const tick = () => {
+      const ms = end - Date.now()
+      if (ms <= 0) { left.textContent = 'Este cupón ya venció'; return }
+      const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, m = Math.floor(ms / 6e4) % 60
+      left.textContent = d > 0 ? `Vence en ${d} ${d === 1 ? 'día' : 'días'} y ${h} h` : h > 0 ? `Vence en ${h} h ${m} min` : `Vence en ${m} min`
+    }
+    tick(); setInterval(tick, 30_000)
+  }
+
+  // Share the coupon's own address (or copy it).
+  document.querySelector<HTMLButtonElement>('[data-share]')?.addEventListener('click', async e => {
+    const btn = e.currentTarget as HTMLButtonElement
+    const url = location.origin + location.pathname
+    try {
+      if (navigator.share) await navigator.share({ title: document.title, url })
+      else { await navigator.clipboard.writeText(url); btn.textContent = 'Enlace copiado' }
+    } catch { /* closed the share sheet */ }
+  })
+
+  const confetti = () => {
+    const box = document.querySelector<HTMLElement>('[data-confetti]')!
+    const colors = ['#ffc61a', '#ff4130', '#2f5bff', '#00a865', '#ff8fc6', '#fffaf0']
+    const r = tk.getBoundingClientRect(), b = stage.getBoundingClientRect()
+    const ox = r.left - b.left + r.width / 2, oy = r.top - b.top + r.height * 0.35
+    for (let i = 0; i < (innerWidth < 700 ? 46 : 90); i++) {
+      const el = document.createElement('i')
+      const w = gsap.utils.random(8, 18), long = Math.random() < 0.55
+      el.style.cssText = `left:${ox}px;top:${oy}px;width:${long ? w * 0.45 : w}px;height:${long ? w * 2.2 : w}px;background:${colors[i % colors.length]};border-radius:${long ? 3 : 50}px`
+      box.appendChild(el)
+      const ang = gsap.utils.random(-Math.PI, 0), pow = gsap.utils.random(260, Math.min(900, innerWidth * 0.7))
+      gsap.timeline({ onComplete: () => el.remove() })
+        .to(el, { x: Math.cos(ang) * pow, duration: 2.4, ease: 'power2.out' }, 0)
+        .to(el, { y: Math.sin(ang) * pow * 0.8, duration: 0.7, ease: 'power2.out' }, 0)
+        .to(el, { y: `+=${gsap.utils.random(500, 900)}`, duration: 1.8, ease: 'power1.in' }, 0.7)
+        .to(el, { rotation: gsap.utils.random(-720, 720), rotationX: gsap.utils.random(-540, 540), duration: 2.5, ease: 'none' }, 0)
+        .to(el, { opacity: 0, duration: 0.5 }, 2)
+    }
+  }
+
+  const intro = () => {
+    if (reduce) { gsap.set(['[data-cv-in]', tk, '[data-cv-step]'], { opacity: 1 }); if (stampEl) gsap.set(stampEl, { opacity: 1 }); return }
+    const tl = gsap.timeline()
+    tl.fromTo('[data-cv-in]', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', stagger: 0.12 }, 0)
+      .fromTo(tk, { opacity: 0, y: -220, rotate: 10, scale: 0.9 }, { opacity: 1, y: 0, rotate: -1.5, scale: 1, duration: 1.4, ease: 'elastic.out(1, 0.55)' }, 0.15)
+    if (stampEl) tl.fromTo(stampEl, { opacity: 0, scale: 3, rotate: -40 }, { opacity: 1, scale: 1, rotate: -14, duration: 0.45, ease: 'back.out(2.4)' }, 0.95)
+      .fromTo(tk, { x: 0 }, { keyframes: { x: [-6, 5, -3, 0] }, duration: 0.3 }, 1.3)
+    if (fresh) tl.add(confetti, 1.05)
+    tl.fromTo('[data-cv-step]', { opacity: 0, y: 80, rotate: 6 }, { opacity: 1, y: 0, rotate: 0, duration: 0.9, ease: 'back.out(1.6)', stagger: 0.1 }, 1.1)
+  }
+  if ((window as unknown as { __auroraReady?: boolean }).__auroraReady) intro()
+  else addEventListener('aurora:ready', intro, { once: true })
+</script>
+
+<style>
+  .cv { position: relative; min-height: 100svh; background: var(--ink); color: var(--paper); overflow: hidden; isolation: isolate; display: grid; justify-items: center; align-content: start; gap: clamp(26px, 3.4vw, 44px); padding: clamp(130px, 16vh, 170px) var(--m) clamp(80px, 10vw, 130px);
+    background-image: radial-gradient(40% 40% at 50% 38%, #2c2378 0%, transparent 70%); }
+  .cv__confetti { position: absolute; inset: 0; pointer-events: none; z-index: 5; perspective: 600px; }
+  .cv__confetti :global(i) { position: absolute; display: block; }
+  :global(.a-js) [data-cv-in], :global(.a-js) .tk, :global(.a-js) [data-cv-step] { opacity: 0; }
+  .cv__head { text-align: center; display: grid; gap: 6px; justify-items: center; }
+  .cv__hand { font-family: var(--hand); font-size: clamp(2rem, 1.4rem + 2vw, 3.2rem); line-height: 1; color: var(--yellow); rotate: -2deg; }
+  .cv__title { font-size: clamp(2.8rem, 1.4rem + 5vw, 6rem); line-height: 0.9; }
+
+  .tk { position: relative; width: min(940px, 100%); display: grid; grid-template-columns: 54fr 6px 46fr; background: var(--paper); color: var(--ink); border-radius: 32px; box-shadow: 0 18px 0 #000, 0 40px 90px -30px rgb(0 0 0 / 0.8);
+    --n: 18px;
+    -webkit-mask: radial-gradient(circle var(--n) at 54% 0, #0000 98%, #000 100%) top / 100% 51% no-repeat, radial-gradient(circle var(--n) at 54% 100%, #0000 98%, #000 100%) bottom / 100% 51% no-repeat;
+            mask: radial-gradient(circle var(--n) at 54% 0, #0000 98%, #000 100%) top / 100% 51% no-repeat, radial-gradient(circle var(--n) at 54% 100%, #0000 98%, #000 100%) bottom / 100% 51% no-repeat; }
+  .tk__l { padding: clamp(28px, 4vw, 52px); display: flex; flex-direction: column; gap: 10px; background: var(--red); color: #fff; border-radius: 32px 0 0 32px; }
+  .tk__biz { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1rem; }
+  .tk__dot { width: 14px; height: 14px; border-radius: 50%; background: var(--yellow); box-shadow: 0 0 0 4px rgb(255 255 255 / 0.25); }
+  .tk__v { color: var(--yellow); font-variation-settings: 'wdth' 76; font-size: clamp(5.4rem, 3rem + 8vw, 10rem); font-weight: 800; line-height: 0.82; letter-spacing: -0.06em; font-variant-numeric: tabular-nums; margin-top: auto; padding-top: 24px; }
+  .tk__name { font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.25rem); font-weight: 800; line-height: 1.05; letter-spacing: -0.03em; }
+  .tk__meta { font-size: 1.0625rem; }
+  .tk__left { margin-top: 8px; align-self: flex-start; padding: 8px 14px; border-radius: 999px; background: var(--ink); color: var(--yellow); font-weight: 800; font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+  .tk__perf { margin-block: 26px; background-image: radial-gradient(circle, var(--ink) 3px, transparent 3.5px); background-size: 6px 14px; background-repeat: repeat-y; }
+  .tk__r { padding: clamp(24px, 3.4vw, 44px); display: grid; justify-items: center; align-content: center; gap: 12px; }
+  .tk__qr { width: min(240px, 64vw); }
+  .tk__qr :global(svg), .tk__bar :global(svg) { width: 100%; height: auto; display: block; }
+  .tk__code { font-size: 1.875rem; font-weight: 800; letter-spacing: 0.1em; font-variant-numeric: tabular-nums; }
+  .tk__bar { width: 100%; max-width: 280px; }
+  .tk__for { font-size: 0.9375rem; color: var(--muted); font-weight: 600; }
+  .tk.off .tk__r > *, .tk.off .tk__v { opacity: 0.25; }
+  .tk__stamp { position: absolute; right: 9%; top: 50%; translate: 0 -50%; rotate: -14deg; padding: 8px 26px; border: 6px solid #c4211a; border-radius: 18px; color: #c4211a; background: rgb(255 250 240 / 0.85); font-size: clamp(2.4rem, 1.8rem + 2.4vw, 4rem); font-weight: 800; text-transform: uppercase; letter-spacing: -0.03em; pointer-events: none; }
+  /* never over the QR or the barcode: the till has to read them */
+  .tk__stamp.good { border-color: var(--green); color: var(--green); right: auto; left: 30%; top: 15%; translate: -50% 0; font-size: clamp(2rem, 1.6rem + 1.6vw, 3rem); background: var(--paper); }
+  :global(.a-js) .tk__stamp { opacity: 0; }
+
+  .cv__steps { list-style: none; margin: 0; padding: 0; width: min(940px, 100%); display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .cv__steps li { display: flex; gap: 14px; align-items: flex-start; background: var(--c); color: var(--i); border: 3px solid var(--paper); border-radius: 24px; padding: 18px 20px; rotate: var(--r); line-height: 1.35; font-size: 1rem; }
+  .cv__steps b { font-size: 2.6rem; font-weight: 800; line-height: 0.8; letter-spacing: -0.05em; }
+  .cv__steps span { display: grid; gap: 2px; }
+  .cv__steps strong { font-size: 1.25rem; font-weight: 800; }
+  .cv__actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .cv__terms { font-size: var(--step-small); color: rgb(255 250 240 / 0.7); text-align: center; max-width: 60ch; }
+
+  @media (max-width: 760px) {
+    .tk { grid-template-columns: 1fr; grid-template-rows: auto 6px auto; -webkit-mask: none; mask: none; }
+    .tk__l { border-radius: 32px 32px 0 0; }
+    .tk__perf { margin: 0 22px; background-image: radial-gradient(circle, var(--ink) 3px, transparent 3.5px); background-size: 14px 6px; background-repeat: repeat-x; }
+    .tk__stamp.good { left: auto; right: 16px; top: 22px; translate: none; font-size: 1.75rem; }
+    .tk__stamp:not(.good) { right: 50%; top: 70%; translate: 50% -50%; }
+    .cv__steps { grid-template-columns: 1fr; }
+  }
+  @media print {
+    :global(.a-top), :global(.a-foot), :global(.pencil-bar), :global(.cursor), .cv__steps, .cv__actions, .cv__head, .cv__confetti, .tk__stamp.good { display: none !important; }
+    .cv { background: #fff !important; min-height: 0; padding: 0; }
+    :global(body), :global(.a-main) { background: #fff !important; }
+    .tk { box-shadow: none; opacity: 1 !important; transform: none !important; border: 2px solid #000; }
+  }
+</style>

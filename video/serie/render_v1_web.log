@@ -1,0 +1,78 @@
+[WARN] [compile] Audio "sfx-0" (assets/sfx/pop.mp3) is 0.72s but its data-duration is 1.20s, so the slot is shortened to the media length. Set data-duration to ~0.72s, trim data-media-start, or use a longer/looping source if that isn't intended. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb"}
+[WARN] [compile] Audio "sfx-1" (assets/sfx/click-soft.mp3) is 0.37s but its data-duration is 1.20s, so the slot is shortened to the media length. Set data-duration to ~0.37s, trim data-media-start, or use a longer/looping source if that isn't intended. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb"}
+[WARN] [compile] Audio "sfx-2" (assets/sfx/pop.mp3) is 0.72s but its data-duration is 1.20s, so the slot is shortened to the media length. Set data-duration to ~0.72s, trim data-media-start, or use a longer/looping source if that isn't intended. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb"}
+[WARN] [compile] Audio "sfx-3" (assets/sfx/pop.mp3) is 0.72s but its data-duration is 1.20s, so the slot is shortened to the media length. Set data-duration to ~0.72s, trim data-media-start, or use a longer/looping source if that isn't intended. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb"}
+[WARN] [compile] Audio "sfx-4" (assets/sfx/pop.mp3) is 0.72s but its data-duration is 1.20s, so the slot is shortened to the media length. Set data-duration to ~0.72s, trim data-media-start, or use a longer/looping source if that isn't intended. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb"}
+[WARN] [compile] Audio "sfx-5" (assets/sfx/pop.mp3) is 0.72s but its data-duration is 1.20s, so the slot is shortened to the media length. Set data-duration to ~0.72s, trim data-media-start, or use a longer/looping source if that isn't intended. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb"}
+[WARN] [compile] Audio "sfx-7" (assets/sfx/pop.mp3) is 0.72s but its data-duration is 1.20s, so the slot is shortened to the media length. Set data-duration to ~0.72s, trim data-media-start, or use a longer/looping source if that isn't intended. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb"}
+[WARN] [compile] Audio "sfx-8" (assets/sfx/pop.mp3) is 0.72s but its data-duration is 1.20s, so the slot is shortened to the media length. Set data-duration to ~0.72s, trim data-media-start, or use a longer/looping source if that isn't intended. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb"}
+[WARN] [compile] Audio "sfx-9" (assets/sfx/click-soft.mp3) is 0.37s but its data-duration is 1.20s, so the slot is shortened to the media length. Set data-duration to ~0.37s, trim data-media-start, or use a longer/looping source if that isn't intended. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb"}
+[WARN] [compile] Audio "sfx-12" (assets/sfx/pop.mp3) is 0.72s but its data-duration is 1.20s, so the slot is shortened to the media length. Set data-duration to ~0.72s, trim data-media-start, or use a longer/looping source if that isn't intended. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb"}
+[WARN] [compile] Audio "sfx-13" (assets/sfx/click-soft.mp3) is 0.37s but its data-duration is 1.20s, so the slot is shortened to the media length. Set data-duration to ~0.37s, trim data-media-start, or use a longer/looping source if that isn't intended. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb"}
+[WARN] [compile] Audio "sfx-14" (assets/sfx/pop.mp3) is 0.72s but its data-duration is 1.20s, so the slot is shortened to the media length. Set data-duration to ~0.72s, trim data-media-start, or use a longer/looping source if that isn't intended. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb"}
+[WARN] [compile] Audio "sfx-15" (assets/sfx/click-soft.mp3) is 0.37s but its data-duration is 1.20s, so the slot is shortened to the media length. Set data-duration to ~0.37s, trim data-media-start, or use a longer/looping source if that isn't intended. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb"}
+[WARN] [compile] Audio "sfx-16" (assets/sfx/pop.mp3) is 0.72s but its data-duration is 1.20s, so the slot is shortened to the media length. Set data-duration to ~0.72s, trim data-media-start, or use a longer/looping source if that isn't intended. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb"}
+[WARN] [compile] Audio "sfx-17" (assets/sfx/whoosh-short.mp3) is 0.57s but its data-duration is 1.20s, so the slot is shortened to the media length. Set data-duration to ~0.57s, trim data-media-start, or use a longer/looping source if that isn't intended. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb"}
+[INFO] [Compiler] Fetched 9 font face(s) for "Outfit" from Google Fonts (cached to C:\Users\Alejandra Yol\.cache\hyperframes\fonts\outfit)
+[INFO] [Compiler] Fetched 11 font face(s) for "Inter" from Google Fonts (cached to C:\Users\Alejandra Yol\.cache\hyperframes\fonts\inter)
+[INFO] [Compiler] Injected deterministic @font-face rules for 2 requested font families
+[INFO] [Compiler] Inlined CDN script: https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js
+[hyperframes] browserGpuMode probe → hardware (WebGL renderer vendor="Google Inc. (AMD)" renderer="ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001900) Direct3D11 vs_5_0 ps_5_0, D3D11)")
+[BrowserManager] Browser launched (HeadlessChrome/152.0.7977.30, screenshot, gl=--use-gl=angle --use-angle=d3d11, headlessShell=true, platform=win32)
+[initSession:screenshot] page.goto start (0ms)
+[initSession:screenshot] page.goto complete (555ms)
+[initSession:screenshot] GSAP proxy flush complete (603ms)
+[HyperFrames] render runtime fps {"canonicalFps":30,"source":"render-options","rawFpsSource":"render-options","rawFps":30}
+[initSession:screenshot] pollHfReady complete (841ms)
+[initSession:screenshot] pollSubCompositionTimelines complete (ready) (852ms)
+[initSession:screenshot] applyVideoMetadataHints complete (865ms)
+[initSession:screenshot] media + fonts + tailwind ready (1189ms)
+[initSession:screenshot] captureBeyondViewport downgraded: page content fits the capture viewport (1198ms)
+[initSession:screenshot] static-frame dedup: disabled (before-capture hook / video injection active) (1221ms)
+[WARN] [Render] Measured slow frame capture during auto-worker calibration. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb","multiplier":1.41,"p95Ms":845,"sampledFrames":[0,980,1960,2940,3920]}
+[BrowserManager] Browser launched (HeadlessChrome/152.0.7977.30, screenshot, gl=--use-gl=angle --use-angle=swiftshader, headlessShell=true, platform=win32)
+[WARN] [Render] Reduced auto worker count for high-cost capture workload to avoid Chrome compositor starvation. {"renderJobId":"0a4e7c23-5cb4-4006-9a5c-184776b10bfb","from":5,"to":4,"costMultiplier":1.41,"reasons":["calibration-p95=845ms"]}
+[BrowserManager] Browser launched (HeadlessChrome/152.0.7977.30, screenshot, gl=--use-gl=angle --use-angle=d3d11, headlessShell=true, platform=win32)
+[BrowserManager] Browser launched (HeadlessChrome/152.0.7977.30, screenshot, gl=--use-gl=angle --use-angle=d3d11, headlessShell=true, platform=win32)
+[BrowserManager] Browser launched (HeadlessChrome/152.0.7977.30, screenshot, gl=--use-gl=angle --use-angle=d3d11, headlessShell=true, platform=win32)
+[BrowserManager] Browser launched (HeadlessChrome/152.0.7977.30, screenshot, gl=--use-gl=angle --use-angle=d3d11, headlessShell=true, platform=win32)
+[initSession:screenshot] page.goto start (1ms)
+[initSession:screenshot] page.goto start (0ms)
+[initSession:screenshot] page.goto start (0ms)
+[initSession:screenshot] page.goto start (0ms)
+[initSession:screenshot] page.goto complete (732ms)
+[initSession:screenshot] page.goto complete (813ms)
+[HyperFrames] render runtime fps {"canonicalFps":30,"source":"render-options","rawFpsSource":"render-options","rawFps":30}
+[initSession:screenshot] page.goto complete (744ms)
+[HyperFrames] render runtime fps {"canonicalFps":30,"source":"render-options","rawFpsSource":"render-options","rawFps":30}
+[initSession:screenshot] GSAP proxy flush complete (833ms)
+[initSession:screenshot] GSAP proxy flush complete (777ms)
+[initSession:screenshot] pollHfReady complete (859ms)
+[initSession:screenshot] GSAP proxy flush complete (814ms)
+[initSession:screenshot] pollSubCompositionTimelines complete (ready) (895ms)
+[HyperFrames] render runtime fps {"canonicalFps":30,"source":"render-options","rawFpsSource":"render-options","rawFps":30}
+[initSession:screenshot] pollHfReady complete (830ms)
+[initSession:screenshot] applyVideoMetadataHints complete (916ms)
+[initSession:screenshot] pollSubCompositionTimelines complete (ready) (861ms)
+[initSession:screenshot] page.goto complete (841ms)
+[initSession:screenshot] applyVideoMetadataHints complete (882ms)
+[initSession:screenshot] GSAP proxy flush complete (898ms)
+[HyperFrames] render runtime fps {"canonicalFps":30,"source":"render-options","rawFpsSource":"render-options","rawFps":30}
+[initSession:screenshot] pollHfReady complete (1030ms)
+[initSession:screenshot] pollSubCompositionTimelines complete (ready) (1063ms)
+[initSession:screenshot] applyVideoMetadataHints complete (1097ms)
+[initSession:screenshot] pollHfReady complete (1187ms)
+[initSession:screenshot] pollSubCompositionTimelines complete (ready) (1238ms)
+[initSession:screenshot] applyVideoMetadataHints complete (1258ms)
+[initSession:screenshot] media + fonts + tailwind ready (1892ms)
+[initSession:screenshot] captureBeyondViewport downgraded: page content fits the capture viewport (1901ms)
+[initSession:screenshot] static-frame dedup: disabled (before-capture hook / video injection active) (1901ms)
+[initSession:screenshot] media + fonts + tailwind ready (1927ms)
+[initSession:screenshot] captureBeyondViewport downgraded: page content fits the capture viewport (1934ms)
+[initSession:screenshot] static-frame dedup: disabled (before-capture hook / video injection active) (1934ms)
+[initSession:screenshot] media + fonts + tailwind ready (1959ms)
+[initSession:screenshot] captureBeyondViewport downgraded: page content fits the capture viewport (1972ms)
+[initSession:screenshot] static-frame dedup: disabled (before-capture hook / video injection active) (1972ms)
+[initSession:screenshot] media + fonts + tailwind ready (2078ms)
+[initSession:screenshot] captureBeyondViewport downgraded: page content fits the capture viewport (2086ms)
+[initSession:screenshot] static-frame dedup: disabled (before-capture hook / video injection active) (2086ms)

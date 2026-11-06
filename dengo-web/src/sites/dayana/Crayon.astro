@@ -1,0 +1,160 @@
+---
+// One of the crayon crew, drawn in SVG: a wax tip, a paper wrapper with
+// the crayon's name on its label, a face, two arms and white sneakers.
+// The page's script moves the pupils (--lx/--ly), and the CSS here makes it
+// breathe, blink and wave. Poses and props are classes, so a script can
+// swap them (asleep at a closed store, a hop when tapped).
+import { CREW, type CrewKey } from './data'
+
+type Pose = 'idle' | 'wave' | 'cheer' | 'hold' | 'read' | 'point'
+type Face = 'smile' | 'grin' | 'o'
+type Acc = 'glasses' | 'shades' | 'cap' | 'beret' | 'backpack' | 'book' | 'brush' | 'pen' | 'apron'
+interface Props { who: CrewKey; pose?: Pose; face?: Face; acc?: Acc[]; asleep?: boolean; class?: string; style?: string; title?: string; flip?: boolean }
+const { who, pose = 'idle', face = 'smile', acc = [], asleep = false, class: cls = '', style = '', title, flip = false } = Astro.props
+const c = CREW[who]
+const has = (a: Acc) => acc.includes(a)
+const vars = `--wax:${c.wax};--wrap:${c.wrap};--shade:${c.shade};--bd:${(2.3 + (c.name.length % 4) * 0.35).toFixed(2)}s;--bl:${(3.6 + (c.name.length % 3) * 0.9).toFixed(1)}s;${style}`
+---
+<svg class:list={['cr', `cr--${pose}`, `cr--${face}`, { 'is-asleep': asleep, 'cr--flip': flip }, cls]} viewBox="0 0 168 272" style={vars} data-crayon={who} role={title ? 'img' : undefined} aria-label={title} aria-hidden={title ? undefined : 'true'} focusable="false">
+  <g class="cr-all">
+    {has('backpack') && (
+      <g class="cr-pack"><rect x="40" y="116" width="88" height="88" rx="18" /><rect class="cr-pack__pocket" x="34" y="160" width="20" height="34" rx="7" /><rect class="cr-pack__pocket" x="114" y="160" width="20" height="34" rx="7" /></g>
+    )}
+    <g class="cr-legs">
+      <path class="cr-limb" d="M71 226 V249" />
+      <path class="cr-limb" d="M97 226 V249" />
+      <path class="cr-shoe" d="M52 256 q0 -11 15 -11 q11 0 12 7 q1 6 -6 6 h-19 q-2 0 -2 -2z" />
+      <path class="cr-shoe" d="M116 256 q0 -11 -15 -11 q-11 0 -12 7 q-1 6 6 6 h19 q2 0 2 -2z" />
+    </g>
+    <path class="cr-tip" d="M55 89 L69 39 Q84 25 99 39 L113 89 Z" />
+    <path class="cr-tip-hi" d="M65 84 L75 45 Q78 41 81 42 L73 84 Z" />
+    <rect class="cr-body" x="52" y="84" width="64" height="144" rx="11" />
+    <path class="cr-band" d="M52 97 q8 -5 16 0 t16 0 t16 0 t16 0 v8 q-8 -5 -16 0 t-16 0 t-16 0 t-16 0 z" />
+    <path class="cr-band" d="M52 208 q8 -5 16 0 t16 0 t16 0 t16 0 v8 q-8 -5 -16 0 t-16 0 t-16 0 t-16 0 z" />
+    {has('apron') && <path class="cr-apron" d="M60 150 h48 v52 q-24 8 -48 0z" />}
+    <rect class="cr-label" x="57" y="178" width="54" height="22" rx="11" />
+    <text class="cr-name" x="84" y="194.5" text-anchor="middle">{c.name}</text>
+    {has('backpack') && (
+      <g class="cr-straps"><path d="M61 104 Q56 140 62 172" /><path d="M107 104 Q112 140 106 172" /></g>
+    )}
+    <g class="cr-face">
+      <ellipse class="cr-cheek" cx="62" cy="151" rx="7" ry="4.5" />
+      <ellipse class="cr-cheek" cx="106" cy="151" rx="7" ry="4.5" />
+      <g class="cr-eye"><ellipse class="cr-white" cx="71" cy="128" rx="10" ry="12.5" /><g class="cr-pupil"><circle cx="71" cy="130" r="5.6" /><circle class="cr-glint" cx="69" cy="127.6" r="2" /></g></g>
+      <g class="cr-eye"><ellipse class="cr-white" cx="97" cy="128" rx="10" ry="12.5" /><g class="cr-pupil"><circle cx="97" cy="130" r="5.6" /><circle class="cr-glint" cx="95" cy="127.6" r="2" /></g></g>
+      <g class="cr-shut"><path d="M62 130 Q71 137 80 130" /><path d="M88 130 Q97 137 106 130" /></g>
+      {face === 'smile' && <path class="cr-mouth" d="M75 150 Q84 159 93 150" />}
+      {face === 'grin' && <path class="cr-grin" d="M73 147 Q84 166 95 147 Z" />}
+      {face === 'o' && <ellipse class="cr-o" cx="84" cy="153" rx="4.6" ry="5.8" />}
+      <g class="cr-zzz"><text x="118" y="64">z</text><text x="132" y="44">z</text><text x="146" y="24">Z</text></g>
+    </g>
+    {has('glasses') && <g class="cr-glasses"><circle cx="71" cy="128" r="14.5" /><circle cx="97" cy="128" r="14.5" /><path d="M85.5 125 Q84 121 82.5 125" /></g>}
+    {has('shades') && <g class="cr-shades"><rect x="55" y="117" width="27" height="19" rx="8" /><rect x="86" y="117" width="27" height="19" rx="8" /><path class="cr-shades__b" d="M82 124 h4" /><path class="cr-shades__g" d="M60 123 l7 -2.5 M91 123 l7 -2.5" /></g>}
+    {has('cap') && <g class="cr-cap"><path d="M66 46 Q67 20 86 20 Q105 21 104 46 Z" /><path d="M100 44 q19 -3 28 6 q-10 5 -28 2z" /></g>}
+    {has('beret') && <g class="cr-beret"><path d="M60 42 Q62 22 88 22 Q114 24 112 42 Q86 51 60 42Z" /><path d="M88 22 q1 -7 7 -7" /></g>}
+    {has('book') && <g class="cr-book"><rect x="50" y="160" width="68" height="44" rx="4" /><path d="M84 160 V204" /><path class="cr-book__p" d="M56 168 h22 M56 176 h22 M90 168 h22 M90 176 h22" /></g>}
+    <g class="cr-arm cr-arm--l">
+      <path class="cr-limb" d="M54 138 Q38 150 34 170" />
+      <circle class="cr-hand" cx="34" cy="173" r="8.5" />
+    </g>
+    <g class="cr-arm cr-arm--r">
+      {has('brush') && <g class="cr-brush"><path class="cr-brush__h" d="M134 173 L147 197" /><path class="cr-brush__f" d="M147 197 L150.5 203.5" /><path class="cr-brush__t" d="M150.5 203.5 L155 212" /></g>}
+      {has('pen') && <g class="cr-pen"><path class="cr-pen__b" d="M134 173 L152 207" /><path class="cr-pen__c" d="M138 176 L143 186" /><path class="cr-pen__t" d="M152 207 L155 213" /></g>}
+      <path class="cr-limb" d="M114 138 Q130 150 134 170" />
+      <circle class="cr-hand" cx="134" cy="173" r="8.5" />
+    </g>
+  </g>
+</svg>
+
+<style>
+  .cr { --ink: #1a1433; --line: var(--ink); display: block; overflow: visible; width: 100%; height: auto; }
+  .cr--flip { scale: -1 1; }
+  .cr--flip .cr-name { scale: -1 1; transform-box: fill-box; transform-origin: center; }
+  .cr * { vector-effect: non-scaling-stroke; }
+  .cr-all { transform-box: view-box; transform-origin: 84px 258px; animation: cr-bob var(--bd) ease-in-out infinite; }
+  .cr-tip { fill: var(--wax); stroke: var(--line); stroke-width: 3.5; stroke-linejoin: round; }
+  .cr-tip-hi { fill: #fff; opacity: 0.38; }
+  .cr-body { fill: var(--wrap); stroke: var(--line); stroke-width: 3.5; }
+  .cr-band { fill: var(--shade); }
+  .cr-label { fill: #fff; stroke: var(--line); stroke-width: 2.5; }
+  .cr-name { font: 700 17px 'Caveat', 'Comic Sans MS', cursive; fill: var(--shade); }
+  .cr-limb { fill: none; stroke: var(--line); stroke-width: 5; stroke-linecap: round; }
+  .cr-hand, .cr-shoe { fill: #fff; stroke: var(--line); stroke-width: 3.2; stroke-linejoin: round; }
+  .cr-white { fill: #fff; stroke: var(--ink); stroke-width: 3; }
+  .cr-pupil { fill: var(--ink); transform: translate(calc(var(--lx, 0) * 1px), calc(var(--ly, 0) * 1px)); transition: transform 0.18s ease-out; }
+  .cr-glint { fill: #fff; }
+  .cr-cheek { fill: #ff8fb4; opacity: 0.75; }
+  .cr-mouth { fill: none; stroke: var(--ink); stroke-width: 3.5; stroke-linecap: round; }
+  .cr-grin { fill: #5b0b1e; stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; }
+  .cr-o { fill: #5b0b1e; stroke: var(--ink); stroke-width: 3; }
+  .cr-eye { transform-box: fill-box; transform-origin: 50% 60%; animation: cr-blink var(--bl) infinite; }
+  .cr-shut { display: none; fill: none; stroke: var(--ink); stroke-width: 3.5; stroke-linecap: round; }
+  .cr-zzz { display: none; font: 700 20px 'Caveat', cursive; fill: #fff; stroke: var(--ink); stroke-width: 1px; paint-order: stroke; }
+  .cr-glasses { fill: rgb(255 255 255 / 0.18); stroke: var(--ink); stroke-width: 3.2; }
+  .cr-shades rect { fill: var(--ink); }
+  .cr-shades__b { stroke: var(--ink); stroke-width: 4; }
+  .cr-shades__g { stroke: #fff; stroke-width: 2.5; stroke-linecap: round; opacity: 0.85; }
+  .cr-cap path { fill: var(--cap, #001f5f); stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; }
+  .cr-beret path:first-child { fill: var(--beret, #e8212b); stroke: var(--ink); stroke-width: 3; }
+  .cr-beret path:last-child { fill: none; stroke: var(--ink); stroke-width: 3.5; stroke-linecap: round; }
+  .cr-pack rect { fill: var(--pack, #e8212b); stroke: var(--ink); stroke-width: 3.2; }
+  .cr-pack .cr-pack__pocket { fill: var(--pack-2, #b3121c); }
+  .cr-straps path { fill: none; stroke: var(--pack-2, #b3121c); stroke-width: 7; stroke-linecap: round; }
+  .cr-apron { fill: #fff; stroke: var(--ink); stroke-width: 3; opacity: 0.95; }
+  .cr-book rect { fill: var(--book, #001f5f); stroke: var(--ink); stroke-width: 3.2; }
+  .cr-book path { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; }
+  .cr-book__p { opacity: 0.7; }
+  .cr-brush__h { stroke: #c98a4b; stroke-width: 6; stroke-linecap: round; }
+  .cr-brush__f { stroke: #c9ccd6; stroke-width: 7; }
+  .cr-brush__t { stroke: var(--paint, #2f5bd3); stroke-width: 8; stroke-linecap: round; }
+  .cr-pen__b { stroke: #0b1f5c; stroke-width: 6.5; stroke-linecap: round; }
+  .cr-pen__c { stroke: #e3b341; stroke-width: 2.5; stroke-linecap: round; }
+  .cr-pen__t { stroke: #e3b341; stroke-width: 4; stroke-linecap: round; }
+
+  /* Arms turn at the shoulder. */
+  .cr-arm { transform-box: view-box; transition: transform 0.5s cubic-bezier(.34, 1.56, .64, 1); }
+  .cr-arm--l { transform-origin: 54px 138px; animation: cr-swing-l 3.2s ease-in-out infinite; }
+  .cr-arm--r { transform-origin: 114px 138px; animation: cr-swing-r 3.2s ease-in-out infinite; }
+  .cr--wave .cr-arm--r { animation: cr-wave 1.3s ease-in-out infinite; }
+  .cr--cheer .cr-arm--l { animation: cr-cheer-l 0.9s ease-in-out infinite; }
+  .cr--cheer .cr-arm--r { animation: cr-cheer-r 0.9s ease-in-out infinite; }
+  .cr--hold .cr-arm--l { animation: none; transform: rotate(138deg); }
+  .cr--hold .cr-arm--r { animation: none; transform: rotate(-138deg); }
+  .cr--read .cr-arm--l { animation: none; transform: rotate(-30deg); }
+  .cr--read .cr-arm--r { animation: none; transform: rotate(30deg); }
+  .cr--read .cr-pupil { --ly: 3; }
+  .cr--point .cr-arm--r { animation: cr-point 2.4s ease-in-out infinite; }
+
+  /* Asleep: eyes shut, a few Zs float up. */
+  .is-asleep .cr-eye { display: none; }
+  .is-asleep .cr-shut, .is-asleep .cr-zzz { display: block; }
+  .is-asleep .cr-zzz text { animation: cr-z 2.6s ease-in-out infinite; }
+  .is-asleep .cr-zzz text:nth-child(2) { animation-delay: 0.5s; }
+  .is-asleep .cr-zzz text:nth-child(3) { animation-delay: 1s; }
+  .is-asleep .cr-all { animation-duration: 4.6s; }
+  .is-asleep .cr-arm { animation: none; transform: none; }
+  .is-asleep .cr-mouth { d: path('M79 152 Q84 155 89 152'); }
+
+  /* A hop when tapped (the class is added by script). */
+  :global(.cr-hop) .cr-all { animation: cr-hop 0.7s cubic-bezier(.3, 1.6, .5, 1) both; }
+
+  @keyframes cr-bob { 0%, 100% { transform: translateY(0) rotate(-1.2deg); } 50% { transform: translateY(-5px) rotate(1.2deg) scaleY(1.015); } }
+  @keyframes cr-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } }
+  @keyframes cr-swing-l { 0%, 100% { transform: rotate(4deg); } 50% { transform: rotate(-6deg); } }
+  @keyframes cr-swing-r { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(6deg); } }
+  @keyframes cr-wave { 0%, 100% { transform: rotate(-104deg); } 50% { transform: rotate(-136deg); } }
+  @keyframes cr-cheer-l { 0%, 100% { transform: rotate(118deg); } 50% { transform: rotate(142deg); } }
+  @keyframes cr-cheer-r { 0%, 100% { transform: rotate(-118deg); } 50% { transform: rotate(-142deg); } }
+  @keyframes cr-point { 0%, 100% { transform: rotate(-62deg); } 50% { transform: rotate(-70deg); } }
+  @keyframes cr-z { 0% { opacity: 0; transform: translate(0, 8px); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(6px, -10px); } }
+  @keyframes cr-hop {
+    0% { transform: translateY(0) scale(1, 1); }
+    18% { transform: translateY(4px) scale(1.08, 0.9); }
+    50% { transform: translateY(-46px) scale(0.94, 1.08) rotate(-6deg); }
+    80% { transform: translateY(2px) scale(1.06, 0.94); }
+    100% { transform: translateY(0) scale(1, 1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cr *, .cr-all { animation: none !important; transition: none !important; }
+  }
+</style>

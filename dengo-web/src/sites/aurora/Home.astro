@@ -1,0 +1,668 @@
+---
+// Librería Aurora — custom design (demo of a made-to-measure site).
+// Idea: the shop is the box of crayons and the school notebook every kid
+// carries in January. A 3D desk of supplies floats in the hero; the shop's
+// story is written in a notebook that turns its pages as you scroll; the
+// aisles slide past sideways; a pencil draws the path a coupon takes from
+// the phone to the till. Live thing: take your coupon right on the page.
+import Layout from './Layout.astro'
+import CouponForm from '../../core/CouponForm.astro'
+import Stickers from './Stickers.astro'
+import { offerHeadline, fmtDay, mapsLink, waLink } from '../../core/api'
+import { qrSvg } from '../../core/codes'
+import { openState } from '../../core/hours'
+import type { SiteContent } from '../../core/types'
+
+const { content } = Astro.props as { content: SiteContent }
+const short = content.businessName.replace(/^librer[ií]a\s+/i, '').trim() || content.businessName
+const offers = content.promotions.slice(0, 4)
+const featured = content.promotions.find(p => p.featured) ?? content.promotions[0]
+const wa = waLink(content.contact.whatsapp, `Hola ${content.businessName}, les mando la lista de útiles.`)
+const sub = content.heroSubtitle || content.tagline || 'Útiles, cuadernos, arte y oficina. Te armamos la lista del colegio completa.'
+const about = (content.about || 'Abrimos la primera tienda con un mostrador, dos estantes y la lista de útiles del colegio de enfrente pegada en la pared.\n\nTodavía trabajamos así: si traes la lista, te la armamos completa.')
+  .split(/\n\s*\n|\n/).filter(Boolean)
+const towns = content.branches.map(b => b.name.replace(/^(sucursal|tienda|central)\s+/i, ''))
+const offerColors = ['var(--yellow)', 'var(--blue)', 'var(--pink)', 'var(--green)']
+const offerInk = ['var(--ink)', '#fff', 'var(--ink)', '#fff']
+
+const aisles = [
+  { t: 'Cuadernos', x: 'Cosidos, espiral y de dibujo, de 50 a 200 hojas. Te los forramos mientras esperas.', tag: 'En las tres tiendas', img: '/sites/aurora/2000-notebook-pages-4-5.webp', w: 1400, h: 1050, alt: 'Cuaderno cuadriculado abierto con apuntes a mano', c: 'var(--yellow)', i: 'var(--ink)' },
+  { t: 'Lápices y colores', x: 'Grafito HB y 2B, colores de 12 a 48, sacapuntas de depósito y borradores de miga.', tag: 'Precio por docena', img: '/sites/aurora/selection-of-colored-pencils.webp', w: 1400, h: 1171, alt: 'Lápices de colores con la punta recién sacada', c: 'var(--red)', i: '#fff' },
+  { t: 'Arte', x: 'Témperas, acuarelas, pinceles, plastilina, crayones, carboncillo y papel de colores.', tag: 'Pedidos por grado', img: '/sites/aurora/conte-crayons.webp', w: 1400, h: 1048, alt: 'Crayones y barras de carboncillo en su lata', c: 'var(--blue)', i: '#fff' },
+  { t: 'Mochilas', x: 'Para preprimaria, primaria y básicos, con garantía en cierres. Loncheras y cartucheras.', tag: 'Temporada de enero', img: '/sites/aurora/colored-pencils-chevre.webp', w: 1400, h: 1048, alt: 'Lápices de colores acomodados en círculo', c: 'var(--pink)', i: 'var(--ink)' },
+  { t: 'Oficina', x: 'Folders, archivadores, papel bond, tinta, engrapadoras y todo para el escritorio.', tag: 'Todo el año', img: '/sites/aurora/apsco-vacuhold-pencil-sharpener-13.webp', w: 1400, h: 933, alt: 'Mecanismo de un sacapuntas de manivela', c: 'var(--green)', i: '#fff' },
+]
+const marquee1 = ['Cuadernos', 'Crayones', 'Mochilas', 'Témperas', 'Folders', 'Plastilina', 'Acuarelas', 'Sacapuntas']
+const marquee2 = ['Te armamos la lista del colegio', 'Forramos tus cuadernos', 'Abrimos temprano']
+const sampleQr = qrSvg('CUP-AURORA25', '#120e2e')
+const stepCode = featured ? offerHeadline(featured) : '15%'
+---
+<Layout content={content} home>
+  <!-- ═════ HERO: a desk of supplies floating in 3D ═════ -->
+  <section class="hero" data-hero aria-labelledby="h-hero">
+    <canvas class="hero__canvas" data-desk aria-hidden="true"></canvas>
+    <div class="hero__glow" aria-hidden="true"></div>
+    <div class="hero__in">
+      <h1 id="h-hero" class="hero__title" data-split>
+        <span class="hero__l1">Llega a clases</span>
+        <span class="hero__l2"><em>con todo.</em><svg class="hero__scrib" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true"><path d="M6 28 C 120 6, 260 6, 380 18 S 560 34, 594 12" /></svg></span>
+      </h1>
+      <p class="hero__sub" data-hero-in>{sub}</p>
+      <div class="hero__actions" data-hero-in>
+        {featured && <a class="a-btn a-btn--go" href={`/ofertas/${featured.slug}`} data-magnet data-cursor="Recortar">Recorta tu {offerHeadline(featured)} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>}
+        <a class="a-btn a-btn--light" href="#pasillos" data-magnet>Recorre los pasillos</a>
+      </div>
+    </div>
+
+    {featured && (
+      <a class="badge" href={`/ofertas/${featured.slug}`} data-hero-in aria-label={`${featured.name}: obtener cupón`} data-cursor="Ver">
+        <svg class="badge__ring" viewBox="0 0 200 200" aria-hidden="true">
+          <defs><path id="ring" d="M100 100 m -78 0 a 78 78 0 1 1 156 0 a 78 78 0 1 1 -156 0" /></defs>
+          <text><textPath href="#ring">REGRESO A CLASES • CUPÓN EN LÍNEA • UNO POR PERSONA • </textPath></text>
+        </svg>
+        <span class="badge__v">{offerHeadline(featured)}</span>
+      </a>
+    )}
+
+    {content.branches.length > 0 && (
+      <ul class="hero__stores" data-hero-in>
+        {content.branches.map(b => { const s = openState(b.openTime, b.closeTime); return (
+          <li><span class="live" data-open-flag={s.open ? '1' : '0'} data-store data-open={b.openTime} data-close={b.closeTime}>{b.name.replace(/^(sucursal|tienda)\s+/i, '')}</span></li>
+        )})}
+      </ul>
+    )}
+    <span class="hero__scroll" aria-hidden="true"><span></span></span>
+  </section>
+
+  <!-- ═════ MARQUEE: two crossing ribbons ═════ -->
+  <div class="ribbons" aria-hidden="true">
+    <div class="ribbon ribbon--a" data-ribbon>
+      <div class="ribbon__track">{[0, 1].map(() => marquee1.map(w => <span>{w}<svg viewBox="0 0 24 24"><path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" /></svg></span>))}</div>
+    </div>
+    <div class="ribbon ribbon--b" data-ribbon data-dir="-1">
+      <div class="ribbon__track">{[0, 1, 2].map(() => marquee2.map(w => <span>{w}<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" /></svg></span>))}</div>
+    </div>
+  </div>
+
+  <!-- ═════ OFFERS: stickers you peel off ═════ -->
+  {offers.length > 0 && (
+    <section class="offers" id="ofertas" aria-labelledby="h-offers">
+      <div class="offers__head">
+        <h2 id="h-offers" class="h-big" data-split>Ofertas para recortar</h2>
+        <div class="cutline" aria-hidden="true" data-cutline>
+          <span class="cutline__dash"></span>
+          <svg class="cutline__scissors" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="5"><circle cx="14" cy="18" r="9" /><circle cx="14" cy="46" r="9" /></g><path class="blade-a" d="M21 23 60 42" stroke="currentColor" stroke-width="5" stroke-linecap="round" /><path class="blade-b" d="M21 41 60 22" stroke="currentColor" stroke-width="5" stroke-linecap="round" /></svg>
+        </div>
+        <p class="offers__intro">Pide tu cupón aquí, llega con él en el teléfono y el cajero lo escanea. Uno por persona, en cualquiera de las tiendas.</p>
+      </div>
+      <Stickers offers={offers} featured={featured} />
+      {content.promotions.length > offers.length && <p class="offers__all"><a class="a-btn" href="/ofertas">Ver las {content.promotions.length} ofertas</a></p>}
+    </section>
+  )}
+
+  <!-- ═════ THE NOTEBOOK: the story, page by page ═════ -->
+  <section class="nb" id="cuaderno" aria-labelledby="h-nb">
+    <div class="nb__stage" data-nb-stage>
+      <h2 id="h-nb" class="h-big nb__title" data-split>El cuaderno de {short}</h2>
+      <p class="nb__hint" aria-hidden="true">Sigue bajando para pasar la página</p>
+      <div class="book" data-book>
+        <div class="page page--base">
+          <div class="page__ruled">
+            <p class="hand hand--xl">¿Traes tu lista?</p>
+            <p class="hand">Mándanos una foto y la tenemos lista cuando llegues. Si algo falta, te avisamos antes.</p>
+            {wa && <a class="a-btn a-btn--go page__btn" href={wa} target="_blank" rel="noopener" data-cursor="WhatsApp">Enviar por WhatsApp</a>}
+            <p class="hand hand--sign">— el equipo de {short}</p>
+          </div>
+        </div>
+        <div class="leaf" data-leaf>
+          <div class="face face--front cover">
+            <div class="cover__label">
+              <p class="cover__brand">{short}</p>
+              <p class="cover__row"><span>Materia</span><b class="hand">Nuestra historia</b></p>
+              <p class="cover__row"><span>Nombre</span><b class="hand">{content.businessName}</b></p>
+              <p class="cover__row"><span>Grado</span><b class="hand">{content.branches.length || 1} tiendas</b></p>
+            </div>
+            <span class="cover__elastic" aria-hidden="true"></span>
+          </div>
+          <div class="face face--back page">
+            <div class="page__ruled page__ruled--left">
+              <p class="hand hand--xl">Nuestra historia</p>
+              <svg class="doodle" viewBox="0 0 220 150" aria-hidden="true"><g fill="none" stroke="var(--blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 140V60l90-45 90 45v80z" /><path d="M20 60h180" /><path d="M85 140V95h50v45" /><path d="M40 80h30v25H40zM150 80h30v25h-30z" /><path d="M60 35l-8-18M160 35l8-18M110 12V2" stroke="var(--red)" /></g></svg>
+              <p class="hand">La tienda del dibujo fue la primera. Todavía tiene el mostrador.</p>
+            </div>
+          </div>
+        </div>
+        <div class="leaf" data-leaf>
+          <div class="face face--front page">
+            <div class="page__ruled">
+              {about.map((p, i) => <p class:list={['hand', { 'hand--first': i === 0 }]}>{p}</p>)}
+            </div>
+          </div>
+          <div class="face face--back page">
+            <div class="page__ruled page__ruled--left">
+              <p class="hand hand--xl">Así te armamos la lista</p>
+              <ol class="checks">
+                <li><span class="box" aria-hidden="true"></span>Traes la lista del colegio, o nos mandas la foto.</li>
+                <li><span class="box" aria-hidden="true"></span>La armamos completa, marca por marca.</li>
+                <li><span class="box" aria-hidden="true"></span>Forramos los cuadernos mientras esperas.</li>
+                <li><span class="box" aria-hidden="true"></span>Si algo falta, te avisamos antes de cobrar.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+        <div class="leaf" data-leaf>
+          <div class="face face--front page">
+            <div class="page__ruled">
+              <figure class="polaroid" style="--rot:-4deg">
+                <img src="/sites/aurora/selection-of-colored-pencils.webp" alt="Lápices de colores con la punta recién sacada" width="1400" height="1171" loading="lazy" />
+                <figcaption class="hand">El pasillo de colores</figcaption>
+                <span class="tape" aria-hidden="true"></span>
+              </figure>
+              <p class="hand">Colores de 12 a 48, siempre con punta.</p>
+            </div>
+          </div>
+          <div class="face face--back page">
+            <div class="page__ruled page__ruled--left">
+              <figure class="polaroid" style="--rot:3deg">
+                <img src="/sites/aurora/2000-notebook-pages-4-5.webp" alt="Cuaderno cuadriculado abierto con apuntes a mano" width="1400" height="1050" loading="lazy" />
+                <figcaption class="hand">Cuadernos de 50 a 200 hojas</figcaption>
+                <span class="tape" aria-hidden="true"></span>
+              </figure>
+              <p class="hand">Cosidos, espiral y de dibujo. ¡Y forrados!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════ AISLES: slide past sideways ═════ -->
+  <section class="aisles" id="pasillos" aria-labelledby="h-aisles">
+    <div class="aisles__pin" data-aisles>
+      <div class="aisles__track" data-aisles-track>
+        <div class="aisle aisle--intro">
+          <h2 id="h-aisles" class="h-big">Recorre los pasillos</h2>
+          <p class="aisles__lead">{aisles.length} pasillos en cada tienda, desde el cuaderno de preprimaria hasta la tinta de la oficina.</p>
+          <svg class="aisles__arrow" viewBox="0 0 120 40" aria-hidden="true"><path d="M2 20h108M92 4l18 16-18 16" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </div>
+        {aisles.map((a, i) => (
+          <article class="aisle" style={`--c:${a.c}; --i:${a.i}`}>
+            <div class="aisle__img"><img src={a.img} alt={a.alt} width={a.w} height={a.h} loading="lazy" data-par /></div>
+            <div class="aisle__body">
+              <p class="aisle__n">{String(i + 1).padStart(2, '0')}</p>
+              <h3 class="aisle__t">{a.t}</h3>
+              <p class="aisle__x">{a.x}</p>
+              <p class="aisle__tag">{a.tag}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════ HOW A COUPON WORKS: a pencil draws the path ═════ -->
+  <section class="path" aria-labelledby="h-path">
+    <h2 id="h-path" class="h-big path__title" data-split>Del teléfono a la caja</h2>
+    <div class="path__body" data-path>
+      <svg class="path__svg" aria-hidden="true"><path class="path__line" /></svg>
+      <div class="path__pencil" aria-hidden="true"><svg viewBox="0 0 120 24"><path d="M0 4h86v16H0z" fill="var(--red)" /><path d="M0 4h86v5H0z" fill="#ff6a5c" /><path d="M86 4l26 8-26 8z" fill="#e9c393" /><path d="M104 9.5l8 2.5-8 2.5z" fill="var(--ink)" /><path d="M-14 4h14v16h-14z" fill="var(--pink)" /><path d="M-2 4h6v16h-6z" fill="#c9ccd6" /></svg></div>
+      <ol class="steps">
+        <li class="step" data-step>
+          <span class="step__n">1</span>
+          <div class="step__card mock-form">
+            <span class="mock-form__f">Tu nombre<b class="hand">Ana</b></span>
+            <span class="mock-form__f">Tu teléfono<b class="hand">5555 1234</b></span>
+            <span class="mock-form__b">Obtener mi cupón</span>
+          </div>
+          <h3 class="step__t">Elige tu oferta y deja tu nombre</h3>
+          <p class="step__x">Sin cuentas ni contraseñas. Solo tu nombre y tu teléfono, para que el cupón sea solo tuyo.</p>
+        </li>
+        <li class="step" data-step>
+          <span class="step__n">2</span>
+          <div class="step__card phone">
+            <span class="phone__notch" aria-hidden="true"></span>
+            <span class="phone__v">{stepCode}</span>
+            <span class="phone__qr" set:html={sampleQr} aria-hidden="true"></span>
+            <span class="phone__code">AURO-RA25</span>
+          </div>
+          <h3 class="step__t">Recibes tu cupón con QR</h3>
+          <p class="step__x">Queda en tu teléfono. Guárdalo o tómale captura; también puedes dictar el código.</p>
+        </li>
+        <li class="step" data-step>
+          <span class="step__n">3</span>
+          <div class="step__card receipt">
+            <span class="receipt__h">{content.businessName}</span>
+            <span class="receipt__r"><span>Cuaderno cosido ×4</span><span>Q85.00</span></span>
+            <span class="receipt__r"><span>Colores 24</span><span>Q42.00</span></span>
+            <span class="receipt__r receipt__r--off"><span>Cupón {stepCode}</span><span>−Q12.75</span></span>
+            <span class="receipt__t"><span>Total</span><span>Q114.25</span></span>
+          </div>
+          <h3 class="step__t">En caja, lo escanean y listo</h3>
+          <p class="step__x">El descuento se aplica solo. Cada cupón se usa una vez, en cualquiera de las tiendas.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ═════ THE LIVE THING: clip your coupon here ═════ -->
+  {featured && (
+    <section class="clip" id="cupon" aria-labelledby="h-clip">
+      <h2 id="h-clip" class="h-big clip__title" data-split>Recórtalo aquí mismo</h2>
+      <div class="ticket" data-ticket>
+        <span class="ticket__sc" aria-hidden="true"><svg viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="5"><circle cx="14" cy="18" r="9" /><circle cx="14" cy="46" r="9" /></g><path d="M21 23 60 42M21 41 60 22" stroke="currentColor" stroke-width="5" stroke-linecap="round" /></svg></span>
+        <div class="ticket__l">
+          <p class="ticket__v">{offerHeadline(featured)}</p>
+          <p class="ticket__n">{featured.name}</p>
+          <p class="ticket__m">{featured.summary}{featured.endsAt ? ` · hasta el ${fmtDay(featured.endsAt)}` : ''}</p>
+        </div>
+        <div class="ticket__r">
+          <CouponForm slug={featured.slug} formClass="t-form" inputClass="t-input" buttonClass="a-btn a-btn--go t-btn" noteClass="t-note" buttonLabel="Recortar mi cupón" />
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- ═════ STORES ═════ -->
+  {content.branches.length > 0 && (
+    <section class="stores" id="tiendas" aria-labelledby="h-stores">
+      <h2 id="h-stores" class="h-big" data-split>{towns.length === 1 ? 'Ven a la tienda' : `${towns.length} tiendas, mismo horario`}</h2>
+      <ul class="stores__list">
+        {content.branches.map((b, i) => { const s = openState(b.openTime, b.closeTime); return (
+          <li class="store" style={`--c:${offerColors[(i + 1) % 4]}; --i:${offerInk[(i + 1) % 4]}`} data-store-card>
+            <p class="store__n">{String(i + 1).padStart(2, '0')}</p>
+            <h3 class="store__t">{b.name}</h3>
+            <p class="store__a">{b.address}{b.city ? `, ${b.city}` : ''}</p>
+            <p class="store__h">De {b.openTime} a {b.closeTime}, todos los días</p>
+            <p class="live store__live" data-open-flag={s.open ? '1' : '0'} data-store data-label data-open={b.openTime} data-close={b.closeTime}>{s.label}</p>
+            <p class="store__act">
+              <a class="a-btn a-btn--light" href={mapsLink(b)} target="_blank" rel="noopener" data-cursor="Mapa">Cómo llegar</a>
+              {b.phone && <a class="store__tel" href={`tel:${b.phone}`}>{b.phone}</a>}
+            </p>
+          </li>
+        )})}
+      </ul>
+    </section>
+  )}
+</Layout>
+
+<script>
+  import gsap from 'gsap'
+  import { ScrollTrigger } from 'gsap/ScrollTrigger'
+  import { SplitText } from 'gsap/SplitText'
+  import { openState } from '../../core/hours'
+  import { mountDesk } from './desk3d'
+
+  gsap.registerPlugin(ScrollTrigger, SplitText)
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const mm = gsap.matchMedia()
+
+  // ── Store open/closed chips, live ─────────────────────────────
+  const stores = () => document.querySelectorAll<HTMLElement>('[data-store]').forEach(el => {
+    const s = openState(el.dataset.open ?? '', el.dataset.close ?? '')
+    el.setAttribute('data-open-flag', s.open ? '1' : '0')
+    if (el.hasAttribute('data-label')) el.textContent = s.label
+  })
+  stores(); setInterval(stores, 30_000)
+
+  // ── Hero: 3D desk + headline ───────────────────────────────────
+  const canvas = document.querySelector<HTMLCanvasElement>('[data-desk]')
+  const desk = canvas ? mountDesk(canvas, {
+    count: innerWidth < 760 ? 22 : 38, still: reduce,
+    // keep the space behind the headline clear: left half on wide screens, lower half on phones
+    hole: innerWidth >= innerHeight ? (x, y) => x < 0.5 && y > -5 && y < 4.5 : (x, y) => y < -0.5 && y > -7,
+  }) : null
+  if (!desk) document.querySelector('[data-hero]')?.classList.add('no-3d')
+
+  const heroTitle = document.querySelector<HTMLElement>('.hero__title')!
+  const heroIn = document.querySelectorAll<HTMLElement>('[data-hero-in]')
+  const scrib = document.querySelector<SVGPathElement>('.hero__scrib path')
+
+  const intro = () => {
+    desk?.reveal()
+    if (reduce) { gsap.set(heroIn, { opacity: 1 }); return }
+    const split = SplitText.create(heroTitle.querySelectorAll('.hero__l1, .hero__l2 em'), { type: 'chars,lines', linesClass: 'a-line', charsClass: 'a-ch' })
+    gsap.set(heroTitle, { opacity: 1 })
+    const tl = gsap.timeline()
+    tl.from(split.chars, { yPercent: 115, rotate: () => gsap.utils.random(-18, 18), duration: 1.1, ease: 'expo.out', stagger: 0.028 })
+    if (scrib) { const L = scrib.getTotalLength(); tl.fromTo(scrib, { strokeDasharray: L, strokeDashoffset: L }, { strokeDashoffset: 0, duration: 0.9, ease: 'power2.inOut' }, 0.6) }
+    tl.fromTo(heroIn, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out', stagger: 0.1 }, 0.5)
+  }
+  if ((window as unknown as { __auroraReady?: boolean }).__auroraReady) intro()
+  else addEventListener('aurora:ready', intro, { once: true })
+
+  if (!reduce) {
+    // Scrolling out of the hero: the supplies fly past, the title lifts.
+    ScrollTrigger.create({ trigger: '[data-hero]', start: 'top top', end: 'bottom top', scrub: true, onUpdate: s => desk?.setProgress(s.progress) })
+    gsap.to('.hero__in', { yPercent: -30, opacity: 0.2, ease: 'none', scrollTrigger: { trigger: '[data-hero]', start: 'top top', end: 'bottom top', scrub: true } })
+    gsap.to('.badge__ring', { rotate: 360, duration: 18, ease: 'none', repeat: -1 })
+  }
+
+  // ── Ribbons: speed follows the scroll ─────────────────────────
+  document.querySelectorAll<HTMLElement>('[data-ribbon]').forEach(r => {
+    const track = r.querySelector<HTMLElement>('.ribbon__track')!
+    const dir = Number(r.dataset.dir ?? 1)
+    if (reduce) return
+    const loop = gsap.to(track, { xPercent: dir > 0 ? -50 : 0, startAt: { xPercent: dir > 0 ? 0 : -50 }, duration: 28, ease: 'none', repeat: -1 })
+    ScrollTrigger.create({
+      trigger: r, start: 'top bottom', end: 'bottom top',
+      onUpdate: s => {
+        const v = s.getVelocity() / 300
+        gsap.to(loop, { timeScale: 1 + Math.min(6, Math.abs(v)), duration: 0.2, overwrite: true, onComplete: () => { gsap.to(loop, { timeScale: 1, duration: 1.2 }) } })
+        gsap.to(track, { skewX: gsap.utils.clamp(-12, 12, -v * 2 * dir), duration: 0.4, overwrite: 'auto' })
+      },
+    })
+  })
+
+  // ── Section titles: characters rise in ────────────────────────
+  if (!reduce) document.querySelectorAll<HTMLElement>('.h-big[data-split]').forEach(h => {
+    const split = SplitText.create(h, { type: 'chars,words,lines', linesClass: 'a-line' })
+    gsap.from(split.chars, { yPercent: 110, rotate: 8, duration: 0.9, ease: 'expo.out', stagger: 0.018, scrollTrigger: { trigger: h, start: 'top 85%', once: true } })
+  })
+
+  // ── Offers: the scissors under the title (stickers: Stickers.astro) ─
+  if (!reduce) {
+    // Scissors cut along the line under the title as you scroll.
+    gsap.fromTo('.cutline__scissors', { left: '0%' }, { left: '100%', ease: 'none', scrollTrigger: { trigger: '[data-cutline]', start: 'top 90%', end: 'top 30%', scrub: 0.5 } })
+    gsap.fromTo('.cutline__dash', { clipPath: 'inset(0 0 0 0%)' }, { clipPath: 'inset(0 0 0 100%)', ease: 'none', scrollTrigger: { trigger: '[data-cutline]', start: 'top 90%', end: 'top 30%', scrub: 0.5 } })
+    gsap.to('.blade-a', { rotate: 14, svgOrigin: '21 32', duration: 0.18, repeat: -1, yoyo: true, ease: 'sine.inOut' })
+    gsap.to('.blade-b', { rotate: -14, svgOrigin: '21 32', duration: 0.18, repeat: -1, yoyo: true, ease: 'sine.inOut' })
+  }
+
+  // ── The notebook turns its pages ──────────────────────────────
+  const book = document.querySelector<HTMLElement>('[data-book]')
+  if (book && !reduce) {
+    book.classList.add('is-3d')
+    const leaves = [...book.querySelectorAll<HTMLElement>('[data-leaf]')]
+    const n = leaves.length
+    const stack = () => leaves.forEach((l, i) => {
+      const rot = Number(gsap.getProperty(l, 'rotateY'))
+      l.style.zIndex = String(rot < -90 ? 10 + i : 10 + n - i)
+    })
+    mm.add({ wide: '(min-width: 861px)', narrow: '(max-width: 860px)' }, ctx => {
+      const wide = ctx.conditions?.wide
+      gsap.set(book, { xPercent: 0, rotateX: 10 })
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: '[data-nb-stage]', start: 'top top', end: `+=${n * 90 + 40}%`, pin: true, scrub: 0.7, anticipatePin: 1 },
+        onUpdate: stack,
+      })
+      tl.to('.nb__hint', { opacity: 0, duration: 0.3 }, 0)
+      if (wide) tl.to(book, { xPercent: 50, duration: 1, ease: 'power2.inOut' }, 0)
+      tl.to(book, { rotateX: 4, duration: n * 1.2 }, 0)
+      leaves.forEach((l, i) => {
+        tl.to(l, { rotateY: -180, duration: 1, ease: 'power2.inOut' }, i * 1.2)
+        if (!wide) tl.to(l, { opacity: 0, duration: 0.25 }, i * 1.2 + 0.75)
+      })
+      // tick the checkboxes when their page is showing
+      tl.to('.checks .box', { '--tick': 1, stagger: 0.15, duration: 0.2 }, 1.9)
+      stack()
+      return () => { gsap.set([book, ...leaves], { clearProps: 'all' }) }
+    })
+  }
+
+  // ── Aisles: pinned sideways scroll on wide screens ────────────
+  mm.add('(min-width: 861px) and (prefers-reduced-motion: no-preference)', () => {
+    const track = document.querySelector<HTMLElement>('[data-aisles-track]')!
+    const dist = () => track.scrollWidth - innerWidth
+    const tween = gsap.to(track, { x: () => -dist(), ease: 'none', scrollTrigger: { trigger: '[data-aisles]', start: 'top top', end: () => `+=${dist()}`, pin: true, scrub: 0.8, invalidateOnRefresh: true } })
+    track.querySelectorAll<HTMLElement>('.aisle:not(.aisle--intro)').forEach((card, i) => {
+      gsap.fromTo(card, { rotate: i % 2 ? 6 : -6, y: 60 }, { rotate: i % 2 ? 1.5 : -1.5, y: 0, ease: 'none', scrollTrigger: { trigger: card, containerAnimation: tween, start: 'left right', end: 'center center', scrub: true } })
+      const img = card.querySelector('[data-par]')
+      if (img) gsap.fromTo(img, { xPercent: -12, scale: 1.25 }, { xPercent: 12, scale: 1.1, ease: 'none', scrollTrigger: { trigger: card, containerAnimation: tween, start: 'left right', end: 'right left', scrub: true } })
+    })
+    gsap.to('.aisles__arrow', { x: 24, duration: 0.7, repeat: -1, yoyo: true, ease: 'sine.inOut' })
+  })
+
+  // ── The pencil draws the coupon's path ────────────────────────
+  const pathBox = document.querySelector<HTMLElement>('[data-path]')
+  if (pathBox) {
+    const svg = pathBox.querySelector<SVGSVGElement>('.path__svg')!
+    const line = svg.querySelector<SVGPathElement>('.path__line')!
+    const pencil = pathBox.querySelector<HTMLElement>('.path__pencil')!
+    const steps = [...pathBox.querySelectorAll<HTMLElement>('[data-step]')]
+    let L = 0
+    let st: ScrollTrigger | null = null
+    const build = () => {
+      const box = pathBox.getBoundingClientRect()
+      const w = box.width, h = box.height
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`)
+      // Through the number badge of every step, swinging between them.
+      const pts = [{ x: w * 0.5, y: 0 }, ...steps.map(s => {
+        const b = s.querySelector<HTMLElement>('.step__n')!.getBoundingClientRect()
+        return { x: b.left - box.left + b.width / 2, y: b.top - box.top + b.height / 2 }
+      }), { x: w * 0.5, y: h }]
+      let d = `M${pts[0]!.x} ${pts[0]!.y}`
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1]!, b = pts[i]!
+        const swing = (i % 2 ? 1 : -1) * Math.min(w * 0.35, 260)
+        d += ` C ${a.x + swing} ${a.y + (b.y - a.y) * 0.35}, ${b.x - swing} ${a.y + (b.y - a.y) * 0.65}, ${b.x} ${b.y}`
+      }
+      line.setAttribute('d', d)
+      L = line.getTotalLength()
+      line.style.strokeDasharray = `${L}`
+      if (!st) line.style.strokeDashoffset = reduce ? '0' : `${L}`
+    }
+    const place = (p: number) => {
+      line.style.strokeDashoffset = `${L * (1 - p)}`
+      const at = Math.max(0.5, L * p)
+      const a = line.getPointAtLength(at), b = line.getPointAtLength(Math.max(0, at - 2))
+      const ang = Math.atan2(a.y - b.y, a.x - b.x) * 180 / Math.PI
+      pencil.style.transform = `translate(${a.x}px, ${a.y}px) rotate(${ang}deg)`
+      steps.forEach((s, i) => s.classList.toggle('on', p >= (i + 0.6) / (steps.length + 1) - 0.08))
+    }
+    build()
+    if (reduce) { steps.forEach(s => s.classList.add('on')); pencil.style.display = 'none' }
+    else {
+      st = ScrollTrigger.create({ trigger: pathBox, start: 'top 70%', end: 'bottom 70%', scrub: 0.6, onUpdate: s => place(s.progress), onRefresh: s => { build(); place(s.progress) } })
+      place(0)
+    }
+  }
+
+  // ── Ticket + stores entrances ─────────────────────────────────
+  if (!reduce) {
+    gsap.from('[data-ticket]', { y: 120, rotate: -6, scale: 0.92, duration: 1.2, ease: 'elastic.out(1, 0.6)', scrollTrigger: { trigger: '[data-ticket]', start: 'top 85%', once: true } })
+    gsap.to('.ticket__sc', { left: 'calc(100% - 40px)', duration: 3.2, ease: 'sine.inOut', repeat: -1, yoyo: true })
+    gsap.from('[data-store-card]', { y: 140, rotate: (i: number) => [-8, 5, -4][i % 3], opacity: 0, duration: 1, ease: 'back.out(1.6)', stagger: 0.12, scrollTrigger: { trigger: '.stores__list', start: 'top 80%', once: true } })
+  }
+</script>
+
+<style>
+  .h-big { font-size: var(--step-head); }
+
+  /* ── Hero ───────────────────────────────────────────── */
+  .hero { position: relative; min-height: 100svh; background: var(--ink); color: var(--paper); overflow: hidden; display: grid; align-items: center; padding: 120px var(--m) 110px; isolation: isolate; }
+  .hero__canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; }
+  .hero__glow { position: absolute; inset: -20%; z-index: -2; background: radial-gradient(40% 50% at 25% 40%, #3a2a9b 0%, transparent 70%), radial-gradient(35% 40% at 80% 70%, #7a1f5e 0%, transparent 70%), var(--ink); }
+  .hero.no-3d .hero__glow { background: linear-gradient(rgb(18 14 46 / 0.72), rgb(18 14 46 / 0.9)), url('/sites/aurora/selection-of-colored-pencils.webp') center / cover; }
+  .hero__in { position: relative; max-width: 1400px; }
+  .hero__title { font-size: clamp(3.1rem, 0.4rem + 10vw, 11rem); line-height: 0.88; letter-spacing: -0.035em; word-spacing: 0.08em; display: grid; font-variation-settings: 'wdth' 84, 'opsz' 96; }
+  :global(.a-js) .hero__title { opacity: 0; }
+  @media (prefers-reduced-motion: reduce) { :global(.a-js) .hero__title { opacity: 1; } }
+  .hero__l2 { position: relative; justify-self: start; }
+  .hero__l2 em { font-style: normal; color: var(--yellow); display: inline-block; }
+  .hero__scrib { position: absolute; left: 0; right: 0; bottom: -0.08em; width: 100%; height: 0.22em; overflow: visible; }
+  .hero__scrib path { fill: none; stroke: var(--red); stroke-width: 9; stroke-linecap: round; }
+  .hero__sub { font-size: var(--step-lead); margin-top: clamp(28px, 3vw, 44px); max-width: 34ch; line-height: 1.35; color: rgb(255 250 240 / 0.92); }
+  .hero__actions { display: flex; flex-wrap: wrap; gap: 14px 16px; margin-top: 32px; }
+  :global(.a-js) [data-hero-in] { opacity: 0; }
+  @media (prefers-reduced-motion: reduce) { :global(.a-js) [data-hero-in] { opacity: 1; } }
+
+  .badge { position: absolute; right: clamp(16px, 5vw, 80px); top: clamp(110px, 16vh, 180px); width: clamp(130px, 13vw, 200px); aspect-ratio: 1; display: grid; place-items: center; text-decoration: none; color: var(--ink); }
+  .badge__ring { position: absolute; inset: 0; width: 100%; height: 100%; background: var(--yellow); border-radius: 50%; }
+  .badge__ring text { font: 800 13.2px var(--font); letter-spacing: 0.05em; fill: var(--ink); }
+  .badge__v { position: relative; font-size: clamp(2rem, 1.2rem + 2vw, 3.25rem); font-weight: 800; letter-spacing: -0.05em; background: var(--red); color: #fff; width: 58%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; transition: transform 400ms var(--ease-spring); }
+  @media (hover: hover) { .badge:hover .badge__v { transform: scale(1.12) rotate(-8deg); } }
+
+  .hero__stores { position: absolute; left: var(--m); right: var(--m); bottom: 28px; list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 26px; color: var(--paper); }
+  .hero__stores .live { font-size: 1rem; }
+  .hero__scroll { position: absolute; right: var(--m); bottom: 28px; width: 28px; height: 46px; border: 2px solid rgb(255 250 240 / 0.6); border-radius: 20px; }
+  .hero__scroll span { position: absolute; left: 50%; top: 8px; width: 4px; height: 9px; margin-left: -2px; border-radius: 2px; background: var(--yellow); animation: wheel 1.6s ease-in-out infinite; }
+  @keyframes wheel { 50% { transform: translateY(14px); opacity: 0.3; } }
+  @media (max-width: 760px) {
+    .hero { align-items: end; padding-bottom: 120px; }
+    .badge { top: 96px; right: 14px; width: 112px; }
+    .badge__ring text { font-size: 14px; }
+    .hero__scroll { display: none; }
+  }
+
+  /* ── Ribbons ─────────────────────────────────────────── */
+  .ribbons { position: relative; height: clamp(150px, 18vw, 260px); background: var(--bg); overflow: hidden; }
+  .ribbon { position: absolute; left: -5%; right: -5%; top: 50%; padding: clamp(14px, 1.6vw, 24px) 0; overflow: hidden; }
+  .ribbon--a { background: var(--yellow); transform: translateY(-70%) rotate(-4deg); z-index: 2; box-shadow: 0 12px 0 var(--ink); }
+  .ribbon--b { background: var(--red); color: #fff; transform: translateY(-20%) rotate(3deg); }
+  .ribbon__track { display: flex; width: max-content; }
+  .ribbon__track span { display: inline-flex; align-items: center; gap: clamp(16px, 2vw, 30px); padding-right: clamp(16px, 2vw, 30px); font-size: clamp(1.8rem, 1rem + 3.2vw, 4.2rem); font-weight: 800; letter-spacing: -0.04em; text-transform: uppercase; white-space: nowrap; line-height: 1.15; font-variation-settings: 'wdth' 78; }
+  .ribbon__track svg { width: 0.7em; height: 0.7em; fill: currentColor; }
+  .ribbon--a svg { fill: var(--red); }
+
+  /* ── Offers ──────────────────────────────────────────── */
+  .offers { padding: clamp(60px, 9vw, 140px) var(--m); background: var(--bg); }
+  .offers__head { display: grid; grid-template-columns: 1.3fr 1fr; gap: 22px 48px; align-items: end; margin-bottom: clamp(40px, 6vw, 80px); }
+  .offers__head .h-big { font-size: clamp(3rem, 1.4rem + 6.4vw, 8.5rem); }
+  .cutline { grid-column: 1 / -1; order: 3; }
+  @media (max-width: 760px) { .offers__head { grid-template-columns: 1fr; } }
+  .offers__intro { font-size: var(--step-lead); max-width: 38ch; line-height: 1.35; }
+  .cutline { position: relative; height: 40px; }
+  .cutline__dash { position: absolute; left: 0; right: 0; top: 50%; border-top: 4px dashed var(--ink); }
+  .cutline__scissors { position: absolute; top: 0; left: 0; width: 40px; height: 40px; translate: -50% 0; color: var(--red); }
+  .offers__all { margin-top: 48px; }
+
+  /* ── Notebook ────────────────────────────────────────── */
+  .nb { background: var(--blue); color: #fff; }
+  .nb__stage { min-height: 100svh; display: grid; grid-template-rows: auto auto 1fr; justify-items: center; padding: clamp(90px, 10vh, 120px) var(--m) clamp(30px, 5vh, 60px); overflow: hidden; perspective: 2400px; }
+  .nb__title { text-align: center; }
+  .nb__hint { font-family: var(--hand); font-size: 1.6rem; margin-top: 8px; color: var(--yellow); }
+  .book { --pw: min(40vw, calc(64svh / 1.32), 520px); --ph: calc(var(--pw) * 1.32); position: relative; width: var(--pw); height: var(--ph); margin-top: clamp(16px, 3vh, 40px); align-self: center; left: 0; }
+  .book.is-3d { transform-style: preserve-3d; }
+  .page, .face { container-type: inline-size; }
+  .page { background: var(--paper); color: var(--ink); border-radius: 6px 20px 20px 6px; overflow: hidden; box-shadow: inset 18px 0 30px -18px rgb(0 0 0 / 0.35); }
+  .page--base { position: absolute; inset: 0; }
+  .book:not(.is-3d) { width: min(1100px, 100%); height: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 18px; }
+  .book:not(.is-3d) .page--base { position: relative; order: 9; }
+  .book:not(.is-3d) .leaf { display: contents; }
+  .book:not(.is-3d) .face { position: relative; min-height: 440px; }
+  .book.is-3d .leaf { position: absolute; inset: 0; transform-origin: left center; transform-style: preserve-3d; }
+  .book.is-3d .face { position: absolute; inset: 0; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+  .book.is-3d .face--back { transform: rotateY(180deg); border-radius: 20px 6px 6px 20px; box-shadow: inset -18px 0 30px -18px rgb(0 0 0 / 0.35); }
+  .book.is-3d::after { content: ''; position: absolute; left: -100%; right: 0; bottom: -40px; height: 40px; background: radial-gradient(50% 50% at 75% 50%, rgb(0 0 0 / 0.35), transparent 70%); transform: translateZ(-1px); }
+
+  .cover { background: var(--red); color: #fff; border-radius: 6px 20px 20px 6px; display: grid; place-items: center; overflow: hidden;
+    background-image: radial-gradient(circle at 20% 20%, rgb(255 255 255 / 0.14) 0 2px, transparent 3px), radial-gradient(circle at 70% 60%, rgb(0 0 0 / 0.12) 0 2px, transparent 3px); background-size: 22px 22px, 30px 30px; border-left: 14px solid #c42a1c; }
+  .cover__label { width: 78%; background: var(--paper); color: var(--ink); border-radius: 14px; padding: 7cqw 7cqw 5cqw; display: grid; gap: 3cqw; box-shadow: 0 10px 0 rgb(0 0 0 / 0.18); border: 3px solid var(--ink); }
+  .cover__brand { font-size: 13cqw; font-weight: 800; letter-spacing: -0.06em; line-height: 0.85; color: var(--blue); }
+  .cover__row { display: grid; grid-template-columns: auto 1fr; gap: 3cqw; align-items: end; font-size: 3.6cqw; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .cover__row b { border-bottom: 2px solid var(--ink); font-size: 6.4cqw; text-transform: none; letter-spacing: 0; line-height: 1.1; color: var(--blue); }
+  .cover__elastic { position: absolute; right: 9%; top: 0; bottom: 0; width: 4%; background: var(--ink); }
+
+  .page__ruled { position: absolute; inset: 0; padding: 8cqw 8cqw 8cqw 16cqw; display: grid; align-content: start; gap: 3.4cqw;
+    background: linear-gradient(90deg, transparent 12.5cqw, rgb(255 65 48 / 0.55) 12.5cqw 13cqw, transparent 13cqw), repeating-linear-gradient(transparent 0 calc(7cqw - 1px), rgb(47 91 255 / 0.22) calc(7cqw - 1px) 7cqw); }
+  .page__ruled--left { padding: 8cqw 14cqw 8cqw 8cqw; background: linear-gradient(90deg, transparent calc(100% - 12.5cqw), rgb(255 65 48 / 0.55) calc(100% - 12.5cqw) calc(100% - 12cqw), transparent calc(100% - 12cqw)), repeating-linear-gradient(transparent 0 calc(7cqw - 1px), rgb(47 91 255 / 0.22) calc(7cqw - 1px) 7cqw); }
+  .hand { font-family: var(--hand); font-size: 6.2cqw; line-height: 1.12; font-weight: 500; color: #1d2a7a; }
+  .hand--xl { font-size: 11cqw; font-weight: 700; color: var(--red); line-height: 1; }
+  .hand--first::first-letter { font-size: 2em; color: var(--red); font-weight: 700; }
+  .hand--sign { margin-top: 2cqw; color: var(--red); }
+  .page__btn { justify-self: start; margin-top: 2cqw; }
+  .doodle { width: 76%; margin: 2cqw 0; }
+  .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 4cqw; font-family: var(--hand); font-size: 6cqw; line-height: 1.1; color: #1d2a7a; }
+  .checks li { display: grid; grid-template-columns: auto 1fr; gap: 3cqw; align-items: start; }
+  .box { --tick: 0; position: relative; width: 6cqw; height: 6cqw; border: 3px solid var(--ink); border-radius: 4px; margin-top: 0.6cqw; }
+  .box::after { content: ''; position: absolute; left: 18%; top: -10%; width: 40%; height: 80%; border: solid var(--green); border-width: 0 5px 5px 0; transform: rotate(40deg) scale(var(--tick)); transform-origin: 50% 80%; }
+  .book:not(.is-3d) .box { --tick: 1; }
+  @property --tick { syntax: '<number>'; inherits: true; initial-value: 0; }
+  .polaroid { position: relative; margin: 2cqw 0 4cqw; background: #fff; padding: 4cqw 4cqw 2cqw; box-shadow: 0 12px 26px -10px rgb(0 0 0 / 0.4); transform: rotate(var(--rot)); }
+  .polaroid img { aspect-ratio: 4 / 3; object-fit: cover; width: 100%; }
+  .polaroid figcaption { margin-top: 2cqw; font-size: 6cqw; text-align: center; }
+  .tape { position: absolute; top: -3cqw; left: 50%; width: 30%; height: 7cqw; translate: -50% 0; rotate: -4deg; background: rgb(255 198 26 / 0.75); }
+  @media (max-width: 860px) {
+    .book { --pw: min(84vw, calc(62svh / 1.32)); }
+  }
+
+  /* ── Aisles ──────────────────────────────────────────── */
+  .aisles { background: var(--ink); color: var(--paper); overflow: clip; }
+  .aisles__pin { min-height: 100svh; display: flex; align-items: center; }
+  .aisles__track { display: flex; gap: clamp(16px, 2vw, 32px); padding: clamp(90px, 12vh, 120px) var(--m); align-items: stretch; will-change: transform; }
+  .aisle { flex: 0 0 clamp(300px, 34vw, 520px); height: min(72svh, 680px); background: var(--c); color: var(--i); border-radius: var(--r); overflow: hidden; display: grid; grid-template-rows: 55% 1fr; border: 3px solid var(--paper); }
+  .aisle--intro { flex-basis: clamp(300px, 42vw, 700px); background: none; border: 0; display: flex; flex-direction: column; justify-content: center; gap: 24px; color: var(--paper); }
+  .aisles__lead { font-size: var(--step-lead); max-width: 26ch; line-height: 1.35; }
+  .aisles__arrow { width: 120px; color: var(--yellow); }
+  .aisle__img { overflow: hidden; background: var(--ink); }
+  .aisle__img img { width: 100%; height: 100%; object-fit: cover; }
+  .aisle__body { padding: clamp(18px, 2vw, 30px); display: grid; align-content: start; gap: 8px; position: relative; }
+  .aisle__n { position: absolute; right: 18px; top: -0.5em; font-size: clamp(4rem, 3rem + 3vw, 7rem); font-weight: 800; letter-spacing: -0.06em; line-height: 1; color: var(--c); -webkit-text-stroke: 3px var(--i); }
+  .aisle__t { font-size: clamp(2.2rem, 1.4rem + 2.6vw, 4rem); }
+  .aisle__x { font-size: 1.0625rem; line-height: 1.4; }
+  .aisle__tag { margin-top: 6px; justify-self: start; font-weight: 800; font-size: 0.9375rem; padding: 8px 14px; border-radius: 999px; background: var(--i); color: var(--c); }
+  @media (max-width: 860px) {
+    .aisles__pin { display: block; min-height: 0; }
+    .aisles__track { overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding-block: 80px; scrollbar-width: none; }
+    .aisle { flex-basis: 82vw; height: auto; min-height: 520px; scroll-snap-align: center; }
+    .aisle--intro { flex-basis: 82vw; min-height: 0; }
+  }
+
+  /* ── Coupon path ─────────────────────────────────────── */
+  .path { background: var(--yellow); padding: clamp(70px, 10vw, 150px) var(--m); overflow: hidden; }
+  .path__title { text-align: center; margin-bottom: clamp(40px, 6vw, 90px); }
+  .path__body { position: relative; max-width: 1200px; margin-inline: auto; }
+  .path__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  .path__line { fill: none; stroke: var(--ink); stroke-width: 6; stroke-linecap: round; }
+  .path__pencil { position: absolute; left: 0; top: 0; width: 120px; height: 24px; margin: -12px 0 0 -112px; transform-origin: 112px 12px; pointer-events: none; z-index: 3; }
+  .path__pencil svg { width: 100%; height: 100%; overflow: visible; }
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: clamp(70px, 10vw, 150px); position: relative; z-index: 2; }
+  .step { display: grid; grid-template-columns: auto 1fr; grid-template-areas: 'n card' 'n t' 'n x'; gap: 12px 26px; width: min(560px, 100%); opacity: 0.25; transform: translateY(30px) scale(0.96); transition: opacity 500ms ease, transform 700ms var(--ease-spring); }
+  .step:nth-child(2) { justify-self: end; }
+  .step.on { opacity: 1; transform: none; }
+  .step__n { grid-area: n; width: 74px; height: 74px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--yellow); font-size: 2.2rem; font-weight: 800; }
+  .step__card { grid-area: card; border: 3px solid var(--ink); border-radius: 22px; background: var(--paper); box-shadow: 0 10px 0 var(--ink); padding: 22px; }
+  .step__t { grid-area: t; font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2.6rem); margin-top: 10px; }
+  .step__x { grid-area: x; font-size: 1.125rem; line-height: 1.4; max-width: 38ch; color: var(--ink); }
+  .mock-form { display: grid; gap: 12px; }
+  .mock-form__f { display: grid; gap: 2px; font-size: 0.875rem; font-weight: 700; color: var(--muted); padding: 10px 14px; border: 2px solid var(--ink); border-radius: 12px; }
+  .mock-form__f b { font-size: 1.6rem; color: var(--blue); line-height: 1; }
+  .mock-form__b { text-align: center; padding: 14px; border-radius: 999px; background: var(--red); color: #fff; font-weight: 800; }
+  .phone { position: relative; width: min(240px, 100%); justify-self: start; display: grid; justify-items: center; gap: 10px; padding: 34px 22px 26px; border-radius: 34px; background: var(--ink); color: var(--paper); }
+  .phone__notch { position: absolute; top: 12px; width: 70px; height: 10px; border-radius: 6px; background: #000; }
+  .phone__v { font-size: 3rem; font-weight: 800; letter-spacing: -0.05em; color: var(--yellow); line-height: 1; }
+  .phone__qr { width: 150px; padding: 10px; background: #fff; border-radius: 12px; }
+  .phone__qr :global(svg) { width: 100%; height: auto; display: block; }
+  .phone__code { font-weight: 800; letter-spacing: 0.12em; }
+  .receipt { font-family: ui-monospace, 'Courier New', monospace; display: grid; gap: 6px; font-size: 0.95rem; background: #fff; max-width: 360px;
+    -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 18px 100%; mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 18px 100%; padding-bottom: 30px; border-radius: 22px 22px 0 0; }
+  .receipt__h { text-align: center; font-weight: 700; padding-bottom: 8px; border-bottom: 2px dashed var(--ink); margin-bottom: 4px; }
+  .receipt__r, .receipt__t { display: flex; justify-content: space-between; gap: 12px; }
+  .receipt__r--off { color: var(--green); font-weight: 700; }
+  .receipt__t { border-top: 2px dashed var(--ink); padding-top: 8px; margin-top: 4px; font-weight: 700; font-size: 1.15rem; }
+  @media (max-width: 760px) {
+    .step, .step:nth-child(2) { justify-self: stretch; grid-template-columns: 1fr; grid-template-areas: 'n' 'card' 't' 'x'; }
+    .step__n { width: 60px; height: 60px; font-size: 1.8rem; justify-self: center; }
+    .path__pencil { width: 90px; height: 18px; margin: -9px 0 0 -84px; transform-origin: 84px 9px; }
+  }
+
+  /* ── Clip-out coupon ─────────────────────────────────── */
+  .clip { background: var(--red); color: #fff; padding: clamp(70px, 10vw, 150px) var(--m); display: grid; justify-items: center; gap: clamp(36px, 5vw, 64px); overflow: hidden; }
+  .clip__title { text-align: center; }
+  .ticket { position: relative; width: min(1100px, 100%); display: grid; grid-template-columns: 1fr 1.1fr; background: var(--paper); color: var(--ink); border-radius: 30px; outline: 4px dashed var(--paper); outline-offset: 14px; box-shadow: 0 18px 0 var(--ink); }
+  .ticket__sc { position: absolute; left: 0; top: -36px; width: 40px; height: 40px; color: var(--paper); z-index: 2; }
+  .ticket__l { padding: clamp(28px, 4vw, 56px); border-right: 4px dashed var(--ink); display: grid; align-content: center; gap: 12px; }
+  .ticket__v { font-size: clamp(6rem, 3rem + 10vw, 14rem); font-weight: 800; letter-spacing: -0.07em; line-height: 0.8; color: var(--red); font-variation-settings: 'wdth' 78; }
+  .ticket__n { font-size: clamp(1.5rem, 1.2rem + 1vw, 2.2rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; }
+  .ticket__m { font-size: 1.0625rem; color: var(--muted); }
+  .ticket__r { padding: clamp(28px, 4vw, 56px); display: grid; align-content: center; }
+  .ticket :global(.t-form) { display: grid; gap: 14px; }
+  .ticket :global(.t-input) { height: 64px; border: 3px solid var(--ink); border-radius: 18px; padding: 0 20px; background: #fff; color: var(--ink); font: 600 1.125rem var(--font); transition: box-shadow 200ms var(--ease-out), transform 200ms var(--ease-out); }
+  .ticket :global(.t-input::placeholder) { color: var(--muted); }
+  .ticket :global(.t-input:focus) { outline: none; box-shadow: 0 6px 0 var(--blue); transform: translateY(-2px); border-color: var(--blue); }
+  .ticket :global(.t-btn) { height: 64px; font-size: 1.1875rem; }
+  .ticket :global(.t-note) { font-size: var(--step-small); color: var(--muted); }
+  @media (max-width: 760px) { .ticket { grid-template-columns: 1fr; } .ticket__l { border-right: 0; border-bottom: 4px dashed var(--ink); } }
+
+  /* ── Stores ──────────────────────────────────────────── */
+  .stores { background: var(--bg); padding: clamp(70px, 10vw, 150px) var(--m); }
+  .stores__list { list-style: none; margin: clamp(36px, 5vw, 64px) 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: clamp(16px, 2vw, 28px); }
+  .store { background: var(--c); color: var(--i); border: 3px solid var(--ink); border-radius: var(--r); box-shadow: 0 12px 0 var(--ink); padding: clamp(24px, 3vw, 40px); display: grid; gap: 10px; align-content: start; }
+  .store__n { font-size: clamp(4.5rem, 3rem + 4vw, 8rem); font-weight: 800; letter-spacing: -0.07em; line-height: 0.8; }
+  .store__t { font-size: clamp(1.8rem, 1.3rem + 1.6vw, 2.8rem); margin-top: 10px; }
+  .store__a { font-size: 1.125rem; }
+  .store__h { font-weight: 700; }
+  .store__live { padding: 8px 14px; border-radius: 999px; background: var(--paper); color: var(--ink); justify-self: start; }
+  .store__act { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-top: 10px; }
+  .store__tel { font-weight: 800; }
+</style>

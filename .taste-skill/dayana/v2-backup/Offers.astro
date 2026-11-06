@@ -1,0 +1,37 @@
+---
+// All the offers, as rows: the value large in red, the name, the dates.
+import Layout from './Layout.astro'
+import Arrow from './Arrow.astro'
+import { offerHeadline, fmtDay, waLink } from '../../core/api'
+import { title, BRAND } from './data'
+import type { SiteContent } from '../../core/types'
+
+const { content } = Astro.props as { content: SiteContent }
+const list = content.promotions
+const wa = waLink(content.contact.whatsapp || BRAND.whatsapp, `Hola ${BRAND.name}, ¿qué ofertas tienen?`)
+---
+<Layout content={content} title="Ofertas" description={`Ofertas vigentes de ${BRAND.name} en Rabinal y Cubulco. Pide tu cupón y preséntalo en caja.`}>
+  <section class="d-page" aria-labelledby="h-of">
+    <div class="d-page__in">
+      <h1 id="h-of" data-in>Ofertas de {BRAND.short}</h1>
+      <p class="d-page__sub d-lead" data-in style="--i:1">
+        {list.length
+          ? 'Pide tu cupón aquí y preséntalo en caja, en cualquiera de nuestras tiendas. Es para una persona y se usa una vez.'
+          : 'Hoy no hay ofertas vigentes. Cada temporada sacamos nuevas; pregúntanos por WhatsApp.'}
+      </p>
+      {!list.length && wa && <p style="margin-top:28px"><a class="d-btn" href={wa} target="_blank" rel="noopener">Escríbenos <Arrow /></a></p>}
+      <div class="d-olist">
+        {list.map((o, i) => (
+          <a class="d-orow" href={`/ofertas/${o.slug}`} data-in style={`--i:${i % 4}`}>
+            <p class="d-orow__v" aria-hidden="true">{offerHeadline(o)}</p>
+            <div>
+              <h2>{title(o.name)}</h2>
+              <p>{o.summary}{o.endsAt ? ` · hasta el ${fmtDay(o.endsAt)}` : ''}</p>
+            </div>
+            <span class="d-btn">Obtener cupón <Arrow /></span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</Layout>

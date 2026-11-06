@@ -1,0 +1,17 @@
+    .fan { opacity: 0; }
+    .flab { position: absolute; font-size: 30px; font-weight: 700; color: #fff; background: #1e4d68; padding: 8px 20px; border-radius: 999px; z-index: 6; opacity: 0; }
+<!--markup-->
+    <shot id="e09-a" class="fan" src="ui/x_dashboard.png" crop="205 60 1395 840" at="140 230 760" />
+    <shot id="e09-b" class="fan" src="ui/x_rendimiento.png" crop="256 60 1344 820" at="560 270 760" />
+    <shot id="e09-c" class="fan" src="ui/pa_pedidos.png" crop="205 60 1395 560" at="980 310 760" />
+    <shot id="e09-d" class="fan" src="ui/x_metas.png" crop="205 60 1395 840" at="1060 200 780" />
+    <div id="e09-la" class="flab" style="left:150px;top:190px">Mostrador</div>
+    <div id="e09-lb" class="flab" style="left:570px;top:230px">Cupones</div>
+    <div id="e09-lc" class="flab" style="left:990px;top:270px">Maestros</div>
+    <div id="e09-ld" class="flab" style="left:1070px;top:160px;background:#b9532f">Meta del mes</div>
+<!--script-->
+    lift("#e09-a", {T:mostrador:1:-0.3}); pop("#e09-la", {T:mostrador});
+    lift("#e09-b", {T:cupones:1:-0.3}); pop("#e09-lb", {T:cupones});
+    lift("#e09-c", {T:maestros:1:-0.3}); pop("#e09-lc", {T:maestros});
+    tl.to("#e09-a, #e09-b, #e09-c, #e09-la, #e09-lb, #e09-lc", { opacity: 0.2, duration: 0.4 }, {T:meta:1:-0.5});
+    lift("#e09-d", {T:meta:1:-0.4}); pop("#e09-ld", {T:meta});

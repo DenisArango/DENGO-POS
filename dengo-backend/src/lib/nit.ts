@@ -8,3 +8,23 @@ export function looksLikeRealNit(raw: string | null | undefined): boolean {
   if (!v || v === 'CF' || v === 'C/F' || v === 'C-F' || v.startsWith('SIN-NIT-')) return false
   return /^\d[\d-]{0,14}[\dA-Z]?$/.test(v) && /\d{4,}/.test(v)
 }
+
+/** "12345-6", "1234567 k" → "123456K": the form the SAT/certifier expects. */
+export function normalizeNit(raw: string | null | undefined): string {
+  return (raw ?? '').replace(/[\s-]/g, '').toUpperCase()
+}
+
+/**
+ * SAT check digit (módulo 11): weights 2, 3, 4… from the right over the body,
+ * check = (11 − sum mod 11) mod 11, written as "K" when it is 10.
+ */
+export function isValidGtNit(raw: string | null | undefined): boolean {
+  const v = normalizeNit(raw)
+  if (!/^\d{1,12}[\dK]$/.test(v)) return false
+  const body = v.slice(0, -1)
+  const check = v.slice(-1)
+  let sum = 0
+  for (let i = 0; i < body.length; i++) sum += Number(body[body.length - 1 - i]) * (i + 2)
+  const expected = (11 - (sum % 11)) % 11
+  return check === (expected === 10 ? 'K' : String(expected))
+}

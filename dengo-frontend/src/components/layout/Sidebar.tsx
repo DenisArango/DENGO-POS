@@ -51,6 +51,7 @@ const menuItems = [
   { path: '/transfers', icon: ArrowLeftRight, label: 'Traslados', roles: ['ADMIN', 'INVENTORY_CONTROL'], permissions: ['transfers.view'] },
   { path: '/customers', icon: UserCircle, label: 'Clientes', roles: ['ADMIN', 'OPERATOR'], permissions: ['customers.view'] },
   { path: '/quotations', icon: ClipboardList, label: 'Cotizaciones', roles: ['ADMIN', 'OPERATOR'], permissions: ['quotations.view'] },
+  { path: '/website', icon: Globe, label: 'Página web', roles: ['ADMIN'], permissions: ['website.manage', 'promotions.manage', 'promotions.reports'], license: 'pageEnabled' },
   { path: '/messages', icon: MessageSquare, label: 'Mensajes', roles: ['ADMIN', 'OPERATOR', 'AUDITOR', 'INVENTORY_CONTROL'], badge: 'unreadMessages' },
   { path: '/settings/users', icon: Users, label: 'Usuarios', roles: ['ADMIN'], permissions: ['settings.users'] },
   { path: '/settings', icon: Settings, label: 'Configuración', roles: ['ADMIN'], permissions: ['settings.users', 'settings.roles', 'settings.stores', 'settings.system', 'settings.cashRegisters', 'goals.manage'] },
@@ -74,11 +75,13 @@ export default function Sidebar({ offlineRestricted = false, allowedPaths = [] }
   // Unlink this device's notifications first (needs the token), then log out.
   const handleLogout = () => { void forgetDeviceOnLogout().finally(logout) }
   const maestrosEnabled = useLicenseStore(s => s.maestrosEnabled)
+  const pageEnabled = useLicenseStore(s => s.pageEnabled)
   const pendingPortalOrders = usePendingPortalOrders()
   const unreadMessages = useUnreadMessages()
   const unreadPortalMessages = useUnreadPortalMessages()
 
   const filteredMenuItems = menuItems.filter(item =>
+    ((item as { license?: string }).license !== 'pageEnabled' || pageEnabled) &&
     user && (
       item.roles.includes(user.role) ||
       (item as { permissions?: string[] }).permissions?.some(p => userHasPermission(user, p))

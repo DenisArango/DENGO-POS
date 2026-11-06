@@ -1,0 +1,16 @@
+{INCLUDE:calc.css}
+    #e07-calc { left: 1560px; top: 40px; transform-origin: 100% 0%; z-index: 9; }
+    #e07-q { opacity: 0; }
+<!--markup-->
+    <div id="e07-calc" class="calc"><div class="lcd"><span class="v" id="e07-v">19</span></div><div class="keys"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cap"><b>fx-82</b> · Central</div></div>
+    <browser id="e07-q" src="rec/q_convertir.mp4" url="DENGO POS · Cotizaciones" at="460 176 1300" start="0.1" />
+<!--script-->
+    tl.set("#e07-calc", { scale: 0.62 }, 0);
+    lift("#e07-q", 0.1);
+    count("#e07-v", {T:diecisiete:1:-0.25}, 19, 17, 0.45);
+    tl.fromTo("#e07-calc .lcd", { backgroundColor: "#f2c14e" }, { backgroundColor: "#cfe0c3", duration: 0.8 }, {T:diecisiete});
+    tl.to("#e07-calc", { scale: 0.9, duration: 0.5, ease: "back.out(1.6)" }, {T:diecisiete});
+<!--sfx-->
+click-soft {T:apruebo} 0.5
+click-soft {T:convierte} 0.5
+pop {T:diecisiete} 0.5

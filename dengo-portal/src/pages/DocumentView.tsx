@@ -111,12 +111,17 @@ export default function DocumentView() {
 
             {doc.kind === 'INVOICE' && doc.fel && (
               <section className="mt-8 rounded-xl bg-gray-50 print:bg-white print:border print:border-gray-300 p-4 text-xs text-gray-600 space-y-0.5">
-                {doc.fel.status === 'CERTIFIED' ? (
+                {doc.fel.voided ? (
+                  <p className="font-semibold text-red-700">Esta factura fue anulada en la SAT.</p>
+                ) : doc.fel.status === 'CERTIFIED' ? (
                   <>
-                    <p className="font-semibold text-gray-800">Factura electrónica certificada (FEL)</p>
-                    {doc.fel.authNumber && <p>No. de autorización: <span className="font-mono">{doc.fel.authNumber}</span></p>}
-                    {doc.fel.uuid && <p>UUID: <span className="font-mono">{doc.fel.uuid}</span></p>}
-                    {doc.fel.certifiedAt && <p>Certificada el {fmt(doc.fel.certifiedAt)}</p>}
+                    <p className="font-semibold text-gray-800">Documento Tributario Electrónico — Factura (FEL)</p>
+                    {doc.fel.test && <p className="font-semibold text-orange-700">Documento de prueba: sin validez fiscal.</p>}
+                    {doc.fel.serie && <p>Serie: <span className="font-mono">{doc.fel.serie}</span> · Número: <span className="font-mono">{doc.fel.number}</span></p>}
+                    {doc.fel.authNumber && <p>Número de autorización: <span className="font-mono">{doc.fel.authNumber}</span></p>}
+                    {doc.fel.certifiedAt && <p>Fecha de certificación: {fmt(doc.fel.certifiedAt)}</p>}
+                    {doc.fel.certifierName && <p>Certificador: {doc.fel.certifierName}{doc.fel.certifierNit ? ` · NIT ${doc.fel.certifierNit}` : ''}</p>}
+                    {doc.fel.pdfUrl && <p className="print:hidden"><a href={doc.fel.pdfUrl} target="_blank" rel="noopener" className="text-brand-700 font-semibold underline">Descargar PDF oficial</a></p>}
                   </>
                 ) : (
                   <p>Factura pendiente de certificación electrónica. El proveedor te enviará la versión certificada.</p>

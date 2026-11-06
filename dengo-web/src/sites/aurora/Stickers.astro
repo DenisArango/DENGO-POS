@@ -1,0 +1,102 @@
+---
+// The offers as stickers: whole crayon colours, a hard ink shadow, a slight
+// tilt each; they flip up into place, their numbers count up and, with a
+// mouse, they lean toward the pointer with a glare. Used by the home page
+// and the offers page.
+import { offerHeadline, fmtDay } from '../../core/api'
+import type { Promotion } from '../../core/types'
+
+interface Props { offers: Promotion[]; featured?: Promotion | undefined; cols?: 2 | 3 }
+const { offers, featured, cols = 2 } = Astro.props
+const colors = ['var(--yellow)', 'var(--blue)', 'var(--pink)', 'var(--green)', 'var(--red)']
+const inks = ['var(--ink)', '#fff', 'var(--ink)', '#fff', '#fff']
+const tilt = [-2.5, 1.8, -1.2, 2.4, -1.8]
+// "15%", "Q25", "Q149" → prefix / number / suffix, for the count-up.
+const num = (s: string) => { const m = s.match(/^(\D*)(\d+(?:\.\d+)?)(\D*)$/); return m ? { pre: m[1], n: m[2], post: m[3] } : null }
+---
+<ul class:list={['stickers', `stickers--${cols}`]} data-stickers>
+  {offers.map((o, i) => { const h = offerHeadline(o); const n = num(h); return (
+    <li class:list={['sticker', { 'sticker--big': o === featured }]} style={`--c:${colors[i % 5]}; --i:${inks[i % 5]}; --r:${tilt[i % 5]}deg`} data-sticker>
+      <a href={`/ofertas/${o.slug}`} class="sticker__link" data-tilt data-cursor="Recortar">
+        <span class="sticker__glare" aria-hidden="true"></span>
+        <span class="sticker__v">{n ? <>{n.pre}<span data-count={n.n}>{n.n}</span>{n.post}</> : h}</span>
+        <span class="sticker__name">{o.name}</span>
+        <span class="sticker__meta">{o.summary}{o.endsAt ? ` · hasta el ${fmtDay(o.endsAt)}` : ''}{o.couponsLeft !== null ? ` · quedan ${o.couponsLeft}` : ''}</span>
+        <span class="sticker__perf" aria-hidden="true"></span>
+        <span class="sticker__cta">Obtener cupón <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6" /></svg></span>
+      </a>
+    </li>
+  )})}
+</ul>
+
+<script>
+  import gsap from 'gsap'
+  import { ScrollTrigger } from 'gsap/ScrollTrigger'
+  gsap.registerPlugin(ScrollTrigger)
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  document.querySelectorAll<HTMLElement>('[data-stickers]').forEach(list => {
+    if (list.dataset.bound) return
+    list.dataset.bound = '1'
+    const items = list.querySelectorAll<HTMLElement>('[data-sticker]')
+    if (!reduce) {
+      gsap.fromTo(items, { y: 160, rotateX: -70, opacity: 0 }, { y: 0, rotateX: 0, opacity: 1, duration: 1.1, ease: 'back.out(1.4)', stagger: 0.1, scrollTrigger: { trigger: list, start: 'top 85%', once: true } })
+      list.querySelectorAll<HTMLElement>('[data-count]').forEach(el => {
+        const to = Number(el.dataset.count); const o = { v: 0 }
+        const dec = (el.dataset.count ?? '').includes('.') ? 2 : 0
+        ScrollTrigger.create({ trigger: el, start: 'top 90%', once: true, onEnter: () => gsap.to(o, { v: to, duration: 1.6, ease: 'power3.out', onUpdate: () => { el.textContent = o.v.toFixed(dec) } }) })
+      })
+    }
+    if (reduce || !matchMedia('(hover: hover) and (pointer: fine)').matches) return
+    list.querySelectorAll<HTMLElement>('[data-tilt]').forEach(el => {
+      const rx = gsap.quickTo(el, 'rotateX', { duration: 0.5, ease: 'power3' })
+      const ry = gsap.quickTo(el, 'rotateY', { duration: 0.5, ease: 'power3' })
+      const glare = el.querySelector<HTMLElement>('.sticker__glare')!
+      el.addEventListener('pointermove', e => {
+        const r = el.getBoundingClientRect()
+        const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5
+        rx(-y * 16); ry(x * 18)
+        glare.style.setProperty('--gx', `${(x + 0.5) * 100}%`); glare.style.setProperty('--gy', `${(y + 0.5) * 100}%`)
+      })
+      el.addEventListener('pointerleave', () => { rx(0); ry(0) })
+    })
+  })
+</script>
+
+<style>
+  .stickers { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(18px, 2.4vw, 32px); perspective: 1400px; }
+  .stickers--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sticker { transform: rotate(var(--r)); }
+  .sticker--big { grid-row: span 2; }
+  .stickers--3 .sticker--big { grid-column: span 2; grid-row: span 1; }
+  .sticker__link {
+    position: relative; height: 100%; display: grid; align-content: start; gap: 12px; padding: clamp(26px, 3vw, 44px);
+    background: var(--c); color: var(--i); text-decoration: none; border-radius: var(--r);
+    box-shadow: 0 14px 0 var(--ink); border: 3px solid var(--ink); transform-style: preserve-3d; overflow: hidden;
+    transition: box-shadow 300ms var(--ease-out);
+  }
+  .sticker__glare { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at var(--gx, 50%) var(--gy, 0%), rgb(255 255 255 / 0.45), transparent 45%); opacity: 0; transition: opacity 300ms ease; }
+  @media (hover: hover) { .sticker__link:hover .sticker__glare { opacity: 1; } .sticker__link:hover { box-shadow: 0 22px 0 var(--ink); } }
+  .sticker__v { font-size: clamp(5rem, 3rem + 7vw, 10rem); font-weight: 800; letter-spacing: -0.05em; line-height: 0.95; padding-top: 0.04em; font-variant-numeric: tabular-nums; font-variation-settings: 'wdth' 78; }
+  .stickers--3 .sticker__v { font-size: clamp(4.5rem, 2.6rem + 5vw, 8rem); }
+  .sticker--big .sticker__link { grid-template-rows: 1fr auto auto auto auto; }
+  .sticker--big .sticker__v { font-size: clamp(7rem, 3rem + 15vw, 21rem); align-self: center; }
+  /* in the 3-column wall the featured sticker is wide: value on the left, words on the right */
+  .stickers--3 .sticker--big .sticker__link { grid-template-columns: auto minmax(0, 1fr); grid-template-rows: 1fr auto auto auto; column-gap: clamp(20px, 3vw, 48px); align-content: stretch; }
+  .stickers--3 .sticker--big .sticker__v { grid-row: 1 / -1; align-self: center; font-size: clamp(6rem, 2rem + 12vw, 17rem); }
+  .stickers--3 .sticker--big .sticker__name { align-self: end; }
+  .stickers--3 .sticker--big .sticker__perf { margin-right: -44px; margin-left: 0; }
+  .sticker__name { font-size: clamp(1.4rem, 1.1rem + 1vw, 2.1rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; max-width: 18ch; }
+  .sticker__meta { font-size: 1.0625rem; font-weight: 500; max-width: 40ch; }
+  .sticker__perf { margin: 10px -44px 0; border-top: 4px dashed currentColor; opacity: 0.5; }
+  .sticker__cta { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.125rem; }
+  .sticker__cta svg { width: 22px; transition: transform 300ms var(--ease-out); }
+  @media (hover: hover) { .sticker__link:hover .sticker__cta svg { transform: translateX(8px); } }
+  .sticker__link:active { transform: scale(0.98); }
+  @media (max-width: 1060px) {
+    .stickers--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stickers--3 .sticker--big .sticker__link { grid-template-columns: 1fr; grid-template-rows: 1fr auto auto auto auto; }
+    .stickers--3 .sticker--big .sticker__v { grid-row: auto; }
+  }
+  @media (max-width: 760px) { .stickers, .stickers--3 { grid-template-columns: 1fr; } .sticker--big, .stickers--3 .sticker--big { grid-row: auto; grid-column: auto; } }
+</style>

@@ -1,0 +1,133 @@
+---
+// The house in Rabinal that grew room by room, drawn flat in the brand's
+// colours. Six stages, revealed as the story is read (data-step 1–6, set by
+// Home.astro's script; each stage adds to the last):
+//   1 the one room, 2010, with the rebar still on the roof
+//   2 the vitrinas and the first school supplies
+//   3 the whole first floor, under the red sign
+//   4 the second level, where the family came back to live
+//   5 the house steps back and the branches appear down the road to Cubulco
+//   6 back home: the original room, still the tiendita
+// Without JavaScript the last stage shows (class "is-all").
+interface Props { branches?: string[]; id?: string }
+const { branches = [], id = 'house' } = Astro.props
+const others = branches.filter(n => !/principal|central/i.test(n)).slice(0, 4)
+while (others.length < 3) others.push(`Dayana ${others.length + 2}`)
+const town = (i: number, n: number) => (i === n - 1 ? 'Cubulco' : 'Rabinal')
+const spots = others.map((name, i, a) => ({ name, town: town(i, a.length), x: 330 + i * (230 / Math.max(1, a.length - 1)), far: i === a.length - 1 }))
+const rebar = (x0: number, x1: number, y: number) => Array.from({ length: Math.floor((x1 - x0) / 22) + 1 }, (_, i) => x0 + i * 22).map(x => `M${x} ${y}v-16`).join('')
+---
+<svg class="house is-all" id={id} viewBox="0 318 600 392" preserveAspectRatio="xMidYMax meet" role="img" aria-label="Dibujo de la casa de Variedades Dayana creciendo: de un cuarto en 2010 a la casa completa y las sucursales hasta Cubulco" data-house>
+  <!-- sky stars of the evening: the shop opened in the afternoons -->
+  <g class="h-sky" fill="#ffffff">
+    <circle cx="48" cy="350" r="2.4" /><circle cx="110" cy="410" r="1.6" /><circle cx="480" cy="340" r="1.8" /><circle cx="575" cy="420" r="1.6" /><circle cx="300" cy="338" r="1.4" /><circle cx="200" cy="356" r="1.8" />
+  </g>
+  <circle class="h-moon" cx="530" cy="384" r="22" fill="#ffffff" />
+  <circle cx="539" cy="377" r="19" fill="var(--stage)" class="h-moon" />
+
+  <!-- hills of Baja Verapaz -->
+  <path d="M0 560 C 90 500, 170 520, 250 548 S 420 490, 600 536 V760 H0Z" fill="#0a2a6e" />
+  <path d="M0 600 C 120 566, 260 590, 330 600 S 500 572, 600 590 V760 H0Z" fill="#0d3380" />
+  <rect x="0" y="618" width="600" height="142" fill="#061f55" />
+
+  <!-- 5: the road to the other stores -->
+  <g class="h-s h-5">
+    <path d="M60 690 C 200 690, 260 660, 600 660" fill="none" stroke="#2a4c99" stroke-width="22" stroke-linecap="round" />
+    <path d="M60 690 C 200 690, 260 660, 600 660" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="12 14" opacity=".55" />
+    {spots.map(s => (
+      <g transform={`translate(${s.x} ${s.far ? 602 : 610})`}>
+        <rect x="-26" y="0" width="52" height="40" fill="#ffffff" />
+        <rect x="-30" y="-8" width="60" height="10" fill="var(--red)" />
+        <rect x="-9" y="16" width="18" height="24" fill="#061f55" />
+        <text x="0" y="-18" text-anchor="middle" class="h-lbl">{s.name}</text>
+        <text x="0" y="-38" text-anchor="middle" class="h-lbl h-lbl--soft">{s.town}</text>
+      </g>
+    ))}
+  </g>
+
+  <g class="h-home">
+    <!-- 4: the second level -->
+    <g class="h-s h-4">
+      <rect x="150" y="372" width="300" height="122" fill="#e6ebf5" />
+      <rect x="150" y="364" width="300" height="10" fill="#c9d2e6" />
+      <path d={rebar(160, 440, 364)} stroke="#9fb0d6" stroke-width="3" />
+      <g fill="#ffd27a">
+        <rect x="178" y="404" width="54" height="50" /><rect x="273" y="404" width="54" height="50" /><rect x="368" y="404" width="54" height="50" />
+      </g>
+      <g fill="var(--red)">
+        <rect x="178" y="404" width="14" height="50" /><rect x="273" y="404" width="14" height="50" /><rect x="408" y="404" width="14" height="50" />
+      </g>
+      <rect x="150" y="486" width="300" height="10" fill="#c9d2e6" />
+      <path d="M160 486 v-22 M180 486 v-22 M200 486 v-22 M220 486 v-22 M240 486 v-22 M260 486 v-22 M280 486 v-22 M300 486 v-22 M320 486 v-22 M340 486 v-22 M360 486 v-22 M380 486 v-22 M400 486 v-22 M420 486 v-22 M440 486 v-22 M150 466 h300" stroke="#061f55" stroke-width="3" />
+    </g>
+
+    <!-- 3: the whole first floor under the red sign -->
+    <g class="h-s h-3">
+      <rect x="110" y="494" width="380" height="124" fill="#ffffff" />
+      <rect x="128" y="540" width="88" height="78" fill="#0d3380" />
+      <g fill="#ffffff"><rect x="128" y="562" width="88" height="4" /><rect x="128" y="588" width="88" height="4" /></g>
+      <g><rect x="136" y="546" width="10" height="16" fill="var(--red)" /><rect x="149" y="550" width="8" height="12" fill="#ffd27a" /><rect x="160" y="546" width="12" height="16" fill="#ffffff" /><rect x="176" y="548" width="9" height="14" fill="var(--red)" /><rect x="190" y="546" width="14" height="16" fill="#9fb0d6" />
+        <rect x="136" y="572" width="16" height="16" fill="#ffffff" /><rect x="156" y="574" width="10" height="14" fill="var(--red)" /><rect x="170" y="572" width="14" height="16" fill="#ffd27a" /><rect x="188" y="574" width="16" height="14" fill="#ffffff" /></g>
+      <rect x="400" y="540" width="70" height="78" fill="#0d3380" />
+      <g><rect x="408" y="548" width="12" height="18" fill="#ffffff" /><rect x="424" y="552" width="10" height="14" fill="var(--red)" /><rect x="438" y="548" width="12" height="18" fill="#ffd27a" /><rect x="454" y="550" width="9" height="16" fill="#ffffff" /></g>
+      <path class="h-rebar3" d={rebar(116, 484, 494)} stroke="#9fb0d6" stroke-width="3" />
+    </g>
+
+    <!-- 1: the one room -->
+    <g class="h-s h-1">
+      <rect class="h-glow" x="232" y="526" width="136" height="100" fill="var(--red)" />
+      <rect x="240" y="516" width="120" height="102" fill="#ffffff" />
+      <path class="h-rebar1" d={rebar(246, 354, 516)} stroke="#9fb0d6" stroke-width="3" />
+      <rect x="252" y="548" width="38" height="70" fill="#061f55" />
+      <rect x="256" y="552" width="30" height="66" fill="#ffd27a" />
+      <rect x="248" y="538" width="46" height="8" fill="var(--red)" />
+      <text x="320" y="534" text-anchor="middle" class="h-small">TIENDA</text>
+      <rect x="302" y="552" width="46" height="40" fill="#0d3380" />
+      <g class="h-s h-2">
+        <rect x="302" y="571" width="46" height="3" fill="#ffffff" />
+        <rect x="307" y="557" width="8" height="14" fill="var(--red)" /><rect x="318" y="560" width="8" height="11" fill="#ffffff" /><rect x="329" y="556" width="12" height="15" fill="#ffd27a" />
+        <rect x="307" y="577" width="12" height="13" fill="#ffffff" /><rect x="322" y="579" width="8" height="11" fill="var(--red)" /><rect x="333" y="577" width="10" height="13" fill="#9fb0d6" />
+        <rect x="298" y="596" width="54" height="22" fill="#9fb0d6" />
+        <rect x="302" y="600" width="46" height="14" fill="#ffffff" />
+      </g>
+    </g>
+    <g class="h-s h-3 h-signs">
+      <rect x="104" y="494" width="392" height="30" fill="var(--red)" />
+      <text x="300" y="515" text-anchor="middle" class="h-sign">VARIEDADES DAYANA</text>
+    </g>
+    <text x="300" y="652" text-anchor="middle" class="h-s h-6 h-note">La tiendita, en el mismo cuarto</text>
+  </g>
+</svg>
+
+<style>
+  .house { display: block; width: 100%; height: 100%; }
+  .h-lbl { font: 600 15px var(--font); fill: #ffffff; letter-spacing: -0.01em; }
+  .h-lbl--soft { font-weight: 400; fill: #b9c6e4; font-size: 13px; }
+  .h-sign { font: 700 17px var(--font); fill: #ffffff; letter-spacing: 0.04em; }
+  .h-small { font: 700 12px var(--font); fill: #061f55; letter-spacing: 0.06em; }
+  .h-note { font: 600 17px var(--font); fill: #ffffff; }
+
+  .h-s, .h-home, .h-glow, .h-rebar1, .h-rebar3 { transition: opacity .7s var(--ease), transform .9s var(--ease); transform-box: view-box; }
+  .h-home { transform-origin: 300px 620px; }
+  .h-s { opacity: 0; transform: translateY(18px); }
+  .h-1 { transform-origin: 300px 618px; }
+  .h-3 { transform-origin: 300px 618px; transform: scaleX(.4); }
+  .h-4 { transform: translateY(40px); }
+  .h-glow { opacity: 0; }
+
+  .house.s1 .h-1, .house.s2 .h-2, .house.s3 .h-3, .house.s4 .h-4, .house.s5 .h-5, .house.s6 .h-6 { opacity: 1; transform: none; }
+  .house.s3 .h-rebar1, .house.s4 .h-rebar3 { opacity: 0; }
+  .house.s5 .h-home { transform: translate(-150px, 30px) scale(.6); }
+  .house.s5 .h-1 { transform: none; }
+  .house.s6 .h-glow { opacity: 1; }
+  .house.s6 .h-5 { opacity: 0; }
+
+  /* No JavaScript: everything, home in place. */
+  .house.is-all .h-s:not(.h-5) { opacity: 1; transform: none; }
+  .house.is-all .h-rebar1, .house.is-all .h-rebar3 { opacity: 0; }
+  .house.is-all .h-glow { opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .h-s, .h-home, .h-glow { transition: opacity .3s linear; }
+  }
+</style>

@@ -1,0 +1,33 @@
+---
+import { getContent, getPromotion, siteKey } from '../../core/api'
+import { getSite } from '../../sites/registry'
+import ComingSoon from '../../core/ComingSoon.astro'
+
+const { slug = '' } = Astro.params
+const content = await getContent()
+
+// No-JavaScript fallback of the coupon form: post here, get redirected to
+// the coupon page (or back here with the error).
+let formError: string | null = null
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData()
+  const api = (process.env.DENGO_API ?? 'http://127.0.0.1:3001').replace(/\/$/, '')
+  try {
+    const res = await fetch(`${api}/api/site/promotions/${encodeURIComponent(slug)}/coupons`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': Astro.clientAddress ?? '' },
+      body: JSON.stringify({ name: form.get('name'), phone: form.get('phone'), website: form.get('website') ?? '' }),
+    })
+    const body = await res.json().catch(() => ({}))
+    if (res.ok && body.code) return Astro.redirect(`/cupon/${body.code}${body.reused ? '?ya=1' : ''}`, 303)
+    formError = body.error ?? 'No se pudo generar el cupón'
+  } catch {
+    formError = 'No se pudo generar el cupón. Intenta de nuevo.'
+  }
+}
+
+const promotion = await getPromotion(slug)
+if (!promotion) Astro.response.status = 404
+const Site = getSite(siteKey(Astro, content))
+---
+{content && promotion ? <Site.Offer content={content} promotion={promotion} formError={formError} /> : content ? <Site.NotFound content={content} /> : <ComingSoon content={content} />}

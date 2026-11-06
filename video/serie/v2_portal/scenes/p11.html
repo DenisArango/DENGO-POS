@@ -1,0 +1,15 @@
+    #p11-p1 { left: 1240px; top: 96px; opacity: 0; z-index: 9; }
+    #p11-p2 { left: 1240px; top: 196px; opacity: 0; z-index: 9; }
+    #p11-p3 { left: 1240px; top: 296px; opacity: 0; z-index: 9; }
+    #p11-p4 { left: 1180px; top: 860px; opacity: 0; z-index: 9; }
+<!--markup-->
+    <div id="p11-p1" class="pill">Los maestros piden solos</div>
+    <div id="p11-p2" class="pill">Usted prepara con orden</div>
+    <div id="p11-p3" class="pill">Nadie espera una llamada</div>
+    <div id="p11-p4" class="pill coral">Adecuaciones a la medida</div>
+<!--script-->
+    slide("#p11-p1", {T:maestros}, 80);
+    slide("#p11-p2", {T:preparo}, 80);
+    slide("#p11-p3", {T:nadie}, 80);
+    tl.to("#p11-p1, #p11-p2, #p11-p3", { opacity: 0, duration: 0.35 }, {T:programa:1:-0.3});
+    pop("#p11-p4", {T:adecuan:1:-0.2});

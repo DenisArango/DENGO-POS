@@ -1,0 +1,57 @@
+---
+import { waLink } from '../core/api'
+import type { Block, SiteContent } from '../core/types'
+const { block, content } = Astro.props as { block: Block; content: SiteContent }
+const p = block.props as { title?: string; subtitle?: string; buttonLabel?: string }
+const c = content.contact
+const wa = waLink(c.whatsapp, `Hola ${content.businessName}, quiero información.`)
+const socials = [['Facebook', c.facebook], ['Instagram', c.instagram], ['TikTok', c.tiktok]].filter(([, v]) => v) as [string, string][]
+const isCta = block.type === 'cta'
+---
+{(wa || c.phone || c.email || socials.length > 0) && (
+  <section class:list={['section', 'contact', { 'contact--cta': isCta }]} id={isCta ? undefined : 'contacto'}>
+    <div class="wrap">
+      <div class="contact__card">
+        <div class="contact__text">
+          <h2 class="display contact__title" data-reveal>{p.title || (isCta ? '¿Buscas algo en especial?' : 'Escríbenos')}</h2>
+          <p class="lead" data-reveal style="--i:1">{p.subtitle || 'Te respondemos por WhatsApp, te apartamos lo que necesites y te decimos en qué sucursal lo tenemos.'}</p>
+        </div>
+        <div class="contact__actions" data-reveal style="--i:2">
+          {wa && (
+            <a class="btn contact__wa" href={wa} target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.7 14.9L2 22l5.3-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3z" /></svg>
+              {p.buttonLabel || 'Escríbenos por WhatsApp'}
+            </a>
+          )}
+          {!isCta && c.phone && <a class="contact__line" href={`tel:${c.phone.replace(/\s/g, '')}`}><span>Llámanos</span>{c.phone}</a>}
+          {!isCta && c.email && <a class="contact__line" href={`mailto:${c.email}`}><span>Correo</span>{c.email}</a>}
+          {!isCta && socials.length > 0 && (
+            <p class="contact__social">{socials.map(([n, url]) => <a href={url} target="_blank" rel="noopener">{n}</a>)}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .contact__card { position: relative; overflow: hidden; display: grid; grid-template-columns: 1.3fr 1fr; gap: clamp(28px, 5vw, 80px); align-items: end; padding: clamp(32px, 6vw, 88px); border-radius: var(--radius-lg); background: var(--ink); color: var(--ground); }
+  .contact__card::before { content: ''; position: absolute; right: -10%; bottom: -60%; width: min(560px, 70vw); aspect-ratio: 1; border-radius: 50%; background: var(--brand); opacity: 0.55; }
+  .contact--cta .contact__card { background: var(--brand-2); color: var(--on-brand-2); }
+  .contact--cta .contact__card::before { background: var(--brand); opacity: 0.25; }
+  :global([data-theme='editorial']) .contact__card::before { display: none; }
+  .contact__text, .contact__actions { position: relative; }
+  .contact .lead { color: inherit; opacity: 0.88; }
+  .contact__title { font-size: var(--step-head); margin-bottom: 20px; }
+  .contact__actions { display: grid; gap: 16px; justify-items: start; }
+  .contact__wa { background: #1f9d55; color: #fff; min-height: 60px; font-size: 1.0625rem; }
+  @media (hover: hover) and (pointer: fine) { .contact__wa:hover { background: #18834a; } }
+  .contact__wa svg { width: 22px; height: 22px; }
+  .contact__line { display: grid; color: inherit; font-size: var(--step-lead); font-weight: 600; text-decoration: none; line-height: 1.25; }
+  .contact__line span { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+  @media (hover: hover) { .contact__line:hover { text-decoration: underline; text-underline-offset: 5px; } }
+  .contact__social { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; }
+  .contact__social a { color: inherit; font-weight: 600; text-decoration: none; padding: 8px 14px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px color-mix(in oklab, currentColor 40%, transparent); }
+  @media (hover: hover) { .contact__social a:hover { background: color-mix(in oklab, currentColor 14%, transparent); } }
+  @media (max-width: 760px) { .contact__card { grid-template-columns: 1fr; } }
+</style>

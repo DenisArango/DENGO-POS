@@ -1,0 +1,35 @@
+    .nb { position: absolute; left: 520px; top: 120px; width: 880px; height: 760px; background: #fffdf4; border-radius: 10px 22px 22px 10px; box-shadow: 0 26px 64px rgba(27, 34, 51, 0.2); overflow: hidden; opacity: 0;
+      background-image: linear-gradient(#cfe0ea 2px, transparent 2px); background-size: 100% 64px; background-position: 0 40px; }
+    .nb::before { content: ""; position: absolute; left: 110px; top: 0; bottom: 0; width: 3px; background: #e9a99a; }
+    .nb .ln { position: absolute; left: 140px; font-family: "Nunito", sans-serif; font-size: 36px; font-weight: 600; color: #2b3a67; white-space: nowrap; opacity: 0; }
+    .nb .x { position: absolute; height: 5px; background: #b9532f; border-radius: 3px; transform-origin: 0 50%; }
+    .q { position: absolute; font-family: "Nunito", sans-serif; font-weight: 800; color: #b9532f; opacity: 0; z-index: 4; }
+    .bub { position: absolute; background: #fff; border-radius: 22px; padding: 16px 22px 14px; box-shadow: 0 16px 40px rgba(27, 34, 51, 0.2); font-size: 30px; z-index: 5; opacity: 0; }
+    .bub b { display: block; font-size: 22px; color: #1e4d68; margin-bottom: 4px; }
+<!--markup-->
+    <div id="p02-nb" class="nb">
+      <div id="p02-l1" class="ln" style="top:52px">EORM Cantón — 28 cuadernos, crayones</div>
+      <div id="p02-l2" class="ln" style="top:116px">Prof. Luis — valija (¿llamar?)</div>
+      <div id="p02-l3" class="ln" style="top:180px">Seño Andrea — ¿marcadores?</div>
+      <div id="p02-l4" class="ln" style="top:244px">Jornada Matutina — 70 kits??</div>
+      <div id="p02-l5" class="ln" style="top:308px">Ruth — foto de lista (WhatsApp)</div>
+      <div id="p02-l6" class="ln" style="top:372px">Total cuadernos: 28 + 70 + ¿?</div>
+      <div id="p02-x1" class="x" style="left:140px;top:142px;width:540px"></div>
+      <div id="p02-x2" class="x" style="left:140px;top:398px;width:600px"></div>
+    </div>
+    <div id="p02-q1" class="q" style="left:1300px;top:500px;font-size:220px">¿?</div>
+    <div id="p02-b1" class="bub" style="left:120px;top:250px"><b>Profe Luis</b>¿Ya está listo mi pedido?</div>
+    <div id="p02-b2" class="bub" style="left:1440px;top:220px"><b>Seño Andrea</b>¿Cuánto me va a salir?</div>
+<!--script-->
+    tl.fromTo("#p02-nb", { opacity: 0, y: 60, rotation: -2 }, { opacity: 1, y: 0, rotation: -2, duration: 0.7, ease: "expo.out" }, 0.1);
+    ["#p02-l1", "#p02-l2", "#p02-l3", "#p02-l4", "#p02-l5", "#p02-l6"].forEach((s, i) => tl.fromTo(s, { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.3, ease: "power2.out" }, 0.4 + i * 0.22));
+    tl.set(".x", { scaleX: 0 }, 0);
+    tl.to("#p02-l3", { opacity: 0.12, filter: "blur(2px)", duration: 0.6 }, {T:perdia});
+    tl.to("#p02-x1", { scaleX: 1, duration: 0.35, ease: "power3.out" }, {T:pedido});
+    pop("#p02-b1", {T:listo:1:-0.4});
+    pop("#p02-b2", {T:salir:1:-0.4});
+    tl.to("#p02-x2", { scaleX: 1, duration: 0.35, ease: "power3.out" }, {T:comprar:1:-0.6});
+    pop("#p02-q1", {T:comprar:1:-0.3});
+<!--sfx-->
+notification {T:listo:1:-0.4} 0.35
+notification {T:salir:1:-0.4} 0.35

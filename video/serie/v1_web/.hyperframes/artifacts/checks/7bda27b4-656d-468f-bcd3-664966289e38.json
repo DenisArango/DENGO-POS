@@ -1,0 +1,3687 @@
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 7,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "nested_media_start_basis_ambiguous",
+        "severity": "warning",
+        "message": "<video id=\"w02-sv\"> has data-start=\"12.584\" inside a sub-composition. Nested media timing is local to its composition by default; a nonzero value can be confused with a legacy root-global timestamp.",
+        "selector": "#w02-sv",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v1_web\\compositions\\w02.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Keep data-start=\"12.584\" if it is composition-local. If this is a legacy root-global timestamp, add data-hf-media-start-basis=\"global\"; otherwise convert it to local time by subtracting the host start."
+      },
+      {
+        "code": "overlapping_gsap_tweens",
+        "severity": "warning",
+        "message": "GSAP tweens overlap on \"#w05-r4\" for opacity between 11.56s and 11.81s.",
+        "selector": "#w05-r4",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v1_web\\compositions\\w05.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Shorten the earlier tween, move the later tween, or add `overwrite: \"auto\"`."
+      },
+      {
+        "code": "nested_media_start_basis_ambiguous",
+        "severity": "warning",
+        "message": "<video id=\"w06-ph-v\"> has data-start=\"2.857\" inside a sub-composition. Nested media timing is local to its composition by default; a nonzero value can be confused with a legacy root-global timestamp.",
+        "selector": "#w06-ph-v",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v1_web\\compositions\\w06.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Keep data-start=\"2.857\" if it is composition-local. If this is a legacy root-global timestamp, add data-hf-media-start-basis=\"global\"; otherwise convert it to local time by subtracting the host start."
+      },
+      {
+        "code": "nested_media_start_basis_ambiguous",
+        "severity": "warning",
+        "message": "<video id=\"w07-pos-v\"> has data-start=\"2.431\" inside a sub-composition. Nested media timing is local to its composition by default; a nonzero value can be confused with a legacy root-global timestamp.",
+        "selector": "#w07-pos-v",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v1_web\\compositions\\w07.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Keep data-start=\"2.431\" if it is composition-local. If this is a legacy root-global timestamp, add data-hf-media-start-basis=\"global\"; otherwise convert it to local time by subtracting the host start."
+      },
+      {
+        "code": "overlapping_gsap_tweens",
+        "severity": "warning",
+        "message": "GSAP tweens overlap on \"#w07-r2\" for opacity between 9.94s and 10.19s.",
+        "selector": "#w07-r2",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v1_web\\compositions\\w07.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Shorten the earlier tween, move the later tween, or add `overwrite: \"auto\"`."
+      },
+      {
+        "code": "overlapping_gsap_tweens",
+        "severity": "warning",
+        "message": "GSAP tweens overlap on \"#w08-r4\" for opacity between 7.68s and 7.93s.",
+        "selector": "#w08-r4",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v1_web\\compositions\\w08.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Shorten the earlier tween, move the later tween, or add `overwrite: \"auto\"`."
+      },
+      {
+        "code": "overlapping_gsap_tweens",
+        "severity": "warning",
+        "message": "GSAP tweens overlap on \"#w09-r3\" for opacity between 5.92s and 6.17s.",
+        "selector": "#w09-r3",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v1_web\\compositions\\w09.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Shorten the earlier tween, move the later tween, or add `overwrite: \"auto\"`."
+      }
+    ],
+    "filesScanned": 12
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 145,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-0\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-1\" is 0.37s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.37s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-2\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-3\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-4\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-5\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-7\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-8\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-9\" is 0.37s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.37s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-12\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-13\" is 0.37s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.37s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-14\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-15\" is 0.37s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.37s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-16\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-17\" is 0.57s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.57s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 12.058 s, 0.002 s after a later tween on scaleY ends at 12.056 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 11.966 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 12.056
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 12.058 s, 0.002 s after a later tween on scaleY ends at 12.056 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 11.966 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 12.056
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 12.058 s, 0.002 s after a later tween on scaleY ends at 12.056 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 11.966 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 12.056
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 12.058 s, 0.002 s after a later tween on scaleY ends at 12.056 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 11.966 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 12.056
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 12.058 s, 0.002 s after a later tween on scaleY ends at 12.056 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 11.966 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 12.056
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 15.684 s, 0.002 s after a later tween on scaleY ends at 15.682 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 15.592 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 15.681999999999999
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 15.684 s, 0.002 s after a later tween on scaleY ends at 15.682 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 15.592 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 15.681999999999999
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 15.684 s, 0.002 s after a later tween on scaleY ends at 15.682 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 15.592 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 15.681999999999999
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 15.684 s, 0.002 s after a later tween on scaleY ends at 15.682 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 15.592 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 15.681999999999999
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 15.684 s, 0.002 s after a later tween on scaleY ends at 15.682 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 15.592 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 15.681999999999999
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 16.964 s, 0.002 s after a later tween on scaleY ends at 16.962 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 16.872 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 16.962
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 16.964 s, 0.002 s after a later tween on scaleY ends at 16.962 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 16.872 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 16.962
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 16.964 s, 0.002 s after a later tween on scaleY ends at 16.962 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 16.872 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 16.962
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 16.964 s, 0.002 s after a later tween on scaleY ends at 16.962 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 16.872 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 16.962
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 16.964 s, 0.002 s after a later tween on scaleY ends at 16.962 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 16.872 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 16.962
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 17.092 s, 0.002 s after a later tween on scaleY ends at 17.090 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 17.000 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 17.09
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 17.092 s, 0.002 s after a later tween on scaleY ends at 17.090 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 17.000 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 17.09
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 17.092 s, 0.002 s after a later tween on scaleY ends at 17.090 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 17.000 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 17.09
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 17.092 s, 0.002 s after a later tween on scaleY ends at 17.090 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 17.000 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 17.09
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 17.092 s, 0.002 s after a later tween on scaleY ends at 17.090 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 17.000 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 17.09
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 19.567 s, 0.002 s after a later tween on scaleY ends at 19.565 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 19.475 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 19.564999999999998
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 19.567 s, 0.002 s after a later tween on scaleY ends at 19.565 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 19.475 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 19.564999999999998
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 19.567 s, 0.002 s after a later tween on scaleY ends at 19.565 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 19.475 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 19.564999999999998
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 19.567 s, 0.002 s after a later tween on scaleY ends at 19.565 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 19.475 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 19.564999999999998
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 19.567 s, 0.002 s after a later tween on scaleY ends at 19.565 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 19.475 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 19.564999999999998
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 27.403 s, 0.002 s after a later tween on scaleY ends at 27.401 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 27.311 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 27.401
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 27.403 s, 0.002 s after a later tween on scaleY ends at 27.401 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 27.311 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 27.401
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 27.403 s, 0.002 s after a later tween on scaleY ends at 27.401 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 27.311 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 27.401
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 27.403 s, 0.002 s after a later tween on scaleY ends at 27.401 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 27.311 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 27.401
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 27.403 s, 0.002 s after a later tween on scaleY ends at 27.401 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 27.311 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 27.401
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 27.915 s, 0.002 s after a later tween on scaleY ends at 27.913 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 27.823 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 27.912999999999997
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 27.915 s, 0.002 s after a later tween on scaleY ends at 27.913 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 27.823 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 27.912999999999997
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 27.915 s, 0.002 s after a later tween on scaleY ends at 27.913 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 27.823 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 27.912999999999997
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 27.915 s, 0.002 s after a later tween on scaleY ends at 27.913 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 27.823 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 27.912999999999997
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 27.915 s, 0.002 s after a later tween on scaleY ends at 27.913 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 27.823 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 27.912999999999997
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 32.011 s, 0.002 s after a later tween on scaleY ends at 32.009 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 31.919 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 32.009
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 32.011 s, 0.002 s after a later tween on scaleY ends at 32.009 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 31.919 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 32.009
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 32.011 s, 0.002 s after a later tween on scaleY ends at 32.009 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 31.919 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 32.009
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 32.011 s, 0.002 s after a later tween on scaleY ends at 32.009 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 31.919 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 32.009
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 32.011 s, 0.002 s after a later tween on scaleY ends at 32.009 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 31.919 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 32.009
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 33.718 s, 0.002 s after a later tween on scaleY ends at 33.716 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 33.626 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 33.715999999999994
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 33.718 s, 0.002 s after a later tween on scaleY ends at 33.716 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 33.626 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 33.715999999999994
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 33.718 s, 0.002 s after a later tween on scaleY ends at 33.716 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 33.626 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 33.715999999999994
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 33.718 s, 0.002 s after a later tween on scaleY ends at 33.716 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 33.626 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 33.715999999999994
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 33.718 s, 0.002 s after a later tween on scaleY ends at 33.716 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 33.626 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 33.715999999999994
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 49.301 s, 0.002 s after a later tween on scaleY ends at 49.299 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 49.209 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 49.299
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 49.301 s, 0.002 s after a later tween on scaleY ends at 49.299 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 49.209 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 49.299
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 49.301 s, 0.002 s after a later tween on scaleY ends at 49.299 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 49.209 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 49.299
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 49.301 s, 0.002 s after a later tween on scaleY ends at 49.299 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 49.209 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 49.299
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 49.301 s, 0.002 s after a later tween on scaleY ends at 49.299 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 49.209 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 49.299
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 50.282 s, 0.002 s after a later tween on scaleY ends at 50.280 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 50.190 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 50.28
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 50.282 s, 0.002 s after a later tween on scaleY ends at 50.280 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 50.190 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 50.28
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 50.282 s, 0.002 s after a later tween on scaleY ends at 50.280 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 50.190 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 50.28
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 50.282 s, 0.002 s after a later tween on scaleY ends at 50.280 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 50.190 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 50.28
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 50.282 s, 0.002 s after a later tween on scaleY ends at 50.280 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 50.190 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 50.28
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 58.176 s, 0.002 s after a later tween on scaleY ends at 58.174 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 58.084 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 58.174
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 58.176 s, 0.002 s after a later tween on scaleY ends at 58.174 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 58.084 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 58.174
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 58.176 s, 0.002 s after a later tween on scaleY ends at 58.174 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 58.084 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 58.174
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 58.176 s, 0.002 s after a later tween on scaleY ends at 58.174 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 58.084 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 58.174
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 58.176 s, 0.002 s after a later tween on scaleY ends at 58.174 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 58.084 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 58.174
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 60.558 s, 0.002 s after a later tween on scaleY ends at 60.556 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 60.466 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 60.556000000000004
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 60.558 s, 0.002 s after a later tween on scaleY ends at 60.556 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 60.466 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 60.556000000000004
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 60.558 s, 0.002 s after a later tween on scaleY ends at 60.556 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 60.466 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 60.556000000000004
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 60.558 s, 0.002 s after a later tween on scaleY ends at 60.556 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 60.466 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 60.556000000000004
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 60.558 s, 0.002 s after a later tween on scaleY ends at 60.556 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 60.466 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 60.556000000000004
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 65.303 s, 0.002 s after a later tween on scaleY ends at 65.301 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 65.211 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 65.301
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 65.303 s, 0.002 s after a later tween on scaleY ends at 65.301 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 65.211 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 65.301
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 65.303 s, 0.002 s after a later tween on scaleY ends at 65.301 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 65.211 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 65.301
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 65.303 s, 0.002 s after a later tween on scaleY ends at 65.301 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 65.211 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 65.301
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 65.303 s, 0.002 s after a later tween on scaleY ends at 65.301 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 65.211 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 65.301
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 67.351 s, 0.002 s after a later tween on scaleY ends at 67.349 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 67.259 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 67.349
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 67.351 s, 0.002 s after a later tween on scaleY ends at 67.349 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 67.259 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 67.349
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 67.351 s, 0.002 s after a later tween on scaleY ends at 67.349 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 67.259 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 67.349
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 67.351 s, 0.002 s after a later tween on scaleY ends at 67.349 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 67.259 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 67.349
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 67.351 s, 0.002 s after a later tween on scaleY ends at 67.349 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 67.259 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 67.349
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 67.479 s, 0.002 s after a later tween on scaleY ends at 67.477 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 67.387 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 67.477
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 67.479 s, 0.002 s after a later tween on scaleY ends at 67.477 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 67.387 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 67.477
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 67.479 s, 0.002 s after a later tween on scaleY ends at 67.477 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 67.387 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 67.477
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 67.479 s, 0.002 s after a later tween on scaleY ends at 67.477 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 67.387 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 67.477
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 67.479 s, 0.002 s after a later tween on scaleY ends at 67.477 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 67.387 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 67.477
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 69.612 s, 0.002 s after a later tween on scaleY ends at 69.610 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 69.520 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 69.61
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 69.612 s, 0.002 s after a later tween on scaleY ends at 69.610 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 69.520 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 69.61
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 69.612 s, 0.002 s after a later tween on scaleY ends at 69.610 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 69.520 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 69.61
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 69.612 s, 0.002 s after a later tween on scaleY ends at 69.610 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 69.520 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 69.61
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 69.612 s, 0.002 s after a later tween on scaleY ends at 69.610 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 69.520 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 69.61
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 73.580 s, 0.002 s after a later tween on scaleY ends at 73.578 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 73.488 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 73.578
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 73.580 s, 0.002 s after a later tween on scaleY ends at 73.578 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 73.488 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 73.578
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 73.580 s, 0.002 s after a later tween on scaleY ends at 73.578 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 73.488 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 73.578
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 73.580 s, 0.002 s after a later tween on scaleY ends at 73.578 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 73.488 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 73.578
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 73.580 s, 0.002 s after a later tween on scaleY ends at 73.578 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 73.488 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 73.578
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 74.348 s, 0.002 s after a later tween on scaleY ends at 74.346 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 74.256 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 74.346
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 74.348 s, 0.002 s after a later tween on scaleY ends at 74.346 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 74.256 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 74.346
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 74.348 s, 0.002 s after a later tween on scaleY ends at 74.346 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 74.256 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 74.346
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 74.348 s, 0.002 s after a later tween on scaleY ends at 74.346 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 74.256 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 74.346
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 74.348 s, 0.002 s after a later tween on scaleY ends at 74.346 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 74.256 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 74.346
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 90.062 s, 0.002 s after a later tween on scaleY ends at 90.060 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 89.970 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 90.06
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 90.062 s, 0.002 s after a later tween on scaleY ends at 90.060 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 89.970 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 90.06
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 90.062 s, 0.002 s after a later tween on scaleY ends at 90.060 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 89.970 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 90.06
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 90.062 s, 0.002 s after a later tween on scaleY ends at 90.060 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 89.970 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 90.06
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 90.062 s, 0.002 s after a later tween on scaleY ends at 90.060 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 89.970 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 90.06
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 95.182 s, 0.002 s after a later tween on scaleY ends at 95.180 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 95.090 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 95.18
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 95.182 s, 0.002 s after a later tween on scaleY ends at 95.180 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 95.090 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 95.18
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 95.182 s, 0.002 s after a later tween on scaleY ends at 95.180 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 95.090 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 95.18
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 95.182 s, 0.002 s after a later tween on scaleY ends at 95.180 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 95.090 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 95.18
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 95.182 s, 0.002 s after a later tween on scaleY ends at 95.180 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 95.090 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 95.18
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 99.620 s, 0.002 s after a later tween on scaleY ends at 99.618 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 99.528 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 99.61800000000001
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 99.620 s, 0.002 s after a later tween on scaleY ends at 99.618 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 99.528 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 99.61800000000001
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 99.620 s, 0.002 s after a later tween on scaleY ends at 99.618 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 99.528 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 99.61800000000001
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 99.620 s, 0.002 s after a later tween on scaleY ends at 99.618 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 99.528 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 99.61800000000001
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 99.620 s, 0.002 s after a later tween on scaleY ends at 99.618 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 99.528 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 99.61800000000001
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 101.753 s, 0.002 s after a later tween on scaleY ends at 101.751 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 101.661 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 101.751
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 101.753 s, 0.002 s after a later tween on scaleY ends at 101.751 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 101.661 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 101.751
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 101.753 s, 0.002 s after a later tween on scaleY ends at 101.751 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 101.661 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 101.751
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 101.753 s, 0.002 s after a later tween on scaleY ends at 101.751 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 101.661 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 101.751
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 101.753 s, 0.002 s after a later tween on scaleY ends at 101.751 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 101.661 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 101.751
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 106.790 s, 0.002 s after a later tween on scaleY ends at 106.788 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 106.698 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 106.788
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 106.790 s, 0.002 s after a later tween on scaleY ends at 106.788 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 106.698 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 106.788
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 106.790 s, 0.002 s after a later tween on scaleY ends at 106.788 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 106.698 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 106.788
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 106.790 s, 0.002 s after a later tween on scaleY ends at 106.788 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 106.698 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 106.788
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 106.790 s, 0.002 s after a later tween on scaleY ends at 106.788 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 106.698 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 106.788
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 107.430 s, 0.002 s after a later tween on scaleY ends at 107.428 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 107.338 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 107.428
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 107.430 s, 0.002 s after a later tween on scaleY ends at 107.428 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 107.338 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 107.428
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 107.430 s, 0.002 s after a later tween on scaleY ends at 107.428 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 107.338 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 107.428
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 107.430 s, 0.002 s after a later tween on scaleY ends at 107.428 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 107.338 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 107.428
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 107.430 s, 0.002 s after a later tween on scaleY ends at 107.428 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 107.338 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 107.428
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 109.179 s, 0.002 s after a later tween on scaleY ends at 109.177 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 109.087 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 109.17699999999999
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 109.179 s, 0.002 s after a later tween on scaleY ends at 109.177 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 109.087 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 109.17699999999999
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 109.179 s, 0.002 s after a later tween on scaleY ends at 109.177 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 109.087 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 109.17699999999999
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 109.179 s, 0.002 s after a later tween on scaleY ends at 109.177 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 109.087 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 109.17699999999999
+      },
+      {
+        "code": "gsap_tween_tail",
+        "severity": "warning",
+        "message": "In timeline \"main\", a tween on scaleY of i ends at 109.179 s, 0.002 s after a later tween on scaleY ends at 109.177 s. For that tail the earlier tween takes scaleY back and leaves its own end value on screen, so the later tween's end never shows. End the earlier tween by 109.087 s, or add overwrite: \"auto\" to the later tween.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "130.69",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 109.17699999999999
+      }
+    ]
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 1,
+    "findings": [
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 7.261,
+        "selector": "#w01-sign > b:nth-of-type(1)",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 1389.12,
+          "top": 183.82,
+          "right": 1812.75,
+          "bottom": 317.84,
+          "width": 423.63,
+          "height": 134.02
+        },
+        "containerSelector": "#w01-camv",
+        "text": "¡OFERTAS!",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 0.11,
+        "dataAttributes": {},
+        "sourceFile": "compositions/w01.html",
+        "bbox": {
+          "x": 1389.12,
+          "y": 183.82,
+          "width": 423.63,
+          "height": 134.02
+        },
+        "firstSeen": 7.261,
+        "lastSeen": 7.261,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          7.261
+        ]
+      }
+    ],
+    "duration": 130.69,
+    "samples": [
+      7.261,
+      21.782,
+      36.303,
+      50.824,
+      65.345,
+      79.866,
+      94.387,
+      108.908,
+      123.429
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 1,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 3,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "contrast_aa_failure",
+        "severity": "warning",
+        "message": "Contrast is 2.9:1; WCAG AA requires 3:1.",
+        "text": "¡OFERTAS!",
+        "fg": "rgb(224,122,95)",
+        "bg": "rgb(255,253,247)",
+        "ratio": 2.9,
+        "requiredRatio": 3,
+        "suggestedColor": "rgb(219,119,93)",
+        "large": true,
+        "selector": "div > div:nth-of-type(2) > div > div:nth-of-type(1) > b",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w01.html",
+        "bbox": {
+          "x": 1389.8653564453125,
+          "y": 199.49842834472656,
+          "width": 352.888916015625,
+          "height": 107.36988830566406
+        },
+        "time": 7.261,
+        "times": [
+          7.261
+        ]
+      },
+      {
+        "code": "contrast_aa_failure",
+        "severity": "warning",
+        "message": "Contrast is 2.74:1; WCAG AA requires 3:1.",
+        "text": "Domingo, 9:40 p.m.",
+        "fg": "rgb(224,122,95)",
+        "bg": "rgb(251,246,238)",
+        "ratio": 2.74,
+        "requiredRatio": 3,
+        "suggestedColor": "rgb(213,116,91)",
+        "large": true,
+        "selector": "#w06-time",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w06.html",
+        "bbox": {
+          "x": 96,
+          "y": 76,
+          "width": 555.59375,
+          "height": 70.390625
+        },
+        "time": 65.345,
+        "times": [
+          65.345
+        ]
+      },
+      {
+        "code": "contrast_aa_failure",
+        "severity": "warning",
+        "message": "Contrast is 2.74:1; WCAG AA requires 3:1.",
+        "text": "7:30 p.m.",
+        "fg": "rgb(224,122,95)",
+        "bg": "rgb(251,246,238)",
+        "ratio": 2.74,
+        "requiredRatio": 3,
+        "suggestedColor": "rgb(213,116,91)",
+        "large": true,
+        "selector": "#w08-time",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w08.html",
+        "bbox": {
+          "x": 96,
+          "y": 76,
+          "width": 262.921875,
+          "height": 70.390625
+        },
+        "time": 94.387,
+        "times": [
+          94.387
+        ]
+      }
+    ],
+    "enabled": true,
+    "samples": [
+      7.261,
+      36.303,
+      65.345,
+      94.387,
+      123.429
+    ],
+    "checked": 18,
+    "passed": 15
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 9,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "first_frame_empty",
+        "severity": "warning",
+        "message": "Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and \"pregunte en caja\" renders at 25 px for 3.71 s: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "pregunte en caja",
+        "selector": "#w01-sign > em:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w01.html",
+        "bbox": {
+          "x": 1482.28,
+          "y": 321.77,
+          "width": 195.18,
+          "height": 57.74
+        },
+        "time": 6.764,
+        "times": [
+          6.764
+        ],
+        "fontPx": 24.55,
+        "floorPx": 28,
+        "seconds": 3.708,
+        "elements": [
+          {
+            "selector": "#w01-sign > em:nth-of-type(1)",
+            "text": "pregunte en caja",
+            "fontPx": 24.55,
+            "time": 6.764,
+            "seconds": 3.708
+          }
+        ]
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and \"libreriaaurora.gt\" renders at 18 px for 14.18 s: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "libreriaaurora.gt",
+        "selector": "#w02-web > div:nth-of-type(1) > span:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w02.html",
+        "bbox": {
+          "x": 219.81,
+          "y": 161.93,
+          "width": 132.28,
+          "height": 22.86
+        },
+        "time": 11.564,
+        "times": [
+          11.564
+        ],
+        "fontPx": 17.89,
+        "floorPx": 28,
+        "seconds": 14.181,
+        "elements": [
+          {
+            "selector": "#w02-web > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "libreriaaurora.gt",
+            "fontPx": 17.89,
+            "time": 11.564,
+            "seconds": 14.181
+          }
+        ]
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and 6 text elements stay under it for 0.5 s or more, the smallest \"3:12 p.m.\" at 17 px: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "3:12 p.m.",
+        "selector": "#w04-m1 > small:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w04.html",
+        "bbox": {
+          "x": 589,
+          "y": 378.37,
+          "width": 67.95,
+          "height": 21.5
+        },
+        "time": 37.309,
+        "times": [
+          36.436,
+          37.309,
+          37.309,
+          38.4,
+          38.4,
+          39.272
+        ],
+        "fontPx": 17,
+        "floorPx": 28,
+        "seconds": 10.909,
+        "elements": [
+          {
+            "selector": "#w04-m1 > small:nth-of-type(1)",
+            "text": "3:12 p.m.",
+            "fontPx": 17,
+            "time": 37.309,
+            "seconds": 10.909
+          },
+          {
+            "selector": "#w04-m2 > small:nth-of-type(1)",
+            "text": "3:15 p.m.",
+            "fontPx": 17,
+            "time": 38.4,
+            "seconds": 9.818
+          },
+          {
+            "selector": "#w04-web > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "libreriaaurora.gt",
+            "fontPx": 17.94,
+            "time": 39.272,
+            "seconds": 8.946
+          },
+          {
+            "selector": "div.head > div:nth-of-type(2) > span:nth-of-type(1)",
+            "text": "WhatsApp · en línea",
+            "fontPx": 19.81,
+            "time": 36.436,
+            "seconds": 11.782
+          },
+          {
+            "selector": "#w04-m1",
+            "text": "Hola, quiero una página que se sienta como mi librería, con mis colores.",
+            "fontPx": 26,
+            "time": 37.309,
+            "seconds": 10.909
+          },
+          {
+            "selector": "#w04-m2",
+            "text": "¡Claro, María José! Le armamos un diseño a su medida. ¿Nos manda su logo y su historia?",
+            "fontPx": 26,
+            "time": 38.4,
+            "seconds": 9.818
+          }
+        ]
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and 6 text elements stay under it for 0.5 s or more, the smallest \"Publicación · 9:12 p.m.\" at 18 px: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "Publicación · 9:12 p.m.",
+        "selector": "div.top > div:nth-of-type(2) > span:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w06.html",
+        "bbox": {
+          "x": 261.55,
+          "y": 251.92,
+          "width": 189.8,
+          "height": 24.94
+        },
+        "time": 64.145,
+        "times": [
+          64.145,
+          64.145,
+          64.145,
+          64.145,
+          64.145,
+          67.2
+        ],
+        "fontPx": 18.4,
+        "floorPx": 28,
+        "seconds": 12.872,
+        "elements": [
+          {
+            "selector": "div.top > div:nth-of-type(2) > span:nth-of-type(1)",
+            "text": "Publicación · 9:12 p.m.",
+            "fontPx": 18.4,
+            "time": 64.145,
+            "seconds": 12.872
+          },
+          {
+            "selector": "div.act > span:nth-of-type(1)",
+            "text": "Me gusta",
+            "fontPx": 20.24,
+            "time": 64.145,
+            "seconds": 12.872
+          },
+          {
+            "selector": "div.act > span:nth-of-type(2)",
+            "text": "Comentar",
+            "fontPx": 20.24,
+            "time": 64.145,
+            "seconds": 12.872
+          },
+          {
+            "selector": "div.act > span:nth-of-type(3)",
+            "text": "Compartir",
+            "fontPx": 20.24,
+            "time": 64.145,
+            "seconds": 12.872
+          },
+          {
+            "selector": "#w06-post > p:nth-of-type(1)",
+            "text": "¡Regreso a clases! 15% en cuadernos en nuestras tres tiendas. Recorte su cupón en la página 👇",
+            "fontPx": 23.92,
+            "time": 64.145,
+            "seconds": 12.872
+          },
+          {
+            "selector": "div.top > div:nth-of-type(2) > b:nth-of-type(1)",
+            "text": "Librería Aurora",
+            "fontPx": 25.76,
+            "time": 67.2,
+            "seconds": 9.817
+          }
+        ]
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and \"DENGO POS · Caja principal #1 · Central Zona 1\" renders at 18 px for 10.04 s: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "DENGO POS · Caja principal #1 · Central Zona 1",
+        "selector": "#w07-pos > div:nth-of-type(1) > span:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w07.html",
+        "bbox": {
+          "x": 682.32,
+          "y": 112.27,
+          "width": 367.94,
+          "height": 22.95
+        },
+        "time": 79.418,
+        "times": [
+          79.418
+        ],
+        "fontPx": 17.96,
+        "floorPx": 28,
+        "seconds": 10.036,
+        "elements": [
+          {
+            "selector": "#w07-pos > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "DENGO POS · Caja principal #1 · Central Zona 1",
+            "fontPx": 17.96,
+            "time": 79.418,
+            "seconds": 10.036
+          }
+        ]
+      },
+      {
+        "code": "line_unread",
+        "severity": "warning",
+        "message": "\"Un solo uso · a nombre de Carmen López\" (8 words) is on screen 1.98 s (±0.01 s), under its 2.17 s floor: hold it about 0.5 s + 0.3 s a word (2.90 s here) before it leaves or changes; see references/motion.md.",
+        "text": "Un solo uso · a nombre de Carmen López",
+        "selector": "#w07-p1",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w07.html",
+        "bbox": {
+          "x": 1098.3,
+          "y": 956.58,
+          "width": 593.79,
+          "height": 41.84000000000003
+        },
+        "time": 87.435,
+        "words": 8,
+        "seconds": 1.978,
+        "floorSeconds": 2.175
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and \"libreriaaurora.gt/ingresar\" renders at 18 px for 9.82 s: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "libreriaaurora.gt/ingresar",
+        "selector": "#w09-web > div:nth-of-type(1) > span:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w09.html",
+        "bbox": {
+          "x": 595.27,
+          "y": 134.91,
+          "width": 205.17,
+          "height": 22.83
+        },
+        "time": 104.072,
+        "times": [
+          104.072
+        ],
+        "fontPx": 17.87,
+        "floorPx": 28,
+        "seconds": 9.818,
+        "elements": [
+          {
+            "selector": "#w09-web > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "libreriaaurora.gt/ingresar",
+            "fontPx": 17.87,
+            "time": 104.072,
+            "seconds": 9.818
+          }
+        ]
+      },
+      {
+        "code": "line_unread",
+        "severity": "warning",
+        "message": "\"Próximo video: el portal de maestros →\" (6 words) is on screen 1.66 s (±0.01 s), under its 1.72 s floor: hold it about 0.5 s + 0.3 s a word (2.30 s here) before it leaves or changes; see references/motion.md.",
+        "text": "Próximo video: el portal de maestros →",
+        "selector": "#w09-p1",
+        "dataAttributes": {},
+        "sourceFile": "compositions/w09.html",
+        "bbox": {
+          "x": 1337.22,
+          "y": 917.11,
+          "width": 545.1000000000001,
+          "height": 83.77999999999997
+        },
+        "time": 112.104,
+        "words": 6,
+        "seconds": 1.663,
+        "floorSeconds": 1.725
+      }
+    ],
+    "enabled": true,
+    "step": 0.21800000000000352,
+    "samples": 599
+  },
+  "audio": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

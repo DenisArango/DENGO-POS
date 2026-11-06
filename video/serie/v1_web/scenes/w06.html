@@ -1,0 +1,32 @@
+    .post { position: absolute; left: 160px; top: 190px; width: 640px; background: #fff; border-radius: 24px; border: 1px solid #e6dfd2; box-shadow: 0 26px 64px rgba(27, 34, 51, 0.16); overflow: hidden; opacity: 0; }
+    .post .top { display: flex; align-items: center; gap: 16px; padding: 22px 26px; }
+    .post .av { width: 58px; height: 58px; border-radius: 50%; background: #1b2233; display: grid; place-items: center; color: #f2c14e; font-size: 30px; font-weight: 800; }
+    .post .top b { display: block; font-size: 28px; }
+    .post .top span { display: block; font-size: 24px; color: #6b6458; }
+    .post p { font-size: 26px; line-height: 1.35; padding: 0 26px 18px; }
+    .post .img { position: relative; width: 640px; height: 340px; overflow: hidden; }
+    .post .img img { position: absolute; width: 1096px; left: -196px; top: -150px; max-width: none; }
+    .post .act { display: flex; gap: 40px; padding: 18px 26px; font-size: 26px; color: #6b6458; border-top: 1px solid #efe6d5; }
+    #w06-ph { opacity: 0; }
+    #w06-p1 { left: 160px; top: 790px; opacity: 0; }
+    #w06-p2 { left: 860px; top: 700px; opacity: 0; }
+<!--markup-->
+    <div id="w06-post" class="post">
+      <div class="top"><div class="av">/</div><div><b>Librería Aurora</b><span>Publicación · 9:12 p.m.</span></div></div>
+      <p>¡Regreso a clases! 15% en cuadernos en nuestras tres tiendas. Recorte su cupón en la página.</p>
+      <div class="img"><img src="assets/ui/web_aurora_oferta.png" alt="" /></div>
+      <div class="act"><span>Me gusta</span><span>Comentar</span><span>Compartir</span></div>
+    </div>
+    <phone id="w06-ph" src="rec/m_cupon.mp4" at="1240 22 446" start="{T:abrio:1:-0.3}" mstart="1.8" dur="10.000" />
+    <div id="w06-p1" class="pill">Sin cuentas ni contraseñas</div>
+    <div id="w06-p2" class="pill sun">QR único</div>
+<!--script-->
+    lift("#w06-post", 0.2);
+    tl.fromTo("#w06-ph", { opacity: 0, x: 120 }, { opacity: 1, x: 0, duration: 0.7, ease: "expo.out" }, {T:abrio:1:-0.5});
+    tl.to("#w06-post", { scale: 0.92, opacity: 0.55, duration: 0.6, ease: "power2.inOut" }, {T:abrio});
+    pop("#w06-p1", {T:sin});
+    pop("#w06-p2", {T:unico:1:-0.3});
+<!--sfx-->
+notification 0.25 0.35
+typing {T:escribio} 0.3
+pop {T:cupon} 0.5

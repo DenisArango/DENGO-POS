@@ -1,0 +1,38 @@
+    .chat { position: absolute; left: 96px; top: 120px; width: 600px; background: #f3eee5; border-radius: 26px; overflow: hidden; box-shadow: 0 26px 64px rgba(27, 34, 51, 0.18); opacity: 0; }
+    .chat .head { background: #1e4d68; color: #fff; padding: 22px 28px; display: flex; align-items: center; gap: 16px; }
+    .chat .head .dot { width: 54px; height: 54px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
+    .chat .head b { display: block; font-size: 28px; }
+    .chat .head span { display: block; font-size: 24px; opacity: 0.8; }
+    .chat .body { padding: 26px 24px 30px; display: flex; flex-direction: column; gap: 16px; }
+    .msg { max-width: 82%; font-size: 26px; line-height: 1.35; padding: 16px 20px 14px; border-radius: 20px; opacity: 0; }
+    .msg small { display: block; font-size: 22px; opacity: 0.6; margin-top: 6px; text-align: right; }
+    .msg.me { align-self: flex-end; background: #d9f2df; border-bottom-right-radius: 6px; }
+    .msg.them { align-self: flex-start; background: #fff; border-bottom-left-radius: 6px; }
+    #w04-web { opacity: 0; }
+    #w04-p1 { left: 820px; top: 860px; opacity: 0; }
+    #w04-p2 { left: 1120px; top: 860px; opacity: 0; }
+    #w04-p3 { left: 1300px; top: 52px; opacity: 0; }
+<!--markup-->
+    <div id="w04-chat" class="chat">
+      <div class="head"><div class="dot"><svg width="34" height="38" viewBox="5 5 120 135"><path d="M 65,15 L 115,44 L 115,101 L 65,130 L 15,101 L 15,44 Z" fill="none" stroke="#1E4D68" stroke-width="14" stroke-linejoin="round"/><path d="M 28,107 L 65,42 L 102,107" fill="none" stroke="#E07A5F" stroke-width="14" stroke-linejoin="round" stroke-linecap="round"/></svg></div><div><b>Soporte DENGO</b><span>WhatsApp · en línea</span></div></div>
+      <div class="body">
+        <div id="w04-m1" class="msg me">Hola, quiero una página que se sienta como mi librería, con mis colores.<small>3:12 p.m.</small></div>
+        <div id="w04-m2" class="msg them">¡Claro, María José! Le armamos un diseño a su medida. ¿Nos manda su logo y su historia?<small>3:15 p.m.</small></div>
+      </div>
+    </div>
+    <browser id="w04-web" src="ui/web_aurora_home.png" url="libreriaaurora.gt" at="780 150 1060" />
+    <div id="w04-p1" class="pill">Sus colores</div>
+    <div id="w04-p2" class="pill sun">Su historia</div>
+    <div id="w04-p3" class="pill coral">Adecuaciones a la medida</div>
+<!--script-->
+    pip({T:soporte:1:-0.2}, "bl");
+    lift("#w04-chat", {T:soporte});
+    pop("#w04-m1", {T:whatsapp:1:+0.1});
+    pop("#w04-m2", {T:ayudaron});
+    lift("#w04-web", {T:diseno});
+    pan("#w04-web-i", {T:diseno}, { scale: 1.08, transformOrigin: "30% 40%" }, 5);
+    pop("#w04-p1", {T:colores}); pop("#w04-p2", {T:historia});
+    pop("#w04-p3", {T:adecuan:1:-0.1});
+<!--sfx-->
+notification {T:ayudaron} 0.45
+pop {T:adecuan:1:-0.1} 0.45

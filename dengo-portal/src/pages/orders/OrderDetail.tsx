@@ -117,7 +117,7 @@ export default function OrderDetail() {
             <dl className="grid grid-cols-2 gap-y-2 text-sm">
               <dt className="text-green-700">Fecha</dt>
               <dd className="font-semibold text-green-900">
-                {new Date(order.deliveryDate).toLocaleDateString('es-GT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                {new Date(order.deliveryDate).toLocaleDateString('es-GT', { timeZone: 'UTC', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </dd>
               {order.deliveryTime && (
                 <>

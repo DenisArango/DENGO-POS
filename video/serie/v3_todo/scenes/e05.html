@@ -1,0 +1,18 @@
+{INCLUDE:calc.css}
+    #e05-calc { left: 1560px; top: 40px; transform-origin: 100% 0%; z-index: 9; }
+    #e05-pos, #e05-ph { opacity: 0; }
+<!--markup-->
+    <div id="e05-calc" class="calc"><div class="lcd"><span class="v" id="e05-v">20</span></div><div class="keys"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cap"><b>fx-82</b> · Central</div></div>
+    <browser id="e05-pos" src="rec/pos_cupon.mp4" url="DENGO POS · Caja principal #1 · Central Zona 1" at="460 176 1300" start="0.3" mstart="4.8" />
+    <ring id="e05-r1" on="e05-pos" box="1213 625 345 76" />
+    <phone id="e05-ph" src="ui/m_cupon_final.png" at="1580 470 250" />
+<!--script-->
+    tl.set("#e05-calc", { scale: 0.62 }, 0);
+    lift("#e05-pos", 0.2);
+    tl.fromTo("#e05-ph", { opacity: 0, y: 60, rotation: 5 }, { opacity: 1, y: 0, rotation: 3, duration: 0.6, ease: "back.out(1.4)" }, {T:carmen});
+    ring("#e05-r1", {T:aplica}, 1.6);
+    count("#e05-v", {T:diecinueve:1:-0.1}, 20, 19, 0.3);
+    tl.fromTo("#e05-calc .lcd", { backgroundColor: "#f2c14e" }, { backgroundColor: "#cfe0c3", duration: 0.8 }, {T:diecinueve});
+<!--sfx-->
+pop {T:aplica} 0.4
+pop {T:diecinueve} 0.45

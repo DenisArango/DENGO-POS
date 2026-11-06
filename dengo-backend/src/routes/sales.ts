@@ -6,12 +6,13 @@ import { updateStock, getConversionFactors } from '../services/inventory.service
 import { log } from '../services/audit.service.js'
 import { canAccessBranch } from '../lib/branch-scope.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
-import { certifyInvoice } from '../lib/fel.js'
+import { certifySale, voidSaleFel, schoolReceiver } from '../lib/fel.js'
 import { looksLikeRealNit } from '../lib/nit.js'
 import { parseBusinessDateParam } from '../lib/timezone.js'
 import { resolveOpenRegisterId } from './cash-registers.js'
 import { saleLineCost, saleBaseUnitCost, currentUnitCosts } from '../lib/saleCost.js'
 import { alertNewSale } from '../lib/staffAlerts.js'
+import { checkCoupon, computePromotion } from '../lib/promotions.js'
 
 // A line is a catalog product (productId) OR a product typed in that isn't
 // in the catalog (customName): no stock movement, no per-product tracking,
@@ -25,6 +26,8 @@ const saleItemSchema = z.object({
   discount: z.number().min(0).max(1).default(0),
   total: z.number().min(0),
   unitCost: z.number().min(0).optional(), // only used for custom lines
+  // Coupon share of this line (see lib/promotions.ts). Re-checked below.
+  promoDiscount: z.number().min(0).optional(),
 }).refine(i => !!i.productId !== !!i.customName, { message: 'Cada línea necesita un producto del catálogo o un nombre' })
 
 type SaleItemInput = z.infer<typeof saleItemSchema>
@@ -32,10 +35,30 @@ const catalogItems = <T extends { productId?: string | null | undefined }>(items
   items.filter((i): i is T & { productId: string } => !!i.productId)
 
 /** Name of a line for documents (FEL, receipts): product · presentation, or the typed-in name. */
+// What the POS needs back about a factura right after checkout (receipt).
+const FEL_SELECT = {
+  felStatus: true, felError: true, felUuid: true, felAuthNumber: true, felSatSerie: true, felSatNumber: true,
+  felCertifiedAt: true, felPdfUrl: true, felCertifierName: true, felCertifierNit: true, felEnvironment: true, felDocType: true,
+  buyerNit: true, buyerName: true,
+} as const
+
 function lineDescription(item: { customName?: string | null; productId?: string | null; product?: { name?: string } | null; variation?: { name?: string; isDefault?: boolean } | null }) {
   if (item.customName) return item.customName
   const base = item.product?.name ?? item.productId ?? 'Producto'
   return item.variation && !item.variation.isDefault ? `${base} (${item.variation.name})` : base
+}
+
+/** Current catalog sale price per product:variation (for the "no combina" check). */
+async function catalogPrices(items: { productId?: string | null | undefined; variationId?: string | null | undefined }[]) {
+  const ids = [...new Set(items.map(i => i.productId).filter((x): x is string => !!x))]
+  const out = new Map<string, number>()
+  if (ids.length === 0) return out
+  const products = await prisma.product.findMany({ where: { id: { in: ids } }, select: { id: true, basePrice: true, variations: { select: { id: true, price: true } } } })
+  for (const p of products) {
+    out.set(`${p.id}:`, Number(p.basePrice))
+    for (const v of p.variations) out.set(`${p.id}:${v.id}`, Number(v.price))
+  }
+  return out
 }
 
 /** Frozen unit cost per line: catalog cost today, or the typed cost for a custom line. */
@@ -72,6 +95,8 @@ const createSaleSchema = z.object({
   // Set only by the offline queue (see dengo-frontend/src/lib/offlineDb.ts) —
   // lets a retried sync POST be replayed safely instead of double-creating.
   clientRequestId: z.string().optional(),
+  // Website coupon (scanned QR/barcode or typed code), single use.
+  couponCode: z.string().max(300).optional(),
 }).refine(
   data => {
     if (data.paymentMethod !== 'MIXED') return true
@@ -95,6 +120,7 @@ const saleInclude = {
       variation: { select: { id: true, name: true, conversionFactor: true, price: true, isDefault: true } },
     },
   },
+  coupon: { select: { code: true, name: true, phone: true, promotion: { select: { id: true, name: true } } } },
 }
 
 // Try to enrich a sale with the new-column data; silently skips if columns/tables are missing
@@ -150,14 +176,16 @@ async function generateInvoiceForSale(
 ): Promise<{ ok: true; sale: any } | { ok: false; error: string }> {
   const sale = await prisma.sale.findUnique({
     where: { id: saleId },
-    include: { customer: true, quotation: { select: { id: true } } },
+    include: { customer: true, quotation: { select: { id: true, portalOrder: { select: { school: { select: { name: true, nit: true, invoiceName: true, address: true } } } } } } },
   })
   if (!sale) return { ok: false, error: 'Venta no encontrada' }
   if (sale.isVoided) return { ok: false, error: 'No se puede facturar una venta anulada' }
   if (sale.requiresInvoice) return { ok: false, error: 'Esta venta ya tiene factura' }
 
-  const buyerNit = overrides?.buyerNit?.trim() || sale.customer?.nit
-  const buyerName = overrides?.buyerName?.trim() || sale.customer?.name
+  // Portal orders are billed to the school (its NIT), not the quotation's customer.
+  const school = schoolReceiver(sale)
+  const buyerNit = overrides?.buyerNit?.trim() || school?.nit || sale.customer?.nit
+  const buyerName = overrides?.buyerName?.trim() || school?.name || sale.customer?.name
   if (!looksLikeRealNit(buyerNit)) {
     return { ok: false, error: `Se necesita un NIT válido — ${sale.customer?.name ?? 'el cliente'} no tiene uno registrado` }
   }
@@ -181,29 +209,9 @@ async function generateInvoiceForSale(
 
   // Certification is external I/O — deliberately outside the DB transaction
   // above (never hold row locks on a network call), same as at sale creation.
-  const items = await prisma.saleItem.findMany({ where: { saleId }, include: { product: { select: { name: true } }, variation: { select: { name: true, isDefault: true } } } })
-  let felResult: { status: string; uuid?: string; authNumber?: string; certifiedAt?: Date; error?: string }
-  try {
-    felResult = await certifyInvoice({
-      saleId,
-      series: reserved.invoiceSeries,
-      seqNumber: reserved.invoiceSeqNumber,
-      buyerNit: buyerNit!,
-      buyerName: buyerName!,
-      total: Number(sale.total),
-      items: items.map(i => ({ description: lineDescription(i), quantity: Number(i.quantity), unitPrice: Number(i.unitPrice), total: Number(i.total) })),
-    })
-  } catch (err: any) {
-    felResult = { status: 'FAILED', error: err?.message ?? 'Error al certificar' }
-  }
-  const felData: any = Object.fromEntries(Object.entries({
-    felStatus: felResult.status,
-    felUuid: felResult.uuid,
-    felAuthNumber: felResult.authNumber,
-    felCertifiedAt: felResult.certifiedAt,
-    felError: felResult.error,
-  }).filter(([, v]) => v !== undefined))
-  const final = await prisma.sale.update({ where: { id: saleId }, data: felData, include: saleInclude })
+  // It never fails the action: the factura stays PENDING/FAILED with a reason.
+  await certifySale(saleId)
+  const final = await prisma.sale.findUniqueOrThrow({ where: { id: saleId }, include: saleInclude })
 
   // If this sale came from a Portal Escolar quotation, that order's status
   // was stuck at QUOTED forever with no signal that it ever got billed —
@@ -422,9 +430,65 @@ export default async function salesRoutes(fastify: FastifyInstance) {
       }
     }
 
+    // Coupon: the discount the POS shows came from /api/website/coupons/validate;
+    // here it's recomputed from the lines and must match, so nobody can send
+    // a bigger discount than the offer gives.
+    let couponPlan: { id: string; total: number; lines: number[]; customerId: string | null } | null = null
+    if (data.couponCode) {
+      const check = await checkCoupon(data.couponCode, data.branchId)
+      if (!check.ok) {
+        if (!isOfflineReplay) return reply.status(422).send({ error: check.error, code: 'COUPON_' + check.code })
+        offlineDiscrepancies.push(`Cupón ${data.couponCode} no se pudo canjear al sincronizar: ${check.error} — la venta quedó con el descuento que se cobró`)
+      } else {
+        const promo = check.coupon.promotion
+        const lines = data.items.map(i => ({ productId: i.productId ?? '', variationId: i.variationId ?? null, quantity: i.quantity, unitPrice: i.unitPrice, discount: i.discount }))
+        const r = await computePromotion(promo, lines)
+        const sent = data.items.map(i => i.promoDiscount ?? 0)
+        const fail = (msg: string) => {
+          if (!isOfflineReplay) return reply.status(409).send({ error: msg, code: 'COUPON_MISMATCH' })
+          offlineDiscrepancies.push(`Cupón ${check.coupon.code}: ${msg}`)
+          return null
+        }
+        if (!r.ok) {
+          const res = fail(r.error); if (res) return res
+        } else if (r.lines.some((v, k) => Math.abs(v - (sent[k] ?? 0)) > 0.02)) {
+          const res = fail('El descuento del cupón ya no coincide con la venta. Vuelve a aplicar el cupón.'); if (res) return res
+        } else {
+          if (!promo.allowManualDiscount) {
+            // The offer doesn't combine: lines it covers must be at full
+            // catalog price, with no manual discount.
+            const elig = data.items.filter((_, k) => r.eligible[k])
+            const prices = await catalogPrices(elig)
+            const bad = elig.find(i => i.discount > 0 || i.unitPrice + 0.005 < (prices.get(`${i.productId}:${i.variationId ?? ''}`) ?? 0))
+            if (bad) {
+              const res = fail('Esta oferta no se combina con descuentos manuales: quita el descuento o el cambio de precio de los productos de la oferta.'); if (res) return res
+            }
+          }
+          if (!couponPlan && (r.ok)) couponPlan = { id: check.coupon.id, total: r.total, lines: r.lines, customerId: check.coupon.customerId }
+        }
+      }
+    }
+
     const unitCosts = await currentUnitCosts(catalogItems(data.items))
 
     const sale = await prisma.$transaction(async (tx) => {
+      // Claim the coupon first: two registers scanning the same coupon at
+      // the same instant — only one gets it.
+      if (couponPlan) {
+        const claimed = await tx.promotionCoupon.updateMany({
+          where: { id: couponPlan.id, status: 'ISSUED' },
+          data: {
+            status: 'REDEEMED', redeemedAt: new Date(), branchId: data.branchId, redeemedById: request.user.id,
+            discountAmount: couponPlan.total, customerId: couponPlan.customerId ?? effectiveCustomerId ?? null,
+          },
+        })
+        if (claimed.count === 0) {
+          if (!isOfflineReplay) throw Object.assign(new Error('Este cupón se acaba de usar en otra venta'), { statusCode: 409 })
+          offlineDiscrepancies.push('El cupón ya se había usado en otra venta al sincronizar — esta venta quedó sin cupón asociado')
+          couponPlan = null
+        }
+      }
+
       let invoiceSeries: string | undefined
       let invoiceSeqNumber: number | undefined
       if (requiresInvoice) {
@@ -476,8 +540,9 @@ export default async function salesRoutes(fastify: FastifyInstance) {
           buyerNit,
           buyerName,
           felStatus: requiresInvoice ? 'PENDING' : 'NONE',
+          ...(couponPlan ? { couponId: couponPlan.id, promoDiscount: couponPlan.total } : {}),
           items: {
-            create: data.items.map(item => ({
+            create: data.items.map((item, k) => ({
               productId: item.productId ?? null,
               customName: item.productId ? null : item.customName!,
               variationId: item.productId ? item.variationId : undefined,
@@ -486,6 +551,7 @@ export default async function salesRoutes(fastify: FastifyInstance) {
               discount: item.discount,
               total: item.total,
               unitCost: lineUnitCost(item, unitCosts),
+              promoDiscount: couponPlan && (couponPlan.lines[k] ?? 0) > 0 ? couponPlan.lines[k] : null,
             })),
           },
         },
@@ -527,33 +593,16 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     // Certification is external I/O — deliberately outside the DB transaction
     // above (never hold row locks on a network call), and never blocks the
     // sale: a FEL failure here doesn't undo a sale that already happened.
-    let felResult: { status: string; uuid?: string; authNumber?: string; certifiedAt?: Date; error?: string } | undefined
+    let felStatus: string = sale.felStatus
     if (requiresInvoice) {
-      try {
-        felResult = await certifyInvoice({
-          saleId: sale.id,
-          series: sale.invoiceSeries!,
-          seqNumber: sale.invoiceSeqNumber!,
-          buyerNit: buyerNit!,
-          buyerName: buyerName!,
-          total: data.total,
-          items: ((sale as any).items as any[]).map(i => ({ description: lineDescription(i), quantity: Number(i.quantity), unitPrice: Number(i.unitPrice), total: Number(i.total) })),
-        })
-      } catch (err: any) {
-        felResult = { status: 'FAILED', error: err?.message ?? 'Error al certificar' }
-      }
-      const felData: any = Object.fromEntries(Object.entries({
-        felStatus: felResult.status,
-        felUuid: felResult.uuid,
-        felAuthNumber: felResult.authNumber,
-        felCertifiedAt: felResult.certifiedAt,
-        felError: felResult.error,
-      }).filter(([, v]) => v !== undefined))
-      await prisma.sale.update({ where: { id: sale.id }, data: felData })
+      await certifySale(sale.id)
+      const fresh = await prisma.sale.findUnique({ where: { id: sale.id }, select: { felStatus: true } })
+      felStatus = fresh?.felStatus ?? felStatus
     }
 
     alertNewSale(sale, request.user.id)
-    return reply.status(201).send({ ...sale, felStatus: felResult?.status ?? sale.felStatus })
+    const felFresh = requiresInvoice ? await prisma.sale.findUnique({ where: { id: sale.id }, select: FEL_SELECT }) : null
+    return reply.status(201).send({ ...sale, ...(felFresh ?? {}), felStatus })
   })
 
   // PUT /api/sales/:id  (full edit — admin only: items, discounts, payment, notes)
@@ -590,6 +639,18 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     if (!canAccessBranch(request, existing.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
 
     const { items: newItems, ...simpleFields } = body.data
+
+    // The coupon's discount was computed for these exact lines; changing
+    // them would leave it wrong. Void and redo the sale instead.
+    // A certified factura is a SAT document: its lines and total can't change
+    // here. Partial returns go through a nota de crédito; otherwise void and redo.
+    if (existing.felStatus === 'CERTIFIED' && (newItems || simpleFields.total !== undefined || simpleFields.discount !== undefined || simpleFields.subtotal !== undefined)) {
+      return reply.status(400).send({ error: 'Esta venta tiene factura certificada: para corregir productos o montos emite una nota de crédito, o anula la venta y hazla de nuevo.' })
+    }
+
+    if (newItems && existing.couponId) {
+      return reply.status(400).send({ error: 'Esta venta usó un cupón: para cambiar sus productos, anúlala (el cupón vuelve a quedar disponible) y hazla de nuevo.' })
+    }
 
     // Editing may keep the out-of-catalog lines a converted quotation
     // brought, but never add new ones (the POS sells catalog products only).
@@ -769,6 +830,15 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     })
     if (claimed.count === 0) return reply.status(400).send({ error: 'La venta ya fue anulada' })
 
+    // A voided sale gives its coupon back: the customer didn't get the offer.
+    if (sale.couponId) {
+      await prisma.promotionCoupon.updateMany({
+        where: { id: sale.couponId, status: 'REDEEMED' },
+        data: { status: 'ISSUED', redeemedAt: null, redeemedById: null, discountAmount: null, branchId: null },
+      })
+      await prisma.sale.update({ where: { id }, data: { couponId: null } })
+    }
+
     for (const item of catalogItems(sale.items)) {
       const convFactor = Number(item.variation?.conversionFactor ?? 1)
       await updateStock(item.productId, sale.branchId, Number(item.quantity) * convFactor, {
@@ -787,8 +857,13 @@ export default async function salesRoutes(fastify: FastifyInstance) {
       })
     }
 
-    await log({ userId: request.user.id, action: 'VOID', entity: 'Sale', entityId: id, newValues: { reason } })
-    return reply.send({ message: 'Venta anulada' })
+    // A certified factura must also be annulled at the SAT (through the
+    // certifier). The sale is voided either way; if the annulment fails it is
+    // recorded (felVoidStatus=FAILED) so it can be retried or done in FELplex.
+    const fel = await voidSaleFel(id, reason ?? 'Anulación de venta')
+
+    await log({ userId: request.user.id, action: 'VOID', entity: 'Sale', entityId: id, newValues: { reason, felVoid: fel.ok ? 'ok' : fel.error } })
+    return reply.send({ message: fel.ok ? 'Venta anulada' : `Venta anulada, pero la factura no se pudo anular en la SAT: ${fel.error}`, felVoidError: fel.ok ? null : fel.error })
   })
 
   // ── Credit payments (abonos) ──────────────────────────────────────────────

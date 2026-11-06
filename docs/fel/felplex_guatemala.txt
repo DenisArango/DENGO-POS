@@ -1,0 +1,3497 @@
+AUTH (collection): null
+
+==========================================================================================
+## Guatemala / Endpoints
+En esta sección se describiran los endpoints disponibles de:
+
+
+Certificacion
+
+
+
+Anulacion
+
+
+
+Metodos de envio
+
+
+
+Solicitud de datos
+
+
+
+Validacion de datos
+
+==========================================================================================
+## Guatemala / Endpoints / Certificación de documentos
+En Felplex existe la posiblidad de poder enviar las peticiones de certificacion de la siguiente manera
+
+
+Json: con parametros especificos para el DTE, revisar campos en Variables Generales
+
+
+
+XML: Debe ser enviado en base 64
+
+
+
+
+La certificacion de los documentos son de manera sincrona ya que espera la respuesta de la certificación
+
+
+Autorización
+
+
+
+Serie
+
+
+
+Número de documento
+
+------------------------------------------------------------------------------------------
+### Guatemala / Endpoints / Certificación de documentos / Crear DTE Síncrono
+POST {{entorno}}/api/entity/{{empresa}}/invoices/await
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+DESC: El DTE es enviado a certificar en el momento, esperando la respuesta de la misma y mostrando la información de autorización o el listado de errores producto de la verificación realizada por la SAT.
+BODY:
+{
+
+  "type": "FACT",
+
+  "currency": "GTQ",
+
+  "datetime_issue": {{YYYY-MM-DDThh:mm:ss}},
+
+  "external_id": "SI24G-0010",
+
+  "items": [
+
+    {
+
+      "qty": "4",
+
+      "type": "B",
+
+      "price": 449.12,
+
+      "description": "Vasos Plasticos",
+
+      "without_iva": 0,
+
+      "discount": 0,
+
+      "is_discount_percentage": 0,
+
+      "taxes": {
+
+        "quantity": null,
+
+        "tax_code": null,
+
+        "full_name": null,
+
+        "short_name": null,
+
+        "tax_amount": null,
+
+        "taxable_amount": null
+
+      }
+
+    },
+
+    {
+
+      "qty": "4",
+
+      "type": "B",
+
+      "price": 649.6,
+
+      "description": "Platos plasticos",
+
+      "without_iva": 0,
+
+      "discount": 0,
+
+      "is_discount_percentage": 0,
+
+      "taxes": {
+
+        "quantity": null,
+
+        "tax_code": null,
+
+        "full_name": null,
+
+        "short_name": null,
+
+        "tax_amount": null,
+
+        "taxable_amount": null
+
+      }
+
+    },
+
+    {
+
+      "qty": "2",
+
+      "type": "B",
+
+      "price": 422.24,
+
+      "description": "22M 0135 .0135 304 AN MALLA 39.125 X 94.5 OB",
+
+      "without_iva": 0,
+
+      "discount": 0,
+
+      "is_discount_percentage": 0,
+
+      "taxes": {
+
+        "quantity": null,
+
+        "tax_code": null,
+
+        "full_name": null,
+
+        "short_name": null,
+
+        "tax_amount": null,
+
+        "taxable_amount": null
+
+      }
+
+    },
+
+    {
+
+      "qty": "1",
+
+      "type": "S",
+
+      "price": 352.8,
+
+      "description": "Gastos de envío",
+
+      "without_iva": 0,
+
+      "discount": 0,
+
+      "is_discount_percentage": 0,
+
+      "taxes": {
+
+        "quantity": null,
+
+        "tax_code": null,
+
+        "full_name": null,
+
+        "short_name": null,
+
+        "tax_amount": null,
+
+        "taxable_amount": null
+
+      }
+
+    }
+
+  ],
+
+  "total": 5592.16,
+
+  "total_tax": 599.16,
+
+  "emails": [
+
+    {
+
+      "email": "mleiva@cari.net"
+
+    }
+
+  ],
+
+  "to_cf": 0,
+
+  "to": {
+
+    "tax_code_type": "NIT",
+
+    "tax_code": "7100531",
+
+    "tax_name": "PEGAMORTEROS DE GUATEMALA S.A.",
+
+    "address": {
+
+      "street": "KM. 29.3 CARRETERA CA-9 SUR",
+
+      "city": "Amatitlán",
+
+      "state": "GU",
+
+      "zip": "01067",
+
+      "country": "GT"
+
+    }
+
+  },
+
+  "exempt_phrase": null,
+
+  "custom_fields": [
+
+    {
+
+      "name": "IVA total incluido",
+
+      "value": "599.16"
+
+    },
+
+    {
+
+      "name": "Número de pedido del cliente",
+
+      "value": "4500977500"
+
+    },
+
+    {
+
+      "name": "Número de pedido",
+
+      "value": "S24G-0016"
+
+    },
+
+    {
+
+      "name": "Condiciones de pago",
+
+      "value": "Net 30 Days"
+
+    }
+
+  ]
+
+}
+EXAMPLE RESPONSE ( None ):
+{
+
+    "valid": true, /*True si se genero el documento, false si fallo por alguna razón */
+
+    "uuid": "71916AF3-73F6-480B-B3B3-6F6E3DABC334", /*Id interno de FELplex*/
+
+    "sat": { /*Datos de certificacion de SAT*/
+
+        "serie": "DD34F4A1",
+
+        "no": 1971864803,
+
+        "authorization": "DD34F4A1-7588-44E3-B609-1DDDA27AD3E0",
+
+        "certification_date": "2024-06-20T15:15:39"
+
+    },
+
+    "certifier": { /*Datos del certificador*/
+
+        "name": "CARI LATINOAMERICA, S.A.",
+
+        "tax_code": "96941243"
+
+    },
+
+    "errors": [], /*Si es que existe algun error en la generacion de los documentos*/
+
+    "invoice_url": "https://felplex.stage.plex.lat/pdf/71916AF3-73F6-480B-B3B3-6F6E3DABC334", /*URL del pdf del documento*/
+
+    "invoice_xml": "https://felplex.stage.plex.lat/xml/71916AF3-73F6-480B-B3B3-6F6E3DABC334"  /*URL del XML del documento*/
+
+}
+
+------------------------------------------------------------------------------------------
+### Guatemala / Endpoints / Certificación de documentos / Crear DTE a partir de XML
+POST {{entorno}}/api/entity/{{empresa}}/invoices/await
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+DESC: Envía un documento a certificación utilizando un XML el cuál debe ser enviado codificado en base 64, adicionalmente se reciben emails para envío de documento a clientes
+BODY:
+{
+
+    "emails": [
+
+        {
+
+            "email": "test@cari.com"
+
+        }
+
+    ],
+
+    "emails_cc": [
+
+        {
+
+            "email": "test@cari.net"
+
+        }
+
+    ],
+
+    "xml": "<base64>"
+
+}
+EXAMPLE RESPONSE ( None ):
+{
+
+    "valid": true,  /*True si se genero el documento, false si fallo por alguna razón */
+
+    "uuid": "6558823E-E710-40B5-A227-658784945C08", /*Id interno de FELplex*/
+
+    "sat": { /*Datos de certificacion de SAT*/
+
+        "serie": "13B0D07E",
+
+        "no": 3951773309,
+
+        "authorization": "13B0D07E-EB8B-467D-8978-F31E6D9B1C2C",
+
+        "certification_date": "2024-06-20T15:40:04"
+
+    },
+
+    "certifier": { /*Datos del certificador*/
+
+        "name": "CARI LATINOAMERICA, S.A.",
+
+        "tax_code": "96941243"
+
+    },
+
+    "errors": [], /*Si es que existe algun error en la generacion de los documentos*/
+
+    "invoice_url": "https://felplex.stage.plex.lat/pdf/6558823E-E710-40B5-A227-658784945C08", /*URL del pdf del documento*/
+
+    "invoice_xml": "https://felplex.stage.plex.lat/xml/6558823E-E710-40B5-A227-658784945C08", /*URL del XML del documento*/
+
+    "xml": /*XML en base 64 firmado*/"PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4NCjxkdGU6R1REb2N1bWVudG8geG1sbnM6Y2V4PSJodHRwOi8vd3d3LnNhdC5nb2IuZ3QvZmFjZTIvQ29tcGxlbWVudG9FeHBvcnRhY2lvbmVzLzAuMS4wIiB4bWxuczpjZXhwcm92PSJodHRwOi8vd3d3LnNhdC5nb2IuZ3QvZmFjZTIvQ29tcGxlbWVudG9FeHBvcnRhY2lvblByb3Zpc2lvbmFsLzAuMS4wIiB4bWxuczpjZmM9Imh0dHA6Ly93d3cuc2F0LmdvYi5ndC9kdGUvZmVsL0NvbXBDYW1iaWFyaWEvMC4xLjAiIHhtbG5zOmNmZT0iaHR0cDovL3d3dy5zYXQuZ29iLmd0L2ZhY2UyL0NvbXBsZW1lbnRvRmFjdHVyYUVzcGVjaWFsLzAuMS4wIiB4bWxuczpjbm89Imh0dHA6Ly93d3cuc2F0LmdvYi5ndC9mYWNlMi9Db21wbGVtZW50b1JlZmVyZW5jaWFOb3RhLzAuMS4wIiB4bWxuczpuczI9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvMDkveG1sZHNpZyMiIHhtbG5zOmR0ZT0iaHR0cDovL3d3dy5zYXQuZ29iLmd0L2R0ZS9mZWwvMC4yLjAiIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIFZlcnNpb249IjAuMSIgeHNpOnNjaGVtYUxvY2F0aW9uPSJodHRwOi8vd3d3LnNhdC5nb2IuZ3QvZHRlL2ZlbC8wLjIuMCBHVF9Eb2N1bWVudG8tMC4yLjAueHNkIj48ZHRlOlNBVCBDbGFzZURvY3VtZW50bz0iZHRlIj48ZHRlOkRURSBJRD0iRGF0b3NDZXJ0aWZpY2Fkb3MiPjxkdGU6RGF0b3NFbWlzaW9uIElEPSJEYXRvc0VtaXNpb24iPjxkdGU6RGF0b3NHZW5lcmFsZXMgQ29kaWdvTW9uZWRhPSJVU0QiIEZlY2hhSG9yYUVtaXNpb249IjIwMjQtMDYtMThUMDA6MDA6MDAiIE51bWVyb0FjY2Vzbz0iMTAxMTI3MDc5IiBUaXBvPSJGQUNUIi8+PGR0ZTpFbWlzb3IgQWZpbGlhY2lvbklWQT0iR0VOIiBDb2RpZ29Fc3RhYmxlY2ltaWVudG89IjIiIENvcnJlb0VtaXNvcj0idGVzdEB0ZXN0LmNvbS5ndCIgTklURW1pc29yPSI1ODg4NDkyIiBOb21icmVDb21lcmNpYWw9IkNhcmkgTGF0IiBOb21icmVFbWlzb3I9IklTTUFSIEJMQURJTUlSLCBQRVJFWiBQRVJFWiI+PGR0ZTpEaXJlY2Npb25FbWlzb3I+PGR0ZTpEaXJlY2Npb24+VG9ycmUgcHJhZGVyYSwgUXVldHphbHRlbmFuZ28sIFF1ZXR6YWx0ZW5hbmdvPC9kdGU6RGlyZWNjaW9uPjxkdGU6Q29kaWdvUG9zdGFsPjAxMDEwPC9kdGU6Q29kaWdvUG9zd
+
+==========================================================================================
+## Guatemala / Endpoints / Envio de documentos
+Los documentos en FELplex tienen la posibilidad de además de ser enviados a los clientes por medio de correo electrónico, utilizar la opción de envio por medio de:
+
+
+SMS 📨: se un enviara el enlace con el cual pueden acceder al documento
+
+
+
+Whatsapp 📱: Se enviara el documento en PDF, asi como el total y tipo de documento
+
+
+
+
+Para esta opcion es necesario que el cliente posea creditos del tipo de medio de envio a utilizar
+
+------------------------------------------------------------------------------------------
+### Guatemala / Endpoints / Envio de documentos / Envio de documentos por SMS
+POST {{entorno}}/api/entity/{{empresa}}/invoices/await
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+DESC: Para enviar el DTE por SMS debemos agregar a nuestra petición:
+
+Para SMS el tipo es 1
+
+"phones": [ 
+ { 
+ "type": 1, 
+ "phone": "+502"
+ }
+]
+
+
+
+En el arreglo podemos asociar más de un numeró de teléfono, siempre tomando en cuenta que debemos contar con los tokens de SMS necesarios para enviar el documento a cada uno de los numeros ingresados
+BODY:
+{
+
+    "type": "FACT",
+
+    "datetime_issue": {{YYYY-MM-DDThh:mm:ss}},
+
+    "items": [
+
+        {
+
+            "qty": 1,
+
+            "type": "B",
+
+            "price": 100,
+
+            "description": "Vasos plásticos",
+
+            "without_iva": 0,
+
+            "discount": 25,
+
+            "is_discount_percentage": 0,
+
+            "taxes": {
+
+                "qty": null,
+
+                "tax_code": null,
+
+                "full_name": null,
+
+                "short_name": null,
+
+                "tax_amount": null,
+
+                "taxable_amount": null
+
+            }
+
+        }
+
+    ],
+
+    "total": 75,
+
+    "total_tax": "4.70",
+
+    "emails": [
+
+        {
+
+            "email": "example@exammple.com"
+
+        }
+
+    ],
+
+    "emails_cc": [
+
+        {
+
+            "email": ""
+
+        }
+
+    ],
+
+    "phones": [        
+
+     {            
+
+         "type": 1,            
+
+         "phone": "+502
+
+      }
+
+    ],
+
+    "to_cf": 0,
+
+    "to": {
+
+        "tax_code_type": "NIT",
+
+        "tax_code": "1607421",
+
+        "tax_name": "John Doe",
+
+        "address": {
+
+            "street": "1a Calle",
+
+            "city": "Mixco",
+
+            "state": "Guatemala",
+
+            "zip": "01001",
+
+            "country": "GT"
+
+        }
+
+    },
+
+    "exempt_phrase": null
+
+}
+
+------------------------------------------------------------------------------------------
+### Guatemala / Endpoints / Envio de documentos / Envio de documentos por Whatsapp
+POST {{entorno}}/api/entity/{{empresa}}/invoices/await
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+DESC: Para enviar el DTE por Whatsapp debemos agregar a nuestra petición:
+
+Para Whatsapp el tipo es 2
+
+"phones": [ 
+ { 
+ "type": 2, 
+ "phone": "+502"
+ }
+]
+
+
+
+En el arreglo podemos asociar más de un numeró de teléfono, siempre tomando en cuenta que debemos contar con los tokens de Whatsapp necesarios para enviar el documento a cada uno de los numeros ingresados
+BODY:
+{
+
+    "type": "FACT",
+
+    "datetime_issue": {{YYYY-MM-DDThh:mm:ss}},
+
+    "items": [
+
+        {
+
+            "qty": 1,
+
+            "type": "B",
+
+            "price": 100,
+
+            "description": "Vasos plásticos",
+
+            "without_iva": 0,
+
+            "discount": 25,
+
+            "is_discount_percentage": 0,
+
+            "taxes": {
+
+                "qty": null,
+
+                "tax_code": null,
+
+                "full_name": null,
+
+                "short_name": null,
+
+                "tax_amount": null,
+
+                "taxable_amount": null
+
+            }
+
+        }
+
+    ],
+
+    "total": 75,
+
+    "total_tax": "4.70",
+
+    "emails": [
+
+        {
+
+            "email": "example@exammple.com"
+
+        }
+
+    ],
+
+    "emails_cc": [
+
+        {
+
+            "email": ""
+
+        }
+
+    ],
+
+    "phones": [        
+
+     {            
+
+         "type": 1,            
+
+         "phone": "+502
+
+      }
+
+    ],
+
+    "to_cf": 0,
+
+    "to": {
+
+        "tax_code_type": "NIT",
+
+        "tax_code": "1607421",
+
+        "tax_name": "John Doe",
+
+        "address": {
+
+            "street": "1a Calle",
+
+            "city": "Mixco",
+
+            "state": "Guatemala",
+
+            "zip": "01001",
+
+            "country": "GT"
+
+        }
+
+    },
+
+    "exempt_phrase": null
+
+}
+
+==========================================================================================
+## Guatemala / Endpoints / Anulacion de documentos
+La API de FELplex permite la anulacion de documentos, tomando en cuenta que la fecha de vencimiento del período del IVA al que corresponde el documento a anular, siendo este el tiempo restante del mes en el cual se emitió el documento y el siguiente.
+
+------------------------------------------------------------------------------------------
+### Guatemala / Endpoints / Anulacion de documentos / Anular DTE
+DELETE {{entorno}}/api/entity/{{empresa}}/invoices/{{dte_uuid}}
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+DESC: El UUID a ingresar debe ser el devuelto por parte de FELplex, no confundir con Autorizacion de SAT
+BODY:
+{
+
+
+
+"reason":"Devolución"
+
+
+
+}
+
+
+EXAMPLE RESPONSE ( None ):
+{
+
+    "success": true, /*True, si la anulación fue exitosa, false si fallo*/
+
+    "uuid": "10FC365A-72D7-4B4D-AAB8-CF847B5DA4C8", /*Uuid del documento anulado*/
+
+    "certifier": { /*Datos del certificador*/
+
+        "name": "CARI LATINOAMERICA, S.A.",
+
+        "tax_code": "96941243"
+
+    },
+
+    "errors": [] /*En caso de haber fallado el proceso de anulacion se brindaran detalles del error*/
+
+}
+
+==========================================================================================
+## Guatemala / Endpoints / Solicitud de datos
+La API de FELplex permite solicitar algunos datos como lo son:
+
+
+Solicitar datos de DTE: Permite consultar los datos de certificacion de un documento
+
+
+
+Texto de DTE: Permite consultar los detalles completos de un documento electrónico previamente certificado
+
+
+
+Listado de frases:
+
+
+Exento del ISR: Frases que deben incluirse cuando el emisor se encuentra exento del Impuesto Sobre la Renta (ISR).
+
+
+
+Exento de IVA: Existen facturas que por diferentes motivos deben llevar esta frase ya que:
+
+
+NO deben incluir el IVA.
+
+
+
+Deben incluir la base legal por la cual no incluyen el IVA (art. 29 literal “a” Ley del IVA y art. 11 Reglamento de la Ley del IVA).
+
+
+
+Son recibos y recibos por donación la correspondiente base legal de exención de IVA.
+
+
+
+
+
+
+
+
+
+Cantidad de DTE: Cantidad disponible de Documentos tributarios electrónicos de una empresa para su emisión
+
+------------------------------------------------------------------------------------------
+### Guatemala / Endpoints / Solicitud de datos / Consultar datos de DTE
+GET {{entorno}}/api/entity/{{empresa}}/invoices/{{dte_uuid}}
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+DESC: El UUID a ingresar debe ser el devuelto por parte de FELplex, no confundir con Autorizacion de SAT
+EXAMPLE RESPONSE ( None ):
+{
+    "valid": true,
+    "uuid": "10FC365A-72D7-4B4D-AAB8-CF847B5DA4C8",
+    "sat": {
+        "serie": "CD2E66E5",
+        "no": "126240118",
+        "authorization": "CD2E66E5-0786-4576-91F0-7BBDE25FD740",
+        "certification_date": "2024-06-21 08:10:32"
+    },
+    "certifier": {
+        "name": "CARI LATINOAMERICA, S.A.",
+        "tax_code": "96941243"
+    },
+    "errors": [],
+    "invoice_url": "https://felplex.stage.plex.lat/pdf/10FC365A-72D7-4B4D-AAB8-CF847B5DA4C8",
+    "invoice_xml": "https://felplex.stage.plex.lat/xml/10FC365A-72D7-4B4D-AAB8-CF847B5DA4C8"
+}
+
+------------------------------------------------------------------------------------------
+### Guatemala / Endpoints / Solicitud de datos / Solicitar Texto de DTE
+GET {{entorno}}/api/entity/{{empresa}}/invoices/{{dte_uuid}}/text
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+DESC: El UUID a ingresar debe ser el devuelto por parte de FELplex, no confundir con Autorizacion de SAT
+EXAMPLE RESPONSE ( None ):
+Generado por www.felplex.com
+
+
+
+Documento Tributario Electrónico
+
+Factura
+
+
+
+Fecha: 2023-04-18
+
+No.: 3547546516 Serie: E8796919
+
+---------------------------------
+
+
+
+CLA Regimen General
+
+NIT: 326070
+
+Ciudad Quetzaltenango, Quetzaltenango
+
+
+
+---------------------------------
+
+Nombre: John Doe
+
+NIT: 1607421
+
+Dirección: 1a Calle, Mixco, Guatemala
+
+
+
+UNI DESCRIPCION TOTAL
+
+--- ------------------ -------
+
+1 Vasos plasticos 100.00
+
+
+
+SUBTOTAL: 100.00
+
+DESCUENTO: 25.00
+
+TOTAL: 75.00
+
+
+
+Sujeto a pago directo ISR 1234567890 2020-10-14
+
+
+
+
+
+Número y Fecha de Autorización:
+
+E8796919-D373-4394-8D3D-17584999296F
+
+Certificador: CARI LATINOAMERICA, S.A.
+
+NIT: 96941243
+
+Fecha: 2023-04-18 07:36:47
+
+------------------------------------------------------------------------------------------
+### Guatemala / Endpoints / Solicitud de datos / Listado de Frases de Exento
+GET {{entorno}}/api/entity/{{empresa}}/invoices/exempt-phrases
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+DESC: En el documento donde enviaremos la frase a utilizar de exento de IVA enviaremos el codigo en el campo exempt_phrase
+EXAMPLE RESPONSE ( 200 ):
+[
+    {
+        "name": "Servicios de intituciones fiscalizadas por la SIB y bolsas de valores autorizadas (art. 7 num. 4 Ley del IVA).",
+        "phrase": "Exenta del IVA (art. 7 num. 4 Ley del IVA)",
+        "type": 4,
+        "code": 2
+    },
+    {
+        "name": "Ventas de cooperativas (art. 7 num. 5 Ley del IVA).",
+        "phrase": "Exenta del IVA (art. 7 num. 5 Ley del IVA)",
+        "type": 4,
+        "code": 3
+    },
+    {
+        "name": "Donaciones (art.  7 num. 9 Ley del IVA).",
+        "phrase": "Exenta del IVA (art.  7 num. 9 Ley del IVA)",
+        "type": 4,
+        "code": 4
+    },
+    {
+        "name": "Servicios exentos (art. 7 núm. 13 Ley del IVA).",
+        "phrase": "Exenta del IVA (art. 7 núm. 13 Ley del IVA)",
+        "type": 4,
+        "code": 6
+    },
+    {
+        "name": "Venta  de  activos  de  Bancos  o  Sociedades  Financieras (art. 7 num. 14 Ley del IVA).",
+        "phrase": "Exenta del IVA (art. 7 num. 14 Ley del IVA)",
+        "type": 4,
+        "code": 7
+    },
+    {
+        "name": "Medicamentos (art. 7 num. 15 Ley del IVA).",
+        "phrase": "Exenta del IVA (art. 7 num. 15 Ley del IVA)",
+        "type": 4,
+        "code": 9
+    },
+    {
+        "name": "Vehículos (art. 55 Ley del IVA).",
+        "phrase": "Esta factura no incluye IVA (art. 55 Ley del IVA)",
+        "type": 4,
+        "code": 10
+    },
+    {
+        "name": "Ventas de maquilas (Decreto 29-89 Ley de Maquila).",
+        "phrase": "No afecta al IVA (Decreto 29-89 Ley de Maquila)",
+        "type": 4,
+        "code": 11
+    },
+    {
+        "name": "Ventas a zonas francas (Decreto 65-89 Ley de Zonas Francas).",
+        "phrase": "No afecta al IVA (Decreto 65-89 Ley de Zonas Francas)",
+        "type": 4,
+        "code": 12
+    },
+    {
+        "name": "Venta de vivienda (art. 7 num. 12,  Ley del IVA).",
+        "phrase": "Exenta del IVA (art. 7 num. 12,  Ley del IVA)",
+        "type": 4,
+        "code": 13
+    },
+    {
+        "name": "Venta de títulos y acciones (art. 7 num. 6 Ley del IVA).",
+        "phrase": "Exenta del IVA (art. 7 num. 6 Ley del IVA)",
+        "type": 4,
+        "code": 14
+    },
+    {
+        "name": "Venta al menudeo en mercados. Exenta del IVA (art. 7 num. 11 Ley del IVA).",
+        "phrase": "Exenta del IVA (art. 7 num. 11 Ley del IVA)",
+        "type": 4,
+        "code": 15
+    },
+    {
+        "name": "Ventas y servicios universidades (art. 8 núm. 2 Ley del IVA).",
+        "phrase": "Exenta del IVA (art. 8 núm. 2 Ley del IVA)",
+   
+
+------------------------------------------------------------------------------------------
+### Guatemala / Endpoints / Solicitud de datos / Listado de Frases de Exento Copy
+GET {{entorno}}/api/entity/{{empresa}}/invoices/isr-exempt-phrases
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+DESC: En el documento donde enviaremos la frase a utilizar de exento de IVA enviaremos el codigo en el campo isr_exempt_phrase
+EXAMPLE RESPONSE ( 200 ):
+[
+    {
+        "name": "Exenciones generales universidades. Las universidades legalmente autorizadas para funcionar en el país.",
+        "phrase": "Exenta del ISR (art. 8 núm. 2 Ley de Actualización Tributaria)",
+        "code": 1
+    },
+    {
+        "name": "Exenciones generales centros educativos privados. Los centros educativos privados, como centros de  cultura, exclusivamente en las rentas derivadas de:  matrícula de inscripción, colegiaturas y derechos de examen, por los cursos que tengan autorizados por la  autoridad competente.",
+        "phrase": "Exenta del ISR (art. 8 núm. 3 Ley de Actualización Tributaria)",
+        "code": 2
+    },
+    {
+        "name": "Exenciones generales iglesias. Exclusivamente por razón de culto.",
+        "phrase": "Exenta del ISR (art. 8 núm. 5 Ley de Actualización Tributaria)",
+        "code": 3
+    },
+    {
+        "name": "Exenciones Rentas de Actividades Lucrativas entes no lucrativos. Las rentas que obtengan los entes que destinen exclusivamente a los fines no lucrativos de su creación y en ningún caso distribuyan, directa o indirectamente, utilidades o bienes entre sus integrantes, tales como: los colegios profesionales; los partidos políticos; los comités cívicos; las asociaciones o fundaciones no lucrativas legalmente autorizadas e inscritas como exentas ante la Administración Tributaria, que tengan por objeto la beneficencia, asistencia o el servicio social, actividades culturales, científicas de educación e instrucción, artísticas, literarias, deportivas, políticas, sindicales, gremiales, religiosas, o el desarrollo de comunidades indígenas; únicamente por la parte que provenga de donaciones o cuotas ordinarias o extraordinarias.",
+        "phrase": "Exenta del ISR (art. 11 núm. 1 Ley de Actualización Tributaria)",
+        "code": 4
+    },
+    {
+        "name": "Exenciones Rentas de Actividades Lucrativas cooperativas. Las rentas de las cooperativas legalmente constituidas en el país, provenientes de las transacciones con sus asociados y con otras cooperativas, federaciones y confederaciones de cooperativas.",
+        "phrase": "Exenta del ISR (art. 11 núm. 2 Ley de Actualización Tributaria)",
+        "code": 5
+    },
+    {
+        "name": "Exenta ISR Zolic. Para el cumplimiento de sus fines, la institución gozará de la exención de impuestos, derechos y arbitrios fiscales o municipales, establecidos o que se establezcan.",
+        "phrase": "Exenta del ISR (art. 31 Ley Orgánica Zolic)",
+        "code": 6
+ 
+
+------------------------------------------------------------------------------------------
+### Guatemala / Endpoints / Solicitud de datos / Solicitar DTE's disponibles
+GET {{entorno}}/api/entity/{{empresa}}/credits
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+EXAMPLE RESPONSE ( None ):
+99
+
+==========================================================================================
+## Guatemala / Endpoints / Validacion de datos
+La API de FELplex nos permite validar los siguientes identificadores:
+
+
+NIT: Numero de identificación tributaria, El NIT es un número seguido de un dígito verificador de 0 a 9 o una letra K mayuscula
+
+
+
+CUI: Codigo unico de identificación, conformado por numeros de una longitud de 13 caracteres
+
+------------------------------------------------------------------------------------------
+### Guatemala / Endpoints / Validacion de datos / Buscar CUI
+GET {{entorno}}/api/entity/{{empresa}}/find/CUI/{{CUI}}
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+EXAMPLE RESPONSE ( None ):
+[
+    {
+        "id": 233,
+        "tax_code_type": "CUI",
+        "tax_code": "22340622*****",
+        "tax_name": "John , Doe",
+        "phones": [],
+        "emails": [],
+        "address": {
+            "zip": "01001",
+            "city": "Mixco",
+            "state": "Guatemala",
+            "street": "1a Calle",
+            "country": "GT"
+        },
+        "name": "John ••••"
+    }
+]
+
+------------------------------------------------------------------------------------------
+### Guatemala / Endpoints / Validacion de datos / Buscar NIT
+GET {{entorno}}/api/entity/{{empresa}}/find/NIT/{{NIT}}
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+EXAMPLE RESPONSE ( None ):
+[
+    {
+        "id": 327,
+        "tax_code_type": "NIT",
+        "tax_code": "10450661213",
+        "tax_name": "PRIMER_APELLIDO SEGUNDO_APELLIDO, PRIMER_NOMBRE SEGUNDO_NOMBRE",
+        "phones": [],
+        "emails": [
+            "marleiq22@gmail.com"
+        ],
+        "address": {
+            "street": "Direccion prueba",
+            "city": "Guatemala",
+            "state": "Guatemala",
+            "zip": "01001"
+        },
+        "name": "PRIMER_APELLIDO SEGUNDO_APELLIDO •••• ••••"
+    }
+]
+
+==========================================================================================
+## Guatemala / Endpoints / Reporte de documentos emitidos
+
+
+------------------------------------------------------------------------------------------
+### Guatemala / Endpoints / Reporte de documentos emitidos / Reporte de emisión
+POST {{entorno}}/api/entity/{{empresa}}/invoices/reports
+HEADERS: [('X-Authorization', '{{api_key}}')]
+EXAMPLE RESPONSE ( None ):
+[
+    {
+        "uuid": "20536D80-931B-4F2F-BBC5-18729A8C1115",
+        "fecha_emisión": "2024-10-22",
+        "estado": "ENVIADO",
+        "tipo": "Factura",
+        "receptor": "CF",
+        "tipo_receptor": "NIT",
+        "emitido_por": null,
+        "moneda": "GTQ",
+        "total": "150.000000",
+        "fecha_certificación": "2024-10-22 13:54:25",
+        "no_autorización": "C8CA331B-AAC1-469D-B59E-A1727618BBFC",
+        "no_serie": null,
+        "no": "2864793245",
+        "id_externo": null,
+        "establecimiento": "2"
+    },
+    {
+        "uuid": "FC646F03-52FC-44B4-94EC-AF8393DF2701",
+        "fecha_emisión": "2024-10-22",
+        "estado": "ENVIADO",
+        "tipo": "Factura",
+        "receptor": "CF",
+        "tipo_receptor": "NIT",
+        "emitido_por": null,
+        "moneda": "GTQ",
+        "total": "10.000000",
+        "fecha_certificación": "2024-10-22 13:52:46",
+        "no_autorización": "23D40B60-B558-4573-A86C-59421701AE56",
+        "no_serie": null,
+        "no": "3042461043",
+        "id_externo": null,
+        "establecimiento": "2"
+    }
+]
+
+==========================================================================================
+## Guatemala / ✨Variables generales
+Entornos
+
+
+ | 
+
+ | Código
+ | Descripción
+
+
+
+
+
+ | Desarrollo
+ | https://felplex.stage.plex.lat/
+
+
+
+ | Producción
+ | https://app.felplex.com/
+
+
+
+
+Afiliaciones al IVA disponibles
+
+
+ | 
+
+ | Código
+ | Descripción
+
+
+
+
+
+ | Gen
+ | Contribuyente General
+
+
+
+ | PEQ
+ | Pequeño Contribuyente
+
+
+
+ | PEE
+ | Pequeño Contribuyente Régimen Electrónico
+
+
+
+ | EXE
+ | Exento
+
+
+
+
+Tipos de documento disponibles
+
+Descripción de los tipos de documento disponibles para emisión de documentos FEL, siempre utilizar el campo "type"
+
+
+ | 
+
+ | Código
+ | Descripción
+
+
+
+
+
+ | FACT
+ | Factura
+
+
+
+ | FCAM
+ | Factura Cambiaria
+
+
+
+ | FPEQ
+ | Factura Pequeño Contribuyente
+
+
+
+ | FCAP
+ | Factura Cambiaria Pequeño Contribuyente
+
+
+
+ | FESP
+ | Factura Especial
+
+
+
+ | NABN
+ | Nota de Abono
+
+
+
+ | RDON
+ | Recibo de Donación
+
+
+
+ | RECI
+ | Recibo
+
+
+
+ | NDEB
+ | Nota de Débito
+
+
+
+ | NCRE
+ | Nota de Crédito
+
+
+
+ | FAPE
+ | Factura Pequeño Contribuyente Régimen Electrónico
+
+
+
+ | FCPE
+ | Factura Cambiaria Pequeño Contribuyente Régimen Electrónico
+
+
+
+
+Tipos de Moneda
+
+Descripción de los tipos de documento disponibles para emisión de documentos FEL, siempre utilizar el campo " currency"
+
+
+ | 
+
+ | Código
+ | Descripción
+
+
+
+
+
+ | GTQ
+ | Quetzal guatemalteco
+
+
+
+ | USD
+ | Dólar estadounidense
+
+
+
+
+Fecha de factura
+
+Descripción de fecha de envió de generación de documentos, siempre utilizar el campo "datetime_issue"
+
+
+ | 
+
+ | Código
+ | Descripción
+
+
+
+
+
+ | datetime_issue
+ | Debe ser enviado en formato YYYY-MM-dd
+
+
+
+
+Ítems
+
+Array con los ítems a enviar en la factura utilizar el campo "ítems"
+
+
+ | 
+
+ | Código
+ | Descripción
+
+
+
+
+
+ | Qty
+ | Cantidad de ítems, debe ser en formato numérico de tipo entero,
+
+
+
+ | Type
+ | Tipo de ítem Bien “B” o servicio “S”
+
+
+
+ | Unit
+ | Unidad de medida del ítem a enviar esto se envía como cadena de texto
+
+
+
+ | Price
+ | Precio del ítem por unidad, debe ser en formato numérico, también
+
+
+
+ | Description
+ | Descripción del ítem puede ser enviado como cadena de texto entre comillas
+
+
+
+ | without_iva
+ | Campo de evaluación de IVA del ítem, de tipo booleano, 0 con IVA, 1 sin IVA
+
+
+
+ | Discount
+ | Puede ser nulo o un campo numérico con hasta 6 decimales
+
+
+
+ | is_discount_percentage
+ | True o False, si el campo discount hace referencia a un porcentaje de descuento
+
+
+
+ | Taxes
+ | Impuestos del ítem, pueden ser nulo en caso de no necesitarlos
+
+
+
+
+Impuestos
+
+Array con el detalle de los impuestos del ítem este debe ir dentro del array de ítems como "taxes", estos deben ser aplicados según el tipo de documento, régimen y caso especial del ítem, se encontrarán más detalles en Reglas y validaciones SAT
+
+
+ | 
+
+ | Código
+ | Descripción
+
+
+
+
+
+ | quantity
+ | Cantidad impuestos, puede ser nulo o numérico
+
+
+
+ | tax_code
+ | Código de impuesto, puede ser numérico o nulo, este puede ser NIT, CUI, EXE
+
+
+
+ | full_name
+ | Nombre completo del impuesto enviado como cadena de texto
+
+
+
+ | short_name
+ | Nombre corto del impuesto enviado como cadena de texto
+
+
+
+ | tax_amount
+ | Monto del impuesto, de tipo numérico o nulo
+
+
+
+ | taxable_amount
+ | Monto grabable del impuesto de tipo numérico o nulo
+
+
+
+
+Total
+
+Total, resultado de la suma de todos los ítems en donde se ha multiplicado la cantidad de cada ítem por el precio individual menos el descuento si es que tuviese, deberá estar en la petición como “total"
+
+
+ | 
+
+ | Código
+ | Descripción
+
+
+
+
+
+ | total
+ | Campo de tipo numérico de hasta 6 decimales
+
+
+
+
+Correo
+
+Casilla para el envió del documento electrónico, debe ser enviado como "emails" en un array, " email" el correo deseado.
+
+
+ | 
+
+ | Código
+ | Descripción
+
+
+
+
+
+ | Email
+ | Cadena de texto debe ir dentro de comillas, puede ser nulo
+
+
+
+
+Copia de correo
+
+Casilla para el envío de copias a otros correos del documento electrónico, debe ser enviado como " emails_cc" en un array, "email" el correo deseado.
+
+
+ | 
+
+ | Código
+ | Descripción
+
+
+
+
+
+ | email
+ | Cadena de texto debe ir dentro de comillas, puede ser nulo
+
+
+
+
+A consumidor final
+
+Casilla para el de NIT del cliente o consumidor final, se envía en el campo "to_cf".
+
+
+ | 
+
+ | Código
+ | Descripción
+
+
+
+
+
+ | to_cf
+ | Booleano, 0 Nit del cliente, 1 Consumidor Final
+
+
+
+
+Datos del cliente
+
+Array con los campos de informacion del cliente, se envía en el campo "to".
+
+
+ | 
+
+ | Campos
+ | Descripción
+
+
+
+
+
+ | Tax_code_type
+ | NIT, DPI, Id extranjero (EXT) como cadena de texto entre comillas
+
+
+
+ | Tax_code
+ | Campo con la informacion del NIT, DPI
+
+
+
+ | Tax_name
+ | Campo con el nombre de la persona a facturar, se envía como cadena de texto dentro de comillas, el sistema nos permite colocar nombre del cliente aun si el NIT está dirigido a CF
+
+
+
+ | Address
+ | Array con los campos de dirección del cliente a facturar
+
+
+
+
+Dirección
+
+Array con los campos de dirección del cliente, se envía en el campo "address".
+
+
+ | 
+
+ | Campos
+ | Descripción
+
+
+
+
+
+ | street
+ | Dirección del cliente, se envía como cadena de texto, dentro de comillas “”, puede ser nulo Ej. “1a Calle 10-25 zona 1”
+
+
+
+ | city
+ | Ciudad de la dirección anteriormente ingresada se envía como cadena de texto, puede ser nulo Ej. “Guatemala”
+
+
+
+ | state
+ | Estado/Departamento de la dirección ingresada, se envía como cadena de texto, puede ser nulo Ej. “Guatemala”
+
+
+
+ | zip
+ | Código postal se envía como cadena de texto dentro de comillas, puede ser nulo Ej. “01001”
+
+
+
+ | country
+ | Código de país se envía como cadena de texto dentro de comillas, puede ser nulo Ej. “GT”
+
+
+
+
+Frases de exento
+
+Deberemos enviar una frase de exento si hemos colocado el campo without_iva como 1 se enviara en el campo "exempt_phrase".
+
+
+ | 
+
+ | Campos
+ | Descripción
+
+
+
+
+
+ | exempt_phrase
+ | Campo numérico con el código de la frase a enviar si el documento está exento al IVA, para consultar frases de exento podemos utilizar la utilizar la opcion, Listado de Frases de Exento
+
+
+
+
+Correlativo interno
+
+Hace referencia a un correlativo que puede ser enviado por la empresa para control interno, se enviara en el campo "external_id".
+
+
+ | 
+
+ | Campos
+ | Descripción
+
+
+
+
+
+ | external_id
+ | Se puede enviar como cadena de texto, no es un campo obligatorio a enviar en la petición, sin embargo, se recomienda incluirlo ya que esto nos permite Re consultar la certificación de un documento
+
+
+
+
+Comentarios
+
+Hace referencia a un comentario adicional que deseemos agregar al documento se envia en el campo "Comments".
+
+
+ | 
+
+ | Campos
+ | Descripción
+
+
+
+
+
+ | Comments
+ | Se agrega como cadena de texto dentro de comillas “”, no es un campo obligatorio.
+
+
+
+
+Telefono
+
+Hace referencia al envio de una notificación por medio de sms o mensajeria WhatsApp se envia en el campo " phones".
+
+
+ | 
+
+ | Código
+ | Descripción
+
+
+
+
+
+ | type
+ | De tipo numérico, puede ser 1: SMS o 2: WhatsApp
+
+
+
+ | phone
+ | Debe ser incluido como cadena de texto y debe incluir el numero de área del país Ej: +502XXXXXXXX
+
+
+
+
+Adendas
+
+Son campos personalizados adicionales que pueden ser enviados en la factura, deben ser
+
+
+ | 
+
+ | Código
+ | Descripción
+
+
+
+
+
+ | name
+ | Se agrega como cadena de texto dentro de comillas “”, es el nombre del campo personalizado
+
+
+
+ | value
+ | Se agrega como cadena de texto dentro de comillas “”, Valor del campo personalizado enviado en name
+
+
+
+
+"custom_fields": [
+ {
+ "name": "Vendedor",
+ "value": "David"
+ },
+ {
+ "name": "Orden de Compra",
+ "value": "123"
+ },
+ {
+ "name": "Pago a crédito o contado",
+ "value": "C"
+ },
+ {
+ "name": "No. de Pedido",
+ "value": "4212"
+ },
+ {
+ "name": "Total en letras",
+ "value": "CINCUENTA"
+ }
+ ]
+
+
+
+
+
+tax_location
+
+Si una empresa posee más de una locación registrada en SAT podemos definir especificamente a cual de ellas estaremos enviando la factura, para ello utilizamos el campo tax_location, este campo es opcional y si no lo colocamos tomar la locación configurada por defecto en FELplex
+
+==========================================================================================
+## Guatemala / Ejemplos Requests DTE
+
+
+------------------------------------------------------------------------------------------
+### Guatemala / Ejemplos Requests DTE / DTE FACT
+POST {{entorno}}/api/entity/{{empresa}}/invoices/await
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+DESC: El DTE es enviado a certificar en el momento, esperando la respuesta de la misma y mostrando la información de autorización o el listado de errores producto de la verificación realizada por la SAT.
+BODY:
+{
+
+    "type": "FACT",
+
+    "datetime_issue": "2024-08-15T00:00:00",
+
+    "items": [
+
+        {
+
+            "qty": 1,
+
+            "type": "B",
+
+            "price": 100,
+
+            "description": "Vasos plásticos",
+
+            "without_iva": 0,
+
+            "discount": 25,
+
+            "is_discount_percentage": 0,
+
+            "taxes": {
+
+                "quantity": null,
+
+                "tax_code": null,
+
+                "full_name": null,
+
+                "short_name": null,
+
+                "tax_amount": null,
+
+                "taxable_amount": null
+
+            }
+
+        }
+
+    ],
+
+    "total": 75,
+
+    "total_tax": "4.70",
+
+    "emails": [
+
+        {
+
+            "email": "example@exammple.com"
+
+        }
+
+    ],
+
+    "emails_cc": [
+
+        {
+
+            "email": ""
+
+        }
+
+    ],
+
+    "to_cf": 0,
+
+    "to": {
+
+        "tax_code_type": "NIT",
+
+        "tax_code": "1607421",
+
+        "tax_name": "John Doe",
+
+        "address": {
+
+            "street": "1a Calle",
+
+            "city": "Mixco",
+
+            "state": "Guatemala",
+
+            "zip": "01001",
+
+            "country": "GT"
+
+        }
+
+    },
+
+    "exempt_phrase": null
+
+}
+EXAMPLE RESPONSE ( None ):
+{
+
+    "valid": true,
+
+    "uuid": "F2AC2C5E-7582-4BCE-AE44-627F01E72DA4",
+
+    "sat": {
+
+        "serie": "8924E06C",
+
+        "no": "3535423344",
+
+        "authorization": "8924E06C-D2BA-4770-9B94-AF783725CDEA"
+
+    },
+
+    "certifier": {
+
+        "name": "CONTAP, S.A.",
+
+        "tax_code": "98978802"
+
+    },
+
+    "errors": []
+
+}
+
+------------------------------------------------------------------------------------------
+### Guatemala / Ejemplos Requests DTE / DTE FCAM
+POST {{entorno}}/api/entity/{{empresa}}/invoices/await
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+DESC: El DTE es enviado a certificar en el momento, esperando la respuesta de la misma y mostrando la información de autorización o el listado de errores producto de la verificación realizada por la SAT.
+
+Fechas de pago
+
+De manera opcional puedes agregar las fechas en las cuales se han acordado los pagos con tu cliente. Esto es para tu control interno y los datos no son enviados a la SAT.
+
+"use_payments": Los pagos se incluirán en la creación del documento si el valor de este es verdadero (1) de lo contrario aunque se listen pagos, no los tomará en cuenta.
+
+"payments": Listado de pagos establecidos, es importante que la sumatoria de los montos de cada pago
+sea igual al total del documento
+BODY:
+{
+
+    "type": "FCAM",
+
+    "datetime_issue": "2021-06-20T23:10:00",
+
+    "items": [
+
+    {
+
+        "qty": 1,
+
+        "type": "B",
+
+        "price": 100,
+
+        "description": "Vasos plásticos",
+
+        "without_iva": 0,
+
+        "discount": 0,
+
+        "is_discount_percentage": 0,
+
+        "taxes": 
+
+        {
+
+            "qty": null,
+
+            "tax_code": null,
+
+            "full_name": null,
+
+            "short_name": null,
+
+            "tax_amount": null,
+
+            "taxable_amount": null
+
+        }
+
+    }
+
+    ],
+
+    "total": 100,
+
+    "total_tax": "4.70",
+
+    "emails": [
+
+    {
+
+        "email": "example@exammple.com"
+
+    }
+
+    ],
+
+    "emails_cc": [
+
+    {
+
+    "email": ""
+
+    }
+
+    ],
+
+    "to_cf": 0,
+
+    "to": {
+
+        "tax_code_type": "NIT",
+
+        "tax_code": "1607421",
+
+        "tax_name": "John Doe",
+
+        "address": {
+
+            "street": "1a Calle",
+
+            "city": "Mixco",
+
+            "state": "Guatemala",
+
+            "zip": "01001",
+
+            "country": "GT"
+
+        }
+
+    },
+
+    "exempt_phrase": null,
+
+    "use_payments": 1,
+
+    "payments":[
+
+    {
+
+        "date": "2021-06-25",
+
+        "amount": 100
+
+    }
+
+    ]
+
+}
+EXAMPLE RESPONSE ( None ):
+{
+
+    "valid": true,
+
+    "uuid": "F2AC2C5E-7582-4BCE-AE44-627F01E72DA4",
+
+    "sat": {
+
+        "serie": "8924E06C",
+
+        "no": "3535423344",
+
+        "authorization": "8924E06C-D2BA-4770-9B94-AF783725CDEA"
+
+    },
+
+    "certifier": {
+
+        "name": "CONTAP, S.A.",
+
+        "tax_code": "98978802"
+
+    },
+
+    "errors": []
+
+}
+
+------------------------------------------------------------------------------------------
+### Guatemala / Ejemplos Requests DTE / DTE NCRE
+POST {{entorno}}/api/entity/{{empresa}}/invoices/await
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+DESC: El DTE es enviado a certificar en el momento, esperando la respuesta de la misma y mostrando la información de autorización o el listado de errores producto de la verificación realizada por la SAT.
+
+El campo "parent_invoice_id" hace referencia al Identificador FELplex del documento sobre el que generaremos la Nota de Crédito.
+BODY:
+{
+
+    "type": "NCRE",
+
+    "datetime_issue": "2020-12-20T00:00:00",
+
+    "items": [
+
+        {
+
+            "qty": 1,
+
+            "type": "B",
+
+            "price": 100,
+
+            "description": "Vasos plásticos",
+
+            "without_iva": 0,
+
+            "discount": 25,
+
+            "is_discount_percentage": 0,
+
+            "taxes": {
+
+                "qty": null,
+
+                "tax_code": null,
+
+                "full_name": null,
+
+                "short_name": null,
+
+                "tax_amount": null,
+
+                "taxable_amount": null
+
+            }
+
+        }
+
+    ],
+
+    "total": 75,
+
+    "total_tax": "4.70",
+
+    "emails": [
+
+        {
+
+            "email": "example@exammple.com"
+
+        }
+
+    ],
+
+    "emails_cc": [
+
+        {
+
+            "email": ""
+
+        }
+
+    ],
+
+    "to_cf": 0,
+
+    "to": {
+
+        "tax_code_type": "NIT",
+
+        "tax_code": "1607421",
+
+        "tax_name": "John Doe",
+
+        "address": {
+
+            "street": "1a Calle",
+
+            "city": "Mixco",
+
+            "state": "Guatemala",
+
+            "zip": "01001",
+
+            "country": "GT"
+
+        }
+
+    },
+
+    "exempt_phrase": null,
+
+    "parent_invoice_id": "E4A0191A-9B3B-4AD2-A38F-AA593CF48B62",
+
+    "memo": "Motivo de emisión del documento"
+
+}
+EXAMPLE RESPONSE ( None ):
+{
+
+    "valid": true,
+
+    "uuid": "F2AC2C5E-7582-4BCE-AE44-627F01E72DA4",
+
+    "sat": {
+
+        "serie": "8924E06C",
+
+        "no": "3535423344",
+
+        "authorization": "8924E06C-D2BA-4770-9B94-AF783725CDEA"
+
+    },
+
+    "certifier": {
+
+        "name": "CONTAP, S.A.",
+
+        "tax_code": "98978802"
+
+    },
+
+    "errors": []
+
+}
+
+------------------------------------------------------------------------------------------
+### Guatemala / Ejemplos Requests DTE / DTE NDEB
+POST {{entorno}}/api/entity/{{empresa}}/invoices/await
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+DESC: El DTE es enviado a certificar en el momento, esperando la respuesta de la misma y mostrando la información de autorización o el listado de errores producto de la verificación realizada por la SAT.
+
+El campo "parent_invoice_id" hace referencia al Identificador FELplex del documento sobre el que generaremos la Nota de Débito.
+BODY:
+{
+
+    "type": "NDEB",
+
+    "datetime_issue": "2020-12-20T00:00:00",
+
+    "items": [
+
+        {
+
+            "qty": 1,
+
+            "type": "B",
+
+            "price": 100,
+
+            "description": "Vasos plásticos",
+
+            "without_iva": 0,
+
+            "discount": 25,
+
+            "is_discount_percentage": 0,
+
+            "taxes": {
+
+                "qty": null,
+
+                "tax_code": null,
+
+                "full_name": null,
+
+                "short_name": null,
+
+                "tax_amount": null,
+
+                "taxable_amount": null
+
+            }
+
+        }
+
+    ],
+
+    "total": 75,
+
+    "total_tax": "4.70",
+
+    "emails": [
+
+        {
+
+            "email": "example@exammple.com"
+
+        }
+
+    ],
+
+    "emails_cc": [
+
+        {
+
+            "email": ""
+
+        }
+
+    ],
+
+    "to_cf": 0,
+
+    "to": {
+
+        "tax_code_type": "NIT",
+
+        "tax_code": "1607421",
+
+        "tax_name": "John Doe",
+
+        "address": {
+
+            "street": "1a Calle",
+
+            "city": "Mixco",
+
+            "state": "Guatemala",
+
+            "zip": "01001",
+
+            "country": "GT"
+
+        }
+
+    },
+
+    "exempt_phrase": null,
+
+    "parent_invoice_id": "E4A0191A-9B3B-4AD2-A38F-AA593CF48B62",
+
+    "memo": "Motivo de emisión del documento"
+
+}
+EXAMPLE RESPONSE ( None ):
+{
+
+    "valid": true,
+
+    "uuid": "F2AC2C5E-7582-4BCE-AE44-627F01E72DA4",
+
+    "sat": {
+
+        "serie": "8924E06C",
+
+        "no": "3535423344",
+
+        "authorization": "8924E06C-D2BA-4770-9B94-AF783725CDEA"
+
+    },
+
+    "certifier": {
+
+        "name": "CONTAP, S.A.",
+
+        "tax_code": "98978802"
+
+    },
+
+    "errors": []
+
+}
+
+==========================================================================================
+## Guatemala / REST API codigos de error
+A continuación se muestra la lista de todos los códigos de error de la API REST
+
+
+ | 
+
+ | Código
+ | Descripción
+
+
+
+
+
+ | FEL_RCP000
+ | "Se Devuelve un FaceId"
+
+
+
+ | FEL_AUT001
+ | "Error variable token no viene en el header del mensaje"
+
+
+
+ | FEL_AUT002
+ | "El Token ha expirado, favor de renovarlo"
+
+
+
+ | FEL_AUT003
+ | "Error Usuario / Clave Invalidos"
+
+
+
+ | FEL_ASO099
+ | "El Certificador no está acreditado por el Emisor del DTE."
+
+
+
+ | FEL_GEN100
+ | "Error Genérico Comuníquese con el Administrador del sistema"
+
+
+
+ | FEL_GEN101
+ | "No existe el nodo de certificación dentro del xsd para validaciones del xml"
+
+
+
+ | FEL_GEN102
+ | "El XML enviado no cumple con el esquema del XSD"
+
+
+
+ | FEL_GEN103
+ | "Validar que la firma del certificador este correcta"
+
+
+
+ | FEL_INF300
+ | "La diferencia entre la fecha de emisión y de certificación excede los cinco días."
+
+
+
+ | FEL_RCP301
+ | "La fecha de emisión es posterior al último día del mes de la fecha de certificación."
+
+
+
+ | FEL_RCP302
+ | "El NIT no existe en la SAT."
+
+
+
+ | FEL_RCP303
+ | "El NIT no está afiliado."
+
+
+
+ | FEL_RCP304
+ | "El NIT no está activo en la SAT."
+
+
+
+ | FEL_RCP305
+ | "El establecimiento no existe en la SAT."
+
+
+
+ | FEL_RCP306
+ | "El establecimiento no está activo en la SAT (para la fecha de emision)."
+
+
+
+ | FEL_RCP307
+ | "El CUI del Receptor no es numérico."
+
+
+
+ | FEL_RCP308
+ | "El CUI del Receptor tiene un dígito verificador inválido."
+
+
+
+ | FEL_RCP309
+ | "El CUI del Receptor tiene un dígito verificador inválido."
+
+
+
+ | FEL_RCP310
+ | "El tipo especial CUI no debe estar presente para una exportación."
+
+
+
+ | FEL_RCP311
+ | "El NIT del Receptor debe ser CF para una exportación."
+
+
+
+ | FEL_RCP312
+ | "El Tipo de Documento no puede utilizarse para una exportación"
+
+
+
+ | FEL_RCP313
+ | "Precio calculado incorrectamente."
+
+
+
+ | FEL_RCP314
+ | "El Descuento no debe ser mayor al Precio."
+
+
+
+ | FEL_RCP315
+ | "El tipo de DTE no debe incluir el impuesto"
+
+
+
+ | FEL_RCP316
+ | "Error. El Tipo de DTE no aplica para este Régimen del IVA”."
+
+
+
+ | FEL_RCP317
+ | "El Tipo de Documento no aplica para este Régimen del IVA."
+
+
+
+ | FEL_RCP318
+ | "El Tipo de Frase debe estar presente para el Tipo de DTE"
+
+
+
+ | FEL_INF319
+ | "El Tipo de Frase no debe de estar presente para el Tipo de DTE"
+
+
+
+ | FEL_RCP320
+ | "El código de escenario no existe para el Tipo de Frase xxx"
+
+
+
+ | FEL_RCP321
+ | "El código de escenario para el Tipo de Frase xxx no corresponde a la afiliación del NIT del emisor."
+
+
+
+ | FEL_RCP322
+ | "El Tipo de Frase Retención del IVA debe estar presente para ese NIT Emisor."
+
+
+
+ | FEL_RCP323
+ | "El Tipo de Frase Exento o no Afecto al IVA debe estar presente para una exportación."
+
+
+
+ | FEL_RCP324
+ | "El Código de Escenario xxx para el Tipo de Frase Exento o no Afecto al IVA no corresponde para una exportación."
+
+
+
+ | FEL_RCP325
+ | "El Tipo de Frase Exento o no Afecto al IVA debe estar presente cuando el DTE contiene Items sin IVA."
+
+
+
+ | FEL_RCP326
+ | "El Código de Escenario xxx para el Tipo de Frase Exento o no Afecto no corresponde para el tipo de DTE."
+
+
+
+ | FEL_RCP327
+ | "El Código de Escenario xxx para el Tipo de Frase Exento o no Afecto no corresponde para el tipo de DTE."
+
+
+
+ | FEL_RCP328
+ | "El Código de Escenario xxx para el Tipo de Frase Exento o no Afecto no corresponde para el tipo de DTE."
+
+
+
+ | FEL_RCP329
+ | "Monto Gravable debe estar presente para IVA."
+
+
+
+ | FEL_RCP330
+ | "Error. Código de Unidad Gravable no existe en el catálogo para el IVA."
+
+
+
+ | FEL_RCP331
+ | "Monto del Impuesto calculado incorrectamente para el IVA"
+
+
+
+ | FEL_RCP332
+ | "El total de Impuesto calculado incorrectamente para el IVA"
+
+
+
+ | FEL_RCP333
+ | "El total del impuesto IVA no puede ser mayor al del documento origen registrado en la SAT."
+
+
+
+ | FEL_RCP334
+ | "Código de Unidad Gravable no existe en el catálogo de Petróleo."
+
+
+
+ | FEL_RCP335
+ | "Cantidad de Unidades Gravables debe existir para Petróleo."
+
+
+
+ | FEL_RCP336
+ | "Total de Impuestos calculado incorrectamente para Petróleo."
+
+
+
+ | FEL_RCP337
+ | "El total del impuesto Petroleo no puede ser mayor al del documento origen registrado en la SAT."
+
+
+
+ | FEL_RCP338
+ | "Total de Impuestos calculado incorrectamente para Turismo Hospedaje."
+
+
+
+ | FEL_RCP339
+ | "El total del impuesto Turismo Hospedaje no puede ser mayor al del documento origen registrado en la SAT."
+
+
+
+ | FEL_RCP340
+ | "Total de Impuestos calculado incorrectamente para Turismo Pasajes."
+
+
+
+ | FEL_RCP341
+ | "El total del impuesto Turismo Pasaje no puede ser mayor al del documento origen registrado en la SAT."
+
+
+
+ | FEL_RCP342
+ | "Total de Impuestos calculado incorrectamente para Timbre de Prensa."
+
+
+
+ | FEL_RCP343
+ | "El total del Timbre de Prensa no puede ser mayor al del documento origen registrado en la SAT."
+
+
+
+ | FEL_RCP344
+ | "Total de Impuestos calculado incorrectamente para Bomberos."
+
+
+
+ | FEL_RCP345
+ | "El total del impuesto Bomberos no puede ser mayor al del documento origen registrado en la SAT."
+
+
+
+ | FEL_RCP346
+ | "Total de Impuestos calculado incorrectamente para Tasa Municipal."
+
+
+
+ | FEL_RCP347
+ | "El total de la Tasa Municipal no puede ser mayor a la del documento origen registrado en la SAT."
+
+
+
+ | FEL_RCP348
+ | "Total calculado incorrectamente."
+
+
+
+ | FEL_RCP349
+ | "Gran Total calculado incorrectamente."
+
+
+
+ | FEL_RCP350
+ | "El Gran Total no puede ser mayor al del documento origen registrado en la SAT."
+
+
+
+ | FEL_RCP351
+ | "El número de Autorización del Documento Origen no coincide con ningún DTE registrado en la SAT."
+
+
+
+ | FEL_RCP352
+ | "El número de Autorización del Documento Origen corresponde a un documento diferente a factura."
+
+
+
+ | FEL_RCP353
+ | "El número de Autorización del Documento Origen corresponde a un documento diferente a factura."
+
+
+
+ | FEL_RCP354
+ | "El valor de la casilla NIT del Emisor no coincide con el registrado en el Documento Origen."
+
+
+
+ | FEL_RCP355
+ | "El valor de la casilla ID del Receptor no coincide con el registrado en el Documento Origen."
+
+
+
+ | FEL_RCP356
+ | "El valor de la casilla NIT del Certificador no coincide con el registrado en el Documento Origen."
+
+
+
+ | FEL_RCP357
+ | "El número de Autorización del Documento Origen no existe en la SAT"
+
+
+
+ | FEL_RCP358
+ | "La fecha de emisión del documento origen no coincide con la registrada en la SAT."
+
+
+
+ | FEL_RCP359
+ | "La serie del documento origen no coincide con la registrada en la SAT para esa Resolución de Autorización."
+
+
+
+ | FEL_RCP360
+ | "El número del documento origen no se encuentra dentro del rango registrado en la SAT para esa Resolución Autorización."
+
+
+
+ | FEL_RCP361
+ | "La firma del Emisor es errónea."
+
+
+
+ | FEL_RCP362
+ | "El NIT del CERTIFICADOR no coincide con el NIT del usuario."
+
+
+
+ | FEL_INF363
+ | "La “Fecha y hora de recepción en la SAT” es más de 24 horas posterior a la “Fecha y hora de certificación” dCERTIFICADOR."
+
+
+
+ | FEL_RCP364
+ | "La firma del CERTIFICADOR es errónea."
+
+
+
+ | FEL_RCP365
+ | "El número de autorización no puede repetirse."
+
+
+
+ | FEL_RCP366
+ | "La serie del DTE no corresponde al número de autorización."
+
+
+
+ | FEL_RCP367
+ | "El número del DTE es incorrecto."
+
+
+
+ | FEL_ANU368
+ | "El número de Autorización del Documento a anular no coincide con ningún DTE registrado en la SAT."
+
+
+
+ | FEL_ANU369
+ | "El NIT del Emisor del documento a anular no coincide con el registrado en la SAT."
+
+
+
+ | FEL_ANU370
+ | "La firma del Emisor es errónea."
+
+
+
+ | FEL_ANU371
+ | "El ID del Receptor del documento a anular no coincide con el registrado en la SAT."
+
+
+
+ | FEL_ANU372
+ | "El NIT del Certificador del documento a anular no coincide con el registrado en la SAT."
+
+
+
+ | FEL_ANU373
+ | "La firma del CERTIFICADOR es errónea."
+
+
+
+ | FEL_ANU374
+ | "La fecha de emisión del documento a anular no coincide con la registrada en la SAT."
+
+
+
+ | FEL_ANU375
+ | "La fecha de anulación excede el plazo de vencimiento de la declaración mensual del IVA."
+
+
+
+ | FEL_ANU376
+ | "La fecha de anulación no puede ser inferior a la fecha de emisión del DTE a anular."
+
+
+
+ | FEL_ANU377
+ | "La Fecha y hora de recepción en la SAT es mayor a 24 horas posterior a la Fecha y hora de certificación del documento a anular."
+
+
+
+ | FEL_ANU378
+ | "La Fecha de certificación es diferente a la Fecha de anulación."
+
+
+
+ | FEL_RCP379
+ | "El NIT no corresponde a un Emisor Activo del Régimen FEL."
+
+
+
+ | FEL_INF380
+ | "La casilla Tipo Especial sólo puede incluirse en Facturas Especiales"
+
+
+
+ | FEL_INF381
+ | "El ID del Receptor no puede ser CF para una factura especial."
+
+
+
+ | FEL_INF382
+ | "El ID del Receptor no corresponde a un formato del tipo especial Número de documento de identificación del extranjero."
+
+
+
+ | FEL_RCP383
+ | "Error. El documento que desea emitir debe contener la misma moneda del DTE origen."
+
+
+
+ | FEL_RCP384
+ | "El contribuyente agropecuario únicamente puede facturar bienes."
+
+
+
+ | FEL_RCP385
+ | "El tipo de DTE RDON debe de incluir la casilla personería."
+
+
+
+ | FEL_RCP386
+ | "El tipo de DTE no debe incluir la casilla personería."
+
+
+
+ | FEL_RCP387
+ | "El Tipo de DTE no aplica para este tipo de personería”."
+
+
+
+ | FEL_RCP419
+ | "MontoCobroIVA calculado incorrectamente según la BaseImponible."
+
+
+
+ | FEL_RCP422
+ | "El Tipo de DTE RECI no aplica para este tipo de personería o código - tipo de establecimiento""
+
+
+
+ | FEL_RCP423
+ | "Debe de incluir afiliación al IVA para poder emitir el Tipo de DTE RDON o RECI"
+
+
+
+ | FEL_RCP424
+ | "El valor estimado ingresado no puede ser diferente al Gran Total del DTE"
+
+
+
+ | FEL_RCP425
+ | " El Código de Escenario 24 del Tipo de Frase 4, para los Tipos de DTE XXX no corresponde."
+
+
+
+ | FEL_SEC500
+ | "Error. Monto Gravable calculado incorrectamente para el IVA"
+
+
+
+ | FEL_SEC502
+ | "Cantidad de Unidades Gravables no debe estar presente para IVA."
+
+
+
+ | FEL_SEC503
+ | "Monto Gravable no debe estar presente para Petróleo."
+
+
+
+ | FEL_SEC506
+ | "Monto del Impuesto calculado incorrectamente para Petróleo."
+
+
+
+ | FEL_SEC508
+ | "Código de Unidad Gravable no existe en el catálogo para Turismo Hospedaje."
+
+
+
+ | FEL_SEC509
+ | "Cantidad de Unidades Gravables no debe estar presente para Turismo Hospedaje."
+
+
+
+ | FEL_SEC511
+ | "Monto Gravable no debe estar presente para Turismo Pasajes."
+
+
+
+ | FEL_SEC512
+ | "Código de Unidad Gravable no existe en el catálogo de Turismo Pasajes."
+
+
+
+ | FEL_SEC513
+ | "Cantidad de Unidades Gravables debe existir para Turismo Pasajes."
+
+
+
+ | FEL_SEC515
+ | "Código de Unidad Gravable no existe en el catálogo para Timbre de Prensa."
+
+
+
+ | FEL_SEC518
+ | "Monto Gravable calculado incorrectamente para Bomberos."
+
+
+
+ | FEL_SEC519
+ | "Código de Unidad Gravable no existe en el catálogo para Bomberos."
+
+
+
+ | FEL_SEC523
+ | "Código de Unidad Gravable no existe en el catálogo para Tasa Municipal."
+
+
+
+ | FEL_RCP525
+ | "Un complemento requerido está ausente en el DTE."
+
+
+
+ | FEL_SEC526
+ | "Un complemento no corresponde que esté presente en el DTE."
+
+
+
+ | FEL_SEC533
+ | "Monto del Impuesto calculado incorrectamente para Petróleo."
+
+
+
+ | FEL_INF534
+ | "El valor de la casilla ISR a Retener es erróneo."
+
+
+
+ | FEL_RCP535
+ | "Error. El monto total en Q del documento excede el límite permitido para CF."
+
+
+
+ | FEL_SEC535
+ | "Error. El monto total en Q del documento excede el límite permitido para CF."
+
+
+
+ | FEL_RCP10
+ | "Error. El tipo de DTE no puede incluir complemento al item."
+
+
+
+ | FEL_GEN104
+ | "Error de procesamiento del XML, debe de reenviarlo para ser aceptado por la SAT."
+
+
+
+ | FEL_GEN105
+ | "Error de procesamiento del XML, debe de reenviarlo para ser aceptado por la SAT."
+
+
+
+ | FEL_GEN106
+ | "Error de procesamiento del XML, debe de reenviarlo para ser aceptado por la SAT."
+
+
+
+ | FEL_GEN107
+ | "Error de procesamiento del XML, debe de reenviarlo para ser aceptado por la SAT."
+
+
+
+ | FEL_GEN108
+ | "Error de procesamiento del XML, debe de reenviarlo para ser aceptado por la SAT."
+
+
+
+ | FEL_RCP426
+ | "Error. El Id del Transportista ingresado no corresponde a los permitidos en el catálogo."
+
+
+
+ | FEL_RCP427
+ | "Error. El Id del Transportista ingresado no existe o no está activo en los registros de la SAT."
+
+
+
+ | FEL_RCP428
+ | "Error. El Id del Transportista tipo CUI corresponde a una persona fallecida."
+
+
+
+ | FEL_RCP429
+ | "Error. El Id del Transportista tipo Extranjero no cumple con el formato establecido."
+
+
+
+ | FEL_RCP430
+ | "Error. La Placa ingresada no existe en la base de datos de la SAT."
+
+
+
+ | FEL_RCP431
+ | "Error. La Placa ingresada se encuentra con estado Inactivo."
+
+
+
+ | FEL_RCP432
+ | "Error. El código de escenario no corresponde para el tipo de DTE."
+
+
+
+ | FEL_RCP433
+ | "Error. El contribuyente con el Tipo de personería XXX no puede emitir el tipo de DTE RANT."
+
+
+
+ | FEL_RCP434
+ | "Error. El tipo de DTE referenciado no existe."
+
+
+
+ | FEL_RCP435
+ | "Error. El tipo de DTE únicamente puede facturar servicios."
+
+
+
+ | FEL_RCP436
+ | "Error. El Id Receptor no puede ser CF para los tipos de DTE NEV o RANT."
+
+
+
+ | FEL_RCP437
+ | "Error. La casilla es de carácter obligatorio."
+
+
+
+ | FEL_RCP438
+ | "Error. No existe el valor en el catalogo correspondiente."
+
+
+
+ | FEL_RCP439
+ | "Error. La Fecha de Transacción no puede ser menor a la fecha de emisión del DTE."
+
+
+
+ | FEL_RCP440
+ | "Error. La sumatoria de la casilla Monto del complemento Medios de Pago no puede ser diferente al Gran Total del DTE."
+
+
+
+ | FEL_RCP442
+ | "Error. El número de Autorización del Documento Origen corresponde a un documento diferente a factura."
+
+
+
+ | FEL_RCP443
+ | "Error. Excede el tiempo para la emisión de la Factura Definitiva."
+
+
+
+ | FEL_RCP444
+ | "Error. El NIT del emisor no está autorizado para poder emitir el tipo de DTE FACP."
+
+
+
+ | FEL_RCP445
+ | "Error. El código de escenario no corresponde para el tipo de DTE."
+
+
+
+ | FEL_RCP446
+ | "Error. El número de autorización es inválido."
+
+
+
+ | FEL_RCP447
+ | "Error. El tipo de DTE no puede ser referenciado."
+
+
+
+ | FEL_RCP448
+ | "Error. La factura provisional se encuentra anulada."
+
+
+
+ | FEL_RCP449
+ | "Error. El receptor del documento origen no es la misma a la del documento de exportación."
+
+
+
+ | FEL_RCP450
+ | "El NIT emisor no está autorizado para emitir Constancias de Adquisición de Insumos y Servicios."
+
+
+
+ | FEL_ANU451
+ | "Error. El DTE a anular, tiene asociada alguna Constancia de exención de IVA o de adquisición de insumos y servicios"
+
+
+
+ | FEL_RCP452
+ | "Error. El NIT Emisor debe contar con la característica especial “DECRETO 29-89”, para el Tipo de DTE “CAIS”."
+
+
+
+ | FEL_RCP453
+ | "Error. El número de Autorización corresponde a un Documento Origen que no contiene la frase “No afecta al IV(Decreto 29-89 Ley de Maquila)”"
+
+
+
+ | FEL_RCP454
+ | "Error. La moneda del documento origen no es la misma a la del documento de exportación."
+
+
+
+ | FEL_ANU455
+ | "Error. El DTE a anular fue incluido en la Planilla del IVA FEL de la SAT, por lo cual no se puede anular."
+
+
+
+ | FEL_ANU456
+ | "Error. El DTE a anular tiene una Retención de IVA en el sistema Retenciones Web de SAT."
+
+
+
+ | FEL_ANU457
+ | "Error. El DTE a anular tiene una Retención de ISR en el sistema Retenciones Web de SAT."
+
+
+
+ | FEL_ANU458
+ | "Error. El DTE a anular se encuentra con estado diferente a vigente."
+
+
+
+ | FEL_RCP459
+ | "Error. El NIT del emisor no cuenta con afiliación al IVA con estado Activo."
+
+
+
+ | FEL_RCP460
+ | "Error. La clasificación o tipo del establecimiento no le permite el tipo de DTE."
+
+
+
+ | FEL_ANU461
+ | "El DTE está ingresado en el Registro de Garantías Mobiliarias, no se permite la anulación."
+
+
+
+ | FEL_ANU462
+ | "La transacción de anulación ya se encuentra registrada en SAT y pendiente de aprobación."
+
+
+
+ | FEL_RCP463
+ | "Error. El monto exento de IVA no puede ser vacío o mayor al total de IVA del documento origen."
+
+
+
+ | FEL_ANU464
+ | "El DTE a anular fue incluido en el LET de SAT, por lo cual es necesario que rectifique el mismo."
+
+
+
+ | FEL_RCP465
+ | "No es permitido emitir derivado que el DTE referenciado cuenta con una constancia con estatus vigente."
+
+
+
+ | FEL_ANU001
+ | "Su transacción de anulación se encuentra pendiente de autorización por parte de la Administración Tributaria."
+
+
+
+ | FEL_CLA001
+ | "La URL del contrato es inválida o el archivo no existe."
+
+
+
+ | FEL_CLA002
+ | "El contrato debería de ser archivo con extensión pdf"
+
+
+
+ | FEL_CLA003
+ | "El campo external_id debe ser una cadena de caracteres"
+
+
+
+ | FEL_CLA004
+ | "Ya existe un invoice con el external_id"
+
+
+
+ | FEL_CLA005
+ | "El NIT del emisor no corresponde al NIT del token de autenticación."
+
+
+
+ | FEL_CLA006
+ | "El campo xml debe estar presente y codificado en base 64."
+
+
+
+ | FEL_CLA007
+ | "El campo external_id debe ser una cadena de caracteres."
+
+
+
+ | FEL_CLA008
+ | "El documento a anular no existe o no esta activo."
+
+
+
+ | FEL_CLA009
+ | "El documento ya se encuentra anulado."
+
+
+
+ | FEL_CLA010
+ | "Estás intentando utilizar el certificador .Certificador este certificador se encuentra inactivo, por favor, dirígete al portal SAT para realizar la operación. "
+
+
+
+ | FEL_CLA011
+ | "La fecha de anulación excede la fecha de vencimiento del período del IVA al que corresponde el documento a anular."
+
+
+
+ | FEL_CLA012
+ | "No se ha podido identificar el error, contacta a soporte."
+
+
+
+ | FEL_CLA013
+ | "El archivo es requerido."
+
+
+
+ | FEL_CLA014
+ | "El archivo debe ser de tipo .xlsx o .csv"
+
+
+
+ | FEL_CLA015
+ | "Los datos no fueron almacenados, problemas de comunicación con SAT."
+
+
+
+ | FEL_CLA016
+ | "El ID de la empresa es requerido."
+
+
+
+ | FEL_CLA017
+ | "La empresa no tiene permisos para realizar esta acción."
+
+
+
+ | FEL_CLA018
+ | "El Número de Autorización no existe o es incorrecto."
+
+
+
+ | FEL_CLA019
+ | "El campo attribute es obligatorio "
+
+
+
+ | FEL_CLA020
+ | "El campo attribute debe ser un número entero"
+
+
+
+ | FEL_CLA021
+ | "El campo attribute es inválido "
+
+
+
+ | FEL_CLA022
+ | "El formato del campo attribute es inválido "
+
+
+
+ | FEL_CLA023
+ | "El campo attribute debe ser una cadena de caracteres "
+
+
+
+ | FEL_CLA024
+ | "El campo attribute debe ser al menos min"
+
+
+
+ | FEL_CLA025
+ | "El archivo attribute debe pesar al menos min kilobytes"
+
+
+
+ | FEL_CLA026
+ | "El campo attribute debe contener al menos min caracteres"
+
+
+
+ | FEL_CLA027
+ | "El campo attribute debe contener al menos min elementos "
+
+
+
+ | FEL_CLA028
+ | "El campo attribute seleccionado es inválido "
+
+
+
+ | FEL_CLA029
+ | "El campo attribute debe ser verdadero o falso "
+
+
+
+ | FEL_CLA030
+ | "El campo attribute es obligatorio cuando values está presente "
+
+
+
+ | FEL_CLA031
+ | "El campo attribute es obligatorio cuando el campo other es value "
+
+
+
+ | FEL_CLA032
+ | "El campo :attribute debe ser un número"
+
+
+
+ | FEL_CLA033
+ | "El campo :attribute no puede ser 0."
+
+
+
+ | FEL_CLA034
+ | "El campo :attribute debe ser una dirección de correo válida."
+
+
+
+ | FEL_CLA035
+ | "El campo :attribute no corresponde con el formato de fecha :format."
+
+
+
+ | FEL_CLA036
+ | "El campo :attribute debe tener un tamaño de :size."
+
+
+
+ | FEL_CLA037
+ | "El campo :attribute debe ser un array."
+
+
+
+ | FEL_CLA038
+ | "El campo :attribute debe ser un número de teléfono válido."
+
+
+
+ | FEL_CLA039
+ | "El campo :attribute debe ser una fecha posterior o igual a :date."
+
+
+
+ | FEL_CLA040
+ | "El campo :attribute debe ser una fecha posterior a :date."
+
+
+
+ | FEL_CLA041
+ | "Ya existe un invoice registrado con este external id"
+
+
+
+ | FEL_CLA042
+ | "No existe una entidad asociada para emitir facturación automática."
+
+
+
+ | FEL_CLA043
+ | "El establecimiento no existe en los registros de la SAT para ese NIT."
+
+
+
+ | FEL_CLA044
+ | "Estás intentando utilizar el certificador :name, este certificador se encuentra inactivo, por favor, dirígete al portal SAT para realizar la operación."
+
+
+
+ | FEL_CLA045
+ | "Tipo de documento invalido."
+
+
+
+ | FEL_CLA046
+ | "El parent invoice id no existe o es incorrecto."
+
+
+
+ | FEL_CLA047
+ | "Ya no cuentas con documentos disponibles."
+
+
+
+ | FEL_CLA048
+ | "El número de identificación del receptor no ha sido encontrado, asegúrate de que sea correcto: https://portal.sat.gob.gt/portal/consulta-cui-nit"
+
+
+
+ | FEL_CLA049
+ | "La dirección del Receptor está incompleta."
+
+
+
+ | FEL_CLA050
+ | "Error en la petición"
+
+
+
+ | FEL_CLA051
+ | " Estás intentando utilizar el certificador :name, este certificador se encuentra inactivo, por favor, dirígete al portal SAT para realizar la operación."
+
+
+
+ | FEL_CLA052
+ | " El tipo de documento original no tiene permitido asociar este tipo de documento"
+
+
+
+ | FEL_CLA053
+ | " El emisor del documento original no tiene permitido emitir este tipo de documento"
+
+
+
+ | FEL_CLA054
+ | " El receptor debe ser el mismo que del documento original"
+
+
+
+ | FEL_CLA055
+ | " El receptor no coincide con el del documento original"
+
+
+
+ | FEL_CLA056
+ | " Ninguna frase debe estar presente en este tipo de documento"
+
+
+
+ | FEL_CLA057
+ | " El total no puede ser mayor al del documento original"
+
+
+
+ | FEL_CLA058
+ | " Los items no pueden generar iva pasados 2 meses"
+
+
+
+ | FEL_CLA059
+ | " La factura debe tener un receptor distinto a C/F"
+
+
+
+ | FEL_CLA060
+ | " Ninguna frase debe estar presente en este tipo de documento"
+
+
+
+ | FEL_CLA061
+ | " Este tipo de documento no puede contener documentos relacionados"
+
+
+
+ | FEL_CLA062
+ | " Ningun item puede ser marcado sin iva en este tipo de documento"
+
+
+
+ | FEL_CLA063
+ | " Los items no pueden contener impuestos en este tipo de documento"
+
+
+
+ | FEL_CLA064
+ | " XML: Los datos no fueron almacenados, problemas de comunicación con SAT."
+
+------------------------------------------------------------------------------------------
+### Guatemala / REST API codigos de error / Ejemplo de request erronea
+POST {{entorno}}/api/entity/{{empresa}}/invoices/await
+HEADERS: [('Accept', 'application/json'), ('X-Authorization', '{{api_key}}')]
+DESC: Ejemplo de una factura con impuesto de bomberos, erroneo
+
+Los errores se visualizaran en la API como un array de datos:
+
+
+errors: Para visualizar los mensajes de error
+
+
+
+error_codes: Para visualizar un listado de codigos de errores
+BODY:
+{
+
+    "emails": [
+
+        {
+
+            "email": "test@cari.com"
+
+        }
+
+    ],
+
+    "emails_cc": [
+
+        {
+
+            "email": "test@cari.net"
+
+        }
+
+    ],
+
+    "xml": "<base64>"
+
+}
+EXAMPLE RESPONSE ( None ):
+{
+
+    "valid": false,
+
+    "uuid": "03FD6A73-614C-4882-B8C6-68413FA99BA1",
+
+    "sat": {
+
+        "serie": null,
+
+        "no": "",
+
+        "authorization": null,
+
+        "certification_date": null
+
+    },
+
+    "certifier": {
+
+        "name": "CARI Latinoamerica, S.A.",
+
+        "tax_code": "96941243"
+
+    },
+
+    "errors": [
+
+        [
+
+            "Monto del Impuesto calculado incorrectamente para Bomberos."
+
+        ],
+
+        [
+
+            "El monto total en Q del documento excede el límite permitido para receptor CF."
+
+        ],
+
+        [
+
+            "El monto total en Q del documento excede el límite permitido para receptor CF."
+
+        ]
+
+    ],
+
+    "error_codes": [
+
+        "FEL_CARI_065",
+
+        "FEL_CARI_102",
+
+        "FEL_CARI_105"
+
+    ],
+
+    "invoice_url": null,
+
+    "invoice_xml": null
+
+}

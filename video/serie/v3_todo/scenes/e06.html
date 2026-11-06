@@ -1,0 +1,12 @@
+{INCLUDE:calc.css}
+    #e06-calc { left: 1560px; top: 40px; transform-origin: 100% 0%; z-index: 9; opacity: 0; }
+    #e06-ph { opacity: 0; }
+<!--markup-->
+    <!--tag:Maestra de tercero · EORM Cantón El Carmen-->
+    <div id="e06-calc" class="calc"><div class="lcd"><span class="v">19</span></div><div class="keys"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cap"><b>fx-82</b> · Central</div></div>
+    <phone id="e06-ph" src="rec/m_portal_pedido.mp4" at="760 22 446" start="{T:pedi:1:-0.4}" mstart="10.6" />
+<!--script-->
+    tl.set("#e06-calc", { scale: 0.62 }, 0);
+    pip({T:pedi:1:-0.5}, "bl");
+    tl.to("#e06-calc", { opacity: 1, duration: 0.3 }, {T:pedi:1:-0.4});
+    tl.fromTo("#e06-ph", { opacity: 0, y: 80 }, { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" }, {T:pedi:1:-0.4});

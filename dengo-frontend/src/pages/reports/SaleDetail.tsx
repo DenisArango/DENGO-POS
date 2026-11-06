@@ -12,6 +12,7 @@ import { useStore } from '../../contexts/StoreContext'
 import { usePermissions } from '../../hooks/usePermissions'
 import { toast } from 'sonner'
 import ThermalReceipt from '../../components/print/ThermalReceipt'
+import SaleFelPanel from '../../components/fel/SaleFelPanel'
 
 const PM_LABEL: Record<string, string> = {
   CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia',
@@ -220,8 +221,10 @@ export default function SaleDetail() {
     if (!id) return
     setVoiding(true)
     try {
-      await api.delete(`/api/sales/${id}`, { reason: voidReason })
-      toast.success('Venta anulada')
+      const r = await api.delete<{ message?: string; felVoidError?: string | null }>(`/api/sales/${id}`, { reason: voidReason })
+      // A certified factura is annulled at the SAT too; if that failed, say so.
+      if (r?.felVoidError) toast.error(r.message ?? 'Venta anulada, pero la factura no se pudo anular en la SAT', { duration: 9000 })
+      else toast.success('Venta anulada')
       setShowVoidConfirm(false)
       fetchSale()
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Error al anular')
@@ -323,33 +326,8 @@ export default function SaleDetail() {
         {sale.notes && <div className="flex-1"><p className="text-xs text-gray-400">Notas</p><p className="text-sm text-gray-700">{sale.notes}</p></div>}
       </div>
 
-      {/* Invoice (factura) info */}
-      {sale.requiresInvoice && (
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 flex flex-wrap gap-4 items-center">
-          <div>
-            <p className="text-xs text-purple-500">Factura</p>
-            <p className="text-sm font-medium text-purple-800">Serie {sale.invoiceSeries} No. {sale.invoiceSeqNumber}</p>
-          </div>
-          <div>
-            <p className="text-xs text-purple-500">NIT comprador</p>
-            <p className="text-sm font-mono text-purple-800">{sale.buyerNit}</p>
-          </div>
-          <div>
-            <p className="text-xs text-purple-500">Nombre</p>
-            <p className="text-sm text-purple-800">{sale.buyerName}</p>
-          </div>
-          <div>
-            <p className="text-xs text-purple-500">Emisor (NIT sucursal)</p>
-            <p className="text-sm font-mono text-purple-800">{sale.branch?.companyTaxId ?? '—'}</p>
-          </div>
-          <div>
-            <p className="text-xs text-purple-500">Estado</p>
-            <p className="text-sm font-medium text-purple-800">
-              {sale.felStatus === 'CERTIFIED' ? 'Certificada' : sale.felStatus === 'FAILED' ? 'Error de certificación' : 'Pendiente de certificación'}
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Factura electrónica (FEL): certificación, PDF, anulación, notas de crédito */}
+      {sale.requiresInvoice && <SaleFelPanel sale={sale} onChanged={fetchSale} />}
 
       {/* Items */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -704,6 +682,9 @@ export default function SaleDetail() {
         buyerNit: sale.buyerNit,
         buyerName: sale.buyerName,
         felStatus: sale.felStatus,
+        felSatSerie: sale.felSatSerie, felSatNumber: sale.felSatNumber, felAuthNumber: sale.felAuthNumber,
+        felCertifiedAt: sale.felCertifiedAt, felCertifierName: sale.felCertifierName, felCertifierNit: sale.felCertifierNit,
+        felEnvironment: sale.felEnvironment, felDocType: sale.felDocType,
       }}
     />
     </>

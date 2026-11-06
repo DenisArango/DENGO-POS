@@ -36,6 +36,10 @@ import portalAdminRoutes from './routes/portal-admin.js'
 import messagesRoutes from './routes/messages.js'
 import pushRoutes from './routes/push.js'
 import appRoutes from './routes/app.js'
+import websiteRoutes from './routes/website.js'
+import felRoutes from './routes/fel.js'
+import { startFelWorker } from './lib/fel.js'
+import siteRoutes from './routes/site.js'
 
 const fastify = Fastify({
   // Behind Caddy on the same machine: trust X-Forwarded-For only from the
@@ -161,6 +165,9 @@ async function bootstrap() {
   await fastify.register(messagesRoutes,     { prefix: '/api/messages' })
   await fastify.register(pushRoutes,         { prefix: '/api/push' })
   await fastify.register(appRoutes,          { prefix: '/api/app' })
+  await fastify.register(websiteRoutes,      { prefix: '/api/website' })
+  await fastify.register(felRoutes,          { prefix: '/api/fel' })
+  await fastify.register(siteRoutes,         { prefix: '/api/site' })
 
   // 404 handler
   fastify.setNotFoundHandler((_request, reply) => {
@@ -178,6 +185,8 @@ async function bootstrap() {
   // Start
   await fastify.listen({ port: config.port, host: config.host })
   fastify.log.info(`🚀 DENGO POS API running on http://${config.host}:${config.port}`)
+  // Facturas that never reached the certifier (no connection) are retried in the background.
+  startFelWorker(msg => fastify.log.info(msg))
 }
 
 // Graceful shutdown

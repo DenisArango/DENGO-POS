@@ -1,0 +1,17 @@
+    #p03-m, #p03-pr, #p03-pk { opacity: 0; }
+    #p03-p1 { left: 1180px; top: 940px; opacity: 0; }
+<!--markup-->
+    <shot id="p03-m" src="ui/x_maestros.png" crop="205 60 1395 180" at="600 80 1240" />
+    <shot id="p03-pr" src="ui/x_programas.png" crop="205 60 1395 370" at="600 290 1240" />
+    <ring id="p03-r1" on="p03-pr" box="628 200 56 30" />
+    <ring id="p03-r2" on="p03-pr" box="1068 200 56 30" />
+    <ring id="p03-r3" on="p03-pr" box="1508 200 56 30" />
+    <shot id="p03-pk" src="ui/x_paquetes.png" crop="256 430 1344 240" at="600 650 1240" />
+    <div id="p03-p1" class="pill sun">Cada maestro ve solo lo suyo</div>
+<!--script-->
+    pip({T:doy:1:-0.3}, "bl");
+    lift("#p03-m", {T:maestro});
+    lift("#p03-pr", {T:activo:1:-0.2});
+    ring("#p03-r1", {T:programas}, 1.4); ring("#p03-r2", {T:programas:1:+0.15}, 1.3); ring("#p03-r3", {T:programas:1:+0.3}, 1.2);
+    lift("#p03-pk", {T:paquetes:1:-0.3});
+    pop("#p03-p1", {T:corresponde:1:-0.6});

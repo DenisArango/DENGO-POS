@@ -1,0 +1,2510 @@
+{
+ "url": "http://127.0.0.1:4322/",
+ "at": "2026-11-05T20:58:26.370Z",
+ "allow": [],
+ "viewports": [
+  {
+   "width": 1440,
+   "height": 900,
+   "load": "load",
+   "screens": 12,
+   "filled": [
+    1,
+    0.6,
+    0.61,
+    0.55,
+    0.58,
+    0.78,
+    0.78,
+    0.79,
+    0.7,
+    0.67,
+    0.61,
+    0.59
+   ],
+   "motion": {
+    "elements": 72,
+    "css": 4,
+    "transitions": 67,
+    "scripted": 1,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "page": {
+     "height": 14159,
+     "screens": 15.7,
+     "words": 1054,
+     "img": 15,
+     "video": 0,
+     "canvas": 0,
+     "svg": 17,
+     "sections": 11,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 9,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "tienda-juanita-comunidad-de-cantagallo.webp",
+      "una-papeleria-en-xochimilco.webp",
+      "papeleria-sairy-mazatlan-21-de-octubre-de.webp",
+      "haltern-am-see-lavesum-kunstlerhof-acrylfarbe-20",
+      "parker-fountain-pen.webp",
+      "bookbinding-1.webp",
+      "pan-dulce-cabinet-on-los-bisquets-obregon.webp",
+      "chitomax-cubulco-baja-verapaz-4.webp"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Variedades Dayana",
+     "words": 2,
+     "chars": 17,
+     "lines": 1,
+     "size": 244.8,
+     "vw": 17,
+     "font": "Switzer",
+     "weight": 500,
+     "tracking": -0.055,
+     "leading": 0.8,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "left",
+     "position": "right",
+     "widthRatio": 0.54,
+     "top": 676,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Variedades Dayana",
+     "words": 2,
+     "lines": 1,
+     "size": 244.8,
+     "font": "Switzer"
+    },
+    "headings": [
+     {
+      "text": "Variedades Dayana",
+      "words": 2,
+      "chars": 17,
+      "lines": 1,
+      "size": 244.8,
+      "vw": 17,
+      "font": "Switzer",
+      "weight": 500,
+      "tracking": -0.055,
+      "leading": 0.8,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.54,
+      "top": 676,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "En servicio y calidad nadie nos gana",
+      "words": 7,
+      "chars": 36,
+      "lines": 2,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.35,
+      "top": 1100,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Todo empezó en un cuarto de la casa",
+      "words": 8,
+      "chars": 35,
+      "lines": 2,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.35,
+      "top": 1827,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "15%",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 129.6,
+      "vw": 9,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.06,
+      "leading": 0.82,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.39,
+      "top": 5041,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Black November Totto: 15% de descuento",
+      "words": 6,
+      "chars": 38,
+      "lines": 2,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.39,
+      "top": 5175,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Surtido",
+      "words": 1,
+      "chars": 7,
+      "lines": 1,
+      "size": 129.3,
+      "vw": 9,
+      "font": "Switzer",
+      "weight": 700,
+      "tracking": -0.06,
+      "leading": 0.8,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.44,
+      "top": 5844,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Servicios en tienda",
+      "words": 3,
+      "chars": 19,
+      "lines": 1,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "center",
+      "position": "right",
+      "widthRatio": 0.34,
+      "top": 7423,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "La tiendita de siempre",
+      "words": 4,
+      "chars": 22,
+      "lines": 1,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.35,
+      "top": 8830,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Lo que nos mueve",
+      "words": 4,
+      "chars": 16,
+      "lines": 1,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.35,
+      "top": 9426,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Nuestras 4 tiendas",
+      "words": 3,
+      "chars": 18,
+      "lines": 1,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.35,
+      "top": 10218,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Dayana Principal",
+      "words": 2,
+      "chars": 16,
+      "lines": 1,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.35,
+      "top": 10321,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Dayana 2",
+      "words": 2,
+      "chars": 8,
+      "lines": 1,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.35,
+      "top": 10615,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Dayana 3",
+      "words": 2,
+      "chars": 8,
+      "lines": 1,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.35,
+      "top": 10896,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Dayana 4",
+      "words": 2,
+      "chars": 8,
+      "lines": 1,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.35,
+      "top": 11154,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Desde Rabinal, con calidez",
+      "words": 4,
+      "chars": 26,
+      "lines": 1,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 11731,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "2010",
+      "words": 1,
+      "chars": 4,
+      "lines": 1,
+      "size": 129.6,
+      "vw": 9,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.05,
+      "leading": 0.9,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.27,
+      "top": 11853,
+      "tag": "b",
+      "kind": "statement"
+     },
+     {
+      "text": "4",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 129.6,
+      "vw": 9,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.05,
+      "leading": 0.9,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.27,
+      "top": 12190,
+      "tag": "b",
+      "kind": "statement"
+     },
+     {
+      "text": "5912 5855",
+      "words": 2,
+      "chars": 9,
+      "lines": 1,
+      "size": 244.8,
+      "vw": 17,
+      "font": "Switzer",
+      "weight": 500,
+      "tracking": -0.06,
+      "leading": 0.82,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 13274,
+      "tag": "a",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 18,
+     "maxLines": 2,
+     "over2Lines": 0,
+     "statements": 3,
+     "centered": 1,
+     "medianWords": 2,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Switzer",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      14,
+      19,
+      24,
+      26,
+      52,
+      129,
+      130,
+      245
+     ],
+     "sizeCount": 8,
+     "notLoaded": [],
+     "body": {
+      "font": "Switzer",
+      "size": 19,
+      "leading": 1.5,
+      "weight": 500,
+      "tracking": -0.01,
+      "contrast": 17.7
+     },
+     "measureChars": 82,
+     "max": {
+      "size": 244.8,
+      "vw": 17,
+      "font": "Switzer",
+      "text": "Dayana"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.05,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#ffffff",
+     "bodyBgHsl": {
+      "h": 0,
+      "s": 0,
+      "l": 1
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#00184a",
+       "top": 0,
+       "hsl": {
+        "h": 221,
+        "s": 1,
+        "l": 0.15
+       }
+      },
+      {
+       "color": "#d40008",
+       "top": 4945,
+       "hsl": {
+        "h": 358,
+        "s": 1,
+        "l": 0.42
+       }
+      },
+      {
+       "color": "#001f5f",
+       "top": 7251,
+       "hsl": {
+        "h": 220,
+        "s": 1,
+        "l": 0.19
+       }
+      },
+      {
+       "color": "#ffffff",
+       "top": 7367,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 1
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#0a1638",
+       "share": 0.63
+      },
+      {
+       "color": "#3f4b6e",
+       "share": 0.17
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.11
+      },
+      {
+       "color": "#001f5f",
+       "share": 0.05
+      },
+      {
+       "color": "#d40008",
+       "share": 0.02
+      }
+     ],
+     "button": {
+      "bg": "#ffffff",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 1
+      },
+      "fg": "#001f5f"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 41,
+     "inHero": 3,
+     "radius": "pill",
+     "height": 40,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Obtener cupón",
+      "15% en Totto",
+      "Arma tu lista"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 2,
+     "boxRadius": 14,
+     "squareMedia": 0,
+     "roundedMedia": 3,
+     "mediaRadius": 14,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 3,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 0
+      }
+     ]
+    },
+    "heroMedia": [
+     {
+      "type": "img",
+      "ratio": 0.47
+     },
+     {
+      "type": "img",
+      "ratio": 0.46
+     }
+    ],
+    "nav": {
+     "links": 6,
+     "fixed": false,
+     "height": 64,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "switzer"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "pageH": 14159,
+    "margins": {
+     "left": 46,
+     "right": 66
+    },
+    "sections": [
+     {
+      "sel": "div.d-split",
+      "tag": "div",
+      "top": 0,
+      "height": 11507,
+      "words": 940,
+      "media": 1,
+      "middle": 0,
+      "heading": {
+       "text": "Dayana",
+       "size": 245,
+       "tag": "h1"
+      },
+      "left": 31,
+      "right": 46,
+      "textLeft": 76,
+      "textRight": 46,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": true,
+      "pinned": true
+     },
+     {
+      "sel": "section.d-mosaic",
+      "tag": "section",
+      "top": 11507,
+      "height": 968,
+      "words": 0,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": null,
+      "right": null,
+      "textLeft": null,
+      "textRight": null,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#contacto.d-contact",
+      "tag": "section",
+      "top": 12675,
+      "height": 900,
+      "words": 10,
+      "media": 0,
+      "middle": 862,
+      "heading": null,
+      "left": 46,
+      "right": 46,
+      "textLeft": 46,
+      "textRight": 46,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "footer.d-foot",
+      "tag": "footer",
+      "top": 13575,
+      "height": 321,
+      "words": 16,
+      "media": 0,
+      "middle": 370,
+      "heading": null,
+      "left": 46,
+      "right": 46,
+      "textLeft": 46,
+      "textRight": 46,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [
+     {
+      "top": 13536,
+      "height": 308
+     }
+    ],
+    "h1s": [
+     {
+      "text": "Variedades Dayana",
+      "size": 245,
+      "top": 676,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 758,
+      "n": 29
+     },
+     {
+      "x": 46,
+      "n": 1
+     },
+     {
+      "x": 614,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 31,
+    "bodySize": 19,
+    "stage": false,
+    "explains": true,
+    "slivers": [],
+    "voidShare": 0.09,
+    "voidBox": {
+     "x": 1200,
+     "y": 120,
+     "w": 240,
+     "h": 480
+    }
+   },
+   "app": null,
+   "consoleErrors": []
+  },
+  {
+   "width": 768,
+   "height": 1024,
+   "load": "load",
+   "screens": 12,
+   "filled": [
+    0.96,
+    0.66,
+    0.7,
+    0.51,
+    0.53,
+    0.68,
+    0.74,
+    0.69,
+    0.41,
+    0.7,
+    0.26,
+    0.41
+   ],
+   "motion": {
+    "elements": 56,
+    "css": 4,
+    "transitions": 52,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "page": {
+     "height": 15240,
+     "screens": 14.9,
+     "words": 1076,
+     "img": 15,
+     "video": 0,
+     "canvas": 0,
+     "svg": 17,
+     "sections": 11,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 5,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "tienda-juanita-comunidad-de-cantagallo.webp",
+      "una-papeleria-en-xochimilco.webp",
+      "pan-dulce-cabinet-on-los-bisquets-obregon.webp",
+      "chitomax-cubulco-baja-verapaz-4.webp",
+      "a-glimpse-of-guatemala-a-temple-near.webp"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Variedades Dayana",
+     "words": 2,
+     "chars": 17,
+     "lines": 1,
+     "size": 207.4,
+     "vw": 27,
+     "font": "Switzer",
+     "weight": 500,
+     "tracking": -0.055,
+     "leading": 0.85,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "left",
+     "position": "center",
+     "widthRatio": 0.97,
+     "top": 556,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Variedades Dayana",
+     "words": 2,
+     "lines": 1,
+     "size": 207.4,
+     "font": "Switzer"
+    },
+    "headings": [
+     {
+      "text": "Variedades Dayana",
+      "words": 2,
+      "chars": 17,
+      "lines": 1,
+      "size": 207.4,
+      "vw": 27,
+      "font": "Switzer",
+      "weight": 500,
+      "tracking": -0.055,
+      "leading": 0.85,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.97,
+      "top": 556,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "En servicio y calidad nadie nos gana",
+      "words": 7,
+      "chars": 36,
+      "lines": 1,
+      "size": 39.2,
+      "vw": 5.1,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 1113,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Todo empezó en un cuarto de la casa",
+      "words": 8,
+      "chars": 35,
+      "lines": 1,
+      "size": 39.2,
+      "vw": 5.1,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 2149,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "15%",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 72,
+      "vw": 9.4,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.06,
+      "leading": 0.82,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.73,
+      "top": 6070,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Black November Totto: 15% de descuento",
+      "words": 6,
+      "chars": 38,
+      "lines": 2,
+      "size": 39.2,
+      "vw": 5.1,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.73,
+      "top": 6157,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Surtido",
+      "words": 1,
+      "chars": 7,
+      "lines": 1,
+      "size": 131.2,
+      "vw": 17.1,
+      "font": "Switzer",
+      "weight": 700,
+      "tracking": -0.06,
+      "leading": 0.8,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.84,
+      "top": 6734,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Servicios en tienda",
+      "words": 3,
+      "chars": 19,
+      "lines": 1,
+      "size": 39.2,
+      "vw": 5.1,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "center",
+      "position": "center",
+      "widthRatio": 0.73,
+      "top": 8175,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "La tiendita de siempre",
+      "words": 4,
+      "chars": 22,
+      "lines": 1,
+      "size": 39.2,
+      "vw": 5.1,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 9256,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Lo que nos mueve",
+      "words": 4,
+      "chars": 16,
+      "lines": 1,
+      "size": 39.2,
+      "vw": 5.1,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 10294,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Nuestras 4 tiendas",
+      "words": 3,
+      "chars": 18,
+      "lines": 1,
+      "size": 39.2,
+      "vw": 5.1,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 10842,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Dayana Principal",
+      "words": 2,
+      "chars": 16,
+      "lines": 1,
+      "size": 39.2,
+      "vw": 5.1,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 10931,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Dayana 2",
+      "words": 2,
+      "chars": 8,
+      "lines": 1,
+      "size": 39.2,
+      "vw": 5.1,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 11205,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Dayana 3",
+      "words": 2,
+      "chars": 8,
+      "lines": 1,
+      "size": 39.2,
+      "vw": 5.1,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 11445,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Dayana 4",
+      "words": 2,
+      "chars": 8,
+      "lines": 1,
+      "size": 39.2,
+      "vw": 5.1,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 11685,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Desde Rabinal, con calidez",
+      "words": 4,
+      "chars": 26,
+      "lines": 1,
+      "size": 39.2,
+      "vw": 5.1,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 12720,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "2010",
+      "words": 1,
+      "chars": 4,
+      "lines": 1,
+      "size": 99.8,
+      "vw": 13,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.05,
+      "leading": 0.9,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.42,
+      "top": 13360,
+      "tag": "b",
+      "kind": "statement"
+     },
+     {
+      "text": "4",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 99.8,
+      "vw": 13,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.05,
+      "leading": 0.9,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.42,
+      "top": 13360,
+      "tag": "b",
+      "kind": "statement"
+     },
+     {
+      "text": "5912 5855",
+      "words": 2,
+      "chars": 9,
+      "lines": 1,
+      "size": 145.9,
+      "vw": 19,
+      "font": "Switzer",
+      "weight": 500,
+      "tracking": -0.06,
+      "leading": 0.82,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 14435,
+      "tag": "a",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 18,
+     "maxLines": 2,
+     "over2Lines": 0,
+     "statements": 3,
+     "centered": 1,
+     "medianWords": 2,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Switzer",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      13,
+      18,
+      19,
+      21,
+      23,
+      39,
+      72,
+      100,
+      131,
+      146,
+      207
+     ],
+     "sizeCount": 11,
+     "notLoaded": [],
+     "body": {
+      "font": "Switzer",
+      "size": 17.9,
+      "leading": 1.5,
+      "weight": 500,
+      "tracking": -0.01,
+      "contrast": 17.7
+     },
+     "measureChars": 76,
+     "max": {
+      "size": 207.4,
+      "vw": 27,
+      "font": "Switzer",
+      "text": "Dayana"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.04,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#ffffff",
+     "bodyBgHsl": {
+      "h": 0,
+      "s": 0,
+      "l": 1
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#00184a",
+       "top": 0,
+       "hsl": {
+        "h": 221,
+        "s": 1,
+        "l": 0.15
+       }
+      },
+      {
+       "color": "#d40008",
+       "top": 6014,
+       "hsl": {
+        "h": 358,
+        "s": 1,
+        "l": 0.42
+       }
+      },
+      {
+       "color": "#dde3f1",
+       "top": 6973,
+       "hsl": {
+        "h": 222,
+        "s": 0.42,
+        "l": 0.91
+       }
+      },
+      {
+       "color": "#001f5f",
+       "top": 8055,
+       "hsl": {
+        "h": 220,
+        "s": 1,
+        "l": 0.19
+       }
+      },
+      {
+       "color": "#ffffff",
+       "top": 8119,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 1
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#0a1638",
+       "share": 0.63
+      },
+      {
+       "color": "#3f4b6e",
+       "share": 0.15
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.13
+      },
+      {
+       "color": "#001f5f",
+       "share": 0.05
+      },
+      {
+       "color": "#d40008",
+       "share": 0.02
+      }
+     ],
+     "button": {
+      "bg": "#ffffff",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 1
+      },
+      "fg": "#001f5f"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 41,
+     "inHero": 3,
+     "radius": "pill",
+     "height": 40,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Obtener cupón",
+      "15% en Totto",
+      "Arma tu lista"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 2,
+     "boxRadius": 14,
+     "squareMedia": 0,
+     "roundedMedia": 5,
+     "mediaRadius": 14,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [
+     {
+      "type": "img",
+      "ratio": 0.56
+     }
+    ],
+    "nav": {
+     "links": 3,
+     "fixed": false,
+     "height": 52,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "switzer"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "pageH": 15240,
+    "margins": {
+     "left": 24,
+     "right": 29
+    },
+    "sections": [
+     {
+      "sel": "div.d-split",
+      "tag": "div",
+      "top": 0,
+      "height": 12576,
+      "words": 985,
+      "media": 5,
+      "middle": 0,
+      "heading": {
+       "text": "Dayana",
+       "size": 207,
+       "tag": "h1"
+      },
+      "left": 12,
+      "right": 12,
+      "textLeft": 14,
+      "textRight": 29,
+      "fullBleed": true,
+      "footer": false,
+      "hero": true,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.d-mosaic",
+      "tag": "section",
+      "top": 12576,
+      "height": 1099,
+      "words": 0,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": null,
+      "right": null,
+      "textLeft": null,
+      "textRight": null,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#contacto.d-contact",
+      "tag": "section",
+      "top": 13795,
+      "height": 881,
+      "words": 10,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 25,
+      "right": 480,
+      "textLeft": 25,
+      "textRight": 480,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "footer.d-foot",
+      "tag": "footer",
+      "top": 14676,
+      "height": 311,
+      "words": 16,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 25,
+      "right": 450,
+      "textLeft": 25,
+      "textRight": 450,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "p.d-credits",
+      "tag": "p",
+      "top": 14987,
+      "height": 253,
+      "words": 122,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 25,
+      "right": 285,
+      "textLeft": 25,
+      "textRight": 285,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Variedades Dayana",
+      "size": 207,
+      "top": 556,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 25,
+      "n": 29
+     },
+     {
+      "x": 14,
+      "n": 3
+     }
+    ],
+    "leftBlocks": 32,
+    "bodySize": 18,
+    "stage": false,
+    "explains": true,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": null,
+   "consoleErrors": []
+  },
+  {
+   "width": 390,
+   "height": 844,
+   "load": "load",
+   "screens": 12,
+   "filled": [
+    0.95,
+    0.57,
+    0.58,
+    0.57,
+    0.53,
+    0.54,
+    0.81,
+    0.87,
+    0.54,
+    0.53,
+    0.65,
+    0.34
+   ],
+   "motion": {
+    "elements": 54,
+    "css": 4,
+    "transitions": 50,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "page": {
+     "height": 13271,
+     "screens": 15.7,
+     "words": 1076,
+     "img": 15,
+     "video": 0,
+     "canvas": 0,
+     "svg": 17,
+     "sections": 11,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 4,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "tienda-juanita-comunidad-de-cantagallo.webp",
+      "una-papeleria-en-xochimilco.webp",
+      "pan-dulce-cabinet-on-los-bisquets-obregon.webp",
+      "chitomax-cubulco-baja-verapaz-4.webp"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Variedades Dayana",
+     "words": 2,
+     "chars": 17,
+     "lines": 1,
+     "size": 105.3,
+     "vw": 27,
+     "font": "Switzer",
+     "weight": 500,
+     "tracking": -0.055,
+     "leading": 0.85,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "left",
+     "position": "center",
+     "widthRatio": 0.93,
+     "top": 476,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Variedades Dayana",
+     "words": 2,
+     "lines": 1,
+     "size": 105.3,
+     "font": "Switzer"
+    },
+    "headings": [
+     {
+      "text": "Variedades Dayana",
+      "words": 2,
+      "chars": 17,
+      "lines": 1,
+      "size": 105.3,
+      "vw": 27,
+      "font": "Switzer",
+      "weight": 500,
+      "tracking": -0.055,
+      "leading": 0.85,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.93,
+      "top": 476,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "En servicio y calidad nadie nos gana",
+      "words": 7,
+      "chars": 36,
+      "lines": 2,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 945,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Todo empezó en un cuarto de la casa",
+      "words": 8,
+      "chars": 35,
+      "lines": 2,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 1901,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "15%",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 72,
+      "vw": 18.5,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.06,
+      "leading": 0.82,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 5043,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Black November Totto: 15% de descuento",
+      "words": 6,
+      "chars": 38,
+      "lines": 2,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 5130,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Surtido",
+      "words": 1,
+      "chars": 7,
+      "lines": 1,
+      "size": 71.8,
+      "vw": 18.4,
+      "font": "Switzer",
+      "weight": 700,
+      "tracking": -0.06,
+      "leading": 0.8,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 5712,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Servicios en tienda",
+      "words": 3,
+      "chars": 19,
+      "lines": 1,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "center",
+      "position": "center",
+      "widthRatio": 0.79,
+      "top": 7146,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "La tiendita de siempre",
+      "words": 4,
+      "chars": 22,
+      "lines": 1,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 8233,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Lo que nos mueve",
+      "words": 4,
+      "chars": 16,
+      "lines": 1,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 9053,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Nuestras 4 tiendas",
+      "words": 3,
+      "chars": 18,
+      "lines": 1,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 9779,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Dayana Principal",
+      "words": 2,
+      "chars": 16,
+      "lines": 1,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 9860,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Dayana 2",
+      "words": 2,
+      "chars": 8,
+      "lines": 1,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 10146,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Dayana 3",
+      "words": 2,
+      "chars": 8,
+      "lines": 1,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 10375,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Dayana 4",
+      "words": 2,
+      "chars": 8,
+      "lines": 1,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 10603,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Desde Rabinal, con calidez",
+      "words": 4,
+      "chars": 26,
+      "lines": 2,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.035,
+      "leading": 1.04,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 11326,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "2010",
+      "words": 1,
+      "chars": 4,
+      "lines": 1,
+      "size": 50.7,
+      "vw": 13,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.05,
+      "leading": 0.9,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.35,
+      "top": 11715,
+      "tag": "b",
+      "kind": "statement"
+     },
+     {
+      "text": "4",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 50.7,
+      "vw": 13,
+      "font": "Switzer",
+      "weight": 600,
+      "tracking": -0.05,
+      "leading": 0.9,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.35,
+      "top": 11715,
+      "tag": "b",
+      "kind": "statement"
+     },
+     {
+      "text": "5912 5855",
+      "words": 2,
+      "chars": 9,
+      "lines": 1,
+      "size": 74.1,
+      "vw": 19,
+      "font": "Switzer",
+      "weight": 500,
+      "tracking": -0.06,
+      "leading": 0.82,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 12522,
+      "tag": "a",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 18,
+     "maxLines": 2,
+     "over2Lines": 0,
+     "statements": 3,
+     "centered": 1,
+     "medianWords": 2,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Switzer",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      13,
+      17,
+      19,
+      20,
+      32,
+      51,
+      72,
+      74,
+      105
+     ],
+     "sizeCount": 9,
+     "notLoaded": [],
+     "body": {
+      "font": "Switzer",
+      "size": 17,
+      "leading": 1.5,
+      "weight": 500,
+      "tracking": -0.01,
+      "contrast": 17.7
+     },
+     "measureChars": 60,
+     "max": {
+      "size": 105.3,
+      "vw": 27,
+      "font": "Switzer",
+      "text": "Dayana"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.04,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#ffffff",
+     "bodyBgHsl": {
+      "h": 0,
+      "s": 0,
+      "l": 1
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#00184a",
+       "top": 0,
+       "hsl": {
+        "h": 221,
+        "s": 1,
+        "l": 0.15
+       }
+      },
+      {
+       "color": "#d40008",
+       "top": 4987,
+       "hsl": {
+        "h": 358,
+        "s": 1,
+        "l": 0.42
+       }
+      },
+      {
+       "color": "#dde3f1",
+       "top": 5900,
+       "hsl": {
+        "h": 222,
+        "s": 0.42,
+        "l": 0.91
+       }
+      },
+      {
+       "color": "#001f5f",
+       "top": 7026,
+       "hsl": {
+        "h": 220,
+        "s": 1,
+        "l": 0.19
+       }
+      },
+      {
+       "color": "#ffffff",
+       "top": 7090,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 1
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#0a1638",
+       "share": 0.63
+      },
+      {
+       "color": "#3f4b6e",
+       "share": 0.15
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.13
+      },
+      {
+       "color": "#001f5f",
+       "share": 0.05
+      },
+      {
+       "color": "#d40008",
+       "share": 0.02
+      }
+     ],
+     "button": {
+      "bg": "#ffffff",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 1
+      },
+      "fg": "#001f5f"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 41,
+     "inHero": 3,
+     "radius": "pill",
+     "height": 40,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Obtener cupón",
+      "15% en Totto",
+      "Arma tu lista"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 2,
+     "boxRadius": 14,
+     "squareMedia": 0,
+     "roundedMedia": 5,
+     "mediaRadius": 14,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [
+     {
+      "type": "img",
+      "ratio": 0.54
+     }
+    ],
+    "nav": {
+     "links": 3,
+     "fixed": false,
+     "height": 52,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "switzer"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "pageH": 13271,
+    "margins": {
+     "left": 20,
+     "right": 21
+    },
+    "sections": [
+     {
+      "sel": "div.d-split",
+      "tag": "div",
+      "top": 0,
+      "height": 11182,
+      "words": 933,
+      "media": 5,
+      "middle": 0,
+      "heading": {
+       "text": "Dayana",
+       "size": 105,
+       "tag": "h1"
+      },
+      "left": 12,
+      "right": 12,
+      "textLeft": 14,
+      "textRight": 21,
+      "fullBleed": true,
+      "footer": false,
+      "hero": true,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.d-mosaic",
+      "tag": "section",
+      "top": 11182,
+      "height": 664,
+      "words": 0,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": null,
+      "right": null,
+      "textLeft": null,
+      "textRight": null,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#contacto.d-contact",
+      "tag": "section",
+      "top": 11966,
+      "height": 726,
+      "words": 10,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 20,
+      "right": 114,
+      "textLeft": 20,
+      "textRight": 114,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "footer.d-foot",
+      "tag": "footer",
+      "top": 12692,
+      "height": 273,
+      "words": 16,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 20,
+      "right": 84,
+      "textLeft": 20,
+      "textRight": 84,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "p.d-credits",
+      "tag": "p",
+      "top": 12965,
+      "height": 306,
+      "words": 122,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 20,
+      "right": 22,
+      "textLeft": 20,
+      "textRight": 22,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Variedades Dayana",
+      "size": 105,
+      "top": 476,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 14,
+      "n": 29
+     }
+    ],
+    "leftBlocks": 29,
+    "bodySize": 17,
+    "stage": false,
+    "explains": true,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": null,
+   "consoleErrors": []
+  }
+ ],
+ "findings": [
+  {
+   "level": "WARN",
+   "id": "no-footage",
+   "width": 1440,
+   "message": "No video anywhere on the page.",
+   "fix": "Look for one honest clip with scripts/assets.mjs --video (the place, the material, the process) and use it as a muted loop with a poster frame. Defend its absence only if no clip fits the subject."
+  },
+  {
+   "level": "WARN",
+   "id": "dev-server",
+   "width": 1440,
+   "message": "This page is served by a development server (Vite, webpack or Next in dev mode).",
+   "fix": "Run the last gate on the production build too (vite build && vite preview, next build && next start, or the built index.html): minifiers and bundlers change the CSS a visitor receives.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "off-centre",
+   "width": 1440,
+   "message": "The margins differ: 46px on the left, 66px on the right, at 1440px.",
+   "fix": "Put the navigation and the content on one pair of margins; check for padding on one side only, a scrollbar gutter, or a header on another inset than the page."
+  },
+  {
+   "level": "WARN",
+   "id": "pinned-over-picture",
+   "width": 1440,
+   "message": "Pinned large text slides across pictures while the page scrolls: \"2010\" (screen 3, 100% over a picture); \"Las escuelas\" (screen 4, 100% over a picture); \"Las sucursales\" (screen 6, 100% over a picture)",
+   "fix": "Jurors read a pinned title crossing drawings or photographs as a collision. Keep the pictures in the column the title does not occupy, or unpin it."
+  },
+  {
+   "level": "WARN",
+   "id": "size-count",
+   "width": 768,
+   "message": "11 different font sizes (13, 18, 19, 21, 23, 39, 72, 100, 131, 146, 207).",
+   "fix": "A page needs about five: display, heading, lead, body, small."
+  }
+ ],
+ "images": [
+  {
+   "viewport": "desktop",
+   "width": 1440,
+   "fold": "C:\\denis\\DENGO-POS\\.taste-skill\\dayana\\inspect\\desktop-fold.jpg",
+   "pages": [
+    "C:\\denis\\DENGO-POS\\.taste-skill\\dayana\\inspect\\desktop-page-01.jpg",
+    "C:\\denis\\DENGO-POS\\.taste-skill\\dayana\\inspect\\desktop-page-02.jpg",
+    "C:\\denis\\DENGO-POS\\.taste-skill\\dayana\\inspect\\desktop-page-03.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "tablet",
+   "width": 768,
+   "fold": "C:\\denis\\DENGO-POS\\.taste-skill\\dayana\\inspect\\tablet-fold.jpg",
+   "pages": [
+    "C:\\denis\\DENGO-POS\\.taste-skill\\dayana\\inspect\\tablet-page-01.jpg",
+    "C:\\denis\\DENGO-POS\\.taste-skill\\dayana\\inspect\\tablet-page-02.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "mobile",
+   "width": 390,
+   "fold": "C:\\denis\\DENGO-POS\\.taste-skill\\dayana\\inspect\\mobile-fold.jpg",
+   "pages": [
+    "C:\\denis\\DENGO-POS\\.taste-skill\\dayana\\inspect\\mobile-page-01.jpg",
+    "C:\\denis\\DENGO-POS\\.taste-skill\\dayana\\inspect\\mobile-page-02.jpg"
+   ],
+   "film": []
+  }
+ ]
+}

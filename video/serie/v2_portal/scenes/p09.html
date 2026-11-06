@@ -1,0 +1,22 @@
+    #p09-h, #p09-d, #p09-ph { opacity: 0; }
+    .st { position: absolute; left: 200px; display: flex; align-items: center; gap: 22px; font-size: 46px; font-weight: 700; color: #b8ae9c; opacity: 0; }
+    .st i { width: 30px; height: 30px; border-radius: 50%; background: #d8cfbf; display: block; }
+<!--markup-->
+    <shot id="p09-h" src="ui/x_hoja.png" crop="0 0 1600 300" at="120 110 1300" />
+    <shot id="p09-d" src="ui/x_pedido_detalle.png" crop="1087 700 513 140" at="120 600 760" />
+    <phone id="p09-ph" src="ui/m_t_pedido.png" at="1300 22 446" />
+    <ring id="p09-s1" on="p09-ph" box="40 395 54 70" pad="4" />
+    <ring id="p09-s2" on="p09-ph" box="122 395 62 70" pad="4" />
+    <ring id="p09-s3" on="p09-ph" box="205 395 60 70" pad="4" />
+<!--script-->
+    tl.fromTo("#p09-h", { opacity: 0, y: 50, rotation: -2 }, { opacity: 1, y: 0, rotation: -1.5, duration: 0.7, ease: "expo.out" }, {T:hoja:1:-0.2});
+    lift("#p09-d", {T:fecha:1:-0.2});
+    tl.to("#p09-h, #p09-d", { opacity: 0.25, duration: 0.4 }, {T:revision:1:-0.4});
+    tl.fromTo("#p09-ph", { opacity: 0, x: 140 }, { opacity: 1, x: 0, duration: 0.6, ease: "expo.out" }, {T:revision:1:-0.5});
+    ring("#p09-s1", {T:revision}, 0.85);
+    ring("#p09-s2", {T:aprobado}, 0.85);
+    ring("#p09-s3", {T:cotizado});
+<!--sfx-->
+pop {T:revision} 0.35
+pop {T:aprobado} 0.35
+pop {T:cotizado} 0.35

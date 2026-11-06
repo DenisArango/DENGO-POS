@@ -1,0 +1,162 @@
+---
+import '@fontsource/fraunces/500.css'
+import '@fontsource/fraunces/600.css'
+import '@fontsource-variable/inter'
+import '@fontsource/instrument-serif/400.css'
+import './plantilla.css'
+import Seo from '../../core/Seo.astro'
+import { waLink, offerHeadline, canLogin } from '../../core/api'
+import { openState } from '../../core/hours'
+import type { SiteContent } from '../../core/types'
+
+interface Props { content: SiteContent; title?: string; description?: string; noindex?: boolean; bar?: boolean }
+const { content, title, description, noindex, bar = true } = Astro.props
+const hex = (v: string | null, fallback: string) => (v && /^#[0-9a-f]{6}$/i.test(v) ? v : fallback)
+const brand = hex(content.primaryColor, '#1e4d68')
+const brand2 = hex(content.accentColor, '#e07a5f')
+// Readable text on the brand colours: dark ink on light brands.
+const lum = (h: string) => { const n = parseInt(h.slice(1), 16); const c = [n >> 16, (n >> 8) & 255, n & 255].map(v => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4 }); return 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]! }
+const onBrand = lum(brand) > 0.45 ? '#111111' : '#ffffff'
+const onBrand2 = lum(brand2) > 0.45 ? '#111111' : '#ffffff'
+const theme = ['clasico', 'moderno', 'editorial'].includes(content.theme) ? content.theme : 'clasico'
+const wa = waLink(content.contact.whatsapp, `Hola ${content.businessName}, vi su página y quiero información.`)
+const hasOffers = content.promotions.length > 0
+const featured = content.promotions.find(p => p.featured) ?? content.promotions[0]
+const login = canLogin(content)
+const main = content.branches[0]
+const st = main ? openState(main.openTime, main.closeTime) : null
+const year = new Date().getFullYear()
+const c = content.contact
+const socials = [
+  ['Facebook', c.facebook, 'M15 3h-3a4 4 0 0 0-4 4v3H6v4h2v7h4v-7h3l1-4h-4V7a1 1 0 0 1 1-1h3z'],
+  ['Instagram', c.instagram, 'M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4zm5 5a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm5.5-1.5h.01'],
+  ['TikTok', c.tiktok, 'M15 3c.4 2.4 1.9 4 4 4.3v3.2c-1.5 0-2.9-.5-4-1.3V15a6 6 0 1 1-6-6v3.3a2.7 2.7 0 1 0 2.7 2.7V3z'],
+].filter(([, url]) => url) as [string, string, string][]
+const links = [
+  hasOffers && ['/ofertas', 'Ofertas'],
+  content.sections.some(s => s.type === 'about') && content.about && ['/#historia', 'Nosotros'],
+  content.branches.length > 0 && ['/#sucursales', 'Sucursales'],
+  ['/#contacto', 'Contacto'],
+].filter(Boolean) as [string, string][]
+---
+<!doctype html>
+<html lang="es" data-site="plantilla" data-theme={theme} style={`--brand:${brand};--brand-2:${brand2};--on-brand:${onBrand};--on-brand-2:${onBrand2}`}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content={brand} />
+    <Seo content={content} title={title} description={description} image={content.heroImage} noindex={noindex} />
+    <script is:inline>document.documentElement.classList.add('js')</script>
+  </head>
+  <body>
+    {bar && featured && (
+      <div class="bar">
+        <a href={`/ofertas/${featured.slug}`}><span><b>{offerHeadline(featured)}</b> · {featured.name} — obtén tu cupón en línea</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>
+      </div>
+    )}
+    <header class="top" data-top>
+      <div class="wrap top__in">
+        <a class="brandmark" href="/">
+          {content.logo ? <img src={content.logo} alt="" width="44" height="44" /> : <span class="brandmark__mono" aria-hidden="true">{content.businessName.trim().charAt(0)}</span>}
+          <span>{content.businessName}</span>
+        </a>
+        <nav class="nav" aria-label="Principal">
+          {links.map(([href, label]) => <a href={href}>{label}</a>)}
+        </nav>
+        <div class="top__actions">
+          {login && (
+            <a class="top__login" href="/ingresar" aria-label="Ingresar (equipo y maestros)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>
+              <span>Ingresar</span>
+            </a>
+          )}
+          {wa ? <a class="btn" href={wa} target="_blank" rel="noopener">Escríbenos</a> : hasOffers && <a class="btn" href="/ofertas">Ver ofertas</a>}
+          <button class="menu-btn" type="button" aria-expanded="false" aria-controls="drawer" aria-label="Abrir menú" data-menu>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+          </button>
+        </div>
+      </div>
+      <nav class="drawer" id="drawer" aria-label="Menú">
+        {links.map(([href, label]) => <a href={href}>{label}</a>)}
+        {login && <a href="/ingresar">Ingresar (equipo y maestros)</a>}
+        {wa && <a class="btn btn--wa" href={wa} target="_blank" rel="noopener">Escríbenos por WhatsApp</a>}
+      </nav>
+    </header>
+    <main><slot /></main>
+    <footer class="foot">
+      <div class="wrap foot__grid">
+        <div>
+          <p class="foot__name">{content.businessName}</p>
+          {content.tagline && <p class="foot__tag">{content.tagline}</p>}
+          {socials.length > 0 && (
+            <p class="foot__social">
+              {socials.map(([name, url, d]) => (
+                <a href={url} target="_blank" rel="noopener" aria-label={name}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={d} /></svg></a>
+              ))}
+            </p>
+          )}
+        </div>
+        <div>
+          <h2>Página</h2>
+          <ul>
+            {links.map(([href, label]) => <li><a href={href}>{label}</a></li>)}
+            {login && <li><a href="/ingresar">Ingresar</a></li>}
+          </ul>
+        </div>
+        <div>
+          <h2>Contacto</h2>
+          <ul>
+            {wa && <li><a href={wa} target="_blank" rel="noopener">WhatsApp</a></li>}
+            {c.phone && <li><a href={`tel:${c.phone.replace(/\s/g, '')}`}>{c.phone}</a></li>}
+            {c.email && <li><a href={`mailto:${c.email}`}>{c.email}</a></li>}
+          </ul>
+        </div>
+        {main && (
+          <div>
+            <h2>Horario</h2>
+            <ul>
+              <li>{main.name}</li>
+              <li>Todos los días, {main.openTime} a {main.closeTime}</li>
+              <li><span class="status" data-foot-state data-open={main.openTime} data-close={main.closeTime} data-is-open={st?.open ? '1' : '0'}>{st?.label}</span></li>
+            </ul>
+          </div>
+        )}
+      </div>
+      <div class="wrap"><div class="foot__base"><span>© {year} {content.businessName}</span>{content.branches.length > 1 && <span>{content.branches.length} sucursales</span>}</div></div>
+    </footer>
+    <script>
+      import { openState } from '../../core/hours'
+      // Entrance: reveal each [data-reveal] once, as its block comes into view.
+      const els = document.querySelectorAll<HTMLElement>('[data-reveal]')
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver(entries => {
+          for (const e of entries) if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target) }
+        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 })
+        els.forEach(el => io.observe(el))
+      } else els.forEach(el => el.classList.add('is-in'))
+
+      // Header: a shadow once the page moves; the phone menu.
+      const top = document.querySelector<HTMLElement>('[data-top]')!
+      const onScroll = () => top.classList.toggle('is-scrolled', scrollY > 8)
+      addEventListener('scroll', onScroll, { passive: true }); onScroll()
+      const menu = document.querySelector<HTMLButtonElement>('[data-menu]')!
+      menu.addEventListener('click', () => {
+        const open = !top.classList.contains('is-open')
+        top.classList.toggle('is-open', open)
+        menu.setAttribute('aria-expanded', String(open))
+        menu.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú')
+      })
+      top.querySelectorAll('.drawer a').forEach(a => a.addEventListener('click', () => { top.classList.remove('is-open'); menu.setAttribute('aria-expanded', 'false') }))
+
+      // Every open/closed chip on the page stays honest while it's open.
+      const tick = () => document.querySelectorAll<HTMLElement>('[data-open][data-close]').forEach(el => {
+        const target = el.matches('.status') ? el : el.querySelector<HTMLElement>('.status')
+        if (!target) return
+        const s = openState(el.dataset.open ?? '', el.dataset.close ?? '')
+        target.textContent = s.label
+        target.dataset.isOpen = s.open ? '1' : '0'
+      })
+      tick(); setInterval(tick, 60_000)
+    </script>
+  </body>
+</html>

@@ -1,0 +1,43 @@
+---
+// <head> tags every design shares: title, description, Google, the preview
+// card WhatsApp/Facebook show when the link is shared, and the favicon.
+import type { SiteContent } from './types'
+
+interface Props { content: SiteContent; title?: string; description?: string; image?: string | null; noindex?: boolean }
+const { content, title, description, image, noindex } = Astro.props
+const pageTitle = title ? `${title} · ${content.businessName}` : (content.seo.title || `${content.businessName}${content.tagline ? ` — ${content.tagline}` : ''}`)
+const desc = description || content.seo.description || content.tagline || `${content.businessName}: visita nuestras tiendas y aprovecha las ofertas vigentes.`
+const base = content.publicUrl?.replace(/\/$/, '') || Astro.url.origin
+const canonical = new URL(Astro.url.pathname, base).href
+// Data URLs can't be a social preview image; only real URLs are used there.
+const ogImage = image && !image.startsWith('data:') ? image : null
+---
+<title>{pageTitle}</title>
+<meta name="description" content={desc} />
+<link rel="canonical" href={canonical} />
+{noindex && <meta name="robots" content="noindex" />}
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content={content.businessName} />
+<meta property="og:title" content={pageTitle} />
+<meta property="og:description" content={desc} />
+<meta property="og:url" content={canonical} />
+<meta property="og:locale" content="es_GT" />
+{ogImage && <meta property="og:image" content={ogImage} />}
+<meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+<link rel="icon" href="/api/app/icon-32.png" type="image/png" />
+<link rel="apple-touch-icon" href="/api/app/icon-180.png" />
+<script type="application/ld+json" set:html={JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Store',
+  name: content.businessName,
+  description: desc,
+  url: base,
+  telephone: content.contact.phone || undefined,
+  email: content.contact.email || undefined,
+  sameAs: [content.contact.facebook, content.contact.instagram, content.contact.tiktok].filter(Boolean),
+  department: content.branches.map(b => ({
+    '@type': 'Store', name: b.name, telephone: b.phone || undefined,
+    address: { '@type': 'PostalAddress', streetAddress: b.address, addressLocality: b.city, addressCountry: 'GT' },
+    openingHours: `Mo-Su ${b.openTime}-${b.closeTime}`,
+  })),
+})} />

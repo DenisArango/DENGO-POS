@@ -548,7 +548,7 @@ export default function PortalOrders() {
                   <div className="bg-green-50 rounded-lg p-3">
                     <p className="text-xs font-semibold text-green-700 mb-2 flex items-center gap-1.5"><CalendarClock size={13} /> Entrega programada</p>
                     <p className="text-sm font-semibold text-green-900">
-                      {new Date(selected.deliveryDate).toLocaleDateString('es-GT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                      {new Date(selected.deliveryDate).toLocaleDateString('es-GT', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                       {selected.deliveryTime ? ` · ${selected.deliveryTime}` : ''}
                     </p>
                     {selected.deliveryNotes && <p className="text-xs text-green-700 mt-1">{selected.deliveryNotes}</p>}
@@ -859,7 +859,7 @@ function PrepSheet({ order }: { order: Order }) {
         <div className="text-right">
           <p className="font-semibold">{order.school?.name}</p>
           <p>Maestro: {order.teacher?.user?.name ?? '—'}</p>
-          {order.deliveryDate && <p>Entrega: {new Date(order.deliveryDate).toLocaleDateString('es-GT')}{order.deliveryTime ? ` ${order.deliveryTime}` : ''}</p>}
+          {order.deliveryDate && <p>Entrega: {new Date(order.deliveryDate).toLocaleDateString('es-GT', { timeZone: 'UTC' })}{order.deliveryTime ? ` ${order.deliveryTime}` : ''}</p>}
         </div>
       </div>
 

@@ -1,0 +1,1312 @@
+[hyperframes] browserGpuMode probe → hardware (WebGL renderer vendor="Google Inc. (AMD)" renderer="ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001900) Direct3D11 vs_5_0 ps_5_0, D3D11)")
+[INFO] [Compiler] Fetched 9 font face(s) for "Outfit" from Google Fonts (cached to C:\Users\Alejandra Yol\.cache\hyperframes\fonts\outfit)
+[INFO] [Compiler] Fetched 10 font face(s) for "Nunito" from Google Fonts (cached to C:\Users\Alejandra Yol\.cache\hyperframes\fonts\nunito)
+[INFO] [Compiler] Fetched 11 font face(s) for "Inter" from Google Fonts (cached to C:\Users\Alejandra Yol\.cache\hyperframes\fonts\inter)
+[INFO] [Compiler] Injected deterministic @font-face rules for 3 requested font families
+[hyperframes] check: samples 1/9
+[hyperframes] check: samples 2/9
+[hyperframes] check: samples 3/9
+[hyperframes] check: samples 4/9
+[hyperframes] check: samples 5/9
+[hyperframes] check: samples 6/9
+[hyperframes] check: samples 7/9
+[hyperframes] check: samples 8/9
+[hyperframes] check: samples 9/9
+[hyperframes] check: craft 1/599
+[hyperframes] check: craft 2/599
+[hyperframes] check: craft 3/599
+[hyperframes] check: craft 4/599
+[hyperframes] check: craft 5/599
+[hyperframes] check: craft 6/599
+[hyperframes] check: craft 7/599
+[hyperframes] check: craft 8/599
+[hyperframes] check: craft 9/599
+[hyperframes] check: craft 10/599
+[hyperframes] check: craft 11/599
+[hyperframes] check: craft 12/599
+[hyperframes] check: craft 13/599
+[hyperframes] check: craft 14/599
+[hyperframes] check: craft 15/599
+[hyperframes] check: craft 16/599
+[hyperframes] check: craft 17/599
+[hyperframes] check: craft 18/599
+[hyperframes] check: craft 19/599
+[hyperframes] check: craft 20/599
+[hyperframes] check: craft 21/599
+[hyperframes] check: craft 22/599
+[hyperframes] check: craft 23/599
+[hyperframes] check: craft 24/599
+[hyperframes] check: craft 25/599
+[hyperframes] check: craft 26/599
+[hyperframes] check: craft 27/599
+[hyperframes] check: craft 28/599
+[hyperframes] check: craft 29/599
+[hyperframes] check: craft 30/599
+[hyperframes] check: craft 31/599
+[hyperframes] check: craft 32/599
+[hyperframes] check: craft 33/599
+[hyperframes] check: craft 34/599
+[hyperframes] check: craft 35/599
+[hyperframes] check: craft 36/599
+[hyperframes] check: craft 37/599
+[hyperframes] check: craft 38/599
+[hyperframes] check: craft 39/599
+[hyperframes] check: craft 40/599
+[hyperframes] check: craft 41/599
+[hyperframes] check: craft 42/599
+[hyperframes] check: craft 43/599
+[hyperframes] check: craft 44/599
+[hyperframes] check: craft 45/599
+[hyperframes] check: craft 46/599
+[hyperframes] check: craft 47/599
+[hyperframes] check: craft 48/599
+[hyperframes] check: craft 49/599
+[hyperframes] check: craft 50/599
+[hyperframes] check: craft 51/599
+[hyperframes] check: craft 52/599
+[hyperframes] check: craft 53/599
+[hyperframes] check: craft 54/599
+[hyperframes] check: craft 55/599
+[hyperframes] check: craft 56/599
+[hyperframes] check: craft 57/599
+[hyperframes] check: craft 58/599
+[hyperframes] check: craft 59/599
+[hyperframes] check: craft 60/599
+[hyperframes] check: craft 61/599
+[hyperframes] check: craft 62/599
+[hyperframes] check: craft 63/599
+[hyperframes] check: craft 64/599
+[hyperframes] check: craft 65/599
+[hyperframes] check: craft 66/599
+[hyperframes] check: craft 67/599
+[hyperframes] check: craft 68/599
+[hyperframes] check: craft 69/599
+[hyperframes] check: craft 70/599
+[hyperframes] check: craft 71/599
+[hyperframes] check: craft 72/599
+[hyperframes] check: craft 73/599
+[hyperframes] check: craft 74/599
+[hyperframes] check: craft 75/599
+[hyperframes] check: craft 76/599
+[hyperframes] check: craft 77/599
+[hyperframes] check: craft 78/599
+[hyperframes] check: craft 79/599
+[hyperframes] check: craft 80/599
+[hyperframes] check: craft 81/599
+[hyperframes] check: craft 82/599
+[hyperframes] check: craft 83/599
+[hyperframes] check: craft 84/599
+[hyperframes] check: craft 85/599
+[hyperframes] check: craft 86/599
+[hyperframes] check: craft 87/599
+[hyperframes] check: craft 88/599
+[hyperframes] check: craft 89/599
+[hyperframes] check: craft 90/599
+[hyperframes] check: craft 91/599
+[hyperframes] check: craft 92/599
+[hyperframes] check: craft 93/599
+[hyperframes] check: craft 94/599
+[hyperframes] check: craft 95/599
+[hyperframes] check: craft 96/599
+[hyperframes] check: craft 97/599
+[hyperframes] check: craft 98/599
+[hyperframes] check: craft 99/599
+[hyperframes] check: craft 100/599
+[hyperframes] check: craft 101/599
+[hyperframes] check: craft 102/599
+[hyperframes] check: craft 103/599
+[hyperframes] check: craft 104/599
+[hyperframes] check: craft 105/599
+[hyperframes] check: craft 106/599
+[hyperframes] check: craft 107/599
+[hyperframes] check: craft 108/599
+[hyperframes] check: craft 109/599
+[hyperframes] check: craft 110/599
+[hyperframes] check: craft 111/599
+[hyperframes] check: craft 112/599
+[hyperframes] check: craft 113/599
+[hyperframes] check: craft 114/599
+[hyperframes] check: craft 115/599
+[hyperframes] check: craft 116/599
+[hyperframes] check: craft 117/599
+[hyperframes] check: craft 118/599
+[hyperframes] check: craft 119/599
+[hyperframes] check: craft 120/599
+[hyperframes] check: craft 121/599
+[hyperframes] check: craft 122/599
+[hyperframes] check: craft 123/599
+[hyperframes] check: craft 124/599
+[hyperframes] check: craft 125/599
+[hyperframes] check: craft 126/599
+[hyperframes] check: craft 127/599
+[hyperframes] check: craft 128/599
+[hyperframes] check: craft 129/599
+[hyperframes] check: craft 130/599
+[hyperframes] check: craft 131/599
+[hyperframes] check: craft 132/599
+[hyperframes] check: craft 133/599
+[hyperframes] check: craft 134/599
+[hyperframes] check: craft 135/599
+[hyperframes] check: craft 136/599
+[hyperframes] check: craft 137/599
+[hyperframes] check: craft 138/599
+[hyperframes] check: craft 139/599
+[hyperframes] check: craft 140/599
+[hyperframes] check: craft 141/599
+[hyperframes] check: craft 142/599
+[hyperframes] check: craft 143/599
+[hyperframes] check: craft 144/599
+[hyperframes] check: craft 145/599
+[hyperframes] check: craft 146/599
+[hyperframes] check: craft 147/599
+[hyperframes] check: craft 148/599
+[hyperframes] check: craft 149/599
+[hyperframes] check: craft 150/599
+[hyperframes] check: craft 151/599
+[hyperframes] check: craft 152/599
+[hyperframes] check: craft 153/599
+[hyperframes] check: craft 154/599
+[hyperframes] check: craft 155/599
+[hyperframes] check: craft 156/599
+[hyperframes] check: craft 157/599
+[hyperframes] check: craft 158/599
+[hyperframes] check: craft 159/599
+[hyperframes] check: craft 160/599
+[hyperframes] check: craft 161/599
+[hyperframes] check: craft 162/599
+[hyperframes] check: craft 163/599
+[hyperframes] check: craft 164/599
+[hyperframes] check: craft 165/599
+[hyperframes] check: craft 166/599
+[hyperframes] check: craft 167/599
+[hyperframes] check: craft 168/599
+[hyperframes] check: craft 169/599
+[hyperframes] check: craft 170/599
+[hyperframes] check: craft 171/599
+[hyperframes] check: craft 172/599
+[hyperframes] check: craft 173/599
+[hyperframes] check: craft 174/599
+[hyperframes] check: craft 175/599
+[hyperframes] check: craft 176/599
+[hyperframes] check: craft 177/599
+[hyperframes] check: craft 178/599
+[hyperframes] check: craft 179/599
+[hyperframes] check: craft 180/599
+[hyperframes] check: craft 181/599
+[hyperframes] check: craft 182/599
+[hyperframes] check: craft 183/599
+[hyperframes] check: craft 184/599
+[hyperframes] check: craft 185/599
+[hyperframes] check: craft 186/599
+[hyperframes] check: craft 187/599
+[hyperframes] check: craft 188/599
+[hyperframes] check: craft 189/599
+[hyperframes] check: craft 190/599
+[hyperframes] check: craft 191/599
+[hyperframes] check: craft 192/599
+[hyperframes] check: craft 193/599
+[hyperframes] check: craft 194/599
+[hyperframes] check: craft 195/599
+[hyperframes] check: craft 196/599
+[hyperframes] check: craft 197/599
+[hyperframes] check: craft 198/599
+[hyperframes] check: craft 199/599
+[hyperframes] check: craft 200/599
+[hyperframes] check: craft 201/599
+[hyperframes] check: craft 202/599
+[hyperframes] check: craft 203/599
+[hyperframes] check: craft 204/599
+[hyperframes] check: craft 205/599
+[hyperframes] check: craft 206/599
+[hyperframes] check: craft 207/599
+[hyperframes] check: craft 208/599
+[hyperframes] check: craft 209/599
+[hyperframes] check: craft 210/599
+[hyperframes] check: craft 211/599
+[hyperframes] check: craft 212/599
+[hyperframes] check: craft 213/599
+[hyperframes] check: craft 214/599
+[hyperframes] check: craft 215/599
+[hyperframes] check: craft 216/599
+[hyperframes] check: craft 217/599
+[hyperframes] check: craft 218/599
+[hyperframes] check: craft 219/599
+[hyperframes] check: craft 220/599
+[hyperframes] check: craft 221/599
+[hyperframes] check: craft 222/599
+[hyperframes] check: craft 223/599
+[hyperframes] check: craft 224/599
+[hyperframes] check: craft 225/599
+[hyperframes] check: craft 226/599
+[hyperframes] check: craft 227/599
+[hyperframes] check: craft 228/599
+[hyperframes] check: craft 229/599
+[hyperframes] check: craft 230/599
+[hyperframes] check: craft 231/599
+[hyperframes] check: craft 232/599
+[hyperframes] check: craft 233/599
+[hyperframes] check: craft 234/599
+[hyperframes] check: craft 235/599
+[hyperframes] check: craft 236/599
+[hyperframes] check: craft 237/599
+[hyperframes] check: craft 238/599
+[hyperframes] check: craft 239/599
+[hyperframes] check: craft 240/599
+[hyperframes] check: craft 241/599
+[hyperframes] check: craft 242/599
+[hyperframes] check: craft 243/599
+[hyperframes] check: craft 244/599
+[hyperframes] check: craft 245/599
+[hyperframes] check: craft 246/599
+[hyperframes] check: craft 247/599
+[hyperframes] check: craft 248/599
+[hyperframes] check: craft 249/599
+[hyperframes] check: craft 250/599
+[hyperframes] check: craft 251/599
+[hyperframes] check: craft 252/599
+[hyperframes] check: craft 253/599
+[hyperframes] check: craft 254/599
+[hyperframes] check: craft 255/599
+[hyperframes] check: craft 256/599
+[hyperframes] check: craft 257/599
+[hyperframes] check: craft 258/599
+[hyperframes] check: craft 259/599
+[hyperframes] check: craft 260/599
+[hyperframes] check: craft 261/599
+[hyperframes] check: craft 262/599
+[hyperframes] check: craft 263/599
+[hyperframes] check: craft 264/599
+[hyperframes] check: craft 265/599
+[hyperframes] check: craft 266/599
+[hyperframes] check: craft 267/599
+[hyperframes] check: craft 268/599
+[hyperframes] check: craft 269/599
+[hyperframes] check: craft 270/599
+[hyperframes] check: craft 271/599
+[hyperframes] check: craft 272/599
+[hyperframes] check: craft 273/599
+[hyperframes] check: craft 274/599
+[hyperframes] check: craft 275/599
+[hyperframes] check: craft 276/599
+[hyperframes] check: craft 277/599
+[hyperframes] check: craft 278/599
+[hyperframes] check: craft 279/599
+[hyperframes] check: craft 280/599
+[hyperframes] check: craft 281/599
+[hyperframes] check: craft 282/599
+[hyperframes] check: craft 283/599
+[hyperframes] check: craft 284/599
+[hyperframes] check: craft 285/599
+[hyperframes] check: craft 286/599
+[hyperframes] check: craft 287/599
+[hyperframes] check: craft 288/599
+[hyperframes] check: craft 289/599
+[hyperframes] check: craft 290/599
+[hyperframes] check: craft 291/599
+[hyperframes] check: craft 292/599
+[hyperframes] check: craft 293/599
+[hyperframes] check: craft 294/599
+[hyperframes] check: craft 295/599
+[hyperframes] check: craft 296/599
+[hyperframes] check: craft 297/599
+[hyperframes] check: craft 298/599
+[hyperframes] check: craft 299/599
+[hyperframes] check: craft 300/599
+[hyperframes] check: craft 301/599
+[hyperframes] check: craft 302/599
+[hyperframes] check: craft 303/599
+[hyperframes] check: craft 304/599
+[hyperframes] check: craft 305/599
+[hyperframes] check: craft 306/599
+[hyperframes] check: craft 307/599
+[hyperframes] check: craft 308/599
+[hyperframes] check: craft 309/599
+[hyperframes] check: craft 310/599
+[hyperframes] check: craft 311/599
+[hyperframes] check: craft 312/599
+[hyperframes] check: craft 313/599
+[hyperframes] check: craft 314/599
+[hyperframes] check: craft 315/599
+[hyperframes] check: craft 316/599
+[hyperframes] check: craft 317/599
+[hyperframes] check: craft 318/599
+[hyperframes] check: craft 319/599
+[hyperframes] check: craft 320/599
+[hyperframes] check: craft 321/599
+[hyperframes] check: craft 322/599
+[hyperframes] check: craft 323/599
+[hyperframes] check: craft 324/599
+[hyperframes] check: craft 325/599
+[hyperframes] check: craft 326/599
+[hyperframes] check: craft 327/599
+[hyperframes] check: craft 328/599
+[hyperframes] check: craft 329/599
+[hyperframes] check: craft 330/599
+[hyperframes] check: craft 331/599
+[hyperframes] check: craft 332/599
+[hyperframes] check: craft 333/599
+[hyperframes] check: craft 334/599
+[hyperframes] check: craft 335/599
+[hyperframes] check: craft 336/599
+[hyperframes] check: craft 337/599
+[hyperframes] check: craft 338/599
+[hyperframes] check: craft 339/599
+[hyperframes] check: craft 340/599
+[hyperframes] check: craft 341/599
+[hyperframes] check: craft 342/599
+[hyperframes] check: craft 343/599
+[hyperframes] check: craft 344/599
+[hyperframes] check: craft 345/599
+[hyperframes] check: craft 346/599
+[hyperframes] check: craft 347/599
+[hyperframes] check: craft 348/599
+[hyperframes] check: craft 349/599
+[hyperframes] check: craft 350/599
+[hyperframes] check: craft 351/599
+[hyperframes] check: craft 352/599
+[hyperframes] check: craft 353/599
+[hyperframes] check: craft 354/599
+[hyperframes] check: craft 355/599
+[hyperframes] check: craft 356/599
+[hyperframes] check: craft 357/599
+[hyperframes] check: craft 358/599
+[hyperframes] check: craft 359/599
+[hyperframes] check: craft 360/599
+[hyperframes] check: craft 361/599
+[hyperframes] check: craft 362/599
+[hyperframes] check: craft 363/599
+[hyperframes] check: craft 364/599
+[hyperframes] check: craft 365/599
+[hyperframes] check: craft 366/599
+[hyperframes] check: craft 367/599
+[hyperframes] check: craft 368/599
+[hyperframes] check: craft 369/599
+[hyperframes] check: craft 370/599
+[hyperframes] check: craft 371/599
+[hyperframes] check: craft 372/599
+[hyperframes] check: craft 373/599
+[hyperframes] check: craft 374/599
+[hyperframes] check: craft 375/599
+[hyperframes] check: craft 376/599
+[hyperframes] check: craft 377/599
+[hyperframes] check: craft 378/599
+[hyperframes] check: craft 379/599
+[hyperframes] check: craft 380/599
+[hyperframes] check: craft 381/599
+[hyperframes] check: craft 382/599
+[hyperframes] check: craft 383/599
+[hyperframes] check: craft 384/599
+[hyperframes] check: craft 385/599
+[hyperframes] check: craft 386/599
+[hyperframes] check: craft 387/599
+[hyperframes] check: craft 388/599
+[hyperframes] check: craft 389/599
+[hyperframes] check: craft 390/599
+[hyperframes] check: craft 391/599
+[hyperframes] check: craft 392/599
+[hyperframes] check: craft 393/599
+[hyperframes] check: craft 394/599
+[hyperframes] check: craft 395/599
+[hyperframes] check: craft 396/599
+[hyperframes] check: craft 397/599
+[hyperframes] check: craft 398/599
+[hyperframes] check: craft 399/599
+[hyperframes] check: craft 400/599
+[hyperframes] check: craft 401/599
+[hyperframes] check: craft 402/599
+[hyperframes] check: craft 403/599
+[hyperframes] check: craft 404/599
+[hyperframes] check: craft 405/599
+[hyperframes] check: craft 406/599
+[hyperframes] check: craft 407/599
+[hyperframes] check: craft 408/599
+[hyperframes] check: craft 409/599
+[hyperframes] check: craft 410/599
+[hyperframes] check: craft 411/599
+[hyperframes] check: craft 412/599
+[hyperframes] check: craft 413/599
+[hyperframes] check: craft 414/599
+[hyperframes] check: craft 415/599
+[hyperframes] check: craft 416/599
+[hyperframes] check: craft 417/599
+[hyperframes] check: craft 418/599
+[hyperframes] check: craft 419/599
+[hyperframes] check: craft 420/599
+[hyperframes] check: craft 421/599
+[hyperframes] check: craft 422/599
+[hyperframes] check: craft 423/599
+[hyperframes] check: craft 424/599
+[hyperframes] check: craft 425/599
+[hyperframes] check: craft 426/599
+[hyperframes] check: craft 427/599
+[hyperframes] check: craft 428/599
+[hyperframes] check: craft 429/599
+[hyperframes] check: craft 430/599
+[hyperframes] check: craft 431/599
+[hyperframes] check: craft 432/599
+[hyperframes] check: craft 433/599
+[hyperframes] check: craft 434/599
+[hyperframes] check: craft 435/599
+[hyperframes] check: craft 436/599
+[hyperframes] check: craft 437/599
+[hyperframes] check: craft 438/599
+[hyperframes] check: craft 439/599
+[hyperframes] check: craft 440/599
+[hyperframes] check: craft 441/599
+[hyperframes] check: craft 442/599
+[hyperframes] check: craft 443/599
+[hyperframes] check: craft 444/599
+[hyperframes] check: craft 445/599
+[hyperframes] check: craft 446/599
+[hyperframes] check: craft 447/599
+[hyperframes] check: craft 448/599
+[hyperframes] check: craft 449/599
+[hyperframes] check: craft 450/599
+[hyperframes] check: craft 451/599
+[hyperframes] check: craft 452/599
+[hyperframes] check: craft 453/599
+[hyperframes] check: craft 454/599
+[hyperframes] check: craft 455/599
+[hyperframes] check: craft 456/599
+[hyperframes] check: craft 457/599
+[hyperframes] check: craft 458/599
+[hyperframes] check: craft 459/599
+[hyperframes] check: craft 460/599
+[hyperframes] check: craft 461/599
+[hyperframes] check: craft 462/599
+[hyperframes] check: craft 463/599
+[hyperframes] check: craft 464/599
+[hyperframes] check: craft 465/599
+[hyperframes] check: craft 466/599
+[hyperframes] check: craft 467/599
+[hyperframes] check: craft 468/599
+[hyperframes] check: craft 469/599
+[hyperframes] check: craft 470/599
+[hyperframes] check: craft 471/599
+[hyperframes] check: craft 472/599
+[hyperframes] check: craft 473/599
+[hyperframes] check: craft 474/599
+[hyperframes] check: craft 475/599
+[hyperframes] check: craft 476/599
+[hyperframes] check: craft 477/599
+[hyperframes] check: craft 478/599
+[hyperframes] check: craft 479/599
+[hyperframes] check: craft 480/599
+[hyperframes] check: craft 481/599
+[hyperframes] check: craft 482/599
+[hyperframes] check: craft 483/599
+[hyperframes] check: craft 484/599
+[hyperframes] check: craft 485/599
+[hyperframes] check: craft 486/599
+[hyperframes] check: craft 487/599
+[hyperframes] check: craft 488/599
+[hyperframes] check: craft 489/599
+[hyperframes] check: craft 490/599
+[hyperframes] check: craft 491/599
+[hyperframes] check: craft 492/599
+[hyperframes] check: craft 493/599
+[hyperframes] check: craft 494/599
+[hyperframes] check: craft 495/599
+[hyperframes] check: craft 496/599
+[hyperframes] check: craft 497/599
+[hyperframes] check: craft 498/599
+[hyperframes] check: craft 499/599
+[hyperframes] check: craft 500/599
+[hyperframes] check: craft 501/599
+[hyperframes] check: craft 502/599
+[hyperframes] check: craft 503/599
+[hyperframes] check: craft 504/599
+[hyperframes] check: craft 505/599
+[hyperframes] check: craft 506/599
+[hyperframes] check: craft 507/599
+[hyperframes] check: craft 508/599
+[hyperframes] check: craft 509/599
+[hyperframes] check: craft 510/599
+[hyperframes] check: craft 511/599
+[hyperframes] check: craft 512/599
+[hyperframes] check: craft 513/599
+[hyperframes] check: craft 514/599
+[hyperframes] check: craft 515/599
+[hyperframes] check: craft 516/599
+[hyperframes] check: craft 517/599
+[hyperframes] check: craft 518/599
+[hyperframes] check: craft 519/599
+[hyperframes] check: craft 520/599
+[hyperframes] check: craft 521/599
+[hyperframes] check: craft 522/599
+[hyperframes] check: craft 523/599
+[hyperframes] check: craft 524/599
+[hyperframes] check: craft 525/599
+[hyperframes] check: craft 526/599
+[hyperframes] check: craft 527/599
+[hyperframes] check: craft 528/599
+[hyperframes] check: craft 529/599
+[hyperframes] check: craft 530/599
+[hyperframes] check: craft 531/599
+[hyperframes] check: craft 532/599
+[hyperframes] check: craft 533/599
+[hyperframes] check: craft 534/599
+[hyperframes] check: craft 535/599
+[hyperframes] check: craft 536/599
+[hyperframes] check: craft 537/599
+[hyperframes] check: craft 538/599
+[hyperframes] check: craft 539/599
+[hyperframes] check: craft 540/599
+[hyperframes] check: craft 541/599
+[hyperframes] check: craft 542/599
+[hyperframes] check: craft 543/599
+[hyperframes] check: craft 544/599
+[hyperframes] check: craft 545/599
+[hyperframes] check: craft 546/599
+[hyperframes] check: craft 547/599
+[hyperframes] check: craft 548/599
+[hyperframes] check: craft 549/599
+[hyperframes] check: craft 550/599
+[hyperframes] check: craft 551/599
+[hyperframes] check: craft 552/599
+[hyperframes] check: craft 553/599
+[hyperframes] check: craft 554/599
+[hyperframes] check: craft 555/599
+[hyperframes] check: craft 556/599
+[hyperframes] check: craft 557/599
+[hyperframes] check: craft 558/599
+[hyperframes] check: craft 559/599
+[hyperframes] check: craft 560/599
+[hyperframes] check: craft 561/599
+[hyperframes] check: craft 562/599
+[hyperframes] check: craft 563/599
+[hyperframes] check: craft 564/599
+[hyperframes] check: craft 565/599
+[hyperframes] check: craft 566/599
+[hyperframes] check: craft 567/599
+[hyperframes] check: craft 568/599
+[hyperframes] check: craft 569/599
+[hyperframes] check: craft 570/599
+[hyperframes] check: craft 571/599
+[hyperframes] check: craft 572/599
+[hyperframes] check: craft 573/599
+[hyperframes] check: craft 574/599
+[hyperframes] check: craft 575/599
+[hyperframes] check: craft 576/599
+[hyperframes] check: craft 577/599
+[hyperframes] check: craft 578/599
+[hyperframes] check: craft 579/599
+[hyperframes] check: craft 580/599
+[hyperframes] check: craft 581/599
+[hyperframes] check: craft 582/599
+[hyperframes] check: craft 583/599
+[hyperframes] check: craft 584/599
+[hyperframes] check: craft 585/599
+[hyperframes] check: craft 586/599
+[hyperframes] check: craft 587/599
+[hyperframes] check: craft 588/599
+[hyperframes] check: craft 589/599
+[hyperframes] check: craft 590/599
+[hyperframes] check: craft 591/599
+[hyperframes] check: craft 592/599
+[hyperframes] check: craft 593/599
+[hyperframes] check: craft 594/599
+[hyperframes] check: craft 595/599
+[hyperframes] check: craft 596/599
+[hyperframes] check: craft 597/599
+[hyperframes] check: craft 598/599
+[hyperframes] check: craft 599/599
+[hyperframes] check: overlap 1/22
+[hyperframes] check: overlap 2/22
+[hyperframes] check: overlap 3/22
+[hyperframes] check: overlap 4/22
+[hyperframes] check: overlap 5/22
+[hyperframes] check: overlap 6/22
+[hyperframes] check: overlap 7/22
+[hyperframes] check: overlap 8/22
+[hyperframes] check: overlap 9/22
+[hyperframes] check: overlap 10/22
+[hyperframes] check: overlap 11/22
+[hyperframes] check: overlap 12/22
+[hyperframes] check: overlap 13/22
+[hyperframes] check: overlap 14/22
+[hyperframes] check: overlap 15/22
+[hyperframes] check: overlap 16/22
+[hyperframes] check: overlap 17/22
+[hyperframes] check: overlap 18/22
+[hyperframes] check: overlap 19/22
+[hyperframes] check: overlap 20/22
+[hyperframes] check: overlap 21/22
+[hyperframes] check: overlap 22/22
+[hyperframes] check: analyze 0/3
+[hyperframes] check: analyze 1/3
+[hyperframes] check: analyze 2/3
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 8,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "overlapping_gsap_tweens",
+        "severity": "warning",
+        "message": "GSAP tweens overlap on \"#p02-l3\" for opacity between 0.90s and 1.14s.",
+        "selector": "#p02-l3",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v2_portal\\compositions\\p02.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Shorten the earlier tween, move the later tween, or add `overwrite: \"auto\"`."
+      },
+      {
+        "code": "nested_media_start_basis_ambiguous",
+        "severity": "warning",
+        "message": "<video id=\"p05-ph-v\"> has data-start=\"2.6\" inside a sub-composition. Nested media timing is local to its composition by default; a nonzero value can be confused with a legacy root-global timestamp.",
+        "selector": "#p05-ph-v",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v2_portal\\compositions\\p05.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Keep data-start=\"2.6\" if it is composition-local. If this is a legacy root-global timestamp, add data-hf-media-start-basis=\"global\"; otherwise convert it to local time by subtracting the host start."
+      },
+      {
+        "code": "nested_media_start_basis_ambiguous",
+        "severity": "warning",
+        "message": "<video id=\"p07-ap-v\"> has data-start=\"2.985\" inside a sub-composition. Nested media timing is local to its composition by default; a nonzero value can be confused with a legacy root-global timestamp.",
+        "selector": "#p07-ap-v",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v2_portal\\compositions\\p07.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Keep data-start=\"2.985\" if it is composition-local. If this is a legacy root-global timestamp, add data-hf-media-start-basis=\"global\"; otherwise convert it to local time by subtracting the host start."
+      },
+      {
+        "code": "nested_media_start_basis_ambiguous",
+        "severity": "warning",
+        "message": "<video id=\"p07-q-v\"> has data-start=\"5.032\" inside a sub-composition. Nested media timing is local to its composition by default; a nonzero value can be confused with a legacy root-global timestamp.",
+        "selector": "#p07-q-v",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v2_portal\\compositions\\p07.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Keep data-start=\"5.032\" if it is composition-local. If this is a legacy root-global timestamp, add data-hf-media-start-basis=\"global\"; otherwise convert it to local time by subtracting the host start."
+      },
+      {
+        "code": "overlapping_gsap_tweens",
+        "severity": "warning",
+        "message": "GSAP tweens overlap on \"#p07-r2\" for opacity between 10.07s and 10.32s.",
+        "selector": "#p07-r2",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v2_portal\\compositions\\p07.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Shorten the earlier tween, move the later tween, or add `overwrite: \"auto\"`."
+      },
+      {
+        "code": "overlapping_gsap_tweens",
+        "severity": "warning",
+        "message": "GSAP tweens overlap on \"#p08-r3\" for opacity between 8.66s and 8.91s.",
+        "selector": "#p08-r3",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v2_portal\\compositions\\p08.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Shorten the earlier tween, move the later tween, or add `overwrite: \"auto\"`."
+      },
+      {
+        "code": "overlapping_gsap_tweens",
+        "severity": "warning",
+        "message": "GSAP tweens overlap on \"#p09-s3\" for opacity between 7.25s and 7.50s.",
+        "selector": "#p09-s3",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v2_portal\\compositions\\p09.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Shorten the earlier tween, move the later tween, or add `overwrite: \"auto\"`."
+      },
+      {
+        "code": "nested_media_start_basis_ambiguous",
+        "severity": "warning",
+        "message": "<video id=\"p10-ph-v\"> has data-start=\"1.235\" inside a sub-composition. Nested media timing is local to its composition by default; a nonzero value can be confused with a legacy root-global timestamp.",
+        "selector": "#p10-ph-v",
+        "dataAttributes": {},
+        "sourceFile": "C:\\denis\\DENGO-POS\\video\\serie\\v2_portal\\compositions\\p10.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Keep data-start=\"1.235\" if it is composition-local. If this is a legacy root-global timestamp, add data-hf-media-start-basis=\"global\"; otherwise convert it to local time by subtracting the host start."
+      }
+    ],
+    "filesScanned": 13
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 10,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-5\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "150.33",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-6\" is 0.37s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.37s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "150.33",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-7\" is 0.37s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.37s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "150.33",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-9\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "150.33",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-11\" is 0.37s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.37s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "150.33",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-12\" is 0.37s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.37s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "150.33",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-14\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "150.33",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-15\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "150.33",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-16\" is 0.72s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.72s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "150.33",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      },
+      {
+        "code": "clip_media_fit",
+        "severity": "warning",
+        "message": "Audio \"sfx-18\" is 0.57s but its slot (data-duration) is 1.20s — the slot is shortened to the media length when rendered. Set data-duration to ~0.57s if that isn't intended.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {
+          "data-composition-id": "main",
+          "data-start": "0",
+          "data-duration": "150.33",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "time": 0
+      }
+    ]
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "duration": 150.33,
+    "samples": [
+      8.352,
+      25.055,
+      41.758,
+      58.462,
+      75.165,
+      91.868,
+      108.572,
+      125.275,
+      141.978
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 0,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      8.352,
+      41.758,
+      75.165,
+      108.572,
+      141.978
+    ],
+    "checked": 11,
+    "passed": 11
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 6,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "first_frame_empty",
+        "severity": "warning",
+        "message": "Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and 5 text elements stay under it for 0.5 s or more, the smallest \"Profe Luis · Jornada Matutina\" at 20 px: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "Profe Luis · Jornada Matutina",
+        "selector": "#p01-b2 > b:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/p01.html",
+        "bbox": {
+          "x": 1415.2,
+          "y": 444.77,
+          "width": 267.25,
+          "height": 34.59
+        },
+        "time": 7.027,
+        "times": [
+          5.772,
+          6.274,
+          7.027,
+          7.027,
+          8.533
+        ],
+        "fontPx": 19.88,
+        "floorPx": 28,
+        "seconds": 5.02,
+        "elements": [
+          {
+            "selector": "#p01-b2 > b:nth-of-type(1)",
+            "text": "Profe Luis · Jornada Matutina",
+            "fontPx": 19.88,
+            "time": 7.027,
+            "seconds": 5.02
+          },
+          {
+            "selector": "div.wave > span:nth-of-type(1)",
+            "text": "0:47",
+            "fontPx": 21.68,
+            "time": 7.027,
+            "seconds": 5.02
+          },
+          {
+            "selector": "#p01-b5 > b:nth-of-type(1)",
+            "text": "Director Mario",
+            "fontPx": 21.71,
+            "time": 6.274,
+            "seconds": 5.773
+          },
+          {
+            "selector": "#p01-b1 > b:nth-of-type(1)",
+            "text": "Maestra Ruth · EORM No. 12",
+            "fontPx": 21.89,
+            "time": 5.772,
+            "seconds": 6.275
+          },
+          {
+            "selector": "#p01-b4 > b:nth-of-type(1)",
+            "text": "Seño Andrea",
+            "fontPx": 22,
+            "time": 8.533,
+            "seconds": 3.514
+          }
+        ]
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and 2 text elements stay under it for 0.5 s or more, the smallest \"Profe Luis\" at 22 px: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "Profe Luis",
+        "selector": "#p02-b1 > b:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/p02.html",
+        "bbox": {
+          "x": 139.76,
+          "y": 265.52,
+          "width": 102.16,
+          "height": 28.4
+        },
+        "time": 16.815,
+        "times": [
+          16.815,
+          18.572
+        ],
+        "fontPx": 22,
+        "floorPx": 28,
+        "seconds": 5.521,
+        "elements": [
+          {
+            "selector": "#p02-b1 > b:nth-of-type(1)",
+            "text": "Profe Luis",
+            "fontPx": 22,
+            "time": 16.815,
+            "seconds": 5.521
+          },
+          {
+            "selector": "#p02-b2 > b:nth-of-type(1)",
+            "text": "Seño Andrea",
+            "fontPx": 22,
+            "time": 18.572,
+            "seconds": 3.764
+          }
+        ]
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and \"libreriaaurora.gt/ingresar\" renders at 25 px for 2.76 s: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "libreriaaurora.gt/ingresar",
+        "selector": "#p05-web > div:nth-of-type(1) > span:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/p05.html",
+        "bbox": {
+          "x": 388.62,
+          "y": 196.46,
+          "width": 294.29,
+          "height": 32.53
+        },
+        "time": 47.935,
+        "times": [
+          47.935
+        ],
+        "fontPx": 25.49,
+        "floorPx": 28,
+        "seconds": 2.761,
+        "elements": [
+          {
+            "selector": "#p05-web > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "libreriaaurora.gt/ingresar",
+            "fontPx": 25.49,
+            "time": 47.935,
+            "seconds": 2.761
+          }
+        ]
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and \"Portal de maestros · Librería Aurora · ahora\" renders at 22 px for 2.76 s: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "Portal de maestros · Librería Aurora · ahora",
+        "selector": "#p06-push > div:nth-of-type(2) > small:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/p06.html",
+        "bbox": {
+          "x": 686,
+          "y": 52.05,
+          "width": 416.59,
+          "height": 28
+        },
+        "time": 78.302,
+        "times": [
+          78.302
+        ],
+        "fontPx": 22,
+        "floorPx": 28,
+        "seconds": 2.761,
+        "elements": [
+          {
+            "selector": "#p06-push > div:nth-of-type(2) > small:nth-of-type(1)",
+            "text": "Portal de maestros · Librería Aurora · ahora",
+            "fontPx": 22,
+            "time": 78.302,
+            "seconds": 2.761
+          }
+        ]
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and 3 text elements stay under it for 0.5 s or more, the smallest \"DENGO POS · Pedidos del Portal\" at 22 px: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "DENGO POS · Pedidos del Portal",
+        "selector": "#p07-q > div:nth-of-type(1) > span:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/p07.html",
+        "bbox": {
+          "x": 591,
+          "y": 122,
+          "width": 370.69,
+          "height": 33
+        },
+        "time": 86.584,
+        "times": [
+          81.816,
+          84.325,
+          86.584
+        ],
+        "fontPx": 22.36,
+        "floorPx": 28,
+        "seconds": 8.031,
+        "elements": [
+          {
+            "selector": "#p07-q > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "DENGO POS · Pedidos del Portal",
+            "fontPx": 22.36,
+            "time": 86.584,
+            "seconds": 8.031
+          },
+          {
+            "selector": "#p07-list > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "DENGO POS · Pedidos del Portal",
+            "fontPx": 25.97,
+            "time": 81.816,
+            "seconds": 4.768
+          },
+          {
+            "selector": "#p07-ap > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "DENGO POS · Pedidos del Portal",
+            "fontPx": 26,
+            "time": 84.325,
+            "seconds": 2.259
+          }
+        ]
+      }
+    ],
+    "enabled": true,
+    "step": 0.2510000000000012,
+    "samples": 599
+  },
+  "audio": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  },
+  "saved": {
+    "id": "f927a79f-63e2-4bd0-8658-03bf8a6f0cb8",
+    "revision": null,
+    "report": "C:\\denis\\DENGO-POS\\video\\serie\\v2_portal\\.hyperframes\\artifacts\\checks\\f927a79f-63e2-4bd0-8658-03bf8a6f0cb8.json",
+    "attribution": "inputs-changed"
+  },
+  "_meta": {
+    "version": "0.9.15",
+    "updateAvailable": false
+  }
+}

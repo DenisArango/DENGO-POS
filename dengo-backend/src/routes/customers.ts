@@ -21,6 +21,13 @@ const INCOMPLETE_WHERE = {
   NOT: { name: { equals: 'Consumidor Final', mode: 'insensitive' as const } },
 }
 
+// "Con crédito": credit turned on, a limit set, or a balance owed. The last
+// one matters for customers brought over from the previous system, who can
+// owe money with credit never switched on here.
+const WITH_CREDIT_WHERE = {
+  OR: [{ creditEnabled: true }, { creditLimit: { gt: 0 } }, { creditUsed: { gt: 0 } }],
+}
+
 const schema = z.object({
   nit: nitField,
   name: z.string().trim().min(1, 'El nombre es requerido'),
@@ -119,16 +126,22 @@ export default async function customerRoutes(fastify: FastifyInstance) {
     // Default (param absent) stays active-only, same opt-in pattern as
     // suppliers — 'all'/'false' are explicit choices, not the old hardcoded
     // isActive:true that made the page's own "Inactivos"/"Todos" filters a no-op.
+    // Every filter goes into one AND list: the search and "incomplete" are
+    // both AND clauses, and spreading them side by side let one overwrite the other.
+    const search = q.search ? multiWordSearch(q.search, word => [
+      { name: { contains: word, mode: 'insensitive' as const } },
+      { nit: { contains: word, mode: 'insensitive' as const } },
+      { email: { contains: word, mode: 'insensitive' as const } },
+      { phone: { contains: word, mode: 'insensitive' as const } },
+    ]) : {}
+    const and: object[] = [
+      ...(q.hasCredit === 'true' ? [WITH_CREDIT_WHERE] : []),
+      ...(q.incomplete === 'true' ? [INCOMPLETE_WHERE] : []),
+      ...('AND' in search ? search.AND : []),
+    ]
     const where = {
       ...(q.isActive === 'all' ? {} : { isActive: q.isActive === 'false' ? false : true }),
-      ...(q.hasCredit === 'true' ? { creditLimit: { gt: 0 } } : {}),
-      ...(q.incomplete === 'true' ? { AND: [INCOMPLETE_WHERE] } : {}),
-      ...(q.search ? multiWordSearch(q.search, word => [
-        { name: { contains: word, mode: 'insensitive' as const } },
-        { nit: { contains: word, mode: 'insensitive' as const } },
-        { email: { contains: word, mode: 'insensitive' as const } },
-        { phone: { contains: word, mode: 'insensitive' as const } },
-      ]) : {}),
+      ...(and.length ? { AND: and } : {}),
     }
 
     // Paginated path — opt-in via `page`, used by the Customers management
@@ -143,7 +156,7 @@ export default async function customerRoutes(fastify: FastifyInstance) {
         prisma.customer.count({ where }),
         prisma.customer.count({ where: statusWhere }),
         prisma.customer.count({ where: { ...statusWhere, isActive: true } }),
-        prisma.customer.count({ where: { ...statusWhere, creditLimit: { gt: 0 } } }),
+        prisma.customer.count({ where: { ...statusWhere, ...WITH_CREDIT_WHERE } }),
         prisma.customer.aggregate({ where: statusWhere, _sum: { creditUsed: true } }),
         prisma.customer.count({ where: { ...statusWhere, ...INCOMPLETE_WHERE } }),
       ])
@@ -330,5 +343,157 @@ export default async function customerRoutes(fastify: FastifyInstance) {
       newValues: { customerId: id, amount, salesAffected },
     })
     return reply.status(201).send({ payments, totalApplied: amount, salesAffected })
+  })
+
+  // ── Cargos sin venta ─────────────────────────────────────────────────────
+  // POST /api/customers/:id/credit-charge — raises the customer's balance
+  // with no sale behind it: debt carried over from the previous system (the
+  // import didn't bring balances) or a correction. Recorded as a CreditCharge
+  // so it shows in the statement and the audit log, and paid off by ordinary
+  // abonos. The credit limit doesn't block it — the debt already exists — but
+  // the response says when the new balance passes it.
+  fastify.post('/:id/credit-charge', { preHandler: [fastify.authenticate, requirePermission('customers.addCharge')] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida')
+    const body = z.object({
+      amount: z.number().min(0.01, 'El monto debe ser mayor a 0').max(10_000_000),
+      concept: z.string().trim().min(3, 'Escribe el concepto del cargo').max(200),
+      reference: z.string().trim().max(100).optional(),
+      chargeDate: day.optional(),
+      dueDate: day.optional(),
+    }).safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: body.error.issues[0]?.message ?? 'Datos inválidos' })
+
+    const customer = await prisma.customer.findUnique({ where: { id } })
+    if (!customer || !customer.isActive) return reply.status(404).send({ error: 'Cliente no encontrado' })
+
+    // A day is stored at noon Guatemala time (18:00 UTC), so it never slips to
+    // the previous or next day when shown in the business's time zone.
+    const atNoon = (d: string) => new Date(`${d}T18:00:00.000Z`)
+    const chargeDate = body.data.chargeDate ? atNoon(body.data.chargeDate) : new Date()
+    if (chargeDate.getTime() > Date.now() + 36 * 3_600_000) return reply.status(400).send({ error: 'La fecha del cargo no puede ser futura' })
+    const dueDate = body.data.dueDate ? atNoon(body.data.dueDate) : null
+    if (dueDate && dueDate < chargeDate) return reply.status(400).send({ error: 'El vencimiento no puede ser antes de la fecha del cargo' })
+
+    const amount = Math.round(body.data.amount * 100) / 100
+    const [charge, updated] = await prisma.$transaction([
+      prisma.creditCharge.create({
+        data: { customerId: id, amount, concept: body.data.concept, reference: body.data.reference || null, chargeDate, dueDate, createdById: request.user.id },
+        include: { createdBy: { select: { id: true, name: true } } },
+      }),
+      prisma.customer.update({ where: { id }, data: { creditUsed: { increment: amount } } }),
+    ])
+    await log({
+      userId: request.user.id, action: 'CREATE', entity: 'CreditCharge', entityId: charge.id,
+      oldValues: { creditUsed: Number(customer.creditUsed) },
+      newValues: { customerId: id, amount, concept: charge.concept, reference: charge.reference, creditUsed: Number(updated.creditUsed) },
+    })
+    const c = withCreditFields(updated)
+    const overLimit = c.creditEnabled && c.creditLimitEnabled && c.creditUsed > c.creditLimit + 0.001
+    return reply.status(201).send({ charge: { ...charge, amount: Number(charge.amount) }, customer: c, overLimit })
+  })
+
+  // POST /api/customers/:id/credit-charge/:chargeId/void — undoes a charge
+  // entered by mistake: the record stays (voided, with the reason) and its
+  // amount comes back off the balance. Refused once the balance is below the
+  // charge, i.e. abonos have already paid into it — voiding then would leave
+  // the account negative; the fix there is a new, correct charge.
+  fastify.post('/:id/credit-charge/:chargeId/void', { preHandler: [fastify.authenticate, requirePermission('customers.addCharge')] }, async (request, reply) => {
+    const { id, chargeId } = request.params as { id: string; chargeId: string }
+    const body = z.object({ reason: z.string().trim().min(3, 'Escribe el motivo de la anulación').max(500) }).safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: body.error.issues[0]?.message ?? 'Datos inválidos' })
+
+    const charge = await prisma.creditCharge.findFirst({ where: { id: chargeId, customerId: id }, include: { customer: true } })
+    if (!charge) return reply.status(404).send({ error: 'Cargo no encontrado' })
+    if (charge.isVoided) return reply.status(409).send({ error: 'Este cargo ya fue anulado' })
+    const amount = Number(charge.amount)
+    const balance = Number(charge.customer.creditUsed)
+    if (balance + 0.001 < amount) {
+      return reply.status(409).send({ error: `No se puede anular: el saldo del cliente (Q${balance.toFixed(2)}) es menor que el cargo (Q${amount.toFixed(2)}) porque ya se abonó. Si el monto estaba mal, regístralo con un cargo nuevo por la diferencia.` })
+    }
+
+    // Guarded update: only one of two simultaneous voids can flip it.
+    const result = await prisma.$transaction(async tx => {
+      const flipped = await tx.creditCharge.updateMany({
+        where: { id: chargeId, isVoided: false },
+        data: { isVoided: true, voidedById: request.user.id, voidedAt: new Date(), voidReason: body.data.reason },
+      })
+      if (flipped.count === 0) return null
+      return tx.customer.update({ where: { id }, data: { creditUsed: { decrement: amount } } })
+    })
+    if (!result) return reply.status(409).send({ error: 'Este cargo ya fue anulado' })
+    await log({
+      userId: request.user.id, action: 'UPDATE', entity: 'CreditCharge', entityId: chargeId,
+      oldValues: { isVoided: false, creditUsed: balance },
+      newValues: { isVoided: true, reason: body.data.reason, creditUsed: Number(result.creditUsed) },
+    })
+    return reply.send({ customer: withCreditFields(result) })
+  })
+
+  // GET /api/customers/:id/account — the statement of the credit account:
+  // credit sales and charges (debits), abonos (credits), oldest first, with
+  // the running balance. A balance can predate every movement here (imported
+  // with a balance and no detail); that difference opens the statement as
+  // "Saldo anterior sin detalle", so the last running balance always equals
+  // customer.creditUsed.
+  fastify.get('/:id/account', { preHandler: [fastify.authenticate, requirePermission('customers.view')] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const customer = await prisma.customer.findUnique({ where: { id } })
+    if (!customer) return reply.status(404).send({ error: 'Cliente no encontrado' })
+
+    const [sales, charges, payments] = await Promise.all([
+      prisma.sale.findMany({
+        where: { customerId: id, saleType: 'CREDIT', isVoided: false },
+        select: { id: true, invoiceNumber: true, total: true, createdAt: true, dueDate: true, branch: { select: { name: true } } },
+        orderBy: { createdAt: 'asc' }, take: 2000,
+      }),
+      prisma.creditCharge.findMany({
+        where: { customerId: id },
+        include: { createdBy: { select: { name: true } }, voidedBy: { select: { name: true } } },
+        orderBy: { chargeDate: 'asc' }, take: 2000,
+      }),
+      prisma.creditPayment.findMany({
+        where: { OR: [{ customerId: id }, { customerId: null, sale: { customerId: id } }] },
+        select: { id: true, amount: true, paymentMethod: true, createdAt: true, paidBy: { select: { name: true } }, sale: { select: { invoiceNumber: true } } },
+        orderBy: { createdAt: 'asc' }, take: 4000,
+      }),
+    ])
+
+    const METHOD: Record<string, string> = { CASH: 'efectivo', CARD: 'tarjeta', TRANSFER: 'transferencia' }
+    type Move = {
+      type: 'SALE' | 'CHARGE' | 'PAYMENT' | 'OPENING'; id: string; date: Date; description: string; reference: string | null
+      debit: number; credit: number; by?: string | null; method?: string; voided?: boolean; voidReason?: string | null; voidedBy?: string | null; dueDate?: Date | null
+    }
+    const moves: Move[] = []
+    for (const s of sales) moves.push({ type: 'SALE', id: s.id, date: s.createdAt, description: `Venta al crédito${s.branch?.name ? ` · ${s.branch.name}` : ''}`, reference: s.invoiceNumber, debit: Number(s.total), credit: 0, dueDate: s.dueDate })
+    for (const c of charges) moves.push({ type: 'CHARGE', id: c.id, date: c.chargeDate, description: c.concept, reference: c.reference, debit: Number(c.amount), credit: 0, by: c.createdBy?.name, voided: c.isVoided, voidReason: c.voidReason, voidedBy: c.voidedBy?.name ?? null, dueDate: c.dueDate })
+    // One abono can be split over several invoices (several rows, same
+    // person and method, written within the same transaction): one line.
+    const paid: Move[] = []
+    for (const p of payments) {
+      const last = paid[paid.length - 1]
+      if (last && last.by === (p.paidBy?.name ?? null) && last.method === p.paymentMethod && Math.abs(last.date.getTime() - p.createdAt.getTime()) < 3000) {
+        last.credit += Number(p.amount)
+        if (p.sale?.invoiceNumber) last.reference = [last.reference, p.sale.invoiceNumber].filter(Boolean).join(', ')
+        continue
+      }
+      paid.push({ type: 'PAYMENT', id: p.id, date: p.createdAt, description: `Abono en ${METHOD[p.paymentMethod] ?? 'otro medio'}`, reference: p.sale?.invoiceNumber ?? null, debit: 0, credit: Number(p.amount), by: p.paidBy?.name ?? null, method: p.paymentMethod })
+    }
+    moves.push(...paid)
+    moves.sort((a, b) => a.date.getTime() - b.date.getTime())
+
+    const balance = Number(customer.creditUsed)
+    const net = moves.reduce((s, m) => s + (m.voided ? 0 : m.debit - m.credit), 0)
+    const opening = Math.round((balance - net) * 100) / 100
+    if (Math.abs(opening) > 0.009) {
+      moves.unshift({ type: 'OPENING', id: 'opening', date: moves[0]?.date ?? customer.createdAt, description: 'Saldo anterior sin detalle', reference: null, debit: Math.max(0, opening), credit: Math.max(0, -opening) })
+    }
+    let run = 0
+    const movements = moves.map(m => {
+      if (!m.voided) run = Math.round((run + m.debit - m.credit) * 100) / 100
+      const { method: _method, ...rest } = m
+      return { ...rest, debit: Math.round(m.debit * 100) / 100, credit: Math.round(m.credit * 100) / 100, balance: run }
+    })
+    return reply.send({ customerId: id, balance, movements })
   })
 }

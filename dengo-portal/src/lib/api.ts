@@ -58,6 +58,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
+  handoff: (code: string) =>
+    request<{ token: string; user: TeacherUser }>('/auth/handoff', { method: 'POST', body: JSON.stringify({ code }) }),
   getMe: () => request<TeacherUser & { programs: Program[]; blockedPrograms?: BlockedProgram[] }>('/me'),
   getPrograms: () => request<Program[]>('/programs'),
   getProgramOptions: (programType?: string, level?: string) => {

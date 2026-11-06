@@ -1,0 +1,21 @@
+    .tpl { opacity: 0; }
+    .tlabel { position: absolute; top: 96px; font-size: 34px; font-weight: 700; color: #1e4d68; opacity: 0; }
+<!--markup-->
+    <shot id="w03-a" class="tpl" src="ui/web_plantilla_clasico.png" crop="0 0 1600 1500" at="150 170 520" />
+    <shot id="w03-b" class="tpl" src="ui/web_plantilla_moderno.png" crop="0 0 1600 1500" at="700 170 520" />
+    <shot id="w03-c" class="tpl" src="ui/web_plantilla_editorial.png" crop="0 0 1600 1500" at="1250 170 520" />
+    <div id="w03-la" class="tlabel" style="left:150px">Clásico</div>
+    <div id="w03-lb" class="tlabel" style="left:700px">Moderno</div>
+    <div id="w03-lc" class="tlabel" style="left:1250px">Editorial</div>
+<!--script-->
+    lift("#w03-a", {T:clasico:1:-0.25}); tl.set("#w03-la", { opacity: 1 }, {T:clasico});
+    lift("#w03-b", {T:moderno:1:-0.25}); tl.set("#w03-lb", { opacity: 1 }, {T:moderno});
+    lift("#w03-c", {T:editorial:1:-0.25}); tl.set("#w03-lc", { opacity: 1 }, {T:editorial});
+    pan("#w03-a-i", {T:clasico}, { y: -260 }, 4.5);
+    pan("#w03-b-i", {T:moderno}, { y: -260 }, 4);
+    pan("#w03-c-i", {T:editorial}, { y: -260 }, 3.5);
+    tl.to(".tpl, .tlabel", { opacity: 0.25, y: 30, duration: 0.6, ease: "power2.inOut", stagger: 0.04 }, {T:pero});
+<!--sfx-->
+pop {T:clasico} 0.35
+pop {T:moderno} 0.35
+pop {T:editorial} 0.35

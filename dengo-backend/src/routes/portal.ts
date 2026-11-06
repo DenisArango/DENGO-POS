@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js'
 import { validateUser, logLogin } from '../services/auth.service.js'
 import { log } from '../services/audit.service.js'
 import { getLicense } from './license.js'
+import { redeemHandoff } from '../lib/handoff.js'
 import sharp from 'sharp'
 import { isPerStudent, buildOrderItems } from '../lib/portalOrders.js'
 import { getVapidKeys, notifyTeacher } from '../lib/webPush.js'
@@ -92,6 +93,15 @@ async function getTeacherForUser(userId: string) {
   return prisma.teacher.findUnique({ where: { userId } })
 }
 
+/** The token + user the teachers' portal keeps (also used by the website's "Ingresar"). */
+export function teacherSession(fastify: FastifyInstance, user: { id: string; email: string; name: string; role: string; branchId: string; isActive: boolean }) {
+  const token = fastify.jwt.sign(
+    { id: user.id, role: user.role, branchId: user.branchId, branchIds: [user.branchId], email: user.email, permissions: [] },
+    { expiresIn: '8h' }
+  )
+  return { token, user: { id: user.id, email: user.email, name: user.name, role: user.role, branchId: user.branchId, isActive: user.isActive } }
+}
+
 export default async function portalRoutes(fastify: FastifyInstance) {
   const teacherGuard = { preHandler: [fastify.authenticate, requireTeacher] }
 
@@ -170,15 +180,20 @@ export default async function portalRoutes(fastify: FastifyInstance) {
     await logLogin({ email, userId: user.id, success: true, ipAddress: ip, ...(ua && { userAgent: ua }) })
     await log({ userId: user.id, action: 'LOGIN', entity: 'User', entityId: user.id, ipAddress: ip })
 
-    const token = fastify.jwt.sign(
-      { id: user.id, role: user.role, branchId: user.branchId, branchIds: [user.branchId], email: user.email, permissions: [] },
-      { expiresIn: '8h' }
-    )
+    return reply.send(teacherSession(fastify, user))
+  })
 
-    return reply.send({
-      token,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, branchId: user.branchId, isActive: user.isActive },
-    })
+  // Finish a login started on the public website (see lib/handoff.ts).
+  fastify.post('/auth/handoff', { config: { rateLimit: { max: 20, timeWindow: 60_000 } } }, async (request, reply) => {
+    const userId = redeemHandoff((request.body as { code?: unknown } | null)?.code, 'portal')
+    const fail = () => reply.status(401).send({ error: 'El enlace para entrar ya venció. Vuelve a iniciar sesión.' })
+    if (!userId) return fail()
+    const license = await getLicense()
+    if (!license.maestrosEnabled) return reply.status(403).send({ error: 'El portal de maestros no está activo. Contacta a tu proveedor.' })
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user || !user.isActive || user.role !== 'TEACHER') return fail()
+    await log({ userId: user.id, action: 'LOGIN', entity: 'User', entityId: user.id, ipAddress: request.ip })
+    return reply.send(teacherSession(fastify, user))
   })
 
   // ── [TEACHER] profile ───────────────────────────────────────────────────────
@@ -589,7 +604,10 @@ export default async function portalRoutes(fastify: FastifyInstance) {
       if (!sale) return reply.status(404).send({ error: 'Documento no encontrado' })
       return reply.send({
         kind: 'INVOICE',
-        number: `${sale.invoiceSeries ?? ''}${sale.invoiceSeries ? '-' : ''}${sale.invoiceSeqNumber ?? sale.invoiceNumber}`,
+        // A certified factura shows the SAT's serie/número; until then, the internal one.
+        number: sale.felStatus === 'CERTIFIED' && sale.felSatSerie
+          ? `${sale.felSatSerie}-${sale.felSatNumber ?? ''}`
+          : `${sale.invoiceSeries ?? ''}${sale.invoiceSeries ? '-' : ''}${sale.invoiceSeqNumber ?? sale.invoiceNumber}`,
         date: sale.createdAt,
         issuer,
         order: orderInfo,
@@ -599,7 +617,14 @@ export default async function portalRoutes(fastify: FastifyInstance) {
           quantity: Number(i.quantity), unitPrice: Number(i.unitPrice), total: Number(i.total),
         })),
         subtotal: Number(sale.subtotal), discount: Number(sale.discount), tax: Number(sale.tax), total: Number(sale.total),
-        fel: { status: sale.felStatus, uuid: sale.felUuid, authNumber: sale.felAuthNumber, certifiedAt: sale.felCertifiedAt },
+        fel: {
+          status: sale.felStatus, uuid: sale.felUuid, authNumber: sale.felAuthNumber, certifiedAt: sale.felCertifiedAt,
+          serie: sale.felSatSerie, number: sale.felSatNumber, pdfUrl: sale.felPdfUrl,
+          certifierName: sale.felCertifierName, certifierNit: sale.felCertifierNit,
+          // anything but production is a test document with no fiscal value
+          test: sale.felEnvironment != null && sale.felEnvironment !== 'production',
+          voided: sale.felVoidStatus === 'VOIDED',
+        },
       })
     }
 

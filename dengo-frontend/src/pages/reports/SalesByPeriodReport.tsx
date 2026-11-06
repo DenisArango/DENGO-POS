@@ -16,7 +16,7 @@ export default function SalesByPeriodReport() {
   const [from, setFrom] = useState(format(subDays(new Date(), 29), 'yyyy-MM-dd'))
   const [to, setTo] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [loading, setLoading] = useState(false)
-  const [data, setData] = useState<{ date: string; count: number; total: number; cash: number; card: number; transfer: number; credit: number }[]>([])
+  const [data, setData] = useState<{ date: string; count: number; total: number; cash: number; card: number; transfer: number; credit: number; creditNotes: number; netTotal: number }[]>([])
   const [filters, setFilters] = useState<ReportFilterState>({ branchId: currentStore?.id ?? user?.branchId ?? '', cashRegisterId: '' })
 
   useEffect(() => { fetchData() }, [from, to, filters])
@@ -27,12 +27,15 @@ export default function SalesByPeriodReport() {
       const branchQ = filters.branchId ? `&branchId=${filters.branchId}` : ''
       const regQ = filters.cashRegisterId ? `&cashRegisterId=${filters.cashRegisterId}` : ''
       const result = await api.get<any[]>(`/api/reports/daily-sales?from=${from}T00:00:00&to=${to}T23:59:59${branchQ}${regQ}`)
-      setData((result ?? []).map(d => ({ date: d.date, total: Number(d.total), count: Number(d.count), cash: Number(d.cash ?? 0), card: Number(d.card ?? 0), transfer: Number(d.transfer ?? 0), credit: Number(d.credit ?? 0) })))
+      setData((result ?? []).map(d => ({ date: d.date, total: Number(d.total), count: Number(d.count), cash: Number(d.cash ?? 0), card: Number(d.card ?? 0), transfer: Number(d.transfer ?? 0), credit: Number(d.credit ?? 0), creditNotes: Number(d.creditNotes ?? 0), netTotal: Number(d.netTotal ?? d.total) })))
     } catch { setData([]) } finally { setLoading(false) }
   }
 
   const totalSales = data.reduce((s, d) => s + d.total, 0)
   const totalTx = data.reduce((s, d) => s + d.count, 0)
+  // FEL credit notes (NCRE) issued in the period; columns only show when there are any.
+  const totalNotes = data.reduce((s, d) => s + d.creditNotes, 0)
+  const hasNotes = totalNotes > 0
   const avgTicket = totalTx > 0 ? totalSales / totalTx : 0
   const bestDay = data.length > 0 ? data.reduce((b, d) => d.total > b.total ? d : b) : null
   const chartData = data.map(d => ({ date: d.date.slice(5), total: Math.round(d.total * 100) / 100, transacciones: d.count }))
@@ -59,7 +62,9 @@ export default function SalesByPeriodReport() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total ventas', value: `Q${totalSales.toFixed(2)}`, icon: DollarSign, color: 'text-green-600 bg-green-100' },
+          hasNotes
+            ? { label: 'Ventas netas (− notas de crédito)', value: `Q${(totalSales - totalNotes).toFixed(2)}`, icon: DollarSign, color: 'text-green-600 bg-green-100' }
+            : { label: 'Total ventas', value: `Q${totalSales.toFixed(2)}`, icon: DollarSign, color: 'text-green-600 bg-green-100' },
           { label: 'Transacciones', value: String(totalTx), icon: ShoppingCart, color: 'text-blue-600 bg-blue-100' },
           { label: 'Ticket promedio', value: `Q${avgTicket.toFixed(2)}`, icon: TrendingUp, color: 'text-purple-600 bg-purple-100' },
           { label: 'Mejor día', value: bestDay ? `Q${bestDay.total.toFixed(2)}` : '–', icon: Calendar, color: 'text-orange-600 bg-orange-100' },
@@ -113,7 +118,7 @@ export default function SalesByPeriodReport() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  {['Fecha', 'Transacciones', 'Total ventas', 'Ticket prom.'].map(h => (
+                  {['Fecha', 'Transacciones', 'Total ventas', ...(hasNotes ? ['Notas de crédito', 'Total neto'] : []), 'Ticket prom.'].map(h => (
                     <th key={h} className={`px-4 py-2 text-xs text-gray-500 font-medium ${h === 'Fecha' ? 'text-left' : 'text-right'}`}>{h}</th>
                   ))}
                 </tr>
@@ -124,6 +129,8 @@ export default function SalesByPeriodReport() {
                     <td className="px-4 py-2.5 text-gray-800">{d.date}</td>
                     <td className="px-4 py-2.5 text-right text-gray-600">{d.count}</td>
                     <td className="px-4 py-2.5 text-right font-semibold">Q{d.total.toFixed(2)}</td>
+                    {hasNotes && <td className="px-4 py-2.5 text-right text-red-600">{d.creditNotes > 0 ? `−Q${d.creditNotes.toFixed(2)}` : '–'}</td>}
+                    {hasNotes && <td className="px-4 py-2.5 text-right font-semibold">Q{d.netTotal.toFixed(2)}</td>}
                     <td className="px-4 py-2.5 text-right text-gray-600">Q{d.count > 0 ? (d.total / d.count).toFixed(2) : '0.00'}</td>
                   </tr>
                 ))}

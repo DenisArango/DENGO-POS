@@ -8,6 +8,7 @@ import { LogIn, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '../store'
 import { resyncPush } from '../lib/push'
+import { toSessionUser } from '../lib/session'
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -50,39 +51,7 @@ export default function Login() {
 
       const { token, user: u } = await res.json()
 
-      login({
-        id: u.id,
-        email: u.email,
-        name: u.name,
-        role: u.role,
-        branchId: u.branchId,
-        branchIds: u.branchIds,
-        permissions: u.permissions,
-        branch: {
-          id: u.branch.id,
-          name: u.branch.name,
-          code: u.branch.code,
-          type: u.branch.type,
-          address: u.branch.address,
-          city: u.branch.city,
-          phone: u.branch.phone,
-          email: u.branch.email,
-          manager: u.branch.manager,
-          status: u.branch.status,
-          openTime: u.branch.openTime,
-          closeTime: u.branch.closeTime,
-          config: {
-            currency: u.branch.currency,
-            timezone: u.branch.timezone,
-            taxRate: Number(u.branch.taxRate),
-            printerEnabled: u.branch.printerEnabled,
-          },
-          createdAt: u.branch.createdAt,
-          updatedAt: u.branch.updatedAt,
-        },
-        createdAt: u.createdAt,
-        updatedAt: u.updatedAt,
-      }, token)
+      login(toSessionUser(u), token)
       void resyncPush()
 
       toast.success(`¡Bienvenido, ${u.name}!`)

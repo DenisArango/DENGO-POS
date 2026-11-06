@@ -1,0 +1,26 @@
+    #w05-big { position: absolute; left: 96px; top: 230px; }
+    #w05-big .n { font-size: 260px; font-weight: 800; color: #e07a5f; letter-spacing: -0.04em; line-height: 0.9; }
+    #w05-big .t { font-size: 64px; font-weight: 700; color: #1e4d68; letter-spacing: -0.02em; margin-top: 10px; }
+    #w05-kinds { position: absolute; left: 96px; top: 600px; display: flex; flex-direction: column; gap: 14px; }
+    #w05-kinds span { font-size: 34px; font-weight: 600; color: #1b2233; background: #fff; border: 2px solid #e6dfd2; padding: 10px 22px; border-radius: 14px; opacity: 0; width: fit-content; }
+    #w05-ed { opacity: 0; }
+<!--markup-->
+    <div id="w05-big"><div class="mask"><span class="n" id="w05-n">15%</span></div><div class="mask"><span class="t" id="w05-t">en cuadernos</span></div></div>
+    <div id="w05-kinds"><span id="w05-k1">Monto fijo con compra mínima</span><span id="w05-k2">Dos por uno (lleve X, pague Y)</span><span id="w05-k3">Precio especial</span></div>
+    <shot id="w05-ed" src="ui/pw_oferta_editor.png" crop="1024 100 576 700" at="1080 110 740" />
+    <ring id="w05-r1" on="w05-ed" box="1316 238 260 84" />
+    <ring id="w05-r2" on="w05-ed" box="1048 332 258 84" />
+    <ring id="w05-r3" on="w05-ed" box="1316 332 260 84" />
+    <ring id="w05-r4" on="w05-ed" box="1044 702 530 54" />
+<!--script-->
+    lift("#w05-ed", 0.4);
+    rise("#w05-n", {T:quince:1:-0.1}, 0.7); rise("#w05-t", {T:cuadernos});
+    tl.to("#w05-big", { scale: 0.62, y: -150, transformOrigin: "0% 0%", duration: 0.7, ease: "power3.inOut" }, {T:tambien});
+    tl.to("#w05-kinds", { y: -230, duration: 0.7, ease: "power3.inOut" }, {T:tambien});
+    slide("#w05-k1", {T:monto}); ring("#w05-r1", {T:monto}, 1.6);
+    slide("#w05-k2", {T:dos}); ring("#w05-r2", {T:dos}, 1.2);
+    slide("#w05-k3", {T:precio}); ring("#w05-r3", {T:precio}, 1.2);
+    ring("#w05-r4", {T:decido});
+<!--sfx-->
+pop {T:quince} 0.45
+click-soft {T:decido} 0.5

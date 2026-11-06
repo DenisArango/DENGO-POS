@@ -629,8 +629,8 @@ export default function NewOrder() {
                   </div>
                 )}
 
-                <div className="grid lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2 space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2 space-y-4 min-w-0">
                     <div className="relative">
                       <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                       <input

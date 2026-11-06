@@ -1,0 +1,43 @@
+    .nbk { position: absolute; width: 230px; height: 300px; border-radius: 10px 20px 20px 10px; box-shadow: 0 20px 44px rgba(27, 34, 51, 0.25); z-index: 9; opacity: 0; padding: 36px 22px; color: #fff; font-size: 30px; font-weight: 700; line-height: 1.2; }
+    .nbk::before { content: ""; position: absolute; left: 16px; top: 0; bottom: 0; width: 6px; background: rgba(255, 255, 255, 0.35); }
+    .sign2 { position: absolute; width: 250px; padding: 26px 20px; background: #fffdf7; border-radius: 6px; box-shadow: 0 18px 40px rgba(27, 34, 51, 0.22); z-index: 9; opacity: 0; text-align: center; font-size: 48px; font-weight: 800; color: #e07a5f; }
+    #e11-hex { position: absolute; left: 1460px; top: 330px; width: 300px; height: 330px; z-index: 10; opacity: 0; }
+    .chat { position: absolute; left: 760px; top: 140px; width: 640px; background: #f3eee5; border-radius: 26px; overflow: hidden; box-shadow: 0 26px 64px rgba(27, 34, 51, 0.18); opacity: 0; }
+    .chat .head { background: #1e4d68; color: #fff; padding: 22px 28px; }
+    .chat .head b { display: block; font-size: 30px; }
+    .chat .head span { display: block; font-size: 24px; opacity: 0.85; }
+    .chat .body { padding: 26px 24px 30px; display: flex; flex-direction: column; gap: 16px; }
+    .msg { max-width: 84%; font-size: 28px; line-height: 1.35; padding: 16px 20px 14px; border-radius: 20px; opacity: 0; }
+    .msg small { display: block; font-size: 22px; opacity: 0.6; margin-top: 6px; text-align: right; }
+    .msg.me { align-self: flex-end; background: #d9f2df; }
+    .msg.them { align-self: flex-start; background: #fff; }
+    #e11-p1 { left: 760px; top: 640px; opacity: 0; }
+<!--markup-->
+    <div id="e11-n1" class="nbk" style="left:1220px;top:120px;background:#1e4d68">Ventas<br>de la tienda</div>
+    <div id="e11-n2" class="nbk" style="left:1500px;top:170px;background:#b9532f">Pedidos de<br>maestros</div>
+    <div id="e11-s" class="sign2" style="left:1360px;top:560px">¡OFERTAS!</div>
+    <svg id="e11-hex" viewBox="5 5 120 135"><path d="M 65,15 L 115,44 L 115,101 L 65,130 L 15,101 L 15,44 Z" fill="#fff" stroke="#1E4D68" stroke-width="10" stroke-linejoin="round"/><line x1="15" y1="101" x2="115" y2="44" stroke="#1E4D68" stroke-width="7" stroke-linecap="round"/><path d="M 28,107 L 65,42 L 102,107" fill="none" stroke="#E07A5F" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <div id="e11-chat" class="chat">
+      <div class="head"><b>Soporte DENGO</b><span>WhatsApp · responde de 7:00 a.m. a 7:00 p.m.</span></div>
+      <div class="body">
+        <div id="e11-m1" class="msg me">¿Cómo saco el reporte de cupones de este mes?<small>8:05 a.m.</small></div>
+        <div id="e11-m2" class="msg them">¡Buenos días, María José! En Página web → Rendimiento, elija «30 días». Le mando el paso a paso.<small>8:09 a.m.</small></div>
+      </div>
+    </div>
+    <div id="e11-p1" class="pill coral">Soporte personalizado · 7 a 7</div>
+<!--script-->
+    tl.set("#e11-n1", { rotation: -6 }, 0); tl.set("#e11-n2", { rotation: 5 }, 0); tl.set("#e11-s", { rotation: -4 }, 0);
+    pop("#e11-n1", {T:cuaderno}); pop("#e11-n2", {T:otro}); pop("#e11-s", {T:cartel:1:-0.2});
+    tl.to("#e11-n1, #e11-n2, #e11-s", { x: (i) => [380, 120, 220][i], y: (i) => [300, 230, -120][i], scale: 0.2, opacity: 0, rotation: 0, duration: 0.7, ease: "power3.in", stagger: 0.06 }, {T:ahora:1:-0.2});
+    tl.fromTo("#e11-hex", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.8)" }, {T:habla:1:-0.2});
+    tl.to("#e11-hex", { opacity: 0, scale: 0.8, duration: 0.35 }, {T:duda:1:-0.3});
+    pip({T:duda:1:-0.4}, "bl");
+    lift("#e11-chat", {T:duda:1:-0.2});
+    pop("#e11-m1", {T:soporte:1:-0.2}); pop("#e11-m2", {T:responde});
+    pop("#e11-p1", {T:siete});
+<!--sfx-->
+pop {T:cuaderno} 0.35
+pop {T:otro} 0.35
+pop {T:cartel} 0.35
+whoosh-short {T:ahora} 0.35
+notification {T:responde} 0.45

@@ -1,0 +1,79 @@
+---
+import Layout from './Layout.astro'
+import { qrSvg, barcodeSvg } from '../../core/codes'
+import { offerHeadline, fmtDay } from '../../core/api'
+import type { CouponView, SiteContent } from '../../core/types'
+const { content, coupon: c, already } = Astro.props as { content: SiteContent; coupon: CouponView; already?: boolean }
+const usable = c.status === 'ISSUED'
+const statusText = { ISSUED: null, REDEEMED: `Este cupón ya se usó${c.redeemedAt ? ` el ${fmtDay(c.redeemedAt)}` : ''}.`, VOID: 'Este cupón fue anulado.', EXPIRED: 'Este cupón ya venció.' }[c.status]
+---
+<Layout content={content} title={`Cupón ${c.display}`} noindex bar={false}>
+  <section class="section cup">
+    <div class="wrap cup__wrap">
+      <article class:list={['cup__ticket', { 'is-off': !usable }]} data-reveal>
+        <header class="cup__top">
+          <p class="cup__biz">{content.businessName}</p>
+          <p class="cup__value">{offerHeadline(c.promotion)}</p>
+          <h1 class="cup__name">{c.promotion.name}</h1>
+          <p class="cup__for">Para {c.firstName}{c.expiresAt ? ` · válido hasta el ${fmtDay(c.expiresAt)}` : ''}</p>
+        </header>
+        <div class="cup__codes">
+          <div class="cup__qr" set:html={qrSvg(c.payload)} aria-label={`Código QR del cupón ${c.display}`} role="img" />
+          <p class="cup__code">{c.display}</p>
+          <div class="cup__bar" set:html={barcodeSvg(c.payload)} aria-hidden="true" />
+        </div>
+        {statusText && <p class="cup__status">{statusText}</p>}
+      </article>
+      <div class="cup__help" data-reveal style="--i:1">
+        {usable && <p class="cup__ok"><span aria-hidden="true">✓</span>{already ? 'Ya tenías este cupón' : 'Cupón generado'}</p>}
+        <h2 class="cup__h2">{usable ? `Listo, ${c.firstName}. Este es tu cupón.` : 'Cupón no disponible'}</h2>
+        {usable && (
+          <ol class="cup__steps">
+            <li><b>1</b>Guarda esta página o toma una captura de pantalla.</li>
+            <li><b>2</b>En caja, muestra el código QR o dicta el código.</li>
+            <li><b>3</b>El descuento se aplica al momento. Cada cupón se usa una sola vez.</li>
+          </ol>
+        )}
+        {c.promotion.terms && <p class="soft cup__terms">{c.promotion.terms}</p>}
+        <div class="cup__actions">
+          <button class="btn" type="button" onclick="window.print()">Imprimir</button>
+          <a class="btn btn--ghost" href="/ofertas">Ver más ofertas</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .cup { background: var(--brand-tint); }
+  .cup__wrap { display: grid; grid-template-columns: minmax(300px, 440px) 1fr; gap: clamp(28px, 6vw, 96px); align-items: center; }
+  .cup__ticket { background: #fff; color: #111; border-radius: var(--radius-lg); overflow: hidden; filter: drop-shadow(0 24px 40px rgb(20 16 10 / 0.18));
+    --notch: 16px; mask: radial-gradient(var(--notch) at 0 60%, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(var(--notch) at 100% 60%, #0000 98%, #000) right / 51% 100% no-repeat; -webkit-mask: radial-gradient(var(--notch) at 0 60%, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(var(--notch) at 100% 60%, #0000 98%, #000) right / 51% 100% no-repeat; }
+  .cup__top { background: var(--brand); color: var(--on-brand); padding: 30px 30px 26px; }
+  .cup__biz { margin: 0 0 14px; font-weight: 600; opacity: 0.9; }
+  .cup__value { margin: 0; font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: var(--display-track); font-size: clamp(3.75rem, 10vw, 5.5rem); line-height: 0.9; }
+  .cup__name { margin: 10px 0 6px; font-size: 1.375rem; line-height: 1.2; }
+  .cup__for { margin: 0; opacity: 0.9; font-size: 1rem; }
+  .cup__codes { padding: 32px 28px 28px; display: grid; justify-items: center; gap: 14px; border-top: 3px dashed color-mix(in oklab, var(--ink) 20%, transparent); }
+  .cup__qr { width: min(240px, 70vw); }
+  .cup__qr :global(svg), .cup__bar :global(svg) { width: 100%; height: auto; display: block; }
+  .cup__code { margin: 0; font-size: 1.75rem; font-weight: 700; letter-spacing: 0.12em; font-variant-numeric: tabular-nums; }
+  .cup__bar { width: 100%; max-width: 300px; }
+  .cup__status { margin: 0; padding: 14px 28px 22px; text-align: center; font-weight: 700; color: #b42318; }
+  .cup__ticket.is-off .cup__codes { opacity: 0.25; filter: grayscale(1); }
+  .cup__help { display: grid; gap: 18px; justify-items: start; }
+  .cup__ok { display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border-radius: 999px; background: #dff3e7; color: #146c3c; font-weight: 700; }
+  .cup__ok span { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: #1f9d55; color: #fff; font-size: 0.875rem; }
+  .cup__h2 { font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: var(--display-track); font-size: var(--step-head); line-height: 1.02; margin: 0; max-width: 16ch; }
+  .cup__steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; font-size: var(--step-lead); line-height: 1.35; }
+  .cup__steps li { display: flex; gap: 14px; align-items: flex-start; }
+  .cup__steps b { flex-shrink: 0; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--brand); color: var(--on-brand); font-size: 1rem; margin-top: 2px; }
+  .cup__terms { font-size: var(--step-small); }
+  .cup__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+  @media (max-width: 860px) { .cup__wrap { grid-template-columns: 1fr; } }
+  @media print {
+    :global(.top), :global(.foot), :global(.bar), .cup__help { display: none !important; }
+    .cup { background: #fff; }
+    .cup__wrap { grid-template-columns: 1fr; justify-items: center; }
+  }
+</style>

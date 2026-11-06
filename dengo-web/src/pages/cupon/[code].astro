@@ -1,0 +1,14 @@
+---
+import { getContent, getCoupon, siteKey } from '../../core/api'
+import { getSite } from '../../sites/registry'
+import ComingSoon from '../../core/ComingSoon.astro'
+
+const { code = '' } = Astro.params
+const [content, coupon] = await Promise.all([getContent(), getCoupon(code)])
+if (!coupon) Astro.response.status = 404
+// A coupon is personal: never cached, never indexed.
+Astro.response.headers.set('Cache-Control', 'no-store')
+const Site = getSite(siteKey(Astro, content))
+const already = Astro.url.searchParams.has('ya')
+---
+{content && coupon ? <Site.Coupon content={content} coupon={coupon} already={already} /> : content ? <Site.NotFound content={content} /> : <ComingSoon content={content} />}

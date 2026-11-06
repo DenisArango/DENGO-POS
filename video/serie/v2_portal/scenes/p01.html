@@ -1,0 +1,27 @@
+    .bub { position: absolute; background: #fff; border-radius: 22px; padding: 16px 22px 14px; box-shadow: 0 16px 40px rgba(27, 34, 51, 0.2); font-size: 28px; line-height: 1.3; z-index: 9; opacity: 0; max-width: 430px; }
+    .bub b { display: block; font-size: 22px; color: #1e4d68; margin-bottom: 4px; }
+    .bub .ph { width: 300px; height: 150px; border-radius: 12px; background: repeating-linear-gradient(0deg, #f3eee5 0 22px, #e6dfd2 22px 24px); position: relative; overflow: hidden; }
+    .bub .ph::after { content: "Lista de útiles · 3.° B"; position: absolute; left: 14px; top: 12px; font-size: 22px; font-weight: 600; color: #6b6458; transform: rotate(-3deg); }
+    .bub .wave { display: flex; gap: 5px; align-items: center; height: 40px; }
+    .bub .wave i { display: block; width: 6px; border-radius: 3px; background: #1e4d68; }
+    .bub.miss { background: #fde9e3; color: #8a2f1c; font-weight: 600; }
+<!--markup-->
+    <!--tag:Dueña de Librería Aurora-->
+    <div id="p01-b1" class="bub" style="left:1250px;top:120px" data-r="3"><b>Maestra Ruth · EORM No. 12</b><div class="ph"></div></div>
+    <div id="p01-b2" class="bub" style="left:1380px;top:430px" data-r="-2"><b>Profe Luis · Jornada Matutina</b><div class="wave"><i style="height:14px"></i><i style="height:30px"></i><i style="height:22px"></i><i style="height:38px"></i><i style="height:18px"></i><i style="height:32px"></i><i style="height:12px"></i><i style="height:26px"></i><i style="height:36px"></i><i style="height:16px"></i><span style="margin-left:12px;font-size:24px;color:#6b6458">0:47</span></div></div>
+    <div id="p01-b3" class="bub miss" style="left:110px;top:180px" data-r="-3">Llamada perdida (3)</div>
+    <div id="p01-b4" class="bub" style="left:90px;top:420px" data-r="2"><b>Seño Andrea</b>¿Ya tiene lista mi valija?</div>
+    <div id="p01-b5" class="bub" style="left:1300px;top:690px" data-r="2"><b>Director Mario</b>Le mando foto de la otra lista…</div>
+<!--script-->
+    tag(0.5, 3.4);
+    document.querySelectorAll(".bub").forEach((el) => tl.set(el, { rotation: +el.dataset.r }, 0));
+    pop("#p01-b1", {T:fotos});
+    pop("#p01-b5", {T:listas});
+    pop("#p01-b2", {T:audios});
+    pop("#p01-b3", {T:llamadas});
+    pop("#p01-b4", {T:llamadas:1:+0.5});
+    tl.to(".bub", { y: "+=10", rotation: "+=1.5", duration: 0.5, ease: "sine.inOut", stagger: 0.1, yoyo: true, repeat: 3 }, {T:llamadas:1:+0.8});
+<!--sfx-->
+notification {T:fotos} 0.4
+notification {T:audios} 0.4
+notification {T:llamadas} 0.4

@@ -1,0 +1,26 @@
+{INCLUDE:calc.css}
+    #e03-calc { left: 1560px; top: 40px; transform-origin: 100% 0%; }
+    .door { position: absolute; top: 250px; width: 440px; height: 620px; border-radius: 220px 220px 24px 24px; background: #fff; border: 4px solid #e6dfd2; box-shadow: 0 26px 60px rgba(27, 34, 51, 0.14); overflow: hidden; opacity: 0; }
+    .door .in { position: absolute; left: 30px; right: 30px; top: 60px; bottom: 120px; border-radius: 190px 190px 16px 16px; overflow: hidden; background: #f3eee5; }
+    .door .in img { position: absolute; max-width: none; }
+    .door b { position: absolute; left: 0; right: 0; bottom: 38px; text-align: center; font-size: 40px; color: #1e4d68; letter-spacing: -0.02em; }
+    .door i { position: absolute; left: 50%; top: 18px; width: 22px; height: 22px; margin-left: -11px; border-radius: 50%; background: #f2c14e; }
+<!--markup-->
+    <div id="e03-calc" class="calc"><div class="lcd"><span class="v">21</span></div><div class="keys"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cap"><b>fx-82</b> · Central</div></div>
+    <div id="e03-d1" class="door" style="left:250px"><i></i><div class="in"><img src="assets/ui/pos_mostrador_carrito.png" style="width:1140px;left:-60px;top:-30px" /></div><b>El mostrador</b></div>
+    <div id="e03-d2" class="door" style="left:740px"><i></i><div class="in"><img src="assets/ui/m_oferta_top.png" style="width:380px;left:0;top:0" /></div><b>La página web</b></div>
+    <div id="e03-d3" class="door" style="left:1230px"><i></i><div class="in"><img src="assets/ui/m_t_pedido.png" style="width:380px;left:0;top:-80px" /></div><b>El portal</b></div>
+<!--script-->
+    tl.set("#e03-calc", { scale: 0.62 }, 0);
+    tl.fromTo("#e03-calc", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 0.1);
+    tl.fromTo(".door", { opacity: 0, y: 60 }, { opacity: 0.35, y: 0, duration: 0.6, ease: "expo.out", stagger: 0.12 }, 0.2);
+    tl.to("#e03-d1", { opacity: 1, scale: 1.04, duration: 0.4, ease: "back.out(2)" }, {T:mostrador:1:-0.2});
+    tl.to("#e03-d2", { opacity: 1, scale: 1.04, duration: 0.4, ease: "back.out(2)" }, {T:pagina:1:-0.2});
+    tl.to("#e03-d3", { opacity: 1, scale: 1.04, duration: 0.4, ease: "back.out(2)" }, {T:portal:1:-0.2});
+    tl.to(".door", { scale: 1, duration: 0.3 }, {T:y:2});
+    tl.to(".door", { borderColor: "#e07a5f", y: -14, duration: 0.35, ease: "power2.out", stagger: 0.12 }, {T:abiertas:1:-0.3});
+    tl.to(".door", { y: 0, duration: 0.4, ease: "power2.inOut", stagger: 0.12 }, {T:tiempo});
+<!--sfx-->
+pop {T:mostrador} 0.35
+pop {T:pagina} 0.35
+pop {T:portal} 0.35

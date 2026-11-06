@@ -1,0 +1,110 @@
+---
+// A crayon drawing of the house at one stage of the story. Strokes are drawn
+// in order by the page script (a crayon tip follows the line), then the
+// fills and the handwritten words fade in. Without script, or with reduced
+// motion, it shows finished. The wax filter and hatch fills are defined once
+// on the page (Home.astro, #wax and #hx-*).
+interface Props { n: number; class?: string }
+const { n, class: cls = '' } = Astro.props
+
+type C = 'r' | 'n' | 'y' | 'g' | 's' | 'o' | 'b' | 'k'
+type Stroke = [C, string, number?]
+type Fill = [C, string]
+type Word = [C, number, number, string, number?, number?]
+
+const GROUND = 'M14 264 C 110 256, 260 270, 388 260'
+const D: Record<number, { s: Stroke[]; f: Fill[]; w: Word[] }> = {
+  // 2010 — the first store in Rabinal, the door open, bread at the door
+  1: {
+    f: [['n', 'M94 158 L201 84 L308 158 Z'], ['o', 'M182 262 V198 H222 V262 Z'], ['s', 'M240 178 H274 V210 H240 Z'], ['y', 'M330 58 a22 22 0 1 0 44 0 a22 22 0 1 0 -44 0']],
+    s: [['g', GROUND], ['r', 'M112 262 V152 H290 V262'], ['n', 'M94 158 L201 84 L308 158'], ['o', 'M182 262 V198 H222 V262'],
+      ['s', 'M240 178 H274 V210 H240 Z M257 178 V210 M240 194 H274'], ['n', 'M150 110 H252 V138 H150 Z'],
+      ['b', 'M124 238 Q146 264 168 238 Z'], ['o', 'M130 238 Q139 222 149 236 M146 236 Q156 220 165 238'],
+      ['y', 'M330 58 a22 22 0 1 0 44 0 a22 22 0 1 0 -44 0'], ['y', 'M352 22 V12 M352 104 V94 M316 58 H306 M398 58 H388 M327 33 l-7 -7 M377 83 l7 7 M377 33 l7 -7 M327 83 l-7 7', 3.5],
+      ['k', 'M48 76 q8 -8 16 0 q8 -8 16 0', 3]],
+    w: [['n', 201, 131, 'tienda', 24]],
+  },
+  // Desde el inicio — two glass cases: groceries in one, the first notebooks in the other
+  2: {
+    f: [['s', 'M36 156 L58 126 H208 L186 156 Z'], ['s', 'M214 156 L236 126 H386 L364 156 Z'], ['g', 'M228 198 V170 H252 V198 Z'], ['y', 'M288 198 V172 H310 V198 Z'], ['r', 'M258 198 V166 H282 V198 Z']],
+    s: [['b', GROUND], ['n', 'M36 258 V156 H186 V258'], ['s', 'M36 156 L58 126 H208 L186 156 M186 156 L208 126 V228 L186 258'], ['n', 'M36 206 H186'],
+      ['o', 'M52 198 q13 -20 26 0 z M86 198 q13 -20 26 0 z M120 198 q13 -20 26 0 z M56 252 q14 -18 28 0 z M100 252 q14 -18 28 0 z'],
+      ['r', 'M214 258 V156 H364 V258'], ['s', 'M214 156 L236 126 H386 L364 156 M364 156 L386 126 V228 L364 258'], ['r', 'M214 206 H364'],
+      ['g', 'M228 198 V170 H252 V198 Z'], ['r', 'M258 198 V166 H282 V198 Z'], ['y', 'M288 198 V172 H310 V198 Z'],
+      ['y', 'M320 198 L338 164 M334 198 L352 164', 5], ['n', 'M230 252 h32 v-16 h-32 z M276 252 h40 v-20 h-40 z'],
+      ['s', 'M150 146 l16 -12 M328 146 l16 -12', 3]],
+    w: [['k', 110, 120, 'abarrotes', 21, -4], ['k', 290, 120, 'útiles', 22, -4]],
+  },
+  // 2011 — boxes and boxes of school supplies for the OPF, and the school with its flag
+  3: {
+    f: [['b', 'M66 206 V150 H140 V206 Z'], ['r', 'M204 172 L293 126 L382 172 Z'], ['s', 'M293 72 H305 V94 H293 Z M317 72 H329 V94 H317 Z'], ['o', 'M278 262 V220 H308 V262 Z']],
+    s: [['g', GROUND], ['b', 'M30 262 V206 H104 V262 M104 262 V206 H178 V262 M66 206 V150 H140 V206'], ['y', 'M30 224 H104 M104 224 H178 M66 168 H140', 5],
+      ['n', 'M214 262 V172 H372 V262'], ['r', 'M204 172 L293 126 L382 172'], ['o', 'M278 262 V220 H308 V262'], ['s', 'M228 188 h32 v26 h-32 z M326 188 h32 v26 h-32 z'],
+      ['k', 'M293 126 V70', 3.5], ['s', 'M293 72 H305 V94 H293 Z M317 72 H329 V94 H317 Z'], ['k', 'M305 72 H317 M305 94 H317', 2.5],
+      ['k', 'M40 40 L118 30 L128 112 L50 122 Z', 3], ['s', 'M60 58 L112 51 M62 75 L114 68 M64 92 L116 85', 3], ['r', 'M47 58 l4 4 l7 -9 M49 75 l4 4 l7 -9 M51 92 l4 4 l7 -9', 3]],
+    w: [['k', 104, 248, 'útiles', 20], ['k', 103, 194, 'lista', 20]],
+  },
+  // 2022 y 2024 — two new stores side by side, bunting overhead
+  4: {
+    f: [['y', 'M34 128 H186 V150 H34 Z'], ['y', 'M214 118 H366 V140 H214 Z'], ['o', 'M92 262 V206 H128 V262 Z'], ['o', 'M272 262 V214 H308 V262 Z'], ['s', 'M50 186 h34 v32 h-34z M228 200 h34 v30 h-34z M318 200 h34 v30 h-34z'],
+      ['r', 'M60 47 l10 18 l10 -15 z M200 58 l10 18 l10 -18 z M340 47 l10 15 l10 -18 z'], ['s', 'M130 56 l10 18 l10 -16 z M270 56 l10 16 l10 -18 z']],
+    s: [['g', GROUND], ['k', 'M10 40 Q 200 76, 390 40', 3],
+      ['r', 'M60 47 l10 18 l10 -15 M200 58 l10 18 l10 -18 M340 47 l10 15 l10 -18', 3], ['s', 'M130 56 l10 18 l10 -16 M270 56 l10 16 l10 -18', 3],
+      ['n', 'M40 262 V150 H180 V262'], ['y', 'M34 128 H186 V150 H34 Z'], ['o', 'M92 262 V206 H128 V262'], ['s', 'M50 186 h34 v32 h-34z'],
+      ['r', 'M220 262 V140 H360 V262'], ['y', 'M214 118 H366 V140 H214 Z'], ['r', 'M212 176 L222 194 H358 L368 176'],
+      ['r', 'M222 194 q11 9 22 0 q11 9 22 0 q11 9 22 0 q11 9 22 0 q11 9 22 0 q11 9 22 0 q8 7 4 0', 3], ['o', 'M272 262 V214 H308 V262'], ['s', 'M228 200 h34 v30 h-34z M318 200 h34 v30 h-34z']],
+    w: [['n', 110, 145, 'Jassmin', 21], ['n', 290, 135, 'Dayana 2', 21]],
+  },
+  // Hasta Cubulco — the road over the hills, a little store at every stop
+  5: {
+    f: [['g', 'M8 150 L64 84 L112 136 L172 60 L236 140 L292 92 L392 168 V200 H8 Z'], ['s', 'M300 40 q10 -16 26 -6 q14 -12 26 4 q14 2 8 14 h-60 q-10 -4 0 -12z']],
+    s: [['g', 'M8 150 L64 84 L112 136 L172 60 L236 140 L292 92 L392 168'], ['n', 'M8 196 L90 140 L150 178 L214 128 L300 184 L392 150', 3.5],
+      ['o', 'M40 280 C 140 262, 70 222, 160 214 S 290 196, 250 160 S 316 106, 362 88', 7],
+      ['r', 'M52 280 V266 L62 256 L72 266 V280 Z'], ['r', 'M150 214 V200 L160 190 L170 200 V214 Z'], ['r', 'M240 162 V148 L250 138 L260 148 V162 Z'], ['r', 'M352 88 V74 L362 64 L372 74 V88 Z'],
+      ['s', 'M300 40 q10 -16 26 -6 q14 -12 26 4 q14 2 8 14 h-60 q-10 -4 0 -12z', 3.5]],
+    w: [['n', 96, 292, 'Rabinal', 22, -3], ['n', 340, 112, 'Cubulco', 22, -3]],
+  },
+  // Hoy — the door, a heart over it, «Bienvenidos» beside it
+  6: {
+    f: [['o', 'M128 128 L170 144 V282 L128 270 Z'], ['y', 'M150 284 H250 L262 296 H138 Z'], ['g', 'M60 270 L68 236 H100 L108 270 Z']],
+    s: [['b', 'M14 270 C 140 264, 260 274, 388 266'], ['n', 'M128 270 V126 Q200 52 272 126 V270'], ['o', 'M128 128 L170 144 V282 L128 270'],
+      ['b', 'M200 240 Q226 268 252 240 Z'], ['o', 'M206 240 q9 -16 18 0 M222 240 q9 -16 18 0'],
+      ['r', 'M200 104 c -8 -12 -26 -4 -18 10 l18 16 l18 -16 c8 -14 -10 -22 -18 -10 z'],
+      ['r', 'M282 148 H380 V184 H282 Z'], ['y', 'M150 284 H250 L262 296 H138 Z'],
+      ['g', 'M60 270 L68 236 H100 L108 270 Z'], ['g', 'M84 236 q-22 -30 -6 -52 M84 236 q22 -26 8 -50 M84 236 V194', 4]],
+    w: [['r', 331, 173, 'Bienvenidos', 20]],
+  },
+}
+const d = D[n] ?? D[1]!
+---
+<svg class:list={['dw', cls]} viewBox="0 0 400 300" data-draw aria-hidden="true" focusable="false">
+  <g class="dw-art">
+    <g class="dw-fills">{d.f.map(([c, p]) => <path class="dw-fl" d={p} fill={`url(#hx-${c})`} />)}</g>
+    <g class="dw-lines">{d.s.map(([c, p, w]) => <path class={`dw-ln c-${c}`} d={p} style={w ? `stroke-width:${w}` : undefined} />)}</g>
+    <g class="dw-words">{d.w.map(([c, x, y, t, size = 22, rot = 0]) => <text class={`dw-w c-${c}`} x={x} y={y} text-anchor="middle" style={`font-size:${size}px`} transform={rot ? `rotate(${rot} ${x} ${y})` : undefined}>{t}</text>)}</g>
+  </g>
+  <g class="dw-tip" opacity="0"><g transform="rotate(-38)"><path d="M0 0 L-7 -16 H7 Z" class="dw-tip__wax" /><rect x="-7.5" y="-58" width="15" height="43" rx="2.5" class="dw-tip__wrap" /><path d="M-7.5 -48 h15 M-7.5 -24 h15" class="dw-tip__band" /></g></g>
+</svg>
+
+<style>
+  .dw { width: 100%; height: auto; overflow: visible; }
+  .dw-art { filter: url(#wax); }
+  .dw-ln { fill: none; stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
+  .dw-fl { opacity: 0.85; }
+  .dw-w { font-family: 'Caveat', 'Comic Sans MS', cursive; font-weight: 700; stroke: none !important; }
+  .c-r { stroke: #e8141c; fill: #e8141c; --c: #e8141c; }
+  .c-n { stroke: #173a9e; fill: #173a9e; --c: #173a9e; }
+  .c-y { stroke: #f0a800; fill: #f0a800; --c: #f0a800; }
+  .c-g { stroke: #12a356; fill: #12a356; --c: #12a356; }
+  .c-s { stroke: #2b9be0; fill: #2b9be0; --c: #2b9be0; }
+  .c-o { stroke: #ff7a1a; fill: #ff7a1a; --c: #ff7a1a; }
+  .c-b { stroke: #9a5b2e; fill: #9a5b2e; --c: #9a5b2e; }
+  .c-k { stroke: #1a1433; fill: #1a1433; --c: #1a1433; }
+  .dw-ln.c-r, .dw-ln.c-n, .dw-ln.c-y, .dw-ln.c-g, .dw-ln.c-s, .dw-ln.c-o, .dw-ln.c-b, .dw-ln.c-k { fill: none; }
+  .dw-tip__wax { fill: var(--tip, #e8141c); stroke: #1a1433; stroke-width: 2; stroke-linejoin: round; }
+  .dw-tip__wrap { fill: var(--tip, #e8141c); stroke: #1a1433; stroke-width: 2; }
+  .dw-tip__band { stroke: #1a1433; stroke-width: 2.5; opacity: 0.5; }
+  /* Waiting to be drawn (the script adds .is-pending, then draws). */
+  :global(.is-pending) .dw-ln { stroke-dasharray: var(--len) var(--len); stroke-dashoffset: var(--len); }
+  :global(.is-pending) .dw-fl, :global(.is-pending) .dw-w { opacity: 0; }
+</style>

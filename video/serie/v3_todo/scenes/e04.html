@@ -1,0 +1,16 @@
+{INCLUDE:calc.css}
+    #e04-calc { left: 1560px; top: 40px; transform-origin: 100% 0%; z-index: 9; opacity: 0; }
+    #e04-pos { opacity: 0; }
+<!--markup-->
+    <div id="e04-calc" class="calc"><div class="lcd"><span class="v" id="e04-v">21</span></div><div class="keys"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cap"><b>fx-82</b> · Central</div></div>
+    <browser id="e04-pos" src="rec/pos_mostrador.mp4" url="DENGO POS · Caja principal #1 · Central Zona 1" at="96 176 1340" start="{T:cajero:1:-0.6}" mstart="0.2" />
+<!--script-->
+    tl.set("#e04-calc", { scale: 0.62 }, 0);
+    tl.to("#e04-calc", { opacity: 1, duration: 0.3 }, {T:cajero:1:-0.6});
+    pip({T:cajero:1:-0.7}, "br");
+    lift("#e04-pos", {T:cajero:1:-0.6});
+    count("#e04-v", {T:veinte:1:-0.1}, 21, 20, 0.3);
+    tl.fromTo("#e04-calc .lcd", { backgroundColor: "#f2c14e" }, { backgroundColor: "#cfe0c3", duration: 0.8 }, {T:veinte});
+<!--sfx-->
+click-soft {T:escanea} 0.5
+pop {T:veinte} 0.45

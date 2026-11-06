@@ -1,0 +1,10 @@
+---
+import { getContent, siteKey } from '../core/api'
+import { getSite } from '../sites/registry'
+import ComingSoon from '../core/ComingSoon.astro'
+
+const content = await getContent()
+Astro.response.status = 404
+const Site = getSite(siteKey(Astro, content))
+---
+{content ? <Site.NotFound content={content} /> : <ComingSoon content={content} />}

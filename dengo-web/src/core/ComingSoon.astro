@@ -1,0 +1,26 @@
+---
+import Seo from './Seo.astro'
+import type { SiteContent } from './types'
+const { content } = Astro.props as { content: SiteContent | null }
+const name = content?.businessName ?? 'Nuestra tienda'
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {content ? <Seo content={content} noindex /> : <title>{name}</title>}
+    <style>
+      .cs { margin: 0; min-height: 100svh; display: grid; place-items: center; background: #f4f1ee; color: #22201d; font: 18px/1.5 system-ui, sans-serif; padding: 24px; box-sizing: border-box; text-align: center }
+      .cs__t { font-size: clamp(2rem, 6vw, 3.5rem); line-height: 1.05; letter-spacing: -0.03em; margin: 0 0 12px }
+      .cs__logo { width: 88px; height: 88px; object-fit: contain; margin: 0 auto 20px }
+    </style>
+  </head>
+  <body class="cs">
+    <main>
+      {content?.logo && <img class="cs__logo" src={content.logo} alt="" />}
+      <h1 class="cs__t">{name}</h1>
+      <p>{content ? 'Nuestra página está por estrenarse. Muy pronto.' : 'Esta página no está disponible en este momento.'}</p>
+    </main>
+  </body>
+</html>

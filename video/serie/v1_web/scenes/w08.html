@@ -1,0 +1,19 @@
+    #w08-rep { opacity: 0; }
+    #w08-q { position: absolute; left: 1060px; top: 58px; opacity: 0; }
+<!--markup-->
+    <shot id="w08-rep" src="ui/x_rendimiento.png" crop="256 60 1344 820" at="470 150 1380" />
+    <ring id="w08-r1" on="w08-rep" box="280 284 322 104" />
+    <ring id="w08-r2" on="w08-rep" box="607 284 322 104" />
+    <ring id="w08-r3" on="w08-rep" box="934 284 322 104" />
+    <ring id="w08-r4" on="w08-rep" box="1261 284 318 104" />
+    <ring id="w08-r5" on="w08-rep" box="280 520 1296 330" />
+    <div id="w08-q" class="pill">Q8.20 vendidos por cada Q1 de descuento</div>
+<!--script-->
+    lift("#w08-rep", 0.3);
+    ring("#w08-r1", {T:cupones}, 1.2);
+    ring("#w08-r5", {T:dia:1:-0.3}, 0.9);
+    ring("#w08-r2", {T:canjearon}, 1.0);
+    ring("#w08-r3", {T:vendi}, 0.9);
+    ring("#w08-r4", {T:gane});
+
+    pop("#w08-q", {T:trae});

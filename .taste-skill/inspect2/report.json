@@ -1,0 +1,3110 @@
+{
+ "url": "http://127.0.0.1:4321/?diseno=aurora",
+ "at": "2026-11-05T04:13:42.397Z",
+ "allow": [],
+ "viewports": [
+  {
+   "width": 1440,
+   "height": 900,
+   "load": "load",
+   "screens": 12,
+   "filled": [
+    1,
+    0.39,
+    0.76,
+    0.82,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "motion": {
+    "elements": 175,
+    "css": 1,
+    "transitions": 8,
+    "scripted": 166,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "page": {
+     "height": 14012,
+     "screens": 15.6,
+     "words": 798,
+     "img": 7,
+     "video": 0,
+     "canvas": 1,
+     "svg": 42,
+     "sections": 7,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 7,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "selection-of-colored-pencils.webp",
+      "2000-notebook-pages-4-5.webp",
+      "2000-notebook-pages-4-5.webp",
+      "selection-of-colored-pencils.webp",
+      "conte-crayons.webp",
+      "colored-pencils-chevre.webp",
+      "apsco-vacuhold-pencil-sharpener-13.webp"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [
+      "✦"
+     ],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Llega a clases con todo.",
+     "words": 5,
+     "chars": 24,
+     "lines": 2,
+     "size": 156.2,
+     "vw": 10.8,
+     "font": "Bricolage Grotesque Variable",
+     "weight": 800,
+     "tracking": -0.06,
+     "leading": 0.86,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "left",
+     "position": "center",
+     "widthRatio": 0.94,
+     "top": 201,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Llega a clases con todo.",
+     "words": 5,
+     "lines": 2,
+     "size": 156.2,
+     "font": "Bricolage Grotesque Variable"
+    },
+    "headings": [
+     {
+      "text": "REGRESO A CLASES ✦ CUPÓN EN LÍNEA ✦ UNO POR PERSONA ✦ 15%",
+      "words": 13,
+      "chars": 57,
+      "lines": 6,
+      "size": 48,
+      "vw": 3.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.05,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.13,
+      "top": 144,
+      "tag": "a",
+      "kind": "heading"
+     },
+     {
+      "text": "Llega a clases con todo.",
+      "words": 5,
+      "chars": 24,
+      "lines": 2,
+      "size": 156.2,
+      "vw": 10.8,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.06,
+      "leading": 0.86,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 201,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "CUADERNOS CRAYONES MOCHILAS TÉMPERAS FOLDERS PLASTILINA ACUARELAS SACAPUNTAS CUADERNOS CRAYONES MOCHILAS TÉMPERAS FOLDERS PLASTILINA ACUARELAS SACAPUNTAS",
+      "words": 16,
+      "chars": 153,
+      "lines": 8,
+      "size": 62.1,
+      "vw": 4.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.04,
+      "leading": 1,
+      "upper": true,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 1.1,
+      "top": 903,
+      "tag": "div",
+      "kind": "statement"
+     },
+     {
+      "text": "TE ARMAMOS LA LISTA DEL COLEGIO FORRAMOS TUS CUADERNOS ABRIMOS TEMPRANO TE ARMAMOS LA LISTA DEL COLEGIO FORRAMOS TUS CUADERNOS ABRIMOS TEMPRANO TE ARMAMOS LA LISTA DEL COLEGIO FORRAMOS TUS CUADERNOS A",
+      "words": 33,
+      "chars": 215,
+      "lines": 6,
+      "size": 62.1,
+      "vw": 4.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.04,
+      "leading": 1,
+      "upper": true,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 1.1,
+      "top": 968,
+      "tag": "div",
+      "kind": "statement"
+     },
+     {
+      "text": "Ofertas para recortar",
+      "words": 3,
+      "chars": 21,
+      "lines": 1,
+      "size": 97.6,
+      "vw": 6.8,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 1289,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "15%",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 249.6,
+      "vw": 17.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.07,
+      "leading": 0.82,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.4,
+      "top": 1682,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Q149",
+      "words": 1,
+      "chars": 4,
+      "lines": 1,
+      "size": 148.8,
+      "vw": 10.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.07,
+      "leading": 0.82,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.4,
+      "top": 1685,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Mochila escolar a precio especial",
+      "words": 5,
+      "chars": 33,
+      "lines": 2,
+      "size": 32,
+      "vw": 2.2,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.03,
+      "leading": 1.05,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.26,
+      "top": 1819,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Regreso a clases: 15% en cuadernos",
+      "words": 6,
+      "chars": 34,
+      "lines": 2,
+      "size": 32,
+      "vw": 2.2,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.03,
+      "leading": 1.05,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.26,
+      "top": 1907,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "3×2",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 148.8,
+      "vw": 10.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.07,
+      "leading": 0.82,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.4,
+      "top": 2116,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "3×2 en útiles escolares",
+      "words": 4,
+      "chars": 23,
+      "lines": 1,
+      "size": 32,
+      "vw": 2.2,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.03,
+      "leading": 1.05,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.26,
+      "top": 2254,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Q25",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 148.8,
+      "vw": 10.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.07,
+      "leading": 0.82,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.4,
+      "top": 2505,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Q25 de regalo en tu lista completa",
+      "words": 7,
+      "chars": 34,
+      "lines": 2,
+      "size": 32,
+      "vw": 2.2,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.03,
+      "leading": 1.05,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.26,
+      "top": 2639,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "El cuaderno de Aurora",
+      "words": 4,
+      "chars": 21,
+      "lines": 1,
+      "size": 97.6,
+      "vw": 6.8,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "center",
+      "position": "center",
+      "widthRatio": 0.53,
+      "top": 3112,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Nuestra historia",
+      "words": 2,
+      "chars": 16,
+      "lines": 1,
+      "size": 48,
+      "vw": 3.3,
+      "font": "Caveat",
+      "weight": 700,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.23,
+      "top": 3328,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "¿Traes tu lista?",
+      "words": 3,
+      "chars": 16,
+      "lines": 1,
+      "size": 48,
+      "vw": 3.3,
+      "font": "Caveat",
+      "weight": 700,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.23,
+      "top": 3329,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Así te armamos la lista",
+      "words": 5,
+      "chars": 23,
+      "lines": 2,
+      "size": 48,
+      "vw": 3.3,
+      "font": "Caveat",
+      "weight": 700,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.24,
+      "top": 3329,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Aurora",
+      "words": 1,
+      "chars": 6,
+      "lines": 1,
+      "size": 54.9,
+      "vw": 3.8,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.06,
+      "leading": 0.85,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.18,
+      "top": 3491,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Recorre los pasillos",
+      "words": 3,
+      "chars": 20,
+      "lines": 2,
+      "size": 97.6,
+      "vw": 6.8,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.42,
+      "top": 6975,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "01",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 91.2,
+      "vw": 6.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.06,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.05,
+      "top": 7148,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "03",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 91.2,
+      "vw": 6.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.06,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 7185,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "05",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 91.2,
+      "vw": 6.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.06,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 7185,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "02",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 91.2,
+      "vw": 6.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.06,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 7197,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "04",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 91.2,
+      "vw": 6.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.06,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.08,
+      "top": 7221,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Cuadernos",
+      "words": 1,
+      "chars": 9,
+      "lines": 1,
+      "size": 59.8,
+      "vw": 4.2,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.3,
+      "top": 7222,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Lápices y colores",
+      "words": 3,
+      "chars": 17,
+      "lines": 1,
+      "size": 59.8,
+      "vw": 4.2,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.3,
+      "top": 7245,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Arte",
+      "words": 1,
+      "chars": 4,
+      "lines": 1,
+      "size": 59.8,
+      "vw": 4.2,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.3,
+      "top": 7260,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Mochilas",
+      "words": 1,
+      "chars": 8,
+      "lines": 1,
+      "size": 59.8,
+      "vw": 4.2,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.3,
+      "top": 7260,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Oficina",
+      "words": 1,
+      "chars": 7,
+      "lines": 1,
+      "size": 59.8,
+      "vw": 4.2,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.3,
+      "top": 7260,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Del teléfono a la caja",
+      "words": 5,
+      "chars": 22,
+      "lines": 1,
+      "size": 97.6,
+      "vw": 6.8,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "center",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 9599,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "1",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 35.2,
+      "vw": 2.4,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": 0,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.05,
+      "top": 9816,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Elige tu oferta y deja tu nombre",
+      "words": 7,
+      "chars": 32,
+      "lines": 2,
+      "size": 39.4,
+      "vw": 2.7,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.31,
+      "top": 10103,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "2",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 35.2,
+      "vw": 2.4,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": 0,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.05,
+      "top": 10394,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "15%",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 48,
+      "vw": 3.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.05,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.06,
+      "top": 10430,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Recibes tu cupón con QR",
+      "words": 5,
+      "chars": 23,
+      "lines": 1,
+      "size": 39.4,
+      "vw": 2.7,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.31,
+      "top": 10716,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "3",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 35.2,
+      "vw": 2.4,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": 0,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.05,
+      "top": 10968,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "En caja, lo escanean y listo",
+      "words": 6,
+      "chars": 28,
+      "lines": 1,
+      "size": 39.4,
+      "vw": 2.7,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.31,
+      "top": 11209,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Recórtalo aquí mismo",
+      "words": 3,
+      "chars": 20,
+      "lines": 1,
+      "size": 97.6,
+      "vw": 6.8,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "center",
+      "position": "center",
+      "widthRatio": 0.53,
+      "top": 11569,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "15%",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 192,
+      "vw": 13.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.07,
+      "leading": 0.8,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.27,
+      "top": 11921,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Regreso a clases: 15% en cuadernos",
+      "words": 6,
+      "chars": 34,
+      "lines": 2,
+      "size": 33.6,
+      "vw": 2.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.03,
+      "leading": 1.05,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.26,
+      "top": 12073,
+      "tag": "p",
+      "kind": "statement"
+     }
+    ],
+    "headingSummary": {
+     "count": 50,
+     "maxLines": 8,
+     "over2Lines": 1,
+     "statements": 31,
+     "centered": 3,
+     "medianWords": 2,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Bricolage Grotesque Variable",
+       "share": 0.76,
+       "mono": false
+      },
+      {
+       "family": "Caveat",
+       "share": 0.22,
+       "mono": false
+      },
+      {
+       "family": "ui-monospace",
+       "share": 0.02,
+       "mono": false
+      }
+     ],
+     "familyCount": 3,
+     "sizes": [
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      24,
+      26,
+      27,
+      32,
+      34,
+      35,
+      39,
+      44,
+      48,
+      55,
+      60,
+      62,
+      75,
+      91,
+      98,
+      106,
+      149,
+      156,
+      192,
+      250,
+      346
+     ],
+     "sizeCount": 28,
+     "notLoaded": [],
+     "body": {
+      "font": "Bricolage Grotesque Variable",
+      "size": 17,
+      "leading": 1.5,
+      "weight": 500,
+      "tracking": 0,
+      "contrast": 3.1
+     },
+     "measureChars": 104,
+     "max": {
+      "size": 345.6,
+      "vw": 24,
+      "font": "Bricolage Grotesque Variable",
+      "text": "A"
+     },
+     "monoShare": 0.02,
+     "monoProseShare": 0.02,
+     "monoFamilies": [
+      "ui-monospace"
+     ],
+     "monoSamples": [
+      "Librería Aurora",
+      "Cuaderno cosido ×4",
+      "Q85.00",
+      "Colores 24",
+      "Q42.00",
+      "Cupón 15%"
+     ],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0.09,
+     "centerShare": 0.03,
+     "smallText": 0
+    },
+    "eyebrows": [
+     {
+      "text": "Central Zona 1",
+      "above": "CUADERNOS CRAYONES MOCHILAS TÉMPERAS FOL",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 16,
+      "top": 847
+     }
+    ],
+    "numbered": [
+     {
+      "text": "01",
+      "size": 91.2,
+      "top": 7148
+     },
+     {
+      "text": "02",
+      "size": 91.2,
+      "top": 7197
+     },
+     {
+      "text": "03",
+      "size": 91.2,
+      "top": 7185
+     },
+     {
+      "text": "04",
+      "size": 91.2,
+      "top": 7221
+     },
+     {
+      "text": "05",
+      "size": 91.2,
+      "top": 7185
+     },
+     {
+      "text": "01",
+      "size": 105.6,
+      "top": 12716
+     },
+     {
+      "text": "02",
+      "size": 105.6,
+      "top": 12724
+     },
+     {
+      "text": "03",
+      "size": 105.6,
+      "top": 12727
+     }
+    ],
+    "color": {
+     "bodyBg": "#fff3dc",
+     "bodyBgHsl": {
+      "h": 39,
+      "s": 1,
+      "l": 0.93
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#fff3dc",
+       "top": 0,
+       "hsl": {
+        "h": 39,
+        "s": 1,
+        "l": 0.93
+       }
+      },
+      {
+       "color": "#120e2e",
+       "top": 0,
+       "hsl": {
+        "h": 248,
+        "s": 0.53,
+        "l": 0.12
+       }
+      },
+      {
+       "color": "#ffc61a",
+       "top": 1634,
+       "hsl": {
+        "h": 45,
+        "s": 1,
+        "l": 0.55
+       }
+      },
+      {
+       "color": "#2f5bff",
+       "top": 3022,
+       "hsl": {
+        "h": 227,
+        "s": 1,
+        "l": 0.59
+       }
+      },
+      {
+       "color": "#ff4130",
+       "top": 11425,
+       "hsl": {
+        "h": 5,
+        "s": 1,
+        "l": 0.59
+       }
+      },
+      {
+       "color": "#fffaf0",
+       "top": 11806,
+       "hsl": {
+        "h": 40,
+        "s": 1,
+        "l": 0.97
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#120e2e",
+       "share": 0.33
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.23
+      },
+      {
+       "color": "#1d2a7a",
+       "share": 0.19
+      },
+      {
+       "color": "#fffaf0",
+       "share": 0.11
+      },
+      {
+       "color": "#fff9f0",
+       "share": 0.04
+      }
+     ],
+     "button": {
+      "bg": "#ffc61a",
+      "hsl": {
+       "h": 45,
+       "s": 1,
+       "l": 0.55
+      },
+      "fg": "#120e2e"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 14,
+     "inHero": 3,
+     "radius": "pill",
+     "height": 30,
+     "withShadow": 8,
+     "withGradient": 6,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Obtener cupón",
+      "Recorta tu 15%",
+      "Recorre los pasillos"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 23,
+     "shadowOverlay": 1,
+     "shadowSamples": [
+      "a.a-btn.a-btn--go → rgb(18, 14, 46) 0px 6px 0px 0px",
+      "a.a-btn.a-btn--light → rgb(255, 65, 48) 0px 6px 0px 0px",
+      "div.ribbon.ribbon--a → rgb(18, 14, 46) 0px 12px 0px 0px",
+      "a.sticker__link → rgb(18, 14, 46) 0px 14px 0px 0px"
+     ],
+     "gradients": 7,
+     "scrims": 5,
+     "gradientSamples": [
+      "div.hero__glow → radial-gradient(40% 50% at 25% 40%, rgb(58, 42, 155) 0%, rgba(0, 0, 0, 0) 70%), radial-gradient(35% 40% at 80%",
+      "div.page__ruled → linear-gradient(90deg, rgba(0, 0, 0, 0) 54.5449px, rgba(255, 65, 48, 0.55) 54.5449px, rgba(255, 65, 48, 0.55) ",
+      "div.page__ruled.page__ruled--left → linear-gradient(90deg, rgba(0, 0, 0, 0) calc(100% - 54.5449px), rgba(255, 65, 48, 0.55) calc(100% - 54.5449px)",
+      "div.page__ruled → linear-gradient(90deg, rgba(0, 0, 0, 0) 54.5449px, rgba(255, 65, 48, 0.55) 54.5449px, rgba(255, 65, 48, 0.55) "
+     ],
+     "gradientText": 0,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 2,
+     "blurred": 1,
+     "roundedBoxes": 24,
+     "boxRadius": 28,
+     "squareMedia": 1,
+     "roundedMedia": 7,
+     "mediaRadius": 28,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [
+     {
+      "type": "canvas",
+      "ratio": 1
+     }
+    ],
+    "nav": {
+     "links": 6,
+     "fixed": true,
+     "height": 78,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "bricolage grotesque variable",
+     "caveat"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "pageH": 14012,
+    "margins": {
+     "left": 3,
+     "right": 0
+    },
+    "sections": [
+     {
+      "sel": "div.a-main",
+      "tag": "div",
+      "top": 0,
+      "height": 13160,
+      "words": 513,
+      "media": 11,
+      "middle": 3430,
+      "heading": {
+       "text": "15",
+       "size": 250,
+       "tag": "span"
+      },
+      "left": 0,
+      "right": 0,
+      "textLeft": 0,
+      "textRight": 0,
+      "fullBleed": true,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": true
+     },
+     {
+      "sel": "footer#contacto.a-foot",
+      "tag": "footer",
+      "top": 13160,
+      "height": 851,
+      "words": 65,
+      "media": 0,
+      "middle": 145,
+      "heading": {
+       "text": "22:13",
+       "size": 75,
+       "tag": "p"
+      },
+      "left": 43,
+      "right": 63,
+      "textLeft": 43,
+      "textRight": 63,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [
+     {
+      "top": 9456,
+      "height": 292
+     },
+     {
+      "top": 11304,
+      "height": 556
+     },
+     {
+      "top": 12212,
+      "height": 756
+     },
+     {
+      "top": 13008,
+      "height": 276
+     },
+     {
+      "top": 13532,
+      "height": 412
+     }
+    ],
+    "h1s": [
+     {
+      "text": "Llega a clases con todo.",
+      "size": 156,
+      "top": 201,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [
+     {
+      "text": "5 pasillos en cada tienda, desde el cuaderno de pr",
+      "side": "left",
+      "px": 3
+     },
+     {
+      "text": "Grafito HB y 2B, colores de 12 a 48, sacapuntas de",
+      "side": "right",
+      "px": 0
+     }
+    ],
+    "edges": [
+     {
+      "x": 1025,
+      "n": 4
+     },
+     {
+      "x": 3,
+      "n": 2
+     },
+     {
+      "x": 43,
+      "n": 2
+     },
+     {
+      "x": 671,
+      "n": 2
+     },
+     {
+      "x": 1174,
+      "n": 2
+     },
+     {
+      "x": 757,
+      "n": 1
+     },
+     {
+      "x": 1047,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 14,
+    "bodySize": 27,
+    "stage": false,
+    "explains": true,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": null,
+   "consoleErrors": []
+  },
+  {
+   "width": 390,
+   "height": 844,
+   "load": "load",
+   "screens": 12,
+   "filled": [
+    0.98,
+    0.59,
+    0.8,
+    0.91,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0.83
+   ],
+   "motion": {
+    "elements": 162,
+    "css": 0,
+    "transitions": 5,
+    "scripted": 157,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "page": {
+     "height": 11806,
+     "screens": 14,
+     "words": 794,
+     "img": 7,
+     "video": 0,
+     "canvas": 1,
+     "svg": 42,
+     "sections": 7,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 4,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "selection-of-colored-pencils.webp",
+      "2000-notebook-pages-4-5.webp",
+      "2000-notebook-pages-4-5.webp",
+      "selection-of-colored-pencils.webp"
+     ],
+     "blendText": 0,
+     "sideScrollers": 1,
+     "brokenImages": [],
+     "emoji": [
+      "✦"
+     ],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Llega a clases con todo.",
+     "words": 5,
+     "chars": 24,
+     "lines": 2,
+     "size": 49.6,
+     "vw": 12.7,
+     "font": "Bricolage Grotesque Variable",
+     "weight": 800,
+     "tracking": -0.06,
+     "leading": 0.86,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "left",
+     "position": "center",
+     "widthRatio": 0.91,
+     "top": 339,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Llega a clases con todo.",
+     "words": 5,
+     "lines": 2,
+     "size": 49.6,
+     "font": "Bricolage Grotesque Variable"
+    },
+    "headings": [
+     {
+      "text": "Aurora",
+      "words": 1,
+      "chars": 6,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.04,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.34,
+      "top": 21,
+      "tag": "a",
+      "kind": "heading"
+     },
+     {
+      "text": "REGRESO A CLASES ✦ CUPÓN EN LÍNEA ✦ UNO POR PERSONA ✦ 15%",
+      "words": 13,
+      "chars": 57,
+      "lines": 5,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.05,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.29,
+      "top": 96,
+      "tag": "a",
+      "kind": "heading"
+     },
+     {
+      "text": "Llega a clases con todo.",
+      "words": 5,
+      "chars": 24,
+      "lines": 2,
+      "size": 49.6,
+      "vw": 12.7,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.06,
+      "leading": 0.86,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.91,
+      "top": 339,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "Ofertas para recortar",
+      "words": 3,
+      "chars": 21,
+      "lines": 2,
+      "size": 45.1,
+      "vw": 11.6,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.91,
+      "top": 1054,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "15%",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 112,
+      "vw": 28.7,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.07,
+      "leading": 0.82,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.77,
+      "top": 1393,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Q149",
+      "words": 1,
+      "chars": 4,
+      "lines": 1,
+      "size": 80,
+      "vw": 20.5,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.07,
+      "leading": 0.82,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.76,
+      "top": 1750,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "3×2",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 80,
+      "vw": 20.5,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.07,
+      "leading": 0.82,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.76,
+      "top": 2080,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Q25",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 80,
+      "vw": 20.5,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.07,
+      "leading": 0.82,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.77,
+      "top": 2382,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "El cuaderno de Aurora",
+      "words": 4,
+      "chars": 21,
+      "lines": 2,
+      "size": 45.1,
+      "vw": 11.6,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "center",
+      "position": "center",
+      "widthRatio": 0.53,
+      "top": 2845,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Sigue bajando para pasar la página",
+      "words": 6,
+      "chars": 34,
+      "lines": 1,
+      "size": 25.6,
+      "vw": 6.6,
+      "font": "Caveat",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.79,
+      "top": 2936,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Nuestra historia",
+      "words": 2,
+      "chars": 16,
+      "lines": 1,
+      "size": 36,
+      "vw": 9.2,
+      "font": "Caveat",
+      "weight": 700,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.65,
+      "top": 3092,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "¿Traes tu lista?",
+      "words": 3,
+      "chars": 16,
+      "lines": 1,
+      "size": 36,
+      "vw": 9.2,
+      "font": "Caveat",
+      "weight": 700,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.63,
+      "top": 3093,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Así te armamos la lista",
+      "words": 5,
+      "chars": 23,
+      "lines": 2,
+      "size": 36,
+      "vw": 9.2,
+      "font": "Caveat",
+      "weight": 700,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.65,
+      "top": 3093,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Aurora",
+      "words": 1,
+      "chars": 6,
+      "lines": 1,
+      "size": 40.8,
+      "vw": 10.5,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.06,
+      "leading": 0.85,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.5,
+      "top": 3215,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Recorre los pasillos",
+      "words": 3,
+      "chars": 20,
+      "lines": 2,
+      "size": 45.1,
+      "vw": 11.6,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.82,
+      "top": 6430,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "01",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 64,
+      "vw": 16.4,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.06,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.14,
+      "top": 6550,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "02",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 64,
+      "vw": 16.4,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.06,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.18,
+      "top": 6550,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "03",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 64,
+      "vw": 16.4,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.06,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.18,
+      "top": 6550,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "04",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 64,
+      "vw": 16.4,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.06,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.18,
+      "top": 6550,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "05",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 64,
+      "vw": 16.4,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.06,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.18,
+      "top": 6550,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Cuadernos",
+      "words": 1,
+      "chars": 9,
+      "lines": 1,
+      "size": 35.2,
+      "vw": 9,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.71,
+      "top": 6600,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Lápices y colores",
+      "words": 3,
+      "chars": 17,
+      "lines": 1,
+      "size": 35.2,
+      "vw": 9,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.71,
+      "top": 6600,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Arte",
+      "words": 1,
+      "chars": 4,
+      "lines": 1,
+      "size": 35.2,
+      "vw": 9,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.71,
+      "top": 6600,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Mochilas",
+      "words": 1,
+      "chars": 8,
+      "lines": 1,
+      "size": 35.2,
+      "vw": 9,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.71,
+      "top": 6600,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Oficina",
+      "words": 1,
+      "chars": 7,
+      "lines": 1,
+      "size": 35.2,
+      "vw": 9,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.71,
+      "top": 6600,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Del teléfono a la caja",
+      "words": 5,
+      "chars": 22,
+      "lines": 2,
+      "size": 45.1,
+      "vw": 11.6,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "center",
+      "position": "center",
+      "widthRatio": 0.91,
+      "top": 6966,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "1",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 28.8,
+      "vw": 7.4,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": 0,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.15,
+      "top": 7132,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Ana",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 25.6,
+      "vw": 6.6,
+      "font": "Caveat",
+      "weight": 500,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.67,
+      "top": 7259,
+      "tag": "b",
+      "kind": "statement"
+     },
+     {
+      "text": "5555 1234",
+      "words": 2,
+      "chars": 9,
+      "lines": 1,
+      "size": 25.6,
+      "vw": 6.6,
+      "font": "Caveat",
+      "weight": 500,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.67,
+      "top": 7339,
+      "tag": "b",
+      "kind": "statement"
+     },
+     {
+      "text": "Elige tu oferta y deja tu nombre",
+      "words": 7,
+      "chars": 32,
+      "lines": 1,
+      "size": 25.6,
+      "vw": 6.6,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.87,
+      "top": 7483,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "2",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 28.8,
+      "vw": 7.4,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": 0,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.15,
+      "top": 7681,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "15%",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 48,
+      "vw": 12.3,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.05,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.21,
+      "top": 7785,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "Recibes tu cupón con QR",
+      "words": 5,
+      "chars": 23,
+      "lines": 1,
+      "size": 25.6,
+      "vw": 6.6,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.87,
+      "top": 8067,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "3",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 28.8,
+      "vw": 7.4,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": 0,
+      "leading": 1.5,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.15,
+      "top": 8239,
+      "tag": "span",
+      "kind": "statement"
+     },
+     {
+      "text": "En caja, lo escanean y listo",
+      "words": 6,
+      "chars": 28,
+      "lines": 1,
+      "size": 25.6,
+      "vw": 6.6,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.87,
+      "top": 8548,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Recórtalo aquí mismo",
+      "words": 3,
+      "chars": 20,
+      "lines": 2,
+      "size": 45.1,
+      "vw": 11.6,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "center",
+      "position": "center",
+      "widthRatio": 0.53,
+      "top": 8771,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "15%",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 96,
+      "vw": 24.6,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.07,
+      "leading": 0.8,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.76,
+      "top": 8918,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Regreso a clases: 15% en cuadernos",
+      "words": 6,
+      "chars": 34,
+      "lines": 2,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.03,
+      "leading": 1.05,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.76,
+      "top": 9007,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "3 tiendas, mismo horario",
+      "words": 4,
+      "chars": 24,
+      "lines": 2,
+      "size": 45.1,
+      "vw": 11.6,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.045,
+      "leading": 0.92,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.91,
+      "top": 9624,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "01",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 72,
+      "vw": 18.5,
+      "font": "Bricolage Grotesque Variable",
+      "weight": 800,
+      "tracking": -0.07,
+      "leading": 0.8,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.77,
+      "top": 9770,
+      "tag": "p",
+      "kind": "statement"
+     }
+    ],
+    "headingSummary": {
+     "count": 48,
+     "maxLines": 5,
+     "over2Lines": 1,
+     "statements": 28,
+     "centered": 3,
+     "medianWords": 1,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Bricolage Grotesque Variable",
+       "share": 0.76,
+       "mono": false
+      },
+      {
+       "family": "Caveat",
+       "share": 0.22,
+       "mono": false
+      },
+      {
+       "family": "ui-monospace",
+       "share": 0.02,
+       "mono": false
+      }
+     ],
+     "familyCount": 3,
+     "sizes": [
+      11,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      22,
+      24,
+      26,
+      29,
+      32,
+      35,
+      36,
+      41,
+      45,
+      48,
+      50,
+      64,
+      72,
+      80,
+      94,
+      96,
+      112
+     ],
+     "sizeCount": 25,
+     "notLoaded": [],
+     "body": {
+      "font": "Caveat",
+      "size": 20.3,
+      "leading": 1.12,
+      "weight": 500,
+      "tracking": 0,
+      "contrast": null
+     },
+     "measureChars": 51,
+     "max": {
+      "size": 112,
+      "vw": 28.7,
+      "font": "Bricolage Grotesque Variable",
+      "text": "%"
+     },
+     "monoShare": 0.02,
+     "monoProseShare": 0.02,
+     "monoFamilies": [
+      "ui-monospace"
+     ],
+     "monoSamples": [
+      "Librería Aurora",
+      "Cuaderno cosido ×4",
+      "Q85.00",
+      "Colores 24",
+      "Q42.00",
+      "Cupón 15%"
+     ],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0.09,
+     "centerShare": 0.03,
+     "smallText": 0
+    },
+    "eyebrows": [
+     {
+      "text": "Obtener cupón",
+      "above": "Q149",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 18,
+      "top": 1645
+     },
+     {
+      "text": "Obtener cupón",
+      "above": "3×2",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 18,
+      "top": 1976
+     },
+     {
+      "text": "Obtener cupón",
+      "above": "Q25",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 18,
+      "top": 2282
+     },
+     {
+      "text": "Cómo llegar",
+      "above": "02",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 17,
+      "top": 10014
+     },
+     {
+      "text": "Cómo llegar",
+      "above": "03",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 17,
+      "top": 10413
+     }
+    ],
+    "numbered": [
+     {
+      "text": "01",
+      "size": 64,
+      "top": 6550
+     },
+     {
+      "text": "02",
+      "size": 64,
+      "top": 6550
+     },
+     {
+      "text": "03",
+      "size": 64,
+      "top": 6550
+     },
+     {
+      "text": "04",
+      "size": 64,
+      "top": 6550
+     },
+     {
+      "text": "05",
+      "size": 64,
+      "top": 6550
+     },
+     {
+      "text": "01",
+      "size": 72,
+      "top": 9770
+     },
+     {
+      "text": "02",
+      "size": 72,
+      "top": 10142
+     },
+     {
+      "text": "03",
+      "size": 72,
+      "top": 10540
+     }
+    ],
+    "color": {
+     "bodyBg": "#fff3dc",
+     "bodyBgHsl": {
+      "h": 39,
+      "s": 1,
+      "l": 0.93
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#fff3dc",
+       "top": 0,
+       "hsl": {
+        "h": 39,
+        "s": 1,
+        "l": 0.93
+       }
+      },
+      {
+       "color": "#120e2e",
+       "top": 0,
+       "hsl": {
+        "h": 248,
+        "s": 0.53,
+        "l": 0.12
+       }
+      },
+      {
+       "color": "#ffc61a",
+       "top": 1363,
+       "hsl": {
+        "h": 45,
+        "s": 1,
+        "l": 0.55
+       }
+      },
+      {
+       "color": "#2f5bff",
+       "top": 1720,
+       "hsl": {
+        "h": 227,
+        "s": 1,
+        "l": 0.59
+       }
+      },
+      {
+       "color": "#ff8fc6",
+       "top": 2051,
+       "hsl": {
+        "h": 331,
+        "s": 1,
+        "l": 0.78
+       }
+      },
+      {
+       "color": "#00a865",
+       "top": 2352,
+       "hsl": {
+        "h": 156,
+        "s": 1,
+        "l": 0.33
+       }
+      },
+      {
+       "color": "#fffaf0",
+       "top": 3067,
+       "hsl": {
+        "h": 40,
+        "s": 1,
+        "l": 0.97
+       }
+      },
+      {
+       "color": "#ff4130",
+       "top": 3067,
+       "hsl": {
+        "h": 5,
+        "s": 1,
+        "l": 0.59
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#120e2e",
+       "share": 0.33
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.23
+      },
+      {
+       "color": "#1d2a7a",
+       "share": 0.19
+      },
+      {
+       "color": "#fffaf0",
+       "share": 0.1
+      },
+      {
+       "color": "#fff9f0",
+       "share": 0.04
+      }
+     ],
+     "button": {
+      "bg": "#ffc61a",
+      "hsl": {
+       "h": 45,
+       "s": 1,
+       "l": 0.55
+      },
+      "fg": "#120e2e"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 15,
+     "inHero": 3,
+     "radius": "pill",
+     "height": 58,
+     "withShadow": 9,
+     "withGradient": 6,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Obtener cupón",
+      "Recorta tu 15%",
+      "Recorre los pasillos"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 23,
+     "shadowOverlay": 1,
+     "shadowSamples": [
+      "a.a-btn.a-btn--go → rgb(18, 14, 46) 0px 6px 0px 0px",
+      "a.a-btn.a-btn--light → rgb(255, 65, 48) 0px 6px 0px 0px",
+      "div.ribbon.ribbon--a → rgb(18, 14, 46) 0px 12px 0px 0px",
+      "a.sticker__link → rgb(18, 14, 46) 0px 14px 0px 0px"
+     ],
+     "gradients": 10,
+     "scrims": 5,
+     "gradientSamples": [
+      "div.hero__glow → radial-gradient(40% 50% at 25% 40%, rgb(58, 42, 155) 0%, rgba(0, 0, 0, 0) 70%), radial-gradient(35% 40% at 80%",
+      "div.page__ruled → linear-gradient(90deg, rgba(0, 0, 0, 0) 40.9492px, rgba(255, 65, 48, 0.55) 40.9492px, rgba(255, 65, 48, 0.55) ",
+      "div.page__ruled.page__ruled--left → linear-gradient(90deg, rgba(0, 0, 0, 0) calc(100% - 40.9492px), rgba(255, 65, 48, 0.55) calc(100% - 40.9492px)",
+      "div.page__ruled → linear-gradient(90deg, rgba(0, 0, 0, 0) 40.9492px, rgba(255, 65, 48, 0.55) 40.9492px, rgba(255, 65, 48, 0.55) "
+     ],
+     "gradientText": 0,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 2,
+     "blurred": 0,
+     "roundedBoxes": 21,
+     "boxRadius": 28,
+     "squareMedia": 1,
+     "roundedMedia": 7,
+     "mediaRadius": 28,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 5,
+       "iconTopped": false,
+       "rounded": true,
+       "top": 6296
+      }
+     ]
+    },
+    "heroMedia": [
+     {
+      "type": "canvas",
+      "ratio": 1
+     }
+    ],
+    "nav": {
+     "links": 2,
+     "fixed": true,
+     "height": 62,
+     "floatingPill": true,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "bricolage grotesque variable",
+     "caveat"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "pageH": 11806,
+    "margins": {
+     "left": 18,
+     "right": 0
+    },
+    "sections": [
+     {
+      "sel": "div.a-main",
+      "tag": "div",
+      "top": 0,
+      "height": 10967,
+      "words": 563,
+      "media": 11,
+      "middle": 1310,
+      "heading": {
+       "text": "15",
+       "size": 112,
+       "tag": "span"
+      },
+      "left": 0,
+      "right": 0,
+      "textLeft": 0,
+      "textRight": 0,
+      "fullBleed": true,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": true
+     },
+     {
+      "sel": "footer#contacto.a-foot",
+      "tag": "footer",
+      "top": 10967,
+      "height": 839,
+      "words": 65,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "22:14",
+       "size": 48,
+       "tag": "p"
+      },
+      "left": 18,
+      "right": 18,
+      "textLeft": 18,
+      "textRight": 18,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [
+     {
+      "top": 6712,
+      "height": 352
+     },
+     {
+      "top": 9456,
+      "height": 296
+     }
+    ],
+    "h1s": [
+     {
+      "text": "Llega a clases con todo.",
+      "size": 50,
+      "top": 339,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [
+     {
+      "text": "Acuarelas",
+      "side": "left",
+      "px": 4
+     },
+     {
+      "text": "Cuadernos",
+      "side": "right",
+      "px": 0
+     },
+     {
+      "text": "Forramos tus cuadernos",
+      "side": "left",
+      "px": 0
+     },
+     {
+      "text": "Abrimos temprano",
+      "side": "right",
+      "px": 0
+     },
+     {
+      "text": "Cuadernos",
+      "side": "right",
+      "px": 0
+     },
+     {
+      "text": "Cosidos, espiral y de dibujo, de 50 a 200 hojas. T",
+      "side": "right",
+      "px": 0
+     }
+    ],
+    "edges": [
+     {
+      "x": 18,
+      "n": 4
+     },
+     {
+      "x": 96,
+      "n": 4
+     },
+     {
+      "x": 375,
+      "n": 2
+     },
+     {
+      "x": 46,
+      "n": 1
+     },
+     {
+      "x": 109,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 12,
+    "bodySize": 20,
+    "stage": false,
+    "explains": true,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": null,
+   "consoleErrors": []
+  }
+ ],
+ "findings": [
+  {
+   "level": "FAIL",
+   "id": "headline-lines",
+   "width": 1440,
+   "message": "3 headline(s) wrap past two lines at 1440px: \"REGRESO A CLASES ✦ CUPÓN EN LÍNEA ✦ UNO POR PERS\" → 6 lines (13 words, 48px); \"CUADERNOS CRAYONES MOCHILAS TÉMPERAS FOLDERS PLA\" → 8 lines (16 words, 62.1px, a paragraph set above 36px); \"TE ARMAMOS LA LISTA DEL COLEGIO FORRAMOS TUS CUA\" → 6 lines (33 words, 62.1px, a paragraph set above 36px)",
+   "fix": "Cut words first (a headline is a title, not a sentence). Then give it a wider measure. Lower the size only as a last resort and never below the scale you chose. A real statement paragraph belongs in a <p> or <blockquote> at 36px or less."
+  },
+  {
+   "level": "FAIL",
+   "id": "eyebrow",
+   "width": 1440,
+   "message": "1 eyebrow/kicker label(s) above headings: \"Central Zona 1\" above \"CUADERNOS CRAYONES MOCHILAS TÉMPERAS FOL\"",
+   "fix": "Delete them. If the label carried real information, fold it into the headline or the supporting sentence.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "mono",
+   "width": 1440,
+   "message": "Monospace type outside code: ui-monospace — e.g. \"Librería Aurora\", \"Cuaderno cosido ×4\", \"Q85.00\", \"Colores 24\"",
+   "fix": "Set it in the text face. Monospace is for literal code inside <pre>/<code> only.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "numbering",
+   "width": 1440,
+   "message": "Decorative index numbers: \"01\", \"02\", \"03\", \"04\", \"05\", \"01\"",
+   "fix": "Remove them. If order truly matters, write it into the words (\"First, …\") or use a real <ol>.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "width": 1440,
+   "message": "Emoji in the page: ✦",
+   "fix": "Remove. Use words or real imagery.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "gradient",
+   "width": 1440,
+   "message": "7 gradient fill(s): div.hero__glow → radial-gradient(40% 50% at 25% 40%, rgb(58, 42, 155) 0%, rgba(0, 0, 0, 0) 70%), radial-gradient(35% 40% at 80% | div.page__ruled → linear-gradient(90deg, rgba(0, 0, 0, 0) 54.5449px, rgba(255, 65, 48, 0.55) 54.5449px, rgba(255, 65, 48, 0.55)  | div.page__ruled.page__ruled--left → linear-gradient(90deg, rgba(0, 0, 0, 0) calc(100% - 54.5449px), rgba(255, 65, 48, 0.55) calc(100% - 54.5449px)",
+   "fix": "Use a flat colour or a real image. The only gradient allowed by default is a neutral scrim over a photo for legibility.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "shadow",
+   "width": 1440,
+   "message": "23 box-shadow(s) on elements at rest: a.a-btn.a-btn--go → rgb(18, 14, 46) 0px 6px 0px 0px | a.a-btn.a-btn--light → rgb(255, 65, 48) 0px 6px 0px 0px | div.ribbon.ribbon--a → rgb(18, 14, 46) 0px 12px 0px 0px",
+   "fix": "Remove. Separate surfaces with a tone step or space. Shadows are for things that really float (menus, dialogs, sticky bars).",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "button-fx",
+   "width": 1440,
+   "message": "Buttons with gradient fill and shadow/glow.",
+   "fix": "Flat fill, one colour.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "dashed",
+   "width": 1440,
+   "message": "2 dashed/dotted border(s).",
+   "fix": "Remove unless it is a real drop zone.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "palette-cream",
+   "width": 1440,
+   "message": "Yellow-cream background (page background #fff3dc, section #fff3dc, section #fffaf0).",
+   "fix": "Use the drawn palette. If you want warmth, take a low-chroma stone or bone, not a yellow cream.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "font-count",
+   "width": 1440,
+   "message": "3 typefaces in use (Bricolage Grotesque Variable, Caveat, ui-monospace).",
+   "fix": "Two at most.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "size-count",
+   "width": 1440,
+   "message": "28 different font sizes (14, 15, 16, 17, 18, 19, 20, 24, 26, 27, 32, 34, 35, 39, 44, 48, 55, 60, 62, 75, 91, 98, 106, 149, 156, 192, 250, 346).",
+   "fix": "A page needs about five: display, heading, lead, body, small.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "grey-body",
+   "width": 1440,
+   "message": "The running text is a soft grey on its ground (3.1:1).",
+   "fix": "Set body copy in the full ink (7:1 or more). Keep the muted ink for secondary notes; pages read thin and unfinished when everything is grey."
+  },
+  {
+   "level": "WARN",
+   "id": "no-footage",
+   "width": 1440,
+   "message": "No video anywhere on the page.",
+   "fix": "Look for one honest clip with scripts/assets.mjs --video (the place, the material, the process) and use it as a muted loop with a poster frame. Defend its absence only if no clip fits the subject."
+  },
+  {
+   "level": "WARN",
+   "id": "measure",
+   "width": 1440,
+   "message": "Longest paragraph runs about 104 characters per line.",
+   "fix": "Cap paragraphs at 45–75 characters (max-width: 60ch)."
+  },
+  {
+   "level": "WARN",
+   "id": "dev-server",
+   "width": 1440,
+   "message": "This page is served by a development server (Vite, webpack or Next in dev mode).",
+   "fix": "Run the last gate on the production build too (vite build && vite preview, next build && next start, or the built index.html): minifiers and bundlers change the CSS a visitor receives.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "late-title",
+   "width": 1440,
+   "message": "The title is not readable 1.2s after the page loaded (it is at 0% opacity).",
+   "fix": "Put the headline in the HTML, painted on the first frame; the load sequence only adds arrival and is settled by 1.2s (references/motion.md, \"Load sequence in 1.2 seconds\"). No preloader, no gate, no waiting for the load event.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "blank-gap",
+   "width": 1440,
+   "message": "3 stretch(es) of the page hold nothing at all: 556px at 11304px; 756px at 12212px; 412px at 13532px (the screen is 900px tall).",
+   "fix": "Close the gap: a section gap is 120–240px on desktop and 72–112px on a phone. Look for a min-height: 100vh on a short section, an empty grid row, a hidden element still holding its space, or a reveal that never fired. A deliberate rest is a placed picture or colour field, not nothing."
+  },
+  {
+   "level": "FAIL",
+   "id": "edge-text",
+   "width": 1440,
+   "message": "2 text block(s) sit within 16px of the screen edge: \"5 pasillos en cada tienda, des\" (3px from the left); \"Grafito HB y 2B, colores de 12\" (0px from the right)",
+   "fix": "Keep text inside the page margin (16–32px or more). Only display type deliberately bled past the edge may touch it.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "ragged-edges",
+   "width": 1440,
+   "message": "Left-aligned text starts at 7 different lines (1025px, 3px, 43px, 671px, 1174px, 757px, 1047px); the three most used hold only 57% of it.",
+   "fix": "Pick two or three anchor lines from the grid and start every heading and paragraph on one of them."
+  },
+  {
+   "level": "FAIL",
+   "id": "covered-text",
+   "width": 1440,
+   "message": "Large text lies under another element at some scroll position: \"Aurora\" (screen 7, 100% hidden); \"Llega a clases\" (screen 1, 100% hidden); \"15%\" (screen 1, 100% hidden); \"FORRAMOS TUS CUADERNOS\" (screen 2, 88% hidden)",
+   "fix": "Nothing may sit on top of a headline or statement. Move the picture, shorten the pinned run, or raise the text above it (z-index) and give it a ground.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "clipped-text",
+   "width": 1440,
+   "message": "Large text is cut off along its top by the box that holds it: \"SACAPUNTAS\" (screen 1); \"CUADERNOS\" (screen 1); \"TE ARMAMOS LA LISTA DEL COLEGIO\" (screen 1)",
+   "fix": "Jurors read a wordmark sliced at the top as broken. Give the box room for the ascenders (line-height and padding), or crop at the bottom or a side edge on purpose."
+  },
+  {
+   "level": "WARN",
+   "id": "pinned-over-picture",
+   "width": 1440,
+   "message": "Pinned large text slides across pictures while the page scrolls: \"¿Traes tu lista?\" (screen 6, 100% over a picture); \"Aurora\" (screen 7, 100% over a picture); \"Así te armamos la lista\" (screen 7, 100% over a picture)",
+   "fix": "Jurors read a pinned title crossing drawings or photographs as a collision. Keep the pictures in the column the title does not occupy, or unpin it.",
+   "alsoAt": [
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "long-pin",
+   "width": 1440,
+   "message": "The same large text stays on screen for 4 screens in a row: \"El cuaderno de Aurora\"; \"¿Traes tu lista?\"",
+   "fix": "A pinned element earns two screens, and something must change at each. Shorten the run or give every screen its own content."
+  },
+  {
+   "level": "FAIL",
+   "id": "headline-lines",
+   "width": 390,
+   "message": "1 headline(s) wrap past two lines at 390px: \"REGRESO A CLASES ✦ CUPÓN EN LÍNEA ✦ UNO POR PERS\" → 5 lines (13 words, 32px)",
+   "fix": "Cut words first (a headline is a title, not a sentence). Then give it a wider measure. Lower the size only as a last resort and never below the scale you chose. A real statement paragraph belongs in a <p> or <blockquote> at 24px or less."
+  },
+  {
+   "level": "WARN",
+   "id": "pill-nav",
+   "width": 390,
+   "message": "Floating rounded pill navigation.",
+   "fix": "Use a plain bar: wordmark left, a few links, one action."
+  },
+  {
+   "level": "WARN",
+   "id": "side-scroll",
+   "width": 390,
+   "message": "1 row(s) scroll sideways with content past their edge.",
+   "fix": "Jurors and most visitors read a row cut at the edge as clipped, not as scrollable. Wrap it onto more lines, or end it inside the grid."
+  },
+  {
+   "level": "WARN",
+   "id": "off-centre",
+   "width": 390,
+   "message": "The margins differ: 18px on the left, 0px on the right, at 390px.",
+   "fix": "Put the navigation and the content on one pair of margins; check for padding on one side only, a scrollbar gutter, or a header on another inset than the page."
+  }
+ ],
+ "images": [
+  {
+   "viewport": "desktop",
+   "width": 1440,
+   "fold": "C:\\denis\\DENGO-POS\\.taste-skill\\inspect2\\desktop-fold.jpg",
+   "pages": [
+    "C:\\denis\\DENGO-POS\\.taste-skill\\inspect2\\desktop-page-01.jpg",
+    "C:\\denis\\DENGO-POS\\.taste-skill\\inspect2\\desktop-page-02.jpg",
+    "C:\\denis\\DENGO-POS\\.taste-skill\\inspect2\\desktop-page-03.jpg"
+   ],
+   "film": [
+    "C:\\denis\\DENGO-POS\\.taste-skill\\inspect2\\desktop-film-01.jpg",
+    "C:\\denis\\DENGO-POS\\.taste-skill\\inspect2\\desktop-film-02.jpg"
+   ]
+  },
+  {
+   "viewport": "mobile",
+   "width": 390,
+   "fold": "C:\\denis\\DENGO-POS\\.taste-skill\\inspect2\\mobile-fold.jpg",
+   "pages": [
+    "C:\\denis\\DENGO-POS\\.taste-skill\\inspect2\\mobile-page-01.jpg",
+    "C:\\denis\\DENGO-POS\\.taste-skill\\inspect2\\mobile-page-02.jpg"
+   ],
+   "film": []
+  }
+ ]
+}

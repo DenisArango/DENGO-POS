@@ -13,10 +13,12 @@ interface School {
   departamento?: string
   opfContact?: string
   opfPhone?: string
+  nit?: string | null
+  invoiceName?: string | null
   isActive: boolean
 }
 
-const EMPTY = { name: '', code: '', address: '', municipio: '', departamento: '', opfContact: '', opfPhone: '', isActive: true }
+const EMPTY = { name: '', code: '', address: '', municipio: '', departamento: '', opfContact: '', opfPhone: '', nit: '', invoiceName: '', isActive: true }
 
 export default function PortalSchools() {
   const [schools, setSchools] = useState<School[]>([])
@@ -41,7 +43,7 @@ export default function PortalSchools() {
     setEditing(s)
     setForm({
       name: s.name, code: s.code ?? '', address: s.address ?? '', municipio: s.municipio ?? '',
-      departamento: s.departamento ?? '', opfContact: s.opfContact ?? '', opfPhone: s.opfPhone ?? '', isActive: s.isActive,
+      departamento: s.departamento ?? '', opfContact: s.opfContact ?? '', opfPhone: s.opfPhone ?? '', nit: s.nit ?? '', invoiceName: s.invoiceName ?? '', isActive: s.isActive,
     })
     setShowModal(true)
   }
@@ -134,6 +136,9 @@ export default function PortalSchools() {
                 <div></div>
                 <div><label className="label">Contacto OPF</label><input className="input w-full" value={form.opfContact} onChange={e => setForm({ ...form, opfContact: e.target.value })} /></div>
                 <div><label className="label">Teléfono OPF</label><input className="input w-full" value={form.opfPhone} onChange={e => setForm({ ...form, opfPhone: e.target.value })} /></div>
+                <div><label className="label">NIT para factura</label><input className="input w-full" placeholder="Ej: 12345678" value={form.nit} onChange={e => setForm({ ...form, nit: e.target.value })} /></div>
+                <div><label className="label">Nombre en la factura</label><input className="input w-full" placeholder="Ej: OPF EORM Cantón El Carmen" value={form.invoiceName} onChange={e => setForm({ ...form, invoiceName: e.target.value })} /></div>
+                <p className="col-span-2 text-xs text-gray-500 -mt-1">Las facturas de los pedidos de esta escuela salen a este NIT y nombre. Sin NIT, se usa el cliente de la cotización.</p>
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} className="w-4 h-4 text-primary-600 rounded" />

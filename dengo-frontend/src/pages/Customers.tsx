@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import {
   Plus, Search, Edit2, Trash2, Eye, AlertCircle,
   User, Mail, Phone, MapPin, CreditCard, CheckCircle,
-  XCircle, DollarSign, TrendingUp, Clock, ShoppingBag, ExternalLink, UserCog
+  XCircle, DollarSign, TrendingUp, Clock, ShoppingBag, ExternalLink, UserCog, FilePlus2, BookOpen
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -14,6 +14,7 @@ import { compressImageDataUrl } from '../lib/imageCompress'
 import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
+import { ChargeModal, AccountStatement } from '../components/customers/CreditAccount'
 
 interface AbonoSale {
   id: string
@@ -60,6 +61,9 @@ export default function Customers() {
   const canEdit = hasPermission('customers.edit')
   const canDelete = hasPermission('customers.delete')
   const canRegisterPayment = hasPermission('customers.registerPayment')
+  // Cargar saldo sin venta (deuda del sistema anterior): its own permission.
+  const canAddCharge = hasPermission('customers.addCharge')
+  const [chargeCustomer, setChargeCustomer] = useState<Customer | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const PAGE_SIZE = 50
@@ -84,7 +88,7 @@ export default function Customers() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
-  const [detailTab, setDetailTab] = useState<'info' | 'history'>('info')
+  const [detailTab, setDetailTab] = useState<'info' | 'history' | 'account'>('info')
   const [customerSales, setCustomerSales] = useState<any[]>([])
   const [loadingSales, setLoadingSales] = useState(false)
 
@@ -550,6 +554,12 @@ export default function Customers() {
                           <DollarSign size={16} />
                         </button>
                       )}
+                      {canAddCharge && (
+                        <button onClick={() => setChargeCustomer(customer)}
+                          className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg" title="Cargar saldo (sin venta)">
+                          <FilePlus2 size={16} />
+                        </button>
+                      )}
                       {canEdit && (
                         <button onClick={() => openEdit(customer)}
                           className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg" title="Editar">
@@ -804,6 +814,9 @@ export default function Customers() {
               <button onClick={openHistoryTab} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${detailTab === 'history' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                 <span className="flex items-center gap-1"><ShoppingBag size={14} /> Historial de Compras</span>
               </button>
+              <button onClick={() => setDetailTab('account')} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${detailTab === 'account' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                <span className="flex items-center gap-1"><BookOpen size={14} /> Estado de cuenta</span>
+              </button>
             </div>
             <div className="flex-1 overflow-y-auto">
             {detailTab === 'info' && (
@@ -901,6 +914,12 @@ export default function Customers() {
               )}
             </div>
             )}
+            {detailTab === 'account' && (
+              <AccountStatement customerId={selectedCustomer.id} canVoid={canAddCharge} onChanged={() => {
+                fetchCustomers()
+                api.get<Customer>(`/api/customers/${selectedCustomer.id}`).then(setSelectedCustomer).catch(() => {})
+              }} />
+            )}
             {detailTab === 'history' && (
               <div className="p-4">
                 {loadingSales ? (
@@ -941,6 +960,11 @@ export default function Customers() {
             </div>
             <div className="p-6 border-t flex gap-3 justify-end flex-shrink-0">
               <button onClick={() => setShowDetailsModal(false)} className="btn-secondary btn-md">Cerrar</button>
+              {canAddCharge && (
+                <button onClick={() => setChargeCustomer(selectedCustomer)} className="btn-secondary btn-md flex items-center gap-1.5">
+                  <FilePlus2 size={15} /> Cargar saldo
+                </button>
+              )}
               {canEdit && (
                 <button onClick={() => { setShowDetailsModal(false); openEdit(selectedCustomer) }}
                   className="btn-primary btn-md">Editar</button>
@@ -948,6 +972,18 @@ export default function Customers() {
             </div>
           </motion.div>
         </div>
+      )}
+
+      {/* ── Cargar saldo (sin venta) ── */}
+      {chargeCustomer && (
+        <ChargeModal customer={chargeCustomer} onClose={() => setChargeCustomer(null)} onSaved={() => {
+          const id = chargeCustomer.id
+          setChargeCustomer(null)
+          fetchCustomers()
+          if (selectedCustomer?.id === id) {
+            api.get<Customer>(`/api/customers/${id}`).then(c => { setSelectedCustomer(c); setDetailTab('account') }).catch(() => {})
+          }
+        }} />
       )}
 
       {/* ── Delete Confirm ── */}

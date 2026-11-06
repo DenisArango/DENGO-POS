@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import {
   Settings as SettingsIcon, Users, Shield, Building2,
   CreditCard, Bell, Database, Palette, Globe,
-  ChevronRight, Lock, Store, Target, PackagePlus, Tag
+  ChevronRight, Lock, Store, Target, PackagePlus, Tag, FileText
 } from 'lucide-react'
 import { useAuthStore } from '../store'
 import { usePermissions } from '../hooks/usePermissions'
@@ -141,6 +141,16 @@ const settingCards: SettingCard[] = [
     path: '/settings/localization',
     color: 'bg-indigo-500',
     category: 'general'
+  },
+  {
+    id: 'fel',
+    title: 'Facturación electrónica',
+    description: 'Certificador FEL (FELplex), establecimientos y prueba de conexión',
+    icon: FileText,
+    path: '/settings/fel',
+    color: 'bg-purple-600',
+    category: 'system',
+    adminOnly: true
   },
   {
     id: 'security',

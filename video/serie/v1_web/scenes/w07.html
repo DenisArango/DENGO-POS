@@ -1,0 +1,16 @@
+    #w07-pos { opacity: 0; }
+    #w07-p1 { left: 1080px; top: 960px; opacity: 0; }
+<!--markup-->
+    <browser id="w07-pos" src="rec/pos_cupon.mp4" url="DENGO POS · Caja principal #1 · Central Zona 1" at="620 176 1220" start="{T:cajera:1:-0.3}" mstart="7.2" />
+    <ring id="w07-r1" on="w07-pos" box="1213 625 345 76" />
+    <ring id="w07-r2" on="w07-pos" box="562 513 500 30" />
+    <div id="w07-p1" class="pill coral">Un solo uso · a nombre de Carmen López</div>
+<!--script-->
+    pip({T:cajera:1:-0.5}, "bl");
+    lift("#w07-pos", {T:cajera:1:-0.4});
+    ring("#w07-r1", {T:aplico}, 2.6);
+    ring("#w07-r2", {T:nombre:1:-0.6});
+    pop("#w07-p1", {T:nombre});
+<!--sfx-->
+click-soft {T:escaneo} 0.5
+pop {T:aplico} 0.45

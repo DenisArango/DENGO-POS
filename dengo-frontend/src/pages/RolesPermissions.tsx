@@ -7,7 +7,7 @@ import {
   CheckSquare, Square, Users, Lock, AlertTriangle,
   Package, DollarSign, Settings, BarChart3,
   ShoppingCart, Truck, FileText, ChevronDown, ChevronRight, type LucideIcon,
-  UserCircle, Building2, Target
+  UserCircle, Building2, Target, Globe
 } from 'lucide-react'
 import { api } from '../lib/api'
 
@@ -37,6 +37,7 @@ const MODULE_INFO: Record<string, { label: string; icon: LucideIcon }> = {
   reports: { label: 'Reportes', icon: BarChart3 },
   settings: { label: 'Configuración', icon: Settings },
   goals: { label: 'Metas de Venta', icon: Target },
+  website: { label: 'Página web y ofertas', icon: Globe },
 }
 
 const PERMISSION_LABELS: Record<string, string> = {
@@ -58,6 +59,7 @@ const PERMISSION_LABELS: Record<string, string> = {
   'customers.delete': 'Eliminar clientes',
   'customers.editCredit': 'Editar límite de crédito y comentarios',
   'customers.registerPayment': 'Registrar abonos (pagos a crédito)',
+  'customers.addCharge': 'Cargar saldo sin venta (deudas anteriores) y anular cargos',
   'suppliers.view': 'Ver proveedores',
   'suppliers.create': 'Crear proveedores',
   'suppliers.edit': 'Editar proveedores',
@@ -87,6 +89,9 @@ const PERMISSION_LABELS: Record<string, string> = {
   'settings.system': 'Configuración general del sistema',
   'settings.cashRegisters': 'Configurar cajas registradoras fijas',
   'goals.manage': 'Configurar metas de venta',
+  'website.manage': 'Editar la página web',
+  'promotions.manage': 'Crear y editar ofertas y cupones',
+  'promotions.reports': 'Ver reportes de ofertas y cupones',
 }
 
 const SYSTEM_ROLE_LABELS: Record<string, string> = {

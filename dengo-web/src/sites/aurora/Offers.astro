@@ -1,0 +1,193 @@
+---
+// All the offers. A yellow field with the offers' own values floating like
+// cut-out stickers around the title, scissors that cut the page open as it
+// loads, a ribbon of the offers, the full sticker wall, and how a coupon is
+// used, in three tilted cards.
+import Layout from './Layout.astro'
+import Stickers from './Stickers.astro'
+import { offerHeadline, waLink } from '../../core/api'
+import type { SiteContent } from '../../core/types'
+
+const { content } = Astro.props as { content: SiteContent }
+const list = content.promotions
+const featured = list.find(p => p.featured) ?? list[0]
+const wa = waLink(content.contact.whatsapp, `Hola ${content.businessName}, ¿qué ofertas tienen esta semana?`)
+const floaters = list.slice(0, 6).map((o, i) => ({
+  v: offerHeadline(o),
+  c: ['var(--red)', 'var(--blue)', 'var(--pink)', 'var(--green)', 'var(--ink)', 'var(--paper)'][i % 6],
+  i: ['#fff', '#fff', 'var(--ink)', '#fff', 'var(--yellow)', 'var(--ink)'][i % 6],
+  // spots around the title (left %, top %, size, tilt)
+  pos: [[78, 16, 1.15, 12], [89, 56, 0.9, -10], [64, 70, 0.8, 8], [52, 86, 0.72, -14], [68, 38, 0.66, -6], [93, 88, 0.66, 10]][i % 6]!,
+}))
+const ribbon = list.length ? list.map(o => `${offerHeadline(o)} ${o.name}`) : ['Ofertas cada temporada', 'Cupón en línea', 'Uno por persona']
+const steps = [
+  { t: 'Elige y deja tu nombre', x: 'Sin cuentas ni contraseñas: tu nombre y tu teléfono, para que el cupón sea solo tuyo.', c: 'var(--yellow)', i: 'var(--ink)', r: -3 },
+  { t: 'Recibe tu cupón con QR', x: 'Queda en tu teléfono. Tómale captura o dicta el código en caja.', c: 'var(--blue)', i: '#fff', r: 2 },
+  { t: 'Lo escanean en caja', x: 'El descuento se aplica al momento, en cualquiera de las tiendas. Se usa una vez.', c: 'var(--pink)', i: 'var(--ink)', r: -1.5 },
+]
+---
+<Layout content={content} title="Ofertas" description={`Ofertas vigentes de ${content.businessName}. Recorta tu cupón y preséntalo en caja.`} yellow>
+  <section class="oh" data-oh aria-labelledby="h-oh">
+    {floaters.map(f => (
+      <span class="float" style={`--c:${f.c}; --i:${f.i}; left:${f.pos[0]}%; top:${f.pos[1]}%; --s:${f.pos[2]}; --t:${f.pos[3]}deg`} data-float aria-hidden="true">{f.v}</span>
+    ))}
+    <div class="oh__in">
+      <h1 id="h-oh" class="oh__title" data-oh-title>
+        <span class="oh__l1">Ofertas</span>
+        <span class="oh__l2"><em>para recortar</em><svg class="oh__scrib" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true"><path d="M6 28 C 120 6, 260 6, 380 18 S 560 34, 594 12" /></svg></span>
+      </h1>
+      <p class="oh__sub" data-oh-in>
+        {list.length
+          ? <>Hay <b><span data-oh-count={list.length}>{list.length}</span> {list.length === 1 ? 'oferta vigente' : 'ofertas vigentes'}</b>. Cada cupón es para una persona y se usa una vez, en cualquiera de nuestras tiendas.</>
+          : <>Hoy no hay ofertas vigentes. Cada temporada sacamos nuevas: vuelve pronto o pregúntanos por WhatsApp.</>}
+      </p>
+      {featured && <p data-oh-in><a class="a-btn a-btn--go" href={`/ofertas/${featured.slug}`} data-magnet data-cursor="Recortar">Recorta la de {offerHeadline(featured)} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a></p>}
+      {!featured && wa && <p data-oh-in><a class="a-btn a-btn--go" href={wa} target="_blank" rel="noopener" data-magnet>Pregúntanos por WhatsApp</a></p>}
+    </div>
+    <div class="oh__cut" aria-hidden="true" data-oh-cut>
+      <span class="oh__dash"></span>
+      <svg class="oh__scissors" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="5"><circle cx="14" cy="18" r="9" /><circle cx="14" cy="46" r="9" /></g><path class="oh-blade-a" d="M21 23 60 42" stroke="currentColor" stroke-width="5" stroke-linecap="round" /><path class="oh-blade-b" d="M21 41 60 22" stroke="currentColor" stroke-width="5" stroke-linecap="round" /></svg>
+    </div>
+  </section>
+
+  <div class="rib" data-rib aria-hidden="true">
+    <div class="rib__track">{[0, 1, 2].map(() => ribbon.map(w => <span>{w}<svg viewBox="0 0 24 24"><path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" /></svg></span>))}</div>
+  </div>
+
+  {list.length > 0 && (
+    <section class="wall" aria-label="Todas las ofertas">
+      <Stickers offers={list} featured={featured} cols={3} />
+    </section>
+  )}
+
+  <section class="use" aria-labelledby="h-use">
+    <h2 id="h-use" class="use__title" data-use-title>Así se usa</h2>
+    <ol class="use__list">
+      {steps.map((s, i) => (
+        <li class="use__card" style={`--c:${s.c}; --i:${s.i}; --r:${s.r}deg`} data-use-card>
+          <span class="use__n">{i + 1}</span>
+          <h3 class="use__t">{s.t}</h3>
+          <p class="use__x">{s.x}</p>
+          {i < steps.length - 1 && <svg class="use__arrow" viewBox="0 0 120 60" aria-hidden="true"><path d="M4 40 C 30 6, 70 4, 104 30" fill="none" stroke="var(--ink)" stroke-width="5" stroke-linecap="round" /><path d="M88 18 106 31 86 42" fill="none" stroke="var(--ink)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /></svg>}
+        </li>
+      ))}
+    </ol>
+  </section>
+</Layout>
+
+<script>
+  import gsap from 'gsap'
+  import { ScrollTrigger } from 'gsap/ScrollTrigger'
+  import { SplitText } from 'gsap/SplitText'
+  gsap.registerPlugin(ScrollTrigger, SplitText)
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches
+
+  const title = document.querySelector<HTMLElement>('[data-oh-title]')!
+  const parts = document.querySelectorAll<HTMLElement>('[data-oh-in]')
+  const floats = gsap.utils.toArray<HTMLElement>('[data-float]')
+  const scrib = document.querySelector<SVGPathElement>('.oh__scrib path')
+
+  const intro = () => {
+    if (reduce) { gsap.set([title, ...parts, ...floats], { opacity: 1 }); return }
+    const split = SplitText.create(title.querySelectorAll('.oh__l1, .oh__l2 em'), { type: 'chars,lines', linesClass: 'a-line' })
+    gsap.set(title, { opacity: 1 })
+    const tl = gsap.timeline()
+    tl.from(split.chars, { yPercent: 115, rotate: () => gsap.utils.random(-18, 18), duration: 1.1, ease: 'expo.out', stagger: 0.03 })
+    if (scrib) { const L = scrib.getTotalLength(); tl.fromTo(scrib, { strokeDasharray: L, strokeDashoffset: L }, { strokeDashoffset: 0, duration: 0.8, ease: 'power2.inOut' }, 0.6) }
+    tl.fromTo(parts, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', stagger: 0.1 }, 0.5)
+    // the offers' values pop onto the page like stickers slapped on
+    tl.fromTo(floats, { opacity: 0, scale: 0, rotate: (i: number) => (i % 2 ? 40 : -40) }, { opacity: 1, scale: 1, rotate: 0, duration: 0.9, ease: 'back.out(2.2)', stagger: 0.09 }, 0.35)
+    // scissors cut the page open
+    tl.fromTo('.oh__scissors', { left: '-4%' }, { left: '104%', duration: 1.8, ease: 'power1.inOut' }, 0.6)
+      .fromTo('.oh__dash', { clipPath: 'inset(0 0 0 0%)' }, { clipPath: 'inset(0 0 0 100%)', duration: 1.8, ease: 'power1.inOut' }, 0.6)
+    const count = document.querySelector<HTMLElement>('[data-oh-count]')
+    if (count) { const o = { v: 0 }; tl.to(o, { v: Number(count.dataset.ohCount), duration: 1.2, ease: 'power2.out', onUpdate: () => { count.textContent = String(Math.round(o.v)) } }, 0.6) }
+  }
+  if ((window as unknown as { __auroraReady?: boolean }).__auroraReady) intro()
+  else addEventListener('aurora:ready', intro, { once: true })
+
+  if (!reduce) {
+    gsap.to('.oh-blade-a', { rotate: 14, svgOrigin: '21 32', duration: 0.16, repeat: -1, yoyo: true, ease: 'sine.inOut' })
+    gsap.to('.oh-blade-b', { rotate: -14, svgOrigin: '21 32', duration: 0.16, repeat: -1, yoyo: true, ease: 'sine.inOut' })
+    // stickers bob, drift apart as you scroll away, and lean from the pointer
+    floats.forEach((f, i) => {
+      gsap.to(f, { y: i % 2 ? 14 : -14, duration: 2 + i * 0.3, repeat: -1, yoyo: true, ease: 'sine.inOut', delay: i * 0.2 })
+      gsap.fromTo(f, { yPercent: 0 }, { yPercent: -120 - i * 40, ease: 'none', immediateRender: false, scrollTrigger: { trigger: '[data-oh]', start: 'top top', end: 'bottom top', scrub: true } })
+    })
+    if (fine) {
+      // (x only: y and rotation belong to the bob and the scroll)
+      const movers = floats.map((f, i) => ({ x: gsap.quickTo(f, 'x', { duration: 1, ease: 'power3' }), k: (i % 3 + 1) * 30 }))
+      addEventListener('pointermove', e => {
+        const dx = e.clientX / innerWidth - 0.5
+        movers.forEach(m => m.x(-dx * m.k))
+      }, { passive: true })
+    }
+
+    // ribbon: speed and skew follow the scroll
+    const track = document.querySelector<HTMLElement>('.rib__track')!
+    const loop = gsap.to(track, { xPercent: -33.333, duration: 30, ease: 'none', repeat: -1 })
+    ScrollTrigger.create({
+      trigger: '[data-rib]', start: 'top bottom', end: 'bottom top',
+      onUpdate: s => {
+        const v = s.getVelocity() / 300
+        gsap.to(loop, { timeScale: 1 + Math.min(6, Math.abs(v)), duration: 0.2, overwrite: true, onComplete: () => { gsap.to(loop, { timeScale: 1, duration: 1.2 }) } })
+        gsap.to(track, { skewX: gsap.utils.clamp(-12, 12, -v * 2), duration: 0.4, overwrite: 'auto' })
+      },
+    })
+
+    const ut = document.querySelector<HTMLElement>('[data-use-title]')!
+    const us = SplitText.create(ut, { type: 'chars,lines', linesClass: 'a-line' })
+    gsap.from(us.chars, { yPercent: 110, rotate: 8, duration: 0.9, ease: 'expo.out', stagger: 0.03, scrollTrigger: { trigger: ut, start: 'top 85%', once: true } })
+    gsap.from('[data-use-card]', { y: 140, rotate: (i: number) => [-10, 8, -6][i % 3], opacity: 0, duration: 1, ease: 'back.out(1.6)', stagger: 0.14, scrollTrigger: { trigger: '.use__list', start: 'top 80%', once: true } })
+    gsap.utils.toArray<SVGPathElement>('.use__arrow path').forEach(p => {
+      const L = p.getTotalLength()
+      gsap.fromTo(p, { strokeDasharray: L, strokeDashoffset: L }, { strokeDashoffset: 0, duration: 0.7, ease: 'power2.out', delay: 0.6, scrollTrigger: { trigger: '.use__list', start: 'top 70%', once: true } })
+    })
+  }
+</script>
+
+<style>
+  /* ── Opening field ── */
+  .oh { position: relative; min-height: min(92svh, 900px); background: var(--yellow); color: var(--ink); overflow: hidden; display: grid; align-items: center; padding: clamp(130px, 16vh, 170px) var(--m) clamp(90px, 12vh, 130px); isolation: isolate; }
+  .oh__in { position: relative; z-index: 2; display: grid; gap: clamp(22px, 2.6vw, 34px); justify-items: start; max-width: 1200px; }
+  .oh__title { font-size: clamp(3.6rem, 0.6rem + 11vw, 12rem); line-height: 0.86; letter-spacing: -0.04em; word-spacing: 0.08em; display: grid; font-variation-settings: 'wdth' 84, 'opsz' 96; }
+  :global(.a-js) .oh__title, :global(.a-js) [data-oh-in], :global(.a-js) .float { opacity: 0; }
+  .oh__l2 { position: relative; justify-self: start; }
+  .oh__l2 em { font-style: normal; color: var(--red); display: inline-block; }
+  .oh__scrib { position: absolute; left: 0; right: 0; bottom: -0.08em; width: 100%; height: 0.2em; overflow: visible; }
+  .oh__scrib path { fill: none; stroke: var(--ink); stroke-width: 9; stroke-linecap: round; }
+  .oh__sub { font-size: var(--step-lead); line-height: 1.35; max-width: 38ch; }
+  .oh__sub b { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .float { position: absolute; z-index: 1; display: grid; place-items: center; width: calc(clamp(110px, 12vw, 190px) * var(--s)); aspect-ratio: 1; border-radius: 50%; background: var(--c); color: var(--i); border: 3px solid var(--ink); box-shadow: 0 10px 0 var(--ink);
+    font-size: calc(clamp(1.8rem, 1rem + 2.4vw, 3.4rem) * var(--s)); font-weight: 800; letter-spacing: -0.05em; font-variation-settings: 'wdth' 80; rotate: var(--t); pointer-events: none; }
+  .oh__cut { position: absolute; left: 0; right: 0; bottom: 34px; height: 44px; z-index: 2; }
+  .oh__dash { position: absolute; left: 0; right: 0; top: 50%; border-top: 4px dashed var(--ink); }
+  .oh__scissors { position: absolute; top: 0; left: -4%; width: 44px; height: 44px; translate: -50% 0; color: var(--red); }
+  @media (max-width: 860px) {
+    .oh { align-items: end; min-height: 88svh; }
+    .float { opacity: 0.95; }
+    .float:nth-child(n + 4) { display: none; }
+  }
+
+  /* ── Ribbon ── */
+  .rib { background: var(--red); color: #fff; padding: clamp(14px, 1.6vw, 24px) 0; overflow: hidden; border-block: 3px solid var(--ink); }
+  .rib__track { display: flex; width: max-content; }
+  .rib__track span { display: inline-flex; align-items: center; gap: clamp(16px, 2vw, 30px); padding-right: clamp(16px, 2vw, 30px); font-size: clamp(1.6rem, 1rem + 2.6vw, 3.6rem); font-weight: 800; letter-spacing: -0.04em; text-transform: uppercase; white-space: nowrap; line-height: 1.15; font-variation-settings: 'wdth' 78; }
+  .rib__track svg { width: 0.7em; height: 0.7em; fill: var(--yellow); }
+
+  /* ── Sticker wall ── */
+  .wall { background: var(--bg); padding: clamp(70px, 9vw, 140px) var(--m); }
+
+  /* ── How it's used ── */
+  .use { background: var(--ink); color: var(--paper); padding: clamp(70px, 10vw, 150px) var(--m); }
+  .use__title { font-size: var(--step-head); margin-bottom: clamp(40px, 6vw, 80px); }
+  .use__list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(22px, 4vw, 64px); }
+  .use__card { position: relative; background: var(--c); color: var(--i); border: 3px solid var(--paper); border-radius: var(--r); padding: clamp(24px, 3vw, 40px); display: grid; gap: 12px; align-content: start; rotate: var(--r); box-shadow: 0 14px 0 rgb(0 0 0 / 0.5); }
+  .use__n { font-size: clamp(5rem, 3rem + 5vw, 9rem); font-weight: 800; letter-spacing: -0.07em; line-height: 0.8; }
+  .use__t { font-size: clamp(1.7rem, 1.2rem + 1.4vw, 2.6rem); line-height: 1; }
+  .use__x { font-size: 1.0625rem; line-height: 1.45; }
+  .use__arrow { position: absolute; right: calc(-1 * clamp(40px, 5vw, 86px)); top: 28%; width: clamp(60px, 6vw, 110px); z-index: 2; }
+  .use__arrow path { stroke: var(--yellow); }
+  @media (max-width: 860px) { .use__list { grid-template-columns: 1fr; } .use__arrow { display: none; } }
+</style>

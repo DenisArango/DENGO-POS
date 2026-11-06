@@ -1,0 +1,30 @@
+---
+import type { Block } from '../core/types'
+const { block, about, image } = Astro.props as { block: Block; about: string | null; image?: string | null }
+const p = block.props as { title?: string }
+const paragraphs = (about ?? '').split(/\n\s*\n|\n/).map(s => s.trim()).filter(Boolean)
+const [first, ...rest] = paragraphs
+---
+{first && (
+  <section class="section about" id="historia">
+    <div class="wrap about__grid">
+      <h2 class="display h-section h-mark" data-reveal>{p.title || 'Nuestra historia'}</h2>
+      <div class="about__text">
+        <blockquote class="about__quote display" data-reveal style="--i:1"><span aria-hidden="true">&ldquo;</span>{first}</blockquote>
+        {rest.map((t, i) => <p data-reveal style={`--i:${i + 2}`}>{t}</p>)}
+      </div>
+      {image && <img class="about__img" src={image} alt="" loading="lazy" decoding="async" width="900" height="700" data-reveal style="--i:2" />}
+    </div>
+  </section>
+)}
+
+<style>
+  .about { background: var(--surface); }
+  .about__grid { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: clamp(24px, 5vw, 80px); }
+  .about__text { display: grid; gap: 18px; max-width: 64ch; }
+  .about__quote { position: relative; margin: 0 0 8px; font-size: clamp(1.6rem, 1.1rem + 1.8vw, 2.6rem); line-height: 1.18; }
+  .about__quote span { position: absolute; left: -0.1em; top: -0.42em; font-size: 3.4em; line-height: 1; color: var(--brand-2); opacity: 0.35; pointer-events: none; }
+  .about__text p { color: var(--soft); font-size: var(--step-body); }
+  .about__img { grid-column: 1 / -1; width: 100%; aspect-ratio: 21 / 8; object-fit: cover; border-radius: var(--radius-lg); }
+  @media (max-width: 760px) { .about__grid { grid-template-columns: 1fr; } .about__img { aspect-ratio: 4 / 3; } }
+</style>

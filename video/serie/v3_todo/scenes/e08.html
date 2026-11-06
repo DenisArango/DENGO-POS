@@ -1,0 +1,14 @@
+    #e08-h, #e08-d, #e08-o { opacity: 0; }
+    #e08-p1 { left: 1180px; top: 60px; opacity: 0; }
+<!--markup-->
+    <shot id="e08-h" src="ui/x_inventario_historial.png" crop="465 56 670 380" at="96 120 900" />
+    <ring id="e08-r1" on="e08-h" box="487 168 628 206" />
+    <shot id="e08-d" src="ui/x_dashboard.png" crop="205 60 1395 250" at="1060 150 800" />
+    <ring id="e08-r2" on="e08-d" box="283 168 636 124" />
+    <shot id="e08-o" src="ui/x_dashboard.png" crop="938 621 637 279" at="1060 520 800" />
+    <div id="e08-p1" class="pill">3 ventas · Q809.99 · un solo inventario</div>
+<!--script-->
+    lift("#e08-h", 0.2); ring("#e08-r1", {T:ventas:1:-0.2});
+    lift("#e08-d", {T:caja:1:-0.3}); ring("#e08-r2", {T:reportes});
+    pop("#e08-p1", {T:reportes:1:+0.5});
+    lift("#e08-o", {T:avisa:1:-0.4});

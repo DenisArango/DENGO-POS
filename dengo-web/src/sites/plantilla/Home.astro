@@ -1,0 +1,32 @@
+---
+// The block template: renders the client's sections in the order (and with
+// the content) they set in the POS → Página web → Sitio web.
+import Layout from './Layout.astro'
+import Hero from '../../blocks/Hero.astro'
+import Features from '../../blocks/Features.astro'
+import Offers from '../../blocks/Offers.astro'
+import Categories from '../../blocks/Categories.astro'
+import About from '../../blocks/About.astro'
+import Gallery from '../../blocks/Gallery.astro'
+import Branches from '../../blocks/Branches.astro'
+import Contact from '../../blocks/Contact.astro'
+import type { SiteContent } from '../../core/types'
+
+const { content } = Astro.props as { content: SiteContent }
+---
+<Layout content={content}>
+  {content.sections.map(block => {
+    switch (block.type) {
+      case 'hero': return <Hero content={content} />
+      case 'features': return <Features block={block} />
+      case 'offers': return <Offers block={block} promotions={content.promotions} />
+      case 'categories': return <Categories block={block} categories={content.categories} />
+      case 'about': return <About block={block} about={content.about} />
+      case 'gallery': return <Gallery block={block} />
+      case 'branches': return <Branches block={block} branches={content.branches} />
+      case 'contact':
+      case 'cta': return <Contact block={block} content={content} />
+      default: return null
+    }
+  })}
+</Layout>

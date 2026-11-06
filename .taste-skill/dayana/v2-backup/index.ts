@@ -1,0 +1,6 @@
+export { default as Home } from './Home.astro'
+export { default as Offers } from './Offers.astro'
+export { default as Offer } from './Offer.astro'
+export { default as Coupon } from './Coupon.astro'
+export { default as Login } from './Login.astro'
+export { default as NotFound } from './NotFound.astro'

@@ -1,0 +1,103 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Outfit", sans-serif; color: #1b2233; overflow: hidden; }
+    .mask { display: block; overflow: hidden; padding-bottom: 0.08em; }
+    .mask > span { display: block; }
+    .time { position: absolute; left: 96px; top: 76px; z-index: 6; }
+    .time > span { font-size: 64px; font-weight: 700; color: #b9532f; letter-spacing: -0.02em; line-height: 1.1; }
+    .h { font-weight: 700; color: #1e4d68; letter-spacing: -0.025em; line-height: 1.04; }
+    .sub { font-size: 38px; line-height: 1.3; color: #1b2233; }
+    .card { position: absolute; background: #fff; border: 1px solid #e6dfd2; border-radius: 22px; box-shadow: 0 24px 60px rgba(27, 34, 51, 0.16); }
+    .shot { position: absolute; overflow: hidden; background: #fff; border: 1px solid #e6dfd2; border-radius: 18px; box-shadow: 0 24px 60px rgba(27, 34, 51, 0.16); }
+    .shot > img { position: absolute; max-width: none; }
+    .shot.flat { box-shadow: none; }
+    .phone { position: absolute; background: #1b2233; border-radius: 62px; padding: 18px; box-shadow: 0 30px 70px rgba(27, 34, 51, 0.28); }
+    .phone .screen { position: relative; overflow: hidden; border-radius: 46px; background: #fff; }
+    .phone video.fill, .browser video.fill { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; }
+    .browser { position: absolute; overflow: hidden; background: #fff; border: 1px solid #e6dfd2; border-radius: 18px; box-shadow: 0 26px 64px rgba(27, 34, 51, 0.18); }
+    .browser .bar { height: 56px; background: #f3eee5; display: flex; align-items: center; gap: 9px; padding: 0 18px; border-bottom: 1px solid #e6dfd2; }
+    .browser .bar i { width: 13px; height: 13px; border-radius: 50%; background: #d8cfbf; display: block; }
+    .browser .bar span { margin-left: 18px; font-size: 26px; color: #6b6458; background: #fff; border-radius: 999px; padding: 4px 18px; }
+    .browser .view { position: relative; overflow: hidden; }
+    .browser .view > img { max-width: none; }
+    .ring { position: absolute; border: 6px solid #e07a5f; border-radius: 14px; opacity: 0; z-index: 5; }
+    .pill { position: absolute; display: inline-flex; align-items: center; gap: 14px; background: #1e4d68; color: #fff; font-size: 34px; font-weight: 600; padding: 16px 30px; border-radius: 999px; box-shadow: 0 16px 40px rgba(30, 77, 104, 0.3); z-index: 6; }
+    .pill.coral { background: #b9532f; box-shadow: 0 16px 40px rgba(224, 122, 95, 0.35); }
+    .pill.sun { background: #f2c14e; color: #1b2233; box-shadow: 0 16px 40px rgba(242, 193, 78, 0.35); }
+    .cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; transform-origin: 0 0; z-index: 8; background: #fbf6ee; box-shadow: 0 30px 80px rgba(27, 34, 51, 0.3); }
+    .cam video, .cam .poster { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+    .cam .tag { position: absolute; left: 96px; bottom: 96px; background: #fff; border-radius: 22px; padding: 22px 34px; opacity: 0; box-shadow: 0 20px 50px rgba(27, 34, 51, 0.2); }
+    .cam .tag b { display: block; font-size: 46px; color: #1e4d68; letter-spacing: -0.02em; }
+    .cam .tag span { display: block; font-size: 30px; color: #6b6458; margin-top: 2px; }
+    .badge { position: absolute; left: 56px; bottom: 56px; display: flex; align-items: center; gap: 20px; z-index: 9; opacity: 0; }
+    .badge .face { width: 168px; height: 168px; border-radius: 50%; overflow: hidden; border: 6px solid #fff; box-shadow: 0 18px 44px rgba(27, 34, 51, 0.22); background: #fbf6ee; }
+    .badge .face img { width: 100%; height: 100%; object-fit: cover; }
+    .badge .who { background: #fff; border-radius: 18px; padding: 12px 22px 14px; box-shadow: 0 14px 34px rgba(27, 34, 51, 0.14); }
+    .badge .who b { display: block; font-size: 28px; color: #1e4d68; }
+    .badge .bars { display: flex; gap: 6px; align-items: center; height: 30px; margin-top: 4px; }
+    .badge .bars i { display: block; width: 8px; height: 30px; border-radius: 4px; background: #e07a5f; transform: scaleY(0.18); }
+    .post { position: absolute; left: 160px; top: 190px; width: 640px; background: #fff; border-radius: 24px; border: 1px solid #e6dfd2; box-shadow: 0 26px 64px rgba(27, 34, 51, 0.16); overflow: hidden; opacity: 0; }
+    .post .top { display: flex; align-items: center; gap: 16px; padding: 22px 26px; }
+    .post .av { width: 58px; height: 58px; border-radius: 50%; background: #1b2233; display: grid; place-items: center; color: #f2c14e; font-size: 30px; font-weight: 800; }
+    .post .top b { display: block; font-size: 28px; }
+    .post .top span { display: block; font-size: 24px; color: #6b6458; }
+    .post p { font-size: 26px; line-height: 1.35; padding: 0 26px 18px; }
+    .post .img { position: relative; width: 640px; height: 340px; overflow: hidden; }
+    .post .img img { position: absolute; width: 1096px; left: -196px; top: -150px; max-width: none; }
+    .post .act { display: flex; gap: 40px; padding: 18px 26px; font-size: 26px; color: #6b6458; border-top: 1px solid #efe6d5; }
+    #w06-ph { opacity: 0; }
+    #w06-p1 { left: 160px; top: 790px; opacity: 0; }
+    #w06-p2 { left: 860px; top: 700px; opacity: 0; }
+
+  </style>
+  <div id="root" data-composition-id="w06" data-width="1920" data-height="1080" data-layout-allow-overflow data-layout-allow-overlap>
+    <div class="time mask"><span id="w06-time">Domingo, 9:40 p.m.</span></div>
+
+    <div id="w06-post" class="post">
+      <div class="top"><div class="av">/</div><div><b>Librería Aurora</b><span>Publicación · 9:12 p.m.</span></div></div>
+      <p>¡Regreso a clases! 15% en cuadernos en nuestras tres tiendas. Recorte su cupón en la página.</p>
+      <div class="img"><img src="assets/ui/web_aurora_oferta.png" alt="" /></div>
+      <div class="act"><span>Me gusta</span><span>Comentar</span><span>Compartir</span></div>
+    </div>
+    <div id="w06-ph" class="phone" style="left:1240px;top:22px;width:482px;height:1001px"><div class="screen" style="width:446px;height:965px"><video id="w06-ph-v" class="clip fill" src="assets/rec/m_cupon.mp4" muted playsinline data-start="2.857" data-duration="10.000" data-media-start="1.8" style=""></video></div></div>
+    <div id="w06-p1" class="pill">Sin cuentas ni contraseñas</div>
+    <div id="w06-p2" class="pill sun">QR único</div>
+
+    
+    <div id="w06-badge" class="badge"><div class="face"><img src="assets/face/feliz.png" alt="" /></div><div class="who"><b>María José</b><div class="bars"><i></i><i></i><i></i><i></i><i></i></div></div></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const DUR = 13.136;
+    const rise = (s, t, d = 0.55) => tl.fromTo(s, { yPercent: 115 }, { yPercent: 0, duration: d, ease: "expo.out" }, t);
+    const lift = (s, t, d = 0.7) => tl.fromTo(s, { opacity: 0, y: 46, scale: 0.965 }, { opacity: 1, y: 0, scale: 1, duration: d, ease: "expo.out" }, t);
+    const pop = (s, t) => tl.fromTo(s, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.9)" }, t);
+    const slide = (s, t, x = -140) => tl.fromTo(s, { x, opacity: 0 }, { x: 0, opacity: 1, duration: 0.65, ease: "expo.out" }, t);
+    const out = (s, t, d = 0.35) => tl.to(s, { opacity: 0, y: -16, duration: d, ease: "power2.in" }, t);
+    const ring = (s, t, hold = 0) => { tl.fromTo(s, { opacity: 0, scale: 1.08 }, { opacity: 1, scale: 1, duration: 0.32, ease: "back.out(2.2)" }, t); if (hold) tl.to(s, { opacity: 0, duration: 0.25 }, t + hold); };
+    const pan = (s, t, vars, d = 1.2) => tl.to(s, { ...vars, duration: d, ease: "power3.inOut" }, t);
+    const count = (s, t, from, to, d = 0.9, fmt = (v) => Math.round(v).toString()) => {
+      const o = { v: from };
+      tl.to(o, { v: to, duration: d, ease: "power2.out", onUpdate: () => { const el = document.querySelector(s); if (el) el.textContent = fmt(o.v); } }, t);
+    };
+    // voice-only: her face badge, bars move with each spoken word
+    tl.fromTo("#w06-badge", { opacity: 0, y: 30, scale: 0.9 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(1.6)" }, 0.05);
+    const WORDS = [[0.299, 0.555], [0.597, 1.024], [1.152, 1.365], [1.408, 1.493], [1.536, 1.92], [1.963, 2.005], [2.048, 2.731], [2.987, 3.115], [3.157, 3.413], [3.456, 3.541], [3.584, 3.669], [3.712, 4.267], [4.565, 5.035], [5.077, 5.205], [5.248, 5.547], [5.632, 5.675], [5.717, 5.803], [5.845, 6.528], [6.699, 6.912], [6.955, 7.211], [7.296, 7.723], [7.808, 7.936], [7.979, 8.832], [9.045, 9.173], [9.216, 9.643], [9.685, 9.771], [9.813, 10.155], [10.283, 10.411], [10.453, 10.539], [10.581, 11.008], [11.093, 11.477], [11.733, 12.245]];
+    const H = [0.55, 0.9, 0.7, 1, 0.6];
+    WORDS.forEach(([s, e], k) => {
+      const next = k + 1 < WORDS.length ? WORDS[k + 1][0] : e + 1;
+      const down = Math.min(Math.max(s + 0.1, e - 0.04), next - 0.03);
+      tl.to("#w06-badge .bars i", { scaleY: (i) => 0.25 + H[(i + k) % 5] * 0.75, duration: Math.min(0.09, down - s - 0.005), ease: "power1.out" }, s);
+      tl.to("#w06-badge .bars i", { scaleY: 0.18, duration: Math.max(0.01, Math.min(0.12, next - down - 0.01)), ease: "power1.in" }, down);
+    });
+    rise("#w06-time", 0.1);
+
+    lift("#w06-post", 0.2);
+    tl.fromTo("#w06-ph", { opacity: 0, x: 120 }, { opacity: 1, x: 0, duration: 0.7, ease: "expo.out" }, 2.657);
+    tl.to("#w06-post", { scale: 0.92, opacity: 0.55, duration: 0.6, ease: "power2.inOut" }, 3.157);
+    pop("#w06-p1", 6.699);
+    pop("#w06-p2", 11.433);
+
+    window.__timelines["w06"] = tl;
+  </script>
+</template>

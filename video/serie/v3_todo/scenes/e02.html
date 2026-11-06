@@ -1,0 +1,15 @@
+{INCLUDE:calc.css}
+    #e02-calc { left: 760px; top: 190px; transform-origin: 50% 50%; opacity: 0; }
+    #e02-h { position: absolute; left: 96px; top: 330px; width: 560px; }
+    #e02-h .h { font-size: 76px; }
+    #e02-h .sub { margin-top: 20px; }
+<!--markup-->
+    <div id="e02-calc" class="calc"><div class="lcd"><span class="v" id="e02-v">0</span></div><div class="keys"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cap">Calculadora científica <b>fx-82</b><br>Central Zona 1</div></div>
+    <div id="e02-h"><div class="mask"><span class="h" id="e02-t1">La calculadora</span></div><div class="mask"><span class="h" id="e02-t2" style="color:#b9532f">viajera</span></div></div>
+<!--script-->
+    tl.fromTo("#e02-calc", { opacity: 0, y: 120, rotation: -14, scale: 0.8 }, { opacity: 1, y: 0, rotation: -6, scale: 1.5, duration: 0.9, ease: "back.out(1.3)" }, {T:calculadora:1:-0.3});
+    rise("#e02-t1", {T:cientifica}); rise("#e02-t2", {T:cientifica:1:+0.2});
+    count("#e02-v", {T:veintiuna:1:-0.3}, 0, 21, 0.8);
+    tl.to("#e02-calc", { rotation: -3, duration: 0.6, ease: "sine.inOut", yoyo: true, repeat: 1 }, {T:martes:1:-0.8});
+<!--sfx-->
+pop {T:calculadora} 0.4

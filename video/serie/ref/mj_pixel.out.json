@@ -1,0 +1,1 @@
+{"error":{"code":"insufficient_credit","doc_url":"https://developers.heygen.com/docs/error-codes#insufficient-credit","hint":"Check your credit balance: heygen user me get. Purchase API credits: https://app.heygen.com/settings?nav=API","message":"Insufficient credit. This operation requires 'api' credits."}}

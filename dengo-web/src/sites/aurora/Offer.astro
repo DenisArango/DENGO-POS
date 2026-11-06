@@ -1,0 +1,200 @@
+---
+// One offer: a big paper coupon on a blue field, its value written huge in
+// outline behind it. Scissors keep running down the cut line; when the
+// visitor takes the coupon they cut it through and the stub falls away
+// before the coupon page opens. Other offers follow as stickers.
+import Layout from './Layout.astro'
+import CouponForm from '../../core/CouponForm.astro'
+import Stickers from './Stickers.astro'
+import { offerHeadline, fmtDay, money } from '../../core/api'
+import type { Promotion, SiteContent } from '../../core/types'
+
+const { content, promotion: o, formError } = Astro.props as { content: SiteContent; promotion: Promotion; formError?: string | null }
+const ended = o.live === false || (o.couponsLeft !== null && o.couponsLeft <= 0)
+const h = offerHeadline(o)
+const m = h.match(/^(\D*)(\d+(?:\.\d+)?)(\D*)$/)
+const facts = [
+  o.endsAt && { k: 'Válida hasta', v: fmtDay(o.endsAt), c: 'var(--yellow)' },
+  o.minPurchase && { k: 'Compra mínima', v: money(o.minPurchase), c: 'var(--pink)' },
+  o.couponsLeft !== null && { k: 'Quedan', v: `${o.couponsLeft} cupones`, c: '#bfe9d3' },
+  { k: 'Uso', v: 'Una vez, en caja', c: '#c9d4ff' },
+].filter(Boolean) as { k: string; v: string; c: string }[]
+const others = content.promotions.filter(p => p.slug !== o.slug).slice(0, 3)
+---
+<Layout content={content} title={o.name} description={`${o.summary}. ${o.description ?? ''}`.trim()} dark>
+  <section class="od" data-od aria-labelledby="h-od">
+    <p class="od__ghost" aria-hidden="true" data-ghost>{h}</p>
+    <a class="od__back" href="/ofertas" data-od-in>← Todas las ofertas</a>
+
+    <article class:list={['cpn', { 'is-ended': ended }]} data-cpn>
+      <div class="cpn__main" data-cpn-main>
+        <p class="cpn__v">{m ? <>{m[1]}<span data-od-count={m[2]}>{m[2]}</span>{m[3]}</> : h}</p>
+        <h1 id="h-od" class="cpn__name">{o.name}</h1>
+        <p class="cpn__sum">{o.summary}</p>
+        {o.description && <p class="cpn__desc">{o.description}</p>}
+        <ul class="cpn__facts">
+          {facts.map(f => <li style={`--c:${f.c}`}><span>{f.k}</span><b>{f.v}</b></li>)}
+        </ul>
+        {o.terms && <p class="cpn__terms">{o.terms}</p>}
+      </div>
+
+      <div class="cpn__cut" aria-hidden="true" data-cut>
+        <svg class="cpn__sc" viewBox="0 0 64 64" data-sc><g fill="none" stroke="currentColor" stroke-width="5"><circle cx="14" cy="18" r="9" /><circle cx="14" cy="46" r="9" /></g><path class="od-blade-a" d="M21 23 60 42" stroke="currentColor" stroke-width="5" stroke-linecap="round" /><path class="od-blade-b" d="M21 41 60 22" stroke="currentColor" stroke-width="5" stroke-linecap="round" /></svg>
+      </div>
+
+      <div class="cpn__stub" data-stub>
+        {ended ? (
+          <>
+            <h2 class="cpn__h2">Esta oferta ya terminó</h2>
+            <p class="cpn__note">Sacamos ofertas nuevas cada temporada.</p>
+            <a class="a-btn a-btn--yellow" href="/ofertas">Ver las vigentes</a>
+          </>
+        ) : (
+          <>
+            <h2 class="cpn__h2">Recorta tu cupón</h2>
+            {formError && <p class="cpn__err" role="alert">{formError}</p>}
+            <CouponForm slug={o.slug} formClass="cf" inputClass="cf__input" buttonClass="a-btn a-btn--yellow cf__btn" noteClass="cf__note" buttonLabel="Recortar mi cupón" delay={1250} />
+          </>
+        )}
+      </div>
+      {ended && <p class="cpn__stamp" aria-hidden="true">Terminó</p>}
+    </article>
+  </section>
+
+  {others.length > 0 && (
+    <section class="more" aria-labelledby="h-more">
+      <h2 id="h-more" class="more__title" data-more-title>Recorta otra</h2>
+      <Stickers offers={others} cols={3} />
+    </section>
+  )}
+</Layout>
+
+<script>
+  import gsap from 'gsap'
+  import { ScrollTrigger } from 'gsap/ScrollTrigger'
+  import { SplitText } from 'gsap/SplitText'
+  gsap.registerPlugin(ScrollTrigger, SplitText)
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches
+
+  const cpn = document.querySelector<HTMLElement>('[data-cpn]')!
+  const cut = document.querySelector<HTMLElement>('[data-cut]')!
+  const sc = document.querySelector<SVGElement>('[data-sc]')!
+  const stub = document.querySelector<HTMLElement>('[data-stub]')!
+  const vertical = () => getComputedStyle(cut).getPropertyValue('--dir').trim() !== 'x'
+  let run: gsap.core.Tween | null = null
+
+  // Scissors ride up and down the cut line while the visitor reads.
+  const ride = () => {
+    run?.kill()
+    if (reduce) return
+    run = vertical()
+      ? gsap.fromTo(sc, { top: '6%', left: '50%' }, { top: '94%', duration: 3.2, ease: 'sine.inOut', repeat: -1, yoyo: true })
+      : gsap.fromTo(sc, { left: '6%', top: '50%' }, { left: '94%', duration: 3.2, ease: 'sine.inOut', repeat: -1, yoyo: true })
+  }
+
+  const intro = () => {
+    if (reduce) { gsap.set(['[data-od-in]', cpn], { opacity: 1 }); return }
+    const tl = gsap.timeline()
+    tl.fromTo('[data-ghost]', { xPercent: 30, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 1.6, ease: 'expo.out' }, 0)
+      .fromTo(cpn, { opacity: 0, y: -160, rotate: -9 }, { opacity: 1, y: 0, rotate: -1.2, duration: 1.4, ease: 'elastic.out(1, 0.55)' }, 0.1)
+      .fromTo('[data-od-in]', { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.6, ease: 'power3.out' }, 0.4)
+    const count = document.querySelector<HTMLElement>('[data-od-count]')
+    if (count) {
+      const to = Number(count.dataset.odCount); const dec = (count.dataset.odCount ?? '').includes('.') ? 2 : 0; const o = { v: 0 }
+      tl.to(o, { v: to, duration: 1.4, ease: 'power3.out', onUpdate: () => { count.textContent = o.v.toFixed(dec) } }, 0.3)
+    }
+    tl.add(ride, 0.8)
+  }
+  if ((window as unknown as { __auroraReady?: boolean }).__auroraReady) intro()
+  else addEventListener('aurora:ready', intro, { once: true })
+  addEventListener('resize', () => { if (run) ride() })
+
+  if (!reduce) {
+    gsap.to('.od-blade-a', { rotate: 14, svgOrigin: '21 32', duration: 0.16, repeat: -1, yoyo: true, ease: 'sine.inOut' })
+    gsap.to('.od-blade-b', { rotate: -14, svgOrigin: '21 32', duration: 0.16, repeat: -1, yoyo: true, ease: 'sine.inOut' })
+    gsap.to('[data-ghost]', { xPercent: -18, ease: 'none', scrollTrigger: { trigger: '[data-od]', start: 'top top', end: 'bottom top', scrub: true } })
+    if (fine) {
+      const rx = gsap.quickTo(cpn, 'rotateX', { duration: 0.8, ease: 'power3' })
+      const ry = gsap.quickTo(cpn, 'rotateY', { duration: 0.8, ease: 'power3' })
+      cpn.addEventListener('pointermove', e => {
+        const r = cpn.getBoundingClientRect()
+        rx(-((e.clientY - r.top) / r.height - 0.5) * 6); ry(((e.clientX - r.left) / r.width - 0.5) * 8)
+      })
+      cpn.addEventListener('pointerleave', () => { rx(0); ry(0) })
+    }
+    const mt = document.querySelector<HTMLElement>('[data-more-title]')
+    if (mt) {
+      const s = SplitText.create(mt, { type: 'chars,lines', linesClass: 'a-line' })
+      gsap.from(s.chars, { yPercent: 110, rotate: 8, duration: 0.9, ease: 'expo.out', stagger: 0.03, scrollTrigger: { trigger: mt, start: 'top 85%', once: true } })
+    }
+  }
+
+  // Got the coupon: cut it through, the stub falls away, then the coupon opens.
+  document.addEventListener('site:coupon', () => {
+    if (reduce) return
+    run?.kill()
+    gsap.set([cpn], { rotateX: 0, rotateY: 0 })
+    const v = vertical()
+    const tl = gsap.timeline()
+    tl.to(sc, v ? { top: '104%', duration: 0.55, ease: 'power2.in' } : { left: '104%', duration: 0.55, ease: 'power2.in' })
+      .to(stub, { y: v ? '110vh' : '90vh', x: v ? 60 : 0, rotate: v ? 22 : -14, duration: 0.8, ease: 'power3.in' }, 0.5)
+      .to(cut, { opacity: 0, duration: 0.2 }, 0.5)
+      .to(cpn, { rotate: 2, scale: 1.03, duration: 0.35, ease: 'back.out(3)' }, 0.55)
+  })
+</script>
+
+<style>
+  .od { position: relative; min-height: 100svh; background: var(--blue); color: #fff; overflow: hidden; isolation: isolate; display: grid; place-items: center; padding: clamp(140px, 18vh, 190px) var(--m) clamp(80px, 10vw, 140px); perspective: 1600px;
+    background-image: radial-gradient(circle at 20% 30%, rgb(255 255 255 / 0.14) 0 3px, transparent 4px), radial-gradient(circle at 70% 70%, rgb(255 255 255 / 0.1) 0 2px, transparent 3px); background-size: 46px 46px, 30px 30px; }
+  .od__ghost { position: absolute; z-index: -1; left: 0; top: 50%; translate: 0 -54%; white-space: nowrap; max-width: none; font-size: clamp(14rem, 34vw, 44rem); font-weight: 800; letter-spacing: -0.07em; line-height: 0.8; color: transparent; -webkit-text-stroke: 3px rgb(255 255 255 / 0.35); font-variation-settings: 'wdth' 78; pointer-events: none; }
+  .od__back { position: absolute; left: var(--m); top: clamp(104px, 13vh, 130px); color: #fff; font-weight: 800; text-decoration: none; padding: 10px 16px; border-radius: 999px; background: rgb(18 14 46 / 0.35); }
+  @media (hover: hover) { .od__back:hover { background: var(--ink); } }
+  :global(.a-js) [data-od-in], :global(.a-js) .cpn { opacity: 0; }
+
+  .cpn { --cut: 6px; position: relative; width: min(1180px, 100%); display: grid; grid-template-columns: 1fr 44px minmax(300px, 0.72fr); background: var(--paper); color: var(--ink); border: 3px solid var(--ink); border-radius: 34px; box-shadow: 0 20px 0 var(--ink), 0 50px 100px -40px rgb(0 0 0 / 0.6); transform-style: preserve-3d; }
+  .cpn__main { padding: clamp(28px, 4.4vw, 64px); display: grid; gap: 14px; align-content: start; }
+  .cpn__v { color: var(--red); font-variation-settings: 'wdth' 76; font-size: clamp(6rem, 2.6rem + 11vw, 15rem); font-weight: 800; line-height: 0.8; letter-spacing: -0.065em; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
+  .cpn__name { font-size: clamp(2rem, 1.2rem + 2.6vw, 3.8rem); line-height: 0.95; }
+  .cpn__sum { font-size: var(--step-lead); font-weight: 600; }
+  .cpn__desc { font-size: 1.0625rem; line-height: 1.5; max-width: 54ch; }
+  .cpn__facts { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+  .cpn__facts li { display: grid; padding: 10px 16px; border-radius: 16px; background: var(--c); border: 2px solid var(--ink); line-height: 1.2; }
+  .cpn__facts span { font-size: 0.8125rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+  .cpn__facts b { font-size: 1.125rem; font-weight: 800; }
+  .cpn__terms { font-size: var(--step-small); color: var(--muted); max-width: 64ch; }
+
+  .cpn__cut { --dir: y; position: relative; background: repeating-linear-gradient(var(--ink) 0 14px, transparent 14px 24px) center / 4px 100% no-repeat; }
+  .cpn__cut::before, .cpn__cut::after { content: ''; position: absolute; left: 50%; width: 44px; height: 44px; translate: -50% 0; border-radius: 50%; background: var(--blue); }
+  .cpn__cut::before { top: -25px; } .cpn__cut::after { bottom: -25px; }
+  .cpn__sc { position: absolute; left: 50%; top: 6%; width: 46px; height: 46px; translate: -50% -50%; rotate: 90deg; color: var(--red); z-index: 3; }
+
+  .cpn__stub { padding: clamp(28px, 4vw, 56px); background: var(--red); color: #fff; border-radius: 0 31px 31px 0; display: grid; gap: 16px; align-content: center; }
+  .cpn__h2 { font-size: clamp(2rem, 1.4rem + 1.8vw, 3.2rem); line-height: 0.95; }
+  .cpn__note { font-size: 1.0625rem; }
+  .cpn__err { font-weight: 700; background: #fff; color: #b42318; padding: 10px 14px; border-radius: 12px; }
+  .cpn :global(.cf) { display: grid; gap: 12px; }
+  .cpn :global(.cf__input) { height: 62px; border: 3px solid var(--ink); border-radius: 18px; padding: 0 18px; background: #fff; color: var(--ink); font: 600 1.125rem var(--font); transition: box-shadow 200ms var(--ease-out), transform 200ms var(--ease-out); }
+  .cpn :global(.cf__input::placeholder) { color: #8a86a0; font-weight: 500; }
+  .cpn :global(.cf__input:focus) { outline: none; box-shadow: 0 6px 0 var(--ink); transform: translateY(-2px); }
+  .cpn :global(.cf__btn) { height: 64px; width: 100%; font-size: 1.1875rem; }
+  .cpn :global(.cf__btn:disabled) { cursor: progress; }
+  .cpn :global(.cf__note) { font-size: var(--step-small); line-height: 1.4; }
+  .cpn.is-ended .cpn__main > * { opacity: 0.45; }
+  .cpn__stamp { position: absolute; left: 34%; top: 46%; translate: -50% -50%; rotate: -14deg; padding: 10px 28px; border: 6px solid #c4211a; border-radius: 18px; color: #c4211a; background: rgb(255 250 240 / 0.8); font-size: clamp(2.6rem, 2rem + 3vw, 5rem); font-weight: 800; text-transform: uppercase; letter-spacing: -0.03em; }
+
+  @media (max-width: 860px) {
+    .cpn { grid-template-columns: 1fr; grid-template-rows: auto 44px auto; }
+    .cpn__cut { --dir: x; background: repeating-linear-gradient(90deg, var(--ink) 0 14px, transparent 14px 24px) center / 100% 4px no-repeat; }
+    .cpn__cut::before, .cpn__cut::after { top: 50%; bottom: auto; translate: 0 -50%; }
+    .cpn__cut::before { left: -25px; } .cpn__cut::after { left: auto; right: -25px; }
+    .cpn__sc { top: 50%; left: 6%; rotate: 0deg; }
+    .cpn__stub { border-radius: 0 0 31px 31px; }
+    .cpn__stamp { left: 50%; top: 30%; }
+    .od__ghost { top: 30%; }
+    .od { padding-top: 176px; }
+  }
+
+  .more { background: var(--bg); padding: clamp(70px, 9vw, 140px) var(--m); }
+  .more__title { font-size: var(--step-head); margin-bottom: clamp(36px, 5vw, 64px); }
+</style>

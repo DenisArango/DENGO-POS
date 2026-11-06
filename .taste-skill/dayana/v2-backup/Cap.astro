@@ -1,0 +1,6 @@
+---
+// Caption on a photo: what it shows, marked as a reference while the prototype uses found pictures.
+import { PROTOTYPE, type Photo } from './data'
+const { photo: p } = Astro.props as { photo: Photo }
+---
+<p class="d-cap">{PROTOTYPE && p.ref && <b>Foto de referencia · </b>}{p.caption}</p>

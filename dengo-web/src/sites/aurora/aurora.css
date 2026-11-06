@@ -1,0 +1,94 @@
+/* Librería Aurora — custom design (demo of a made-to-measure site).
+   Direction: "la caja de crayones". Night-ink ground, whole fields of
+   crayon colour per section, a loud variable grotesque for display and a
+   handwriting face for the notebook. Everything moves: a 3D desk of
+   floating supplies, a notebook that turns its pages, aisles that scroll
+   sideways, a pencil that draws the coupon's path. */
+
+html[data-site='aurora'] {
+  --ink: #120e2e;
+  --ink-2: #1d1847;
+  --paper: #fffaf0;
+  --bg: #fff3dc;
+  --surface: #f6e7c8;
+  --muted: #4a4562;
+  --yellow: #ffc61a;
+  --red: #ff4130;
+  --blue: #2f5bff;
+  --green: #00a865;
+  --pink: #ff8fc6;
+  --accent: var(--red);
+  --accent-ink: #ffffff;
+  --font: 'Bricolage Grotesque Variable', 'Arial Black', system-ui, sans-serif;
+  --hand: 'Caveat', 'Comic Sans MS', cursive;
+  --step-small: clamp(0.875rem, 0.84rem + 0.15vw, 0.9375rem);
+  --step-body: clamp(1.0625rem, 1rem + 0.3vw, 1.25rem);
+  --step-lead: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+  --step-head: clamp(2.75rem, 1.6rem + 5vw, 6.5rem);
+  --step-hero: clamp(3.6rem, 1.4rem + 9.4vw, 11rem);
+  --m: clamp(18px, 3vw, 44px);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --r: 28px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html[data-site='aurora'] { -webkit-text-size-adjust: 100%; background: var(--ink); }
+html[data-site='aurora'] body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font); font-size: var(--step-body); line-height: 1.5;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased; overflow-x: clip;
+}
+:where(html[data-site='aurora'] img) { display: block; max-width: 100%; height: auto; }
+:where(html[data-site='aurora'] a) { color: inherit; }
+:where(html[data-site='aurora'] h1, html[data-site='aurora'] h2, html[data-site='aurora'] h3) {
+  font-weight: 800; letter-spacing: -0.028em; word-spacing: 0.06em; line-height: 0.92; margin: 0; text-wrap: balance;
+  font-variation-settings: 'wdth' 90;
+}
+:where(html[data-site='aurora'] p) { margin: 0; max-width: 64ch; }
+html[data-site='aurora'] :focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; border-radius: 6px; }
+html[data-site='aurora'] ::selection { background: var(--yellow); color: var(--ink); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Buttons: fat pills with a hard offset shadow, like a sticker. */
+.a-btn {
+  --b: var(--ink); --f: var(--paper); --s: var(--yellow);
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 58px; padding: 0 28px; border: 0; border-radius: 999px;
+  background: var(--b); color: var(--f); box-shadow: 0 6px 0 0 var(--s);
+  font: 700 1.0625rem/1 var(--font); letter-spacing: -0.01em; text-decoration: none; cursor: pointer;
+  transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out), background-color 200ms ease;
+  -webkit-tap-highlight-color: transparent; white-space: nowrap;
+}
+.a-btn svg { width: 20px; height: 20px; transition: transform 260ms var(--ease-out); }
+.a-btn:active { transform: translateY(6px); box-shadow: 0 0 0 0 var(--s); }
+.a-btn--go { --b: var(--red); --f: #fff; --s: var(--ink); }
+.a-btn--yellow { --b: var(--yellow); --f: var(--ink); --s: var(--ink); }
+.a-btn--light { --b: var(--paper); --f: var(--ink); --s: var(--red); }
+@media (hover: hover) and (pointer: fine) {
+  .a-btn:hover { transform: translateY(-3px); box-shadow: 0 9px 0 0 var(--s); }
+  .a-btn:hover svg { transform: translateX(4px) rotate(-8deg); }
+}
+
+/* The main sheet sits above the footer. */
+.a-main { position: relative; z-index: 2; background: var(--bg); }
+.a-foot { position: relative; z-index: 1; }
+
+/* Entrance helpers: content is visible without JS; GSAP animates it in. */
+.a-js [data-in] { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .a-js [data-in] { opacity: 1; } }
+
+/* Perforation dots used by the coupon pages. */
+.perf-y { background-image: radial-gradient(circle, var(--bg) 3px, transparent 3.5px); background-size: 6px 14px; background-repeat: repeat-y; width: 6px; }
+.perf-x { background-image: radial-gradient(circle, var(--bg) 3px, transparent 3.5px); background-size: 14px 6px; background-repeat: repeat-x; height: 6px; }
+
+/* Chip with a live dot. */
+.live { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: var(--step-small); }
+.live::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgb(0 168 101 / 0.6); animation: pulse 1.8s ease-out infinite; }
+.live[data-open-flag='0']::before { background: var(--red); animation: none; }
+@keyframes pulse { to { box-shadow: 0 0 0 12px rgb(0 168 101 / 0); } }
+@media (prefers-reduced-motion: reduce) { .live::before { animation: none; } }
+
+/* SplitText line masks. */
+.a-line { overflow: clip; padding-bottom: 0.08em; margin-bottom: -0.08em; }

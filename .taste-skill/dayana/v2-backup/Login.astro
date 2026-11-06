@@ -1,0 +1,24 @@
+---
+// "Ingresar": the house on the left, the form on the right.
+import Layout from './Layout.astro'
+import LoginForm from '../../core/LoginForm.astro'
+import House from './House.astro'
+import type { SiteContent } from '../../core/types'
+
+const { content, error } = Astro.props as { content: SiteContent; error?: string | null }
+const teachers = !!content.access?.teachers
+const staff = !!content.access?.staff
+const who = staff && teachers ? 'Para el equipo de la tienda y los maestros.' : teachers ? 'Para los maestros.' : 'Para el equipo de la tienda.'
+---
+<Layout content={content} title="Ingresar" description="Acceso para el equipo y los maestros." noindex credits={false}>
+  <section class="d-gate" aria-labelledby="h-g">
+    <div class="d-gate__l" aria-hidden="true"><House id="house-g" branches={content.branches.map(b => b.name)} /></div>
+    <div class="d-gate__r">
+      <h1 id="h-g" data-in>Pasa adelante</h1>
+      <p class="d-gate__sub d-soft" data-in style="--i:1">{who} Entra con tu correo y tu contraseña; te llevamos directo a donde te toca.</p>
+      <div data-in style="--i:2">
+        <LoginForm formClass="d-lform" fieldClass="d-lfield" labelClass="d-llabel" inputClass="d-input" toggleClass="d-ltoggle" buttonClass="d-btn" noteClass="d-note" error={error} />
+      </div>
+    </div>
+  </section>
+</Layout>

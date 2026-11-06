@@ -31,6 +31,8 @@ interface BranchData {
   defaultCustomerId?: string
   receiptWidthMm?: number
   invoiceSeries?: string
+  felEntityId?: string | null
+  felEstablishmentCode?: string | null
   receiptSeries?: string
   salesReconciliationEnabled?: boolean
   createdAt?: string
@@ -609,12 +611,27 @@ export default function Stores() {
                       className="input w-full" placeholder="Ej: VDC1" />
                     <p className="text-xs text-gray-600 mt-1">Prefijo del número de cada venta, el que ves en el recibo impreso: {formData.receiptSeries || 'VDC1'}-1, {formData.receiptSeries || 'VDC1'}-2... Sube solo, en orden.</p>
                   </div>
-                  <div className="border border-gray-200 rounded-lg p-3 opacity-75">
-                    <label className="label">Serie de factura — para cuando se active la facturación electrónica (FEL)</label>
+                  <div className="border border-gray-200 rounded-lg p-3">
+                    <label className="label">Serie interna de factura (FEL)</label>
                     <input type="text" maxLength={10} value={formData.invoiceSeries ?? 'A'}
                       onChange={e => setFormData({ ...formData, invoiceSeries: e.target.value.toUpperCase() })}
                       className="input w-full" placeholder="A" />
-                    <p className="text-xs text-gray-500 mt-1">No es lo mismo que la serie de recibo de arriba — este campo todavía no se usa, es para cuando se active FEL.</p>
+                    <p className="text-xs text-gray-500 mt-1">Correlativo propio de las facturas mientras se certifican. La factura impresa lleva la serie y el número que asigna la SAT.</p>
+                  </div>
+                  <div className="border border-purple-200 bg-purple-50 rounded-lg p-3 sm:col-span-2 grid sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">ID de empresa en FELplex</label>
+                      <input type="text" maxLength={60} value={formData.felEntityId ?? ''}
+                        onChange={e => setFormData({ ...formData, felEntityId: e.target.value.trim() })}
+                        className="input w-full font-mono" placeholder="Vacío = el del servidor" />
+                    </div>
+                    <div>
+                      <label className="label">Código de establecimiento SAT</label>
+                      <input type="text" maxLength={10} value={formData.felEstablishmentCode ?? ''}
+                        onChange={e => setFormData({ ...formData, felEstablishmentCode: e.target.value.trim() })}
+                        className="input w-full" placeholder="Ej: 1" />
+                    </div>
+                    <p className="sm:col-span-2 text-xs text-gray-600">Cada sucursal es un establecimiento ante la SAT y una «empresa» en FELplex. Si la dejas vacía, usa la configurada en el servidor (FELPLEX_ENTITY_ID).</p>
                   </div>
                 </div>
               </div>

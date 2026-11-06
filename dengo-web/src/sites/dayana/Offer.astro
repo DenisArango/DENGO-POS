@@ -1,0 +1,152 @@
+---
+// One offer: "Obtener cupón". A big cream ticket on the red, dotted field,
+// scissors running along its dashed line, the value huge and the facts as
+// coloured tags; Roja and Sol stand by it. When the coupon is issued the
+// scissors cut, the stub flies off with confetti and the crew cheers, then
+// the coupon opens (CouponForm waits `delay` ms for that).
+import Layout from './Layout.astro'
+import Crayon from './Crayon.astro'
+import { title } from './data'
+import CouponForm from '../../core/CouponForm.astro'
+import { offerHeadline, fmtDay, money } from '../../core/api'
+import type { Promotion, SiteContent } from '../../core/types'
+
+const { content, promotion: o, formError } = Astro.props as { content: SiteContent; promotion: Promotion; formError?: string | null }
+const ended = o.live === false || (o.couponsLeft !== null && o.couponsLeft <= 0)
+const facts = [
+  o.startsAt && { k: 'Desde', v: fmtDay(o.startsAt) },
+  o.endsAt && { k: 'Hasta', v: fmtDay(o.endsAt) },
+  o.minPurchase && { k: 'Compra mínima', v: money(o.minPurchase) },
+  o.couponsLeft !== null && { k: 'Quedan', v: `${o.couponsLeft} cupones` },
+  { k: 'Dónde', v: 'Todas nuestras tiendas' },
+].filter(Boolean) as { k: string; v: string }[]
+const tones = ['var(--yellow)', 'var(--sky)', 'var(--pink)', 'var(--green)', 'var(--orange)']
+---
+<Layout content={content} title={o.name} description={`${o.summary}. ${o.description ?? ''}`.trim()}>
+  <section class="op" aria-labelledby="h-o">
+    <div class="op__head">
+      <p class="op__back" data-in><a href="/ofertas">← Todas las ofertas</a></p>
+      <p class="op__kick dy-hand" data-in style="--i:1">{ended ? 'Esta ya pasó' : 'Recorta tu cupón'}</p>
+      <h1 id="h-o" class="op__title" data-split>{title(o.name)}</h1>
+      {o.description && <p class="op__desc" data-in style="--i:2">{o.description}</p>}
+    </div>
+
+    <div class="op__stage">
+      <article class:list={['tk', { 'tk--ended': ended }]} data-ticket>
+        <span class="tk__sc" aria-hidden="true" data-scissors><svg viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="5"><circle cx="14" cy="18" r="9" /><circle cx="14" cy="46" r="9" /></g><path class="blade-a" d="M21 23 60 42" stroke="currentColor" stroke-width="5" stroke-linecap="round" /><path class="blade-b" d="M21 41 60 22" stroke="currentColor" stroke-width="5" stroke-linecap="round" /></svg></span>
+        <div class="tk__l" data-stub>
+          <p class="tk__v" aria-hidden="true">{offerHeadline(o)}</p>
+          <p class="tk__s dy-hand">{o.summary}</p>
+          <ul class="tk__facts">{facts.map((f, i) => <li style={`--c:${tones[i % tones.length]}`}><span>{f.k}</span><b>{f.v}</b></li>)}</ul>
+        </div>
+        <div class="tk__r">
+          {ended ? (
+            <>
+              <h2 class="tk__h">Esta oferta ya terminó</h2>
+              <p class="tk__p">Cada temporada sacamos nuevas. Mira las que siguen vigentes.</p>
+              <p><a class="dy-btn" href="/ofertas">Ver ofertas</a></p>
+            </>
+          ) : (
+            <>
+              <h2 class="tk__h">Pide tu cupón</h2>
+              <p class="tk__p">Solo tu nombre y tu teléfono. Te damos un código con QR para presentar en caja.</p>
+              {formError && <p class="tk__err" role="alert">{formError}</p>}
+              <CouponForm slug={o.slug} formClass="t-form" inputClass="t-input" buttonClass="dy-btn t-btn" noteClass="t-note" buttonLabel="Recortar mi cupón" delay={1500} />
+            </>
+          )}
+        </div>
+      </article>
+      <div class="op__crew op__crew--l" aria-hidden="true" data-crew><Crayon who="roja" pose={ended ? 'idle' : 'point'} face="grin" asleep={ended} /></div>
+      <div class="op__crew op__crew--r" aria-hidden="true" data-crew><Crayon who="sol" pose="wave" acc={['backpack', 'cap']} style="--pack:#173a9e;--pack-2:#0a1d5c;--cap:#e8141c" flip asleep={ended} /></div>
+    </div>
+    {o.terms && <p class="op__terms" data-in>{o.terms}</p>}
+  </section>
+</Layout>
+
+<script>
+  import gsap from 'gsap'
+  import { SplitText } from 'gsap/SplitText'
+  import { confettiFrom } from './fx'
+
+  gsap.registerPlugin(SplitText)
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const ticket = document.querySelector<HTMLElement>('[data-ticket]')!
+  const stub = document.querySelector<HTMLElement>('[data-stub]')!
+  const sc = document.querySelector<HTMLElement>('[data-scissors]')!
+  const crew = [...document.querySelectorAll<HTMLElement>('[data-crew]')]
+  const titleEl = document.querySelector<HTMLElement>('.op__title')!
+
+  let snip: gsap.core.Tween | null = null
+  if (!reduce) {
+    const split = SplitText.create(titleEl, { type: 'chars,words', wordsClass: 'w', charsClass: 'ch' })
+    gsap.from(split.chars, { yPercent: 115, rotate: () => gsap.utils.random(-14, 14), opacity: 0, duration: 1, ease: 'expo.out', stagger: 0.025, delay: 0.1 })
+    gsap.from(ticket, { y: 140, rotate: -7, scale: 0.9, opacity: 0, duration: 1.3, ease: 'elastic.out(1, 0.6)', delay: 0.25 })
+    gsap.from(crew, { y: 160, opacity: 0, duration: 0.9, ease: 'back.out(2)', stagger: 0.15, delay: 0.7 })
+    gsap.from('.tk__facts li', { scale: 0, rotate: () => gsap.utils.random(-20, 20), duration: 0.6, ease: 'back.out(2.4)', stagger: 0.07, delay: 0.9 })
+    snip = gsap.to(sc, { left: 'calc(100% - 44px)', duration: 3.6, ease: 'sine.inOut', repeat: -1, yoyo: true })
+    gsap.to('.blade-a', { rotate: 14, svgOrigin: '21 32', duration: 0.18, repeat: -1, yoyo: true, ease: 'sine.inOut' })
+    gsap.to('.blade-b', { rotate: -14, svgOrigin: '21 32', duration: 0.18, repeat: -1, yoyo: true, ease: 'sine.inOut' })
+  } else gsap.set(titleEl, { opacity: 1 })
+
+  // The coupon is issued: cut along the line, the stub flies off, confetti, cheers.
+  document.addEventListener('site:coupon', () => {
+    crew.forEach(c => c.querySelector('svg.cr')?.classList.add('cr--cheer'))
+    if (reduce) return
+    snip?.kill()
+    const wide = innerWidth > 760
+    const tl = gsap.timeline()
+    tl.fromTo(sc, { left: '0%' }, { left: 'calc(100% - 44px)', duration: 0.55, ease: 'power2.in' })
+    tl.add(() => confettiFrom(ticket, 110), 0.5)
+    tl.to(stub, wide ? { x: -60, y: 40, rotate: -9, duration: 0.6, ease: 'back.out(2)' } : { y: -24, rotate: -4, duration: 0.6, ease: 'back.out(2)' }, 0.5)
+    tl.to(crew, { y: -40, duration: 0.25, yoyo: true, repeat: 3, ease: 'power2.out', stagger: 0.08 }, 0.55)
+  })
+</script>
+
+<style>
+  .op { position: relative; min-height: 100svh; padding: clamp(130px, 16vh, 170px) var(--m) clamp(90px, 10vw, 140px); background: var(--red); color: #fff; overflow: hidden;
+    background-image: radial-gradient(circle at 20% 30%, rgb(255 255 255 / 0.1) 0 2.5px, transparent 3.5px), radial-gradient(circle at 70% 70%, rgb(0 0 0 / 0.1) 0 2.5px, transparent 3.5px); background-size: 28px 28px, 36px 36px; }
+  .op__head { max-width: 1100px; margin: 0 auto; text-align: center; display: grid; justify-items: center; }
+  .op__back a { color: #fff; font-weight: 700; text-decoration: none; opacity: 0.9; }
+  .op__back a:hover { text-decoration: underline; }
+  .op__kick { margin-top: 18px; font-size: clamp(2rem, 1.4rem + 2vw, 3.2rem); font-weight: 700; color: var(--yellow); line-height: 1; transform: rotate(-3deg); }
+  .op__title { margin-top: 10px; font-size: clamp(3.2rem, 1.4rem + 7vw, 8.5rem); font-weight: 900; letter-spacing: -0.03em; color: #fff; }
+  .op__desc { margin-top: 20px; max-width: 46ch; font-size: var(--step-lead); line-height: 1.35; color: rgb(255 255 255 / 0.92); }
+  .op__stage { position: relative; width: min(1100px, 100%); margin: clamp(48px, 6vw, 80px) auto 0; }
+
+  .tk { position: relative; display: grid; grid-template-columns: 1fr 1.05fr; background: var(--paper); color: var(--ink); border-radius: 30px; outline: 4px dashed rgb(255 255 255 / 0.9); outline-offset: 14px; box-shadow: 0 16px 0 var(--ink); }
+  .tk__sc { position: absolute; left: 0; top: -40px; width: 44px; height: 44px; color: #fff; z-index: 3; }
+  .tk__l { position: relative; z-index: 2; padding: clamp(28px, 4vw, 56px); border-right: 4px dashed var(--ink); background: var(--paper); border-radius: 30px 0 0 30px; display: grid; align-content: center; gap: 14px; }
+  .tk__v { font: 900 clamp(5.6rem, 3rem + 9vw, 12.5rem)/0.8 var(--display); font-variation-settings: var(--soft); letter-spacing: -0.05em; color: var(--red); }
+  .tk__s { font-size: clamp(1.7rem, 1.3rem + 1vw, 2.3rem); font-weight: 700; line-height: 1; color: var(--navy); }
+  .tk__facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .tk__facts li { display: grid; padding: 8px 14px; border-radius: 16px; background: var(--c); border: 2.5px solid var(--ink); box-shadow: 0 4px 0 var(--ink); line-height: 1.15; }
+  .tk__facts span { font-size: 0.8125rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+  .tk__facts b { font-weight: 800; }
+  .tk__r { padding: clamp(28px, 4vw, 56px); display: grid; align-content: center; gap: 14px; }
+  .tk__h { font-size: clamp(2rem, 1.4rem + 1.6vw, 3rem); }
+  .tk__p { font-size: 1.0625rem; color: var(--muted); }
+  .tk__err { padding: 12px 16px; border-radius: 14px; background: #ffe2e2; border: 2px solid var(--red); font-weight: 700; }
+  .tk :global(.t-form) { display: grid; gap: 14px; }
+  .tk :global(.t-input) { height: 62px; border: 3px solid var(--ink); border-radius: 18px; padding: 0 20px; background: #fff; color: var(--ink); font: 600 1.125rem var(--font); transition: box-shadow 200ms var(--ease-out), transform 200ms var(--ease-out); }
+  .tk :global(.t-input::placeholder) { color: var(--muted); }
+  .tk :global(.t-input:focus) { outline: none; box-shadow: 0 6px 0 var(--sky); transform: translateY(-2px); }
+  .tk :global(.t-btn) { height: 64px; font-size: 1.1875rem; }
+  .tk :global(.t-note) { font-size: var(--step-small); color: var(--muted); }
+  .tk--ended { filter: grayscale(0.4); }
+
+  .op__crew { position: absolute; bottom: -26px; width: clamp(100px, 10vw, 150px); z-index: 4; }
+  .op__crew--l { left: clamp(-120px, -9vw, -40px); }
+  .op__crew--r { right: clamp(-110px, -8vw, -40px); bottom: auto; top: -20px; width: clamp(86px, 8vw, 124px); }
+  .op__crew > :global(svg) { --line: #fff; }
+  .op__terms { max-width: 70ch; margin: clamp(48px, 6vw, 72px) auto 0; text-align: center; font-size: var(--step-small); color: rgb(255 255 255 / 0.85); }
+
+  @media (max-width: 1240px) { .op__crew--l { left: -10px; bottom: -90px; } .op__crew--r { right: -6px; top: -110px; } }
+  @media (max-width: 760px) {
+    .tk { grid-template-columns: 1fr; }
+    .tk__l { border-right: 0; border-bottom: 4px dashed var(--ink); border-radius: 30px 30px 0 0; }
+    .op__crew--l { width: 84px; bottom: -84px; }
+    .op__crew--r { display: none; }
+    .op__stage { margin-bottom: 80px; }
+  }
+  @media print { .op { background: #fff; color: #000; } .op__crew, .tk__sc { display: none; } }
+</style>

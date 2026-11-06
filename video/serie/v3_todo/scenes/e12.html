@@ -1,0 +1,15 @@
+    .dr { position: absolute; top: 140px; width: 150px; height: 210px; border-radius: 75px 75px 14px 14px; background: #fff; border: 5px solid #1e4d68; z-index: 9; opacity: 0; }
+    .dr::after { content: ""; position: absolute; right: 24px; top: 110px; width: 16px; height: 16px; border-radius: 50%; background: #f2c14e; }
+    #e12-p1 { left: 1300px; top: 400px; opacity: 0; z-index: 9; }
+<!--markup-->
+    <div id="e12-d1" class="dr" style="left:1290px"></div>
+    <div id="e12-d2" class="dr" style="left:1470px;border-color:#b9532f"></div>
+    <div id="e12-d3" class="dr" style="left:1650px;border-color:#c99a1f"></div>
+    <div id="e12-p1" class="pill">Hecho en Guatemala</div>
+<!--script-->
+    pop("#e12-d1", {T:tres}); pop("#e12-d2", {T:tres:1:+0.12}); pop("#e12-d3", {T:tres:1:+0.24});
+    tl.to("#e12-d1", { x: 180, duration: 0.6, ease: "power3.inOut" }, {T:sola:1:-0.2});
+    tl.to("#e12-d3", { x: -180, duration: 0.6, ease: "power3.inOut" }, {T:sola:1:-0.2});
+    tl.to("#e12-d1, #e12-d3", { opacity: 0, duration: 0.2 }, {T:sola:1:+0.35});
+    tl.to("#e12-d2", { scale: 1.15, borderColor: "#1e4d68", duration: 0.4, ease: "back.out(2)" }, {T:libreria:1:-0.1});
+    pop("#e12-p1", {T:guatemala:1:-0.3});

@@ -1,0 +1,20 @@
+    .th { position: absolute; right: 90px; opacity: 0; z-index: 9; }
+    .th .lab { position: absolute; left: -12px; bottom: -22px; background: #1e4d68; color: #fff; font-size: 26px; font-weight: 700; padding: 8px 18px; border-radius: 999px; }
+    #e01-one { position: absolute; left: 1430px; top: 380px; width: 300px; height: 320px; opacity: 0; z-index: 10; }
+<!--markup-->
+    <!--tag:Dueña de Librería Aurora · 3 sucursales-->
+    <div id="e01-t1" class="th" style="top:90px"><shot id="e01-s1" src="ui/pos_mostrador_carrito.png" crop="0 0 1600 900" at="0 0 400" /><span class="lab">Caja</span></div>
+    <div id="e01-t2" class="th" style="top:380px"><shot id="e01-s2" src="ui/web_aurora_home.png" crop="0 0 1600 900" at="0 0 400" /><span class="lab">Página web</span></div>
+    <div id="e01-t3" class="th" style="top:670px"><shot id="e01-s3" src="ui/x_pedido_detalle.png" crop="0 0 1600 900" at="0 0 400" /><span class="lab">Portal de maestros</span></div>
+    <svg id="e01-one" viewBox="5 5 120 135"><path d="M 65,15 L 115,44 L 115,101 L 65,130 L 15,101 L 15,44 Z" fill="#fff" stroke="#1E4D68" stroke-width="10" stroke-linejoin="round"/><line x1="15" y1="101" x2="115" y2="44" stroke="#1E4D68" stroke-width="7" stroke-linecap="round"/><path d="M 28,107 L 65,42 L 102,107" fill="none" stroke="#E07A5F" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/></svg>
+<!--script-->
+    tl.set(".th", { width: 400, height: 225 }, 0);
+    tag(0.4, 3.6);
+    slide("#e01-t1", {T:caja}, 120); slide("#e01-t2", {T:pagina}, 120); slide("#e01-t3", {T:portal}, 120);
+    tl.to(".th", { x: -40, y: (i) => [290, 0, -290][i], scale: 0.4, opacity: 0, duration: 0.7, ease: "power3.in", stagger: 0.05 }, {T:uno:1:-0.5});
+    tl.fromTo("#e01-one", { opacity: 0, scale: 0.4, rotation: -30 }, { opacity: 1, scale: 1, rotation: 0, duration: 0.6, ease: "back.out(1.8)" }, {T:uno});
+<!--sfx-->
+pop {T:caja} 0.35
+pop {T:pagina} 0.35
+pop {T:portal} 0.35
+whoosh-short {T:uno:1:-0.4} 0.35

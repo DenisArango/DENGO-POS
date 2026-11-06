@@ -11,7 +11,9 @@ import { getBusinessTimeMinutes } from './timezone.js'
 export const PERMISSION_CATALOG = {
   sales: ['sales.view', 'sales.create', 'sales.cancel', 'sales.edit', 'sales.discount'],
   inventory: ['inventory.view', 'inventory.create', 'inventory.edit', 'inventory.delete', 'inventory.editPrice', 'inventory.adjust', 'inventory.transfer'],
-  customers: ['customers.view', 'customers.create', 'customers.edit', 'customers.delete', 'customers.editCredit', 'customers.registerPayment'],
+  // customers.addCharge raises a customer's balance with no sale behind it
+  // (debt carried over from before DENGO). Left out of every default role.
+  customers: ['customers.view', 'customers.create', 'customers.edit', 'customers.delete', 'customers.editCredit', 'customers.registerPayment', 'customers.addCharge'],
   suppliers: ['suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete'],
   cash: ['cash.open', 'cash.close', 'cash.movements'],
   // This business receives merchandise directly into stock (POST
@@ -31,6 +33,8 @@ export const PERMISSION_CATALOG = {
   reports: ['reports.sales', 'reports.inventory', 'reports.financial', 'reports.audit'],
   settings: ['settings.users', 'settings.roles', 'settings.stores', 'settings.system', 'settings.cashRegisters'],
   goals: ['goals.manage'],
+  // Página web: site content, offers (promotions) and their coupon reports.
+  website: ['website.manage', 'promotions.manage', 'promotions.reports'],
 } as const
 
 export type PermissionKey =

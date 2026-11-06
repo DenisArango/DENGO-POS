@@ -1,0 +1,16 @@
+    #w09-web { opacity: 0; }
+    #w09-p1 { left: 1300px; top: 900px; opacity: 0; }
+<!--markup-->
+    <browser id="w09-web" src="ui/web_aurora_ingresar.png" url="libreriaaurora.gt/ingresar" at="470 110 1380" />
+    <ring id="w09-r1" on="w09-web" box="47 712 268 67" />
+    <ring id="w09-r2" on="w09-web" box="333 712 332 67" />
+    <ring id="w09-r3" on="w09-web" box="1224 32 136 44" />
+    <div id="w09-p1" class="pill sun">Próximo video: el portal de maestros →</div>
+<!--script-->
+    lift("#w09-web", 0.2);
+    ring("#w09-r1", {T:cajeros}, 1.3);
+    ring("#w09-r2", {T:maestros}, 1.3);
+    ring("#w09-r3", {T:boton:1:-0.1});
+    pop("#w09-p1", {T:pero:1:-0.2});
+<!--sfx-->
+click-soft {T:ingresar} 0.5

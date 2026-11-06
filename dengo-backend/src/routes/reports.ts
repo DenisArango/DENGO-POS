@@ -509,6 +509,23 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       cost: number; profit: number
     }> = {}
 
+    // Certified credit notes (FEL NCRE) reduce that day's net sales. They are
+    // reported on the day they were issued, by the branch of the original sale;
+    // the per-payment-method columns stay as charged (a note doesn't move cash).
+    const notes = await prisma.creditNote.findMany({
+      where: {
+        isCancelled: false, felStatus: 'CERTIFIED',
+        ...((filter as any).createdAt ? { createdAt: (filter as any).createdAt } : {}),
+        ...((filter as any).branchId ? { branchId: (filter as any).branchId } : {}),
+      },
+      select: { createdAt: true, total: true },
+    })
+    const notesByDate = new Map<string, number>()
+    for (const n of notes) {
+      const d = toBusinessDateKey(n.createdAt)
+      notesByDate.set(d, (notesByDate.get(d) ?? 0) + Number(n.total))
+    }
+
     for (const sale of sales) {
       const date = toBusinessDateKey(sale.createdAt)
       if (!grouped[date]) grouped[date] = { date, count: 0, total: 0, cash: 0, card: 0, transfer: 0, credit: 0, cost: 0, profit: 0 }
@@ -528,7 +545,16 @@ export default async function reportRoutes(fastify: FastifyInstance) {
         grouped[date]!.transfer += Number(sale.transferAmount ?? 0)
       }
     }
-    return reply.send(Object.values(grouped))
+    for (const date of notesByDate.keys()) {
+      if (!grouped[date]) grouped[date] = { date, count: 0, total: 0, cash: 0, card: 0, transfer: 0, credit: 0, cost: 0, profit: 0 }
+    }
+    const rows = Object.values(grouped)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(g => {
+        const creditNotes = Math.round((notesByDate.get(g.date) ?? 0) * 100) / 100
+        return { ...g, creditNotes, netTotal: Math.round((g.total - creditNotes) * 100) / 100 }
+      })
+    return reply.send(rows)
   })
 
   // GET /api/reports/sales-by-branch — monthly totals per branch, for the

@@ -1,0 +1,130 @@
+---
+// All the offers. A yellow field with "Ofertas para recortar" huge, each
+// offer's value as a crayon-coloured bubble that drifts and bounces (and
+// shies away from the pointer), Roja pointing at them, a ribbon with the
+// offers' names, then the offers as tilted stickers.
+import Layout from './Layout.astro'
+import Crayon from './Crayon.astro'
+import { offerHeadline, fmtDay, waLink } from '../../core/api'
+import { title, BRAND } from './data'
+import type { SiteContent } from '../../core/types'
+
+const { content } = Astro.props as { content: SiteContent }
+const list = content.promotions
+const wa = waLink(content.contact.whatsapp || BRAND.whatsapp, `Hola ${BRAND.name}, ¿qué ofertas tienen?`)
+const tones = [['var(--red)', '#fff'], ['var(--navy)', '#fff'], ['var(--green)', '#fff'], ['var(--pink)', 'var(--ink)'], ['var(--orange)', 'var(--ink)'], ['var(--sky)', 'var(--ink)']]
+const bubbles = list.slice(0, 6)
+const n = list.length
+const deco = ['%', '★', '♥', '✂', '✿']
+---
+<Layout content={content} title="Ofertas" description={`Ofertas vigentes de ${BRAND.name} en Rabinal y Cubulco. Pide tu cupón y preséntalo en caja.`}>
+  <section class="of" aria-labelledby="h-of">
+    <div class="of__copy">
+      <p class="of__kick dy-hand" data-in>{n ? `${n === 1 ? 'Hay una oferta' : `Hay ${n} ofertas`} vigente${n === 1 ? '' : 's'}` : 'Por ahora, ninguna'}</p>
+      <h1 id="h-of" class="of__title"><span class="of__l">Ofertas</span><span class="of__l of__l--2"><em>para recortar.</em><svg class="of__scrib" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true"><path d="M6 26 C 140 4, 300 10, 420 20 S 560 30, 594 10" /></svg></span></h1>
+      <p class="of__sub" data-in style="--i:1">
+        {n ? 'Pide tu cupón aquí y preséntalo en caja, en cualquiera de nuestras cuatro tiendas. Es para una persona y se usa una vez.' : 'Cada temporada sacamos nuevas. Escríbenos y te contamos qué viene.'}
+      </p>
+      <p class="of__act" data-in style="--i:2">
+        {n ? <a class="dy-btn" href={`/ofertas/${list[0]!.slug}`}>Recorta la de {offerHeadline(list[0]!)} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>
+           : wa && <a class="dy-btn" href={wa} target="_blank" rel="noopener">Escríbenos</a>}
+      </p>
+    </div>
+    <div class="of__box" data-bubbles aria-hidden="true">
+      {n > 0 && bubbles.map((o, i) => <a class="bub" href={`/ofertas/${o.slug}`} tabindex="-1" style={`--c:${tones[i % tones.length]![0]}; --i:${tones[i % tones.length]![1]}; --s:${i === 0 ? 'clamp(150px, 15vw, 220px)' : 'clamp(100px, 10vw, 150px)'}`}>{offerHeadline(o)}</a>)}
+      {/* a few cheerful extras (symbols only, so they never announce an offer that doesn't exist) */}
+      {deco.slice(0, Math.max(2, 6 - n)).map((t, i) => <span class="bub bub--deco" style={`--c:${tones[(i + n + 1) % tones.length]![0]}; --i:${tones[(i + n + 1) % tones.length]![1]}; --s:clamp(64px, 6.4vw, 104px)`}>{t}</span>)}
+    </div>
+    <div class="of__crew" aria-hidden="true"><Crayon who="roja" pose="point" face="grin" asleep={!n} /></div>
+  </section>
+
+  {n > 0 && (
+    <div class="of__ribbon" aria-hidden="true"><div class="of__track">{[0, 1, 2].map(() => list.map(o => <span>{offerHeadline(o)} · {title(o.name)}<svg viewBox="0 0 24 24"><path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" /></svg></span>))}</div></div>
+  )}
+
+  {n > 0 && (
+    <section class="ol" aria-label="Todas las ofertas">
+      <ul class="ol__grid">
+        {list.map((o, i) => { const [c, ink] = tones[i % tones.length]!; return (
+          <li class="st" style={`--c:${c}; --i:${ink}; --r:${[-2.5, 2, -1.5, 3][i % 4]}deg`} data-sticker>
+            <a class="st__in" href={`/ofertas/${o.slug}`}>
+              <p class="st__v" aria-hidden="true">{offerHeadline(o)}</p>
+              <h2 class="st__t">{title(o.name)}</h2>
+              <p class="st__m">{o.summary}{o.endsAt ? ` · hasta el ${fmtDay(o.endsAt)}` : ''}</p>
+              <span class="st__cut" aria-hidden="true"></span>
+              <span class="st__go">Obtener cupón <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></span>
+            </a>
+          </li>
+        ) })}
+      </ul>
+    </section>
+  )}
+</Layout>
+
+<script>
+  import gsap from 'gsap'
+  import { SplitText } from 'gsap/SplitText'
+  import { drift } from './fx'
+
+  gsap.registerPlugin(SplitText)
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const box = document.querySelector<HTMLElement>('[data-bubbles]')!
+  const bubbles = [...box.querySelectorAll<HTMLElement>('.bub')]
+  const titleEl = document.querySelector<HTMLElement>('.of__title')!
+  const scrib = document.querySelector<SVGPathElement>('.of__scrib path')
+
+  if (!reduce) {
+    const split = SplitText.create(titleEl.querySelectorAll('.of__l'), { type: 'chars', charsClass: 'ch' })
+    const tl = gsap.timeline({ delay: 0.1 })
+    tl.from(split.chars, { yPercent: 115, rotate: () => gsap.utils.random(-18, 18), duration: 1.1, ease: 'expo.out', stagger: 0.03 })
+    if (scrib) { const L = scrib.getTotalLength(); tl.fromTo(scrib, { strokeDasharray: L, strokeDashoffset: L }, { strokeDashoffset: 0, duration: 0.8, ease: 'power2.inOut' }, 0.6) }
+    tl.from(bubbles, { scale: 0, duration: 0.8, ease: 'elastic.out(1, 0.5)', stagger: 0.1 }, 0.4)
+    tl.from('.of__crew', { y: 200, duration: 0.9, ease: 'back.out(2)' }, 0.8)
+    gsap.from('[data-sticker]', { y: 120, rotate: (i: number) => [-12, 10, -8, 12][i % 4], opacity: 0, duration: 1, ease: 'back.out(1.6)', stagger: 0.1, delay: 0.5 })
+    const track = document.querySelector<HTMLElement>('.of__track')
+    if (track) gsap.to(track, { xPercent: -33.333, duration: 26, ease: 'none', repeat: -1 })
+  }
+  drift(box, bubbles)
+</script>
+
+<style>
+  .of { position: relative; min-height: min(100svh, 860px); display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; align-items: center; padding: clamp(130px, 16vh, 170px) var(--m) clamp(60px, 8vh, 90px); background: var(--yellow); overflow: hidden; }
+  .of__copy { position: relative; z-index: 2; display: grid; gap: 22px; justify-items: start; }
+  .of__kick { font-size: clamp(1.9rem, 1.4rem + 1.4vw, 2.8rem); font-weight: 700; color: var(--red); line-height: 1; transform: rotate(-3deg); }
+  .of__title { font-size: clamp(3.8rem, 1rem + 8.6vw, 10rem); font-weight: 900; line-height: 0.86; letter-spacing: -0.03em; display: grid; }
+  .of__l { display: block; }
+  .of__l--2 { position: relative; width: max-content; max-width: 100%; }
+  .of__l--2 em { font-style: normal; color: var(--red); }
+  .of__scrib { position: absolute; left: 0; right: 0; bottom: -0.08em; width: 100%; height: 0.2em; overflow: visible; }
+  .of__scrib path { fill: none; stroke: var(--navy); stroke-width: 9; stroke-linecap: round; }
+  .of__sub { font-size: var(--step-lead); line-height: 1.35; max-width: 36ch; }
+  .of__box { position: relative; align-self: stretch; min-height: 380px; }
+  .bub { position: absolute; left: 0; top: 0; width: var(--s); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; background: var(--c); color: var(--i); border: 3px solid var(--ink); box-shadow: 0 8px 0 var(--ink); text-decoration: none; font: 900 calc(var(--s) * 0.28)/1 var(--display); font-variation-settings: var(--soft); letter-spacing: -0.04em; will-change: transform; }
+  .of__crew { position: absolute; right: clamp(16px, 4vw, 60px); bottom: -14px; width: clamp(100px, 9vw, 140px); z-index: 3; }
+
+  .of__ribbon { overflow: hidden; background: var(--red); color: #fff; border-block: 3px solid var(--ink); padding: 16px 0; }
+  .of__track { display: flex; width: max-content; }
+  .of__track span { display: inline-flex; align-items: center; gap: 22px; padding-right: 22px; font: 900 clamp(1.6rem, 1rem + 2.4vw, 3.2rem)/1 var(--display); font-variation-settings: var(--soft); white-space: nowrap; }
+  .of__track svg { width: 0.6em; height: 0.6em; fill: var(--yellow); }
+
+  .ol { padding: clamp(70px, 9vw, 130px) var(--m) clamp(90px, 11vw, 150px); background: var(--paper);
+    background-image: radial-gradient(circle at 1px 1px, rgb(23 58 158 / 0.18) 1.5px, transparent 2px); background-size: 26px 26px; }
+  .ol__grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: clamp(26px, 3vw, 40px); }
+  .st { rotate: var(--r); transition: rotate 0.35s var(--ease-spring), translate 0.35s var(--ease-spring); }
+  .st:hover { rotate: 0deg; translate: 0 -6px; }
+  .st__in { display: grid; gap: 10px; height: 100%; padding: clamp(26px, 3vw, 40px); background: var(--c); color: var(--i); border: 3px solid var(--ink); border-radius: var(--r); box-shadow: 0 12px 0 var(--ink); text-decoration: none; }
+  .st__v { font: 900 clamp(4.4rem, 3rem + 4vw, 7.4rem)/0.82 var(--display); font-variation-settings: var(--soft); letter-spacing: -0.05em; }
+  .st__t { font-size: clamp(1.6rem, 1.2rem + 1vw, 2.3rem); margin-top: 8px; }
+  .st__m { font-size: 1.0625rem; }
+  .st__cut { margin: 8px 0 4px; border-top: 4px dashed currentColor; opacity: 0.55; }
+  .st__go { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; }
+  .st__go svg { width: 20px; height: 20px; transition: transform 0.2s var(--ease-out); }
+  .st:hover .st__go svg { transform: translateX(4px); }
+
+  @media (max-width: 860px) {
+    .of { grid-template-columns: 1fr; min-height: 0; padding-bottom: 40px; }
+    .of__box { min-height: 300px; }
+    .of__crew { width: 86px; right: 10px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .bub { position: relative; display: inline-grid; margin: 8px; } .of__box { display: flex; flex-wrap: wrap; align-content: center; } }
+</style>

@@ -35,6 +35,9 @@ export default function CreditSalesReport() {
   const [payNotes, setPayNotes] = useState('')
   const [paying, setPaying] = useState(false)
   const [paymentHistory, setPaymentHistory] = useState<any[]>([])
+  // The account balance (customer.creditUsed) — what an abono is checked
+  // against on the server. NaN until known (then the invoices' sum is used).
+  const [paymentBalance, setPaymentBalance] = useState<number>(NaN)
 
   // Sale detail
   const [showDetail, setShowDetail] = useState(false)
@@ -50,7 +53,9 @@ export default function CreditSalesReport() {
         api.get<any[]>('/api/customers'),
         api.get<any[]>(`/api/reports/sales-history?paymentMethod=CREDIT${branchQ}&includeVoided=false`),
       ])
-      setCustomers((custs ?? []).filter((c: any) => Number(c.creditLimit ?? 0) > 0))
+      // Anyone with credit on or a balance owed — imported customers can owe
+      // money with no limit set and no sales in this system.
+      setCustomers((custs ?? []).filter((c: any) => c.creditEnabled || Number(c.creditLimit ?? 0) > 0 || Number(c.creditUsed ?? 0) > 0.009))
       setCreditSales(sales ?? [])
     } catch { setCustomers([]); setCreditSales([]) } finally { setLoading(false) }
   }
@@ -58,6 +63,7 @@ export default function CreditSalesReport() {
   const openPaymentForCustomer = async (customerId: string, customerName: string) => {
     const sales = creditSales.filter(s => s.customerId === customerId && !s.isPaid && !s.isVoided)
     setPaymentCustomer({ id: customerId, name: customerName })
+    setPaymentBalance(Number(customers.find(c => c.id === customerId)?.creditUsed ?? NaN))
     setPaymentCustomerSales(sales)
     // Load all credit payments for this customer's outstanding sales, for the
     // history list below the form — informational only.
@@ -84,9 +90,10 @@ export default function CreditSalesReport() {
     if (customerId) openPaymentForCustomer(customerId, sale.customer?.name ?? '')
   }
 
-  const customerTotalRemaining = paymentCustomerSales.reduce(
+  const invoicesRemaining = paymentCustomerSales.reduce(
     (s, sale) => s + Math.max(0, Number(sale.total) - Number(sale.paidAmount ?? 0)), 0
   )
+  const customerTotalRemaining = Number.isFinite(paymentBalance) ? paymentBalance : invoicesRemaining
 
   const handlePay = async () => {
     if (!paymentCustomer) return
@@ -132,20 +139,29 @@ export default function CreditSalesReport() {
     }
   }
 
-  const enriched = customers.map(c => ({
-    ...c,
-    creditLimit: Number(c.creditLimit ?? 0),
-    balance: Math.max(0, balanceMap[c.id] ?? 0),
-    availableCredit: Math.max(0, Number(c.creditLimit ?? 0) - (balanceMap[c.id] ?? 0)),
-    status: (balanceMap[c.id] ?? 0) > Number(c.creditLimit ?? 0) * 0.9 ? 'warning' : 'active',
-  }))
+  // The balance is the account's (creditUsed): credit sales, charges for
+  // debt from before DENGO and abonos all move it. Summing only the credit
+  // sales here hid every balance that came from the previous system.
+  const enriched = customers.map(c => {
+    const balance = Math.max(0, Number(c.creditUsed ?? balanceMap[c.id] ?? 0))
+    const capped = c.creditEnabled !== false && c.creditLimitEnabled !== false && Number(c.creditLimit ?? 0) > 0
+    const creditLimit = Number(c.creditLimit ?? 0)
+    return {
+      ...c,
+      creditLimit,
+      capped,
+      balance,
+      availableCredit: capped ? Math.max(0, creditLimit - balance) : null,
+      status: capped && balance > creditLimit * 0.9 ? 'warning' : 'active',
+    }
+  })
 
   const filteredCustomers = enriched.filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase()))
   const filteredSales = creditSales.filter(s => !search || (s.customer?.name ?? '').toLowerCase().includes(search.toLowerCase()))
 
   const totalCreditBalance = enriched.reduce((s, c) => s + c.balance, 0)
   const overdueCount = enriched.filter(c => c.status === 'warning').length
-  const totalCreditLimit = enriched.reduce((s, c) => s + c.creditLimit, 0)
+  const totalCreditLimit = enriched.reduce((s, c) => s + (c.capped ? c.creditLimit : 0), 0)
 
   return (
     <div className="space-y-6">
@@ -202,16 +218,16 @@ export default function CreditSalesReport() {
                 {filteredCustomers.length === 0
                   ? <tr><td colSpan={7} className="text-center py-10 text-gray-400">Sin clientes con crédito</td></tr>
                   : filteredCustomers.map(c => {
-                      const usagePct = c.creditLimit > 0 ? Math.min(100, (c.balance / c.creditLimit) * 100) : 0
+                      const usagePct = c.capped ? Math.min(100, (c.balance / c.creditLimit) * 100) : 0
                       return (
                         <tr key={c.id} className="hover:bg-gray-50">
                           <td className="px-4 py-2.5">
                             <p className="font-medium text-gray-800">{c.name}</p>
                             <p className="text-xs text-gray-400">{c.phone ?? c.nit ?? '–'}</p>
                           </td>
-                          <td className="px-4 py-2.5 text-right text-gray-700">Q{c.creditLimit.toFixed(2)}</td>
+                          <td className="px-4 py-2.5 text-right text-gray-700">{c.capped ? `Q${c.creditLimit.toFixed(2)}` : <span className="text-gray-400">{c.creditEnabled ? 'Sin límite' : 'Sin crédito'}</span>}</td>
                           <td className="px-4 py-2.5 text-right font-semibold text-orange-600">Q{c.balance.toFixed(2)}</td>
-                          <td className="px-4 py-2.5 text-right text-green-600">Q{c.availableCredit.toFixed(2)}</td>
+                          <td className="px-4 py-2.5 text-right text-green-600">{c.availableCredit === null ? '–' : `Q${c.availableCredit.toFixed(2)}`}</td>
                           <td className="px-4 py-2.5">
                             <div className="flex items-center gap-2">
                               <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -317,7 +333,9 @@ export default function CreditSalesReport() {
               <div className="bg-orange-50 rounded-lg p-3 text-sm">
                 <div className="flex justify-between font-bold"><span>Saldo pendiente</span><span className="text-orange-600">Q{customerTotalRemaining.toFixed(2)}</span></div>
                 <p className="text-xs text-gray-500 mt-1">
-                  {paymentCustomerSales.length} factura{paymentCustomerSales.length === 1 ? '' : 's'} — el abono se aplica primero a la más antigua, luego a la siguiente, hasta agotar el monto.
+                  {paymentCustomerSales.length > 0
+                    ? `${paymentCustomerSales.length} factura${paymentCustomerSales.length === 1 ? '' : 's'} — el abono se aplica primero a la más antigua, luego a la siguiente, hasta agotar el monto.`
+                    : 'Saldo sin facturas en el sistema (saldo anterior o cargado a mano) — el abono se aplica a la cuenta.'}
                 </p>
               </div>
 

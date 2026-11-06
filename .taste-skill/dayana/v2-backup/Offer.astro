@@ -1,0 +1,46 @@
+---
+// One offer: the red half carries the value and the facts, the pale half the form.
+import Layout from './Layout.astro'
+import { title } from './data'
+import CouponForm from '../../core/CouponForm.astro'
+import { offerHeadline, fmtDay, money } from '../../core/api'
+import type { Promotion, SiteContent } from '../../core/types'
+
+const { content, promotion: o, formError } = Astro.props as { content: SiteContent; promotion: Promotion; formError?: string | null }
+const ended = o.live === false || (o.couponsLeft !== null && o.couponsLeft <= 0)
+const facts = [
+  o.startsAt && { k: 'Desde', v: fmtDay(o.startsAt) },
+  o.endsAt && { k: 'Hasta', v: fmtDay(o.endsAt) },
+  o.minPurchase && { k: 'Compra mínima', v: money(o.minPurchase) },
+  o.couponsLeft !== null && { k: 'Quedan', v: `${o.couponsLeft} cupones` },
+  { k: 'Dónde', v: 'Todas nuestras tiendas' },
+].filter(Boolean) as { k: string; v: string }[]
+---
+<Layout content={content} title={o.name} description={`${o.summary}. ${o.description ?? ''}`.trim()}>
+  <section class="d-page" aria-labelledby="h-o">
+    <div class="d-page__in">
+      <p data-in><a class="d-link" href="/ofertas">Todas las ofertas</a></p>
+      <article class="d-cpn" data-in style="--i:1">
+        <div class="d-cpn__main">
+          <p class="d-cpn__v" aria-hidden="true">{offerHeadline(o)}</p>
+          <h1 id="h-o">{title(o.name)}</h1>
+          {o.description && <p>{o.description}</p>}
+          <ul class="d-cpn__facts">{facts.map(f => <li><span>{f.k}</span><b>{f.v}</b></li>)}</ul>
+        </div>
+        <div class="d-cpn__side">
+          {ended ? (
+            <p class="d-ended">Esta oferta ya terminó. Pronto habrá más.</p>
+          ) : (
+            <>
+              <h2>Pide tu cupón</h2>
+              <p class="d-soft">Solo tu nombre y tu teléfono. Te damos un código con QR para presentar en caja.</p>
+              {formError && <p class="d-ended" role="alert">{formError}</p>}
+              <CouponForm slug={o.slug} formClass="d-form" inputClass="d-input" buttonClass="d-btn" noteClass="d-note" buttonLabel="Obtener mi cupón" />
+            </>
+          )}
+        </div>
+      </article>
+      {o.terms && <p class="d-terms" data-in>{o.terms}</p>}
+    </div>
+  </section>
+</Layout>

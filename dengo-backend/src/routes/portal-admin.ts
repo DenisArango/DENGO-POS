@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
+import { isValidGtNit, normalizeNit } from '../lib/nit.js'
 import { prisma } from '../lib/prisma.js'
 import { Prisma } from '@prisma/client'
 import { log } from '../services/audit.service.js'
@@ -568,12 +569,16 @@ export default async function portalAdminRoutes(fastify: FastifyInstance) {
     departamento: z.string().optional(),
     opfContact: z.string().optional(),
     opfPhone: z.string().optional(),
+    // Who its facturas go to (FEL): the school's NIT and the name registered with it.
+    nit: z.string().trim().max(30).optional(),
+    invoiceName: z.string().trim().max(200).optional(),
     isActive: z.boolean().optional(),
   })
 
   fastify.post('/schools', requireAdmin, async (request, reply) => {
     const body = schoolSchema.safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+    if (body.data.nit && !isValidGtNit(body.data.nit)) return reply.status(400).send({ error: 'El NIT de la escuela no es válido (dígito verificador)' })
     const school = await prisma.school.create({
       data: {
         name: body.data.name,
@@ -583,6 +588,8 @@ export default async function portalAdminRoutes(fastify: FastifyInstance) {
         departamento: body.data.departamento ?? null,
         opfContact: body.data.opfContact ?? null,
         opfPhone: body.data.opfPhone ?? null,
+        nit: body.data.nit ? normalizeNit(body.data.nit) : null,
+        invoiceName: body.data.invoiceName || null,
         ...(body.data.isActive !== undefined ? { isActive: body.data.isActive } : {}),
       },
     })
@@ -594,6 +601,7 @@ export default async function portalAdminRoutes(fastify: FastifyInstance) {
     const { id } = request.params as { id: string }
     const body = schoolSchema.partial().safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+    if (body.data.nit && !isValidGtNit(body.data.nit)) return reply.status(400).send({ error: 'El NIT de la escuela no es válido (dígito verificador)' })
     try {
       const school = await prisma.school.update({
         where: { id },
@@ -605,6 +613,8 @@ export default async function portalAdminRoutes(fastify: FastifyInstance) {
           ...(body.data.departamento !== undefined ? { departamento: body.data.departamento } : {}),
           ...(body.data.opfContact !== undefined ? { opfContact: body.data.opfContact } : {}),
           ...(body.data.opfPhone !== undefined ? { opfPhone: body.data.opfPhone } : {}),
+          ...(body.data.nit !== undefined ? { nit: body.data.nit ? normalizeNit(body.data.nit) : null } : {}),
+          ...(body.data.invoiceName !== undefined ? { invoiceName: body.data.invoiceName || null } : {}),
           ...(body.data.isActive !== undefined ? { isActive: body.data.isActive } : {}),
         },
       })

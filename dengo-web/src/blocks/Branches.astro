@@ -1,0 +1,57 @@
+---
+// Each branch as a card with its live open/closed state (kept current by
+// the layout's script through data-open / data-close).
+import { mapsLink } from '../core/api'
+import { openState } from '../core/hours'
+import type { Block, Branch } from '../core/types'
+const { block, branches } = Astro.props as { block: Block; branches: Branch[] }
+const p = block.props as { title?: string }
+---
+{branches.length > 0 && (
+  <section class="section branches" id="sucursales">
+    <div class="wrap">
+      <div class="branches__head">
+        <h2 class="display h-section h-mark" data-reveal>{p.title || 'Visítanos'}</h2>
+        <p class="lead soft" data-reveal style="--i:1">{branches.length === 1 ? 'Te esperamos todos los días.' : `${branches.length} sucursales, todas con el mismo trato.`}</p>
+      </div>
+      <ul class="branches__list">
+        {branches.map((b, i) => {
+          const st = openState(b.openTime, b.closeTime)
+          return (
+            <li class="branch" data-reveal style={`--i:${i % 3}`} data-open={b.openTime} data-close={b.closeTime}>
+              <div class="branch__top">
+                <span class="branch__n" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                <span class="status branch__state" data-is-open={st.open ? '1' : '0'}>{st.label}</span>
+              </div>
+              <h3 class="branch__name">{b.name}</h3>
+              {(b.address || b.city) && <p class="branch__addr">{[b.address, b.city].filter(Boolean).join(', ')}</p>}
+              <p class="branch__hours"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>Todos los días, de {b.openTime} a {b.closeTime}</p>
+              <p class="branch__links">
+                <a class="btn" href={mapsLink(b)} target="_blank" rel="noopener">Cómo llegar</a>
+                {b.phone && <a class="btn btn--ghost" href={`tel:${b.phone.replace(/\s/g, '')}`}>{b.phone}</a>}
+              </p>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  </section>
+)}
+
+<style>
+  .branches__head { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 40px; align-items: end; margin-bottom: clamp(28px, 4vw, 52px); }
+  .branches__head .h-section { margin: 0; }
+  .branches__list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: clamp(12px, 1.6vw, 20px); }
+  .branch { background: var(--card); padding: clamp(22px, 2.6vw, 34px); border-radius: var(--radius-lg); box-shadow: var(--shadow); display: grid; gap: 10px; align-content: start; }
+  :global([data-theme='editorial']) .branch { box-shadow: inset 0 0 0 1px var(--ink); }
+  .branch__top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .branch__n { font-family: var(--font-display); font-weight: var(--display-weight); font-size: 1.25rem; color: var(--brand-2); font-variant-numeric: tabular-nums; }
+  .branch__state { font-size: 0.875rem; padding: 6px 12px; border-radius: 999px; background: var(--surface); }
+  .branch__name { font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: var(--display-track); font-size: clamp(1.625rem, 1.2rem + 1.2vw, 2.25rem); line-height: 1.05; margin: 0; }
+  .branch__addr { font-size: 1.0625rem; }
+  .branch__hours { display: flex; align-items: center; gap: 8px; color: var(--soft); font-size: 1rem; }
+  .branch__hours svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .branch__links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+  .branch__links .btn { min-height: 46px; padding: 0 18px; font-size: 0.9375rem; }
+  @media (max-width: 760px) { .branches__head { grid-template-columns: 1fr; } }
+</style>

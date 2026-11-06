@@ -1,0 +1,92 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Outfit", sans-serif; color: #1b2233; overflow: hidden; }
+    .mask { display: block; overflow: hidden; padding-bottom: 0.08em; }
+    .mask > span { display: block; }
+    .time { position: absolute; left: 96px; top: 76px; z-index: 6; }
+    .time > span { font-size: 64px; font-weight: 700; color: #b9532f; letter-spacing: -0.02em; line-height: 1.1; }
+    .h { font-weight: 700; color: #1e4d68; letter-spacing: -0.025em; line-height: 1.04; }
+    .sub { font-size: 38px; line-height: 1.3; color: #1b2233; }
+    .card { position: absolute; background: #fff; border: 1px solid #e6dfd2; border-radius: 22px; box-shadow: 0 24px 60px rgba(27, 34, 51, 0.16); }
+    .shot { position: absolute; overflow: hidden; background: #fff; border: 1px solid #e6dfd2; border-radius: 18px; box-shadow: 0 24px 60px rgba(27, 34, 51, 0.16); }
+    .shot > img { position: absolute; max-width: none; }
+    .shot.flat { box-shadow: none; }
+    .phone { position: absolute; background: #1b2233; border-radius: 62px; padding: 18px; box-shadow: 0 30px 70px rgba(27, 34, 51, 0.28); }
+    .phone .screen { position: relative; overflow: hidden; border-radius: 46px; background: #fff; }
+    .phone video.fill, .browser video.fill { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; }
+    .browser { position: absolute; overflow: hidden; background: #fff; border: 1px solid #e6dfd2; border-radius: 18px; box-shadow: 0 26px 64px rgba(27, 34, 51, 0.18); }
+    .browser .bar { height: 56px; background: #f3eee5; display: flex; align-items: center; gap: 9px; padding: 0 18px; border-bottom: 1px solid #e6dfd2; }
+    .browser .bar i { width: 13px; height: 13px; border-radius: 50%; background: #d8cfbf; display: block; }
+    .browser .bar span { margin-left: 18px; font-size: 26px; color: #6b6458; background: #fff; border-radius: 999px; padding: 4px 18px; }
+    .browser .view { position: relative; overflow: hidden; }
+    .browser .view > img { max-width: none; }
+    .ring { position: absolute; border: 6px solid #e07a5f; border-radius: 14px; opacity: 0; z-index: 5; }
+    .pill { position: absolute; display: inline-flex; align-items: center; gap: 14px; background: #1e4d68; color: #fff; font-size: 34px; font-weight: 600; padding: 16px 30px; border-radius: 999px; box-shadow: 0 16px 40px rgba(30, 77, 104, 0.3); z-index: 6; }
+    .pill.coral { background: #b9532f; box-shadow: 0 16px 40px rgba(224, 122, 95, 0.35); }
+    .pill.sun { background: #f2c14e; color: #1b2233; box-shadow: 0 16px 40px rgba(242, 193, 78, 0.35); }
+    .cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; transform-origin: 0 0; z-index: 8; background: #fbf6ee; box-shadow: 0 30px 80px rgba(27, 34, 51, 0.3); }
+    .cam video, .cam .poster { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+    .cam .tag { position: absolute; left: 96px; bottom: 96px; background: #fff; border-radius: 22px; padding: 22px 34px; opacity: 0; box-shadow: 0 20px 50px rgba(27, 34, 51, 0.2); }
+    .cam .tag b { display: block; font-size: 46px; color: #1e4d68; letter-spacing: -0.02em; }
+    .cam .tag span { display: block; font-size: 30px; color: #6b6458; margin-top: 2px; }
+    .badge { position: absolute; left: 56px; bottom: 56px; display: flex; align-items: center; gap: 20px; z-index: 9; opacity: 0; }
+    .badge .face { width: 168px; height: 168px; border-radius: 50%; overflow: hidden; border: 6px solid #fff; box-shadow: 0 18px 44px rgba(27, 34, 51, 0.22); background: #fbf6ee; }
+    .badge .face img { width: 100%; height: 100%; object-fit: cover; }
+    .badge .who { background: #fff; border-radius: 18px; padding: 12px 22px 14px; box-shadow: 0 14px 34px rgba(27, 34, 51, 0.14); }
+    .badge .who b { display: block; font-size: 28px; color: #1e4d68; }
+    .badge .bars { display: flex; gap: 6px; align-items: center; height: 30px; margin-top: 4px; }
+    .badge .bars i { display: block; width: 8px; height: 30px; border-radius: 4px; background: #e07a5f; transform: scaleY(0.18); }
+    #p09-h, #p09-d, #p09-ph { opacity: 0; }
+    .st { position: absolute; left: 200px; display: flex; align-items: center; gap: 22px; font-size: 46px; font-weight: 700; color: #b8ae9c; opacity: 0; }
+    .st i { width: 30px; height: 30px; border-radius: 50%; background: #d8cfbf; display: block; }
+
+  </style>
+  <div id="root" data-composition-id="p09" data-width="1920" data-height="1080" data-layout-allow-overflow data-layout-allow-overlap>
+    
+
+    <div id="p09-h" class="shot " style="left:120px;top:110px;width:1300px;height:244px"><img id="p09-h-i" src="assets/ui/x_hoja.png" alt="" style="width:1300.0px;left:-0.0px;top:-0.0px" /></div>
+    <div id="p09-d" class="shot " style="left:120px;top:600px;width:760px;height:207px"><img id="p09-d-i" src="assets/ui/x_pedido_detalle.png" alt="" style="width:2370.4px;left:-1610.4px;top:-1037.0px" /></div>
+    <div id="p09-ph" class="phone" style="left:1300px;top:22px;width:482px;height:1001px"><div class="screen" style="width:446px;height:965px"><img id="p09-ph-i" src="assets/ui/m_t_pedido.png" alt="" style="width:100%;position:absolute;left:0;top:0" /></div></div>
+    <div id="p09-s1" class="ring" style="left:1360px;top:488px;width:70px;height:88px"></div>
+    <div id="p09-s2" class="ring" style="left:1454px;top:488px;width:79px;height:88px"></div>
+    <div id="p09-s3" class="ring" style="left:1548px;top:488px;width:77px;height:88px"></div>
+
+    
+    <div id="p09-badge" class="badge"><div class="face"><img src="assets/face/calida.png" alt="" /></div><div class="who"><b>María José</b><div class="bars"><i></i><i></i><i></i><i></i><i></i></div></div></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const DUR = 14.025;
+    const rise = (s, t, d = 0.55) => tl.fromTo(s, { yPercent: 115 }, { yPercent: 0, duration: d, ease: "expo.out" }, t);
+    const lift = (s, t, d = 0.7) => tl.fromTo(s, { opacity: 0, y: 46, scale: 0.965 }, { opacity: 1, y: 0, scale: 1, duration: d, ease: "expo.out" }, t);
+    const pop = (s, t) => tl.fromTo(s, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.9)" }, t);
+    const slide = (s, t, x = -140) => tl.fromTo(s, { x, opacity: 0 }, { x: 0, opacity: 1, duration: 0.65, ease: "expo.out" }, t);
+    const out = (s, t, d = 0.35) => tl.to(s, { opacity: 0, y: -16, duration: d, ease: "power2.in" }, t);
+    const ring = (s, t, hold = 0) => { tl.fromTo(s, { opacity: 0, scale: 1.08 }, { opacity: 1, scale: 1, duration: 0.32, ease: "back.out(2.2)" }, t); if (hold) tl.to(s, { opacity: 0, duration: 0.25 }, t + hold); };
+    const pan = (s, t, vars, d = 1.2) => tl.to(s, { ...vars, duration: d, ease: "power3.inOut" }, t);
+    const count = (s, t, from, to, d = 0.9, fmt = (v) => Math.round(v).toString()) => {
+      const o = { v: from };
+      tl.to(o, { v: to, duration: d, ease: "power2.out", onUpdate: () => { const el = document.querySelector(s); if (el) el.textContent = fmt(o.v); } }, t);
+    };
+    // voice-only: her face badge, bars move with each spoken word
+    tl.fromTo("#p09-badge", { opacity: 0, y: 30, scale: 0.9 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(1.6)" }, 0.05);
+    const WORDS = [[0.299, 0.469], [0.512, 0.597], [0.64, 0.853], [0.896, 0.939], [0.981, 1.621], [1.749, 2.261], [2.304, 2.475], [2.56, 2.965], [3.157, 3.371], [3.413, 3.883], [3.925, 4.053], [4.096, 4.309], [4.352, 4.48], [4.523, 5.056], [5.333, 5.419], [5.461, 6.208], [6.357, 7.125], [7.253, 8.0], [8.107, 9.003], [9.259, 9.472], [9.557, 9.856], [9.941, 10.155], [10.197, 10.923], [11.051, 11.349], [11.392, 11.776], [11.947, 12.245], [12.288, 12.459], [12.501, 12.587], [12.629, 13.137]];
+    const H = [0.55, 0.9, 0.7, 1, 0.6];
+    WORDS.forEach(([s, e], k) => {
+      const next = k + 1 < WORDS.length ? WORDS[k + 1][0] : e + 1;
+      const down = Math.min(Math.max(s + 0.1, e - 0.04), next - 0.03);
+      tl.to("#p09-badge .bars i", { scaleY: (i) => 0.25 + H[(i + k) % 5] * 0.75, duration: Math.min(0.09, down - s - 0.005), ease: "power1.out" }, s);
+      tl.to("#p09-badge .bars i", { scaleY: 0.18, duration: Math.max(0.01, Math.min(0.12, next - down - 0.01)), ease: "power1.in" }, down);
+    });
+
+    tl.fromTo("#p09-h", { opacity: 0, y: 50, rotation: -2 }, { opacity: 1, y: 0, rotation: -1.5, duration: 0.7, ease: "expo.out" }, 0.440);
+    lift("#p09-d", 3.896);
+    tl.to("#p09-h, #p09-d", { opacity: 0.25, duration: 0.4 }, 5.061);
+    tl.fromTo("#p09-ph", { opacity: 0, x: 140 }, { opacity: 1, x: 0, duration: 0.6, ease: "expo.out" }, 4.961);
+    ring("#p09-s1", 5.461, 0.85);
+    ring("#p09-s2", 6.357, 0.85);
+    ring("#p09-s3", 7.253);
+
+    window.__timelines["p09"] = tl;
+  </script>
+</template>

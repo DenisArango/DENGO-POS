@@ -23,33 +23,33 @@ datasource db {
 // ── Models ─────────────────────────────────────────────────────────────────
 
 model Branch {
-  id             String   @id @default(cuid()) @map("ID") @db.VarChar(36)
-  name           String   @map("NAME") @db.VarChar(150)
-  code           String   @unique @map("CODE") @db.VarChar(20)
-  type           String   @default("branch") @map("TYPE") @db.VarChar(20)
-  address        String   @default("") @map("ADDRESS") @db.VarChar(255)
-  city           String   @default("") @map("CITY") @db.VarChar(100)
-  phone          String   @default("") @map("PHONE") @db.VarChar(30)
-  email          String   @default("") @map("EMAIL") @db.VarChar(150)
-  manager        String   @default("") @map("MANAGER") @db.VarChar(150)
-  status         String   @default("active") @map("STATUS") @db.VarChar(20)
-  openTime       String   @default("08:00") @map("OPEN_TIME") @db.VarChar(5)
-  closeTime      String   @default("20:00") @map("CLOSE_TIME") @db.VarChar(5)
-  currency       String   @default("GTQ") @map("CURRENCY") @db.VarChar(10)
-  timezone       String   @default("America/Guatemala") @map("TIMEZONE") @db.VarChar(60)
-  taxRate        Decimal  @default(0.12) @map("TAX_RATE") @db.Decimal(5, 4)
-  printerEnabled Boolean  @default(true) @map("PRINTER_ENABLED")
+  id                         String   @id @default(cuid()) @map("ID") @db.VarChar(36)
+  name                       String   @map("NAME") @db.VarChar(150)
+  code                       String   @unique @map("CODE") @db.VarChar(20)
+  type                       String   @default("branch") @map("TYPE") @db.VarChar(20)
+  address                    String   @default("") @map("ADDRESS") @db.VarChar(255)
+  city                       String   @default("") @map("CITY") @db.VarChar(100)
+  phone                      String   @default("") @map("PHONE") @db.VarChar(30)
+  email                      String   @default("") @map("EMAIL") @db.VarChar(150)
+  manager                    String   @default("") @map("MANAGER") @db.VarChar(150)
+  status                     String   @default("active") @map("STATUS") @db.VarChar(20)
+  openTime                   String   @default("08:00") @map("OPEN_TIME") @db.VarChar(5)
+  closeTime                  String   @default("20:00") @map("CLOSE_TIME") @db.VarChar(5)
+  currency                   String   @default("GTQ") @map("CURRENCY") @db.VarChar(10)
+  timezone                   String   @default("America/Guatemala") @map("TIMEZONE") @db.VarChar(60)
+  taxRate                    Decimal  @default(0.12) @map("TAX_RATE") @db.Decimal(5, 4)
+  printerEnabled             Boolean  @default(true) @map("PRINTER_ENABLED")
   // Printable width of this branch's receipt printer, in mm — 55/58 and 80 are
   // the common thermal roll widths; the print CSS reads this at runtime via
   // `@page { size: <n>mm auto }`, so a different printer is a settings change,
   // never a code change.
-  receiptWidthMm Int      @default(55) @map("RECEIPT_WIDTH_MM")
+  receiptWidthMm             Int      @default(55) @map("RECEIPT_WIDTH_MM")
   // Factura (Guatemala FEL) sequential numbering — one counter per branch.
   // invoiceNextNumber is incremented inside the same transaction that
   // creates an invoiced sale, so numbers are never skipped or reused even
   // under concurrent sales. See Sale.requiresInvoice / lib/fel.ts.
-  invoiceSeries     String   @default("A") @map("INVOICE_SERIES") @db.VarChar(10)
-  invoiceNextNumber Int      @default(1) @map("INVOICE_NEXT_NUMBER")
+  invoiceSeries              String   @default("A") @map("INVOICE_SERIES") @db.VarChar(10)
+  invoiceNextNumber          Int      @default(1) @map("INVOICE_NEXT_NUMBER")
   // Plain receipt correlativo (Sale.invoiceNumber) — separate from the FEL
   // counter above, which is reserved for the formal electronic-invoice
   // sequence once FEL is actually turned on. This is just "RECIBO-1,
@@ -57,88 +57,95 @@ model Branch {
   // regardless of FEL status, replacing a `FAC-${Date.now()}` id that was
   // needlessly long for a plain receipt. Empty series = no prefix configured
   // yet, falls back to "REC".
-  receiptSeries     String   @default("") @map("RECEIPT_SERIES") @db.VarChar(10)
-  receiptNextNumber Int      @default(1) @map("RECEIPT_NEXT_NUMBER")
+  receiptSeries              String   @default("") @map("RECEIPT_SERIES") @db.VarChar(10)
+  receiptNextNumber          Int      @default(1) @map("RECEIPT_NEXT_NUMBER")
   // Onboarding aid: while a client runs DENGO in parallel with their old
   // Excel/external report, this turns on an optional field at cash-register
   // close to enter that report's total and print the gap against DENGO's own
   // total — meant to be switched off once they trust the system.
-  salesReconciliationEnabled Boolean @default(false) @map("SALES_RECONCILIATION_ENABLED")
+  salesReconciliationEnabled Boolean  @default(false) @map("SALES_RECONCILIATION_ENABLED")
   // Company / branding per branch
-  logo           String?  @map("LOGO")
+  logo                       String?  @map("LOGO")
   // A full-width header image (membrete) printed across the top of a
   // Cotización PDF/print, above the logo+company-info block — separate from
   // `logo` since a letterhead is typically a wide banner graphic (often
   // already including the company name/contact info baked in), not the
   // square/round icon `logo` is used as elsewhere (receipts, the sidebar).
-  quotationLetterhead String? @map("QUOTATION_LETTERHEAD")
-  companyName    String?  @map("COMPANY_NAME") @db.VarChar(150)
-  companyTaxId   String?  @map("COMPANY_TAX_ID") @db.VarChar(30)
-  companyTagline String?  @map("COMPANY_TAGLINE") @db.VarChar(200)
-  companyWebsite String?  @map("COMPANY_WEBSITE") @db.VarChar(150)
+  quotationLetterhead        String?  @map("QUOTATION_LETTERHEAD")
+  companyName                String?  @map("COMPANY_NAME") @db.VarChar(150)
+  companyTaxId               String?  @map("COMPANY_TAX_ID") @db.VarChar(30)
+  companyTagline             String?  @map("COMPANY_TAGLINE") @db.VarChar(200)
+  companyWebsite             String?  @map("COMPANY_WEBSITE") @db.VarChar(150)
   // One shared handle/name printed on the receipt next to the Facebook,
   // Instagram and TikTok icons together — the client uses the same name on
   // all three, so one field beats asking them to retype it per network.
-  socialMediaName String? @map("SOCIAL_MEDIA_NAME") @db.VarChar(100)
-  defaultCustomerId String? @map("DEFAULT_CUSTOMER_ID") @db.VarChar(36) // auto-selected in POS so a sale is never started with no customer
-  createdAt      DateTime @default(now()) @map("CREATED_AT")
-  updatedAt      DateTime @updatedAt @map("UPDATED_AT")
+  socialMediaName            String?  @map("SOCIAL_MEDIA_NAME") @db.VarChar(100)
+  defaultCustomerId          String?  @map("DEFAULT_CUSTOMER_ID") @db.VarChar(36) // auto-selected in POS so a sale is never started with no customer
+  // FEL: each SAT establishment is its own "empresa" in FELplex. Null = use
+  // FELPLEX_ENTITY_ID from the environment (single-establishment businesses).
+  felEntityId                String?  @map("FEL_ENTITY_ID") @db.VarChar(60)
+  felEstablishmentCode       String?  @map("FEL_ESTABLISHMENT_CODE") @db.VarChar(10) // código de establecimiento en la SAT (referencia)
+  createdAt                  DateTime @default(now()) @map("CREATED_AT")
+  updatedAt                  DateTime @updatedAt @map("UPDATED_AT")
 
-  users          User[]
-  userBranches   UserBranch[]
-  inventory      Inventory[]
-  sales          Sale[]
-  cashRegisters  CashRegister[]
+  users                   User[]
+  userBranches            UserBranch[]
+  inventory               Inventory[]
+  sales                   Sale[]
+  cashRegisters           CashRegister[]
   cashRegisterDefinitions CashRegisterDefinition[]
-  transfersFrom  Transfer[]      @relation("FromBranch")
-  transfersTo    Transfer[]      @relation("ToBranch")
-  quotations     Quotation[]
-  stockMovements StockMovement[]
-  salesGoals     SalesGoal[]
-  inventoryCounts InventoryCount[]
-  defaultCustomer Customer? @relation("DefaultCustomer", fields: [defaultCustomerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  transfersFrom           Transfer[]               @relation("FromBranch")
+  transfersTo             Transfer[]               @relation("ToBranch")
+  quotations              Quotation[]
+  stockMovements          StockMovement[]
+  salesGoals              SalesGoal[]
+  inventoryCounts         InventoryCount[]
+  defaultCustomer         Customer?                @relation("DefaultCustomer", fields: [defaultCustomerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("BRANCHES")
 }
 
 model User {
-  id           String   @id @default(cuid()) @map("ID") @db.VarChar(36)
-  email        String   @unique @map("EMAIL") @db.VarChar(150)
-  name         String   @map("NAME") @db.VarChar(150)
-  passwordHash String   @map("PASSWORD_HASH") @db.VarChar(255)
-  role         String   @map("ROLE") @db.VarChar(30)   // ADMIN | AUDITOR | INVENTORY_CONTROL | OPERATOR — coarse role, still used for branch-scoping and the ADMIN bypass
-  customRoleId String?  @map("CUSTOM_ROLE_ID") @db.VarChar(36) // optional fine-grained permission set (see Role); when unset, permissions default to the base `role`'s built-in set
-  branchId     String   @map("BRANCH_ID") @db.VarChar(36) // "home" branch — used for branch-scoping when the user hasn't switched; see lib/branch-scope.ts
-  avatarUrl    String?  @map("AVATAR_URL")
+  id                  String    @id @default(cuid()) @map("ID") @db.VarChar(36)
+  email               String    @unique @map("EMAIL") @db.VarChar(150)
+  name                String    @map("NAME") @db.VarChar(150)
+  passwordHash        String    @map("PASSWORD_HASH") @db.VarChar(255)
+  role                String    @map("ROLE") @db.VarChar(30) // ADMIN | AUDITOR | INVENTORY_CONTROL | OPERATOR — coarse role, still used for branch-scoping and the ADMIN bypass
+  customRoleId        String?   @map("CUSTOM_ROLE_ID") @db.VarChar(36) // optional fine-grained permission set (see Role); when unset, permissions default to the base `role`'s built-in set
+  branchId            String    @map("BRANCH_ID") @db.VarChar(36) // "home" branch — used for branch-scoping when the user hasn't switched; see lib/branch-scope.ts
+  avatarUrl           String?   @map("AVATAR_URL")
   failedLoginAttempts Int       @default(0) @map("FAILED_LOGIN_ATTEMPTS")
   lockedUntil         DateTime? @map("LOCKED_UNTIL") // set after too many failed attempts; login rejected until this passes
-  isActive     Boolean  @default(true) @map("IS_ACTIVE")
-  createdAt    DateTime @default(now()) @map("CREATED_AT")
-  updatedAt    DateTime @updatedAt @map("UPDATED_AT")
+  isActive            Boolean   @default(true) @map("IS_ACTIVE")
+  createdAt           DateTime  @default(now()) @map("CREATED_AT")
+  updatedAt           DateTime  @updatedAt @map("UPDATED_AT")
 
-  customRole          Role?           @relation(fields: [customRoleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  branch              Branch          @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  additionalBranches  UserBranch[]
-  sales               Sale[]          @relation("CashierSales")
-  voidedSales         Sale[]          @relation("VoidedSales")
-  cashRegistersOpened CashRegister[]  @relation("OpenedBy")
-  cashRegistersClosed CashRegister[]  @relation("ClosedBy")
-  cashMovements       CashMovement[]
-  requestedTransfers  Transfer[]      @relation("RequestedBy")
-  approvedTransfers   Transfer[]      @relation("ApprovedBy")
-  receivedTransfers   Transfer[]      @relation("ReceivedByUser")
-  cancelledTransfers  Transfer[]      @relation("CancelledTransfers")
-  quotations          Quotation[]
-  stockMovements      StockMovement[]
-  auditLogs           AuditLog[]
-  loginHistory        LoginHistory[]
-  priceHistory        PriceHistory[]
-  creditPayments      CreditPayment[]
-  teacher              Teacher?
-  approvedPortalOrders    PortalOrder[]             @relation("ApprovedPortalOrders")
-  purchaseTrackingUpdates PortalPurchaseTracking[]  @relation("UpdatedByUser")
-  sentMessages            InternalMessage[]         @relation("SentMessages")
-  receivedMessages        InternalMessage[]         @relation("ReceivedMessages")
+  customRole              Role?                    @relation(fields: [customRoleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  branch                  Branch                   @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  additionalBranches      UserBranch[]
+  sales                   Sale[]                   @relation("CashierSales")
+  voidedSales             Sale[]                   @relation("VoidedSales")
+  creditNotes             CreditNote[]             @relation("CreditNoteCreatedBy")
+  cashRegistersOpened     CashRegister[]           @relation("OpenedBy")
+  cashRegistersClosed     CashRegister[]           @relation("ClosedBy")
+  cashMovements           CashMovement[]
+  requestedTransfers      Transfer[]               @relation("RequestedBy")
+  approvedTransfers       Transfer[]               @relation("ApprovedBy")
+  receivedTransfers       Transfer[]               @relation("ReceivedByUser")
+  cancelledTransfers      Transfer[]               @relation("CancelledTransfers")
+  quotations              Quotation[]
+  stockMovements          StockMovement[]
+  auditLogs               AuditLog[]
+  loginHistory            LoginHistory[]
+  priceHistory            PriceHistory[]
+  creditPayments          CreditPayment[]
+  creditChargesCreated    CreditCharge[]           @relation("CreditChargeCreatedBy")
+  creditChargesVoided     CreditCharge[]           @relation("CreditChargeVoidedBy")
+  teacher                 Teacher?
+  approvedPortalOrders    PortalOrder[]            @relation("ApprovedPortalOrders")
+  purchaseTrackingUpdates PortalPurchaseTracking[] @relation("UpdatedByUser")
+  sentMessages            InternalMessage[]        @relation("SentMessages")
+  receivedMessages        InternalMessage[]        @relation("ReceivedMessages")
   pushSubscriptions       UserPushSubscription[]
   salesGoalsSet           SalesGoal[]
   inventoryCounts         InventoryCount[]
@@ -152,21 +159,21 @@ model User {
 // is an optional, additional named permission set an admin creates and
 // assigns to specific users (User.customRoleId) to override that default.
 model Role {
-  id          String   @id @default(cuid()) @map("ID") @db.VarChar(36)
-  name        String   @unique @map("NAME") @db.VarChar(60)
-  description String?  @map("DESCRIPTION") @db.VarChar(300)
-  isSystem    Boolean  @default(false) @map("IS_SYSTEM") // seeded built-in role; name is locked but permissions can still be edited
+  id              String   @id @default(cuid()) @map("ID") @db.VarChar(36)
+  name            String   @unique @map("NAME") @db.VarChar(60)
+  description     String?  @map("DESCRIPTION") @db.VarChar(300)
+  isSystem        Boolean  @default(false) @map("IS_SYSTEM") // seeded built-in role; name is locked but permissions can still be edited
   // Optional daily login window for this role — checked once at POST
   // /api/auth/login, never against an already-open session. ADMIN always
   // bypasses this regardless of its own role's settings (same "can never be
   // locked out" philosophy as the permission bypass in lib/permissions.ts).
   // scheduleStart/End are "HH:mm"; scheduleStart > scheduleEnd means the
   // window wraps past midnight (e.g. 22:00-06:00 for an overnight shift).
-  scheduleEnabled Boolean @default(false) @map("SCHEDULE_ENABLED")
-  scheduleStart   String? @map("SCHEDULE_START") @db.VarChar(5)
-  scheduleEnd     String? @map("SCHEDULE_END") @db.VarChar(5)
-  createdAt   DateTime @default(now()) @map("CREATED_AT")
-  updatedAt   DateTime @updatedAt @map("UPDATED_AT")
+  scheduleEnabled Boolean  @default(false) @map("SCHEDULE_ENABLED")
+  scheduleStart   String?  @map("SCHEDULE_START") @db.VarChar(5)
+  scheduleEnd     String?  @map("SCHEDULE_END") @db.VarChar(5)
+  createdAt       DateTime @default(now()) @map("CREATED_AT")
+  updatedAt       DateTime @updatedAt @map("UPDATED_AT")
 
   permissions RolePermission[]
   users       User[]
@@ -202,13 +209,13 @@ model UserBranch {
 }
 
 model Category {
-  id          String    @id @default(cuid()) @map("ID") @db.VarChar(36)
-  name        String    @map("NAME") @db.VarChar(100)
-  description String?   @map("DESCRIPTION") @db.VarChar(500)
-  color       String?   @map("COLOR") @db.VarChar(30)
-  isActive    Boolean   @default(true) @map("IS_ACTIVE")
-  createdAt   DateTime  @default(now()) @map("CREATED_AT")
-  updatedAt   DateTime  @updatedAt @map("UPDATED_AT")
+  id          String   @id @default(cuid()) @map("ID") @db.VarChar(36)
+  name        String   @map("NAME") @db.VarChar(100)
+  description String?  @map("DESCRIPTION") @db.VarChar(500)
+  color       String?  @map("COLOR") @db.VarChar(30)
+  isActive    Boolean  @default(true) @map("IS_ACTIVE")
+  createdAt   DateTime @default(now()) @map("CREATED_AT")
+  updatedAt   DateTime @updatedAt @map("UPDATED_AT")
 
   products Product[]
 
@@ -219,7 +226,7 @@ model ProductUnit {
   id           String   @id @default(cuid()) @map("ID") @db.VarChar(36)
   name         String   @map("NAME") @db.VarChar(60)
   abbreviation String   @map("ABBREVIATION") @db.VarChar(10)
-  type         String   @map("TYPE") @db.VarChar(20)  // DISCRETE | CONTINUOUS
+  type         String   @map("TYPE") @db.VarChar(20) // DISCRETE | CONTINUOUS
   createdAt    DateTime @default(now()) @map("CREATED_AT")
 
   products Product[]
@@ -269,17 +276,17 @@ model Product {
   createdAt   DateTime @default(now()) @map("CREATED_AT")
   updatedAt   DateTime @updatedAt @map("UPDATED_AT")
 
-  category       Category            @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  baseUnit       ProductUnit         @relation(fields: [baseUnitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  variations     ProductVariation[]
-  attributes     ProductAttribute[]
-  altBarcodes    ProductBarcode[]
-  inventory      Inventory[]
-  stockMovements StockMovement[]
-  saleItems      SaleItem[]
-  transferItems  TransferItem[]
-  quotationItems QuotationItem[]
-  priceHistory   PriceHistory[]
+  category            Category                 @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  baseUnit            ProductUnit              @relation(fields: [baseUnitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  variations          ProductVariation[]
+  attributes          ProductAttribute[]
+  altBarcodes         ProductBarcode[]
+  inventory           Inventory[]
+  stockMovements      StockMovement[]
+  saleItems           SaleItem[]
+  transferItems       TransferItem[]
+  quotationItems      QuotationItem[]
+  priceHistory        PriceHistory[]
   portalOrderItems    PortalOrderItem[]
   programOptionItems  ProgramOptionItem[]
   purchaseTracking    PortalPurchaseTracking[]
@@ -340,7 +347,7 @@ model StockMovement {
   id             String   @id @default(cuid()) @map("ID") @db.VarChar(36)
   productId      String   @map("PRODUCT_ID") @db.VarChar(36)
   branchId       String   @map("BRANCH_ID") @db.VarChar(36)
-  type           String   @map("TYPE") @db.VarChar(20)  // IN | OUT | ADJUSTMENT | TRANSFER | SALE | RETURN
+  type           String   @map("TYPE") @db.VarChar(20) // IN | OUT | ADJUSTMENT | TRANSFER | SALE | RETURN
   quantity       Decimal  @map("QUANTITY") @db.Decimal(18, 4)
   quantityBefore Decimal? @map("QUANTITY_BEFORE") @db.Decimal(18, 4)
   quantityAfter  Decimal? @map("QUANTITY_AFTER") @db.Decimal(18, 4)
@@ -421,33 +428,35 @@ model InventoryCountItem {
 }
 
 model Customer {
-  id          String    @id @default(cuid()) @map("ID") @db.VarChar(36)
+  id                 String   @id @default(cuid()) @map("ID") @db.VarChar(36)
   // Optional: a customer can be created with just a name in a busy sale and
   // completed later (Clientes → "Datos incompletos"). Null = consumidor final
   // on documents. Still unique when present.
-  nit         String?   @unique @map("NIT") @db.VarChar(30)
-  name        String    @map("NAME") @db.VarChar(150)
-  email       String?   @map("EMAIL") @db.VarChar(150)
-  phone       String?   @map("PHONE") @db.VarChar(30)
-  address     String?   @map("ADDRESS") @db.VarChar(300)
-  avatarUrl   String?   @map("AVATAR_URL")
-  comments    String?   @map("COMMENTS") // shown to the cashier when this customer is selected in a sale
+  nit                String?  @unique @map("NIT") @db.VarChar(30)
+  name               String   @map("NAME") @db.VarChar(150)
+  email              String?  @map("EMAIL") @db.VarChar(150)
+  phone              String?  @map("PHONE") @db.VarChar(30)
+  address            String?  @map("ADDRESS") @db.VarChar(300)
+  avatarUrl          String?  @map("AVATAR_URL")
+  comments           String?  @map("COMMENTS") // shown to the cashier when this customer is selected in a sale
   // Credit is opt-in per customer (creditEnabled), and only when enabled does
   // creditLimitEnabled decide whether creditLimit caps them or they're unlimited.
   // A plain creditLimit=0 used to double as "no credit" — that conflated "no
   // access" with "zero cap" and had no way to express "credit, no ceiling".
-  creditEnabled      Boolean @default(false) @map("CREDIT_ENABLED")
-  creditLimitEnabled Boolean @default(true)  @map("CREDIT_LIMIT_ENABLED")
-  creditLimit Decimal   @default(0) @map("CREDIT_LIMIT") @db.Decimal(18, 2)
-  creditUsed  Decimal   @default(0) @map("CREDIT_USED") @db.Decimal(18, 2)
-  isActive    Boolean   @default(true) @map("IS_ACTIVE")
-  createdAt   DateTime  @default(now()) @map("CREATED_AT")
-  updatedAt   DateTime  @updatedAt @map("UPDATED_AT")
+  creditEnabled      Boolean  @default(false) @map("CREDIT_ENABLED")
+  creditLimitEnabled Boolean  @default(true) @map("CREDIT_LIMIT_ENABLED")
+  creditLimit        Decimal  @default(0) @map("CREDIT_LIMIT") @db.Decimal(18, 2)
+  creditUsed         Decimal  @default(0) @map("CREDIT_USED") @db.Decimal(18, 2)
+  isActive           Boolean  @default(true) @map("IS_ACTIVE")
+  createdAt          DateTime @default(now()) @map("CREATED_AT")
+  updatedAt          DateTime @updatedAt @map("UPDATED_AT")
 
-  sales         Sale[]
-  quotations    Quotation[]
-  creditPayments CreditPayment[]
-  defaultForBranches Branch[] @relation("DefaultCustomer")
+  sales              Sale[]
+  quotations         Quotation[]
+  coupons            PromotionCoupon[]
+  creditPayments     CreditPayment[]
+  creditCharges      CreditCharge[]
+  defaultForBranches Branch[]          @relation("DefaultCustomer")
 
   @@map("CUSTOMERS")
 }
@@ -508,40 +517,40 @@ model CashRegisterDefinition {
 }
 
 model CashRegister {
-  id             String   @id @default(cuid()) @map("ID") @db.VarChar(36)
-  branchId       String   @map("BRANCH_ID") @db.VarChar(36)
-  name           String   @default("Caja") @map("NAME") @db.VarChar(60)
-  registerNumber String   @default("1") @map("REGISTER_NUMBER") @db.VarChar(20)
-  openedById     String   @map("OPENED_BY_ID") @db.VarChar(36)
-  closedById     String?  @map("CLOSED_BY_ID") @db.VarChar(36)
-  openedAt       DateTime @default(now()) @map("OPENED_AT")
-  closedAt       DateTime? @map("CLOSED_AT")
-  initialAmount  Decimal  @map("INITIAL_AMOUNT") @db.Decimal(18, 2)
-  finalAmount    Decimal? @map("FINAL_AMOUNT") @db.Decimal(18, 2)
-  expectedAmount Decimal? @map("EXPECTED_AMOUNT") @db.Decimal(18, 2)
-  difference     Decimal? @map("DIFFERENCE") @db.Decimal(18, 2)
+  id                      String    @id @default(cuid()) @map("ID") @db.VarChar(36)
+  branchId                String    @map("BRANCH_ID") @db.VarChar(36)
+  name                    String    @default("Caja") @map("NAME") @db.VarChar(60)
+  registerNumber          String    @default("1") @map("REGISTER_NUMBER") @db.VarChar(20)
+  openedById              String    @map("OPENED_BY_ID") @db.VarChar(36)
+  closedById              String?   @map("CLOSED_BY_ID") @db.VarChar(36)
+  openedAt                DateTime  @default(now()) @map("OPENED_AT")
+  closedAt                DateTime? @map("CLOSED_AT")
+  initialAmount           Decimal   @map("INITIAL_AMOUNT") @db.Decimal(18, 2)
+  finalAmount             Decimal?  @map("FINAL_AMOUNT") @db.Decimal(18, 2)
+  expectedAmount          Decimal?  @map("EXPECTED_AMOUNT") @db.Decimal(18, 2)
+  difference              Decimal?  @map("DIFFERENCE") @db.Decimal(18, 2)
   // Optional sales-reconciliation slip (Branch.salesReconciliationEnabled) —
   // "Total Excel" entered by the cashier/admin plus the computed gap against
   // DENGO's own total for that register's session, for onboarding parallel-run checks.
-  externalSalesTotal      Decimal? @map("EXTERNAL_SALES_TOTAL") @db.Decimal(18, 2)
-  externalSalesDifference Decimal? @map("EXTERNAL_SALES_DIFFERENCE") @db.Decimal(18, 2)
-  status         String   @default("OPEN") @map("STATUS") @db.VarChar(10)  // OPEN | CLOSED
+  externalSalesTotal      Decimal?  @map("EXTERNAL_SALES_TOTAL") @db.Decimal(18, 2)
+  externalSalesDifference Decimal?  @map("EXTERNAL_SALES_DIFFERENCE") @db.Decimal(18, 2)
+  status                  String    @default("OPEN") @map("STATUS") @db.VarChar(10) // OPEN | CLOSED
   // Idempotency key for a close attempted while offline (see lib/offlineSync.ts)
   // — a retried sync must not recompute/overwrite an already-applied close.
-  closeRequestId String?  @unique @map("CLOSE_REQUEST_ID") @db.VarChar(36)
-  totalSales     Decimal  @default(0) @map("TOTAL_SALES") @db.Decimal(18, 2)
-  salesCount     Int      @default(0) @map("SALES_COUNT")
-  cashSales      Decimal  @default(0) @map("CASH_SALES") @db.Decimal(18, 2)
-  cardSales      Decimal  @default(0) @map("CARD_SALES") @db.Decimal(18, 2)
-  transferSales  Decimal  @default(0) @map("TRANSFER_SALES") @db.Decimal(18, 2)
-  createdAt      DateTime @default(now()) @map("CREATED_AT")
-  updatedAt      DateTime @updatedAt @map("UPDATED_AT")
+  closeRequestId          String?   @unique @map("CLOSE_REQUEST_ID") @db.VarChar(36)
+  totalSales              Decimal   @default(0) @map("TOTAL_SALES") @db.Decimal(18, 2)
+  salesCount              Int       @default(0) @map("SALES_COUNT")
+  cashSales               Decimal   @default(0) @map("CASH_SALES") @db.Decimal(18, 2)
+  cardSales               Decimal   @default(0) @map("CARD_SALES") @db.Decimal(18, 2)
+  transferSales           Decimal   @default(0) @map("TRANSFER_SALES") @db.Decimal(18, 2)
+  createdAt               DateTime  @default(now()) @map("CREATED_AT")
+  updatedAt               DateTime  @updatedAt @map("UPDATED_AT")
 
-  branch    Branch         @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  openedBy  User           @relation("OpenedBy", fields: [openedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  closedBy  User?          @relation("ClosedBy", fields: [closedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  movements CashMovement[]
-  sales     Sale[]
+  branch         Branch          @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  openedBy       User            @relation("OpenedBy", fields: [openedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  closedBy       User?           @relation("ClosedBy", fields: [closedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  movements      CashMovement[]
+  sales          Sale[]
   creditPayments CreditPayment[]
 
   @@index([branchId, status])
@@ -549,15 +558,15 @@ model CashRegister {
 }
 
 model CashMovement {
-  id             String   @id @default(cuid()) @map("ID") @db.VarChar(36)
-  cashRegisterId String   @map("CASH_REGISTER_ID") @db.VarChar(36)
-  type           String   @map("TYPE") @db.VarChar(10)  // INCOME | EXPENSE
-  amount         Decimal  @map("AMOUNT") @db.Decimal(18, 2)
-  description    String   @map("DESCRIPTION") @db.VarChar(500)
-  performedById  String   @map("PERFORMED_BY_ID") @db.VarChar(36)
-  createdAt      DateTime @default(now()) @map("CREATED_AT")
+  id              String   @id @default(cuid()) @map("ID") @db.VarChar(36)
+  cashRegisterId  String   @map("CASH_REGISTER_ID") @db.VarChar(36)
+  type            String   @map("TYPE") @db.VarChar(10) // INCOME | EXPENSE
+  amount          Decimal  @map("AMOUNT") @db.Decimal(18, 2)
+  description     String   @map("DESCRIPTION") @db.VarChar(500)
+  performedById   String   @map("PERFORMED_BY_ID") @db.VarChar(36)
+  createdAt       DateTime @default(now()) @map("CREATED_AT")
   // Idempotency key for a movement recorded while offline (see lib/offlineSync.ts).
-  clientRequestId String? @unique @map("CLIENT_REQUEST_ID") @db.VarChar(36)
+  clientRequestId String?  @unique @map("CLIENT_REQUEST_ID") @db.VarChar(36)
 
   cashRegister CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   performedBy  User         @relation(fields: [performedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -573,15 +582,15 @@ model CashMovement {
 // (this model + the actual sales total for that month) is open to any
 // authenticated user with access to the branch.
 model SalesGoal {
-  id           String   @id @default(cuid()) @map("ID") @db.VarChar(36)
-  branchId     String   @map("BRANCH_ID") @db.VarChar(36)
-  year         Int      @map("YEAR")
-  month        Int      @map("MONTH") // 1-12, business-local (America/Guatemala)
-  targetAmount Decimal  @map("TARGET_AMOUNT") @db.Decimal(18, 2)
+  id              String   @id @default(cuid()) @map("ID") @db.VarChar(36)
+  branchId        String   @map("BRANCH_ID") @db.VarChar(36)
+  year            Int      @map("YEAR")
+  month           Int      @map("MONTH") // 1-12, business-local (America/Guatemala)
+  targetAmount    Decimal  @map("TARGET_AMOUNT") @db.Decimal(18, 2)
   // Optional name shown only when a branch has more than one goal for the
   // same month (split by caja) — e.g. "Mostrador" vs "Mayoreo". Null for the
   // ordinary single branch-wide goal.
-  label        String?  @map("LABEL") @db.VarChar(60)
+  label           String?  @map("LABEL") @db.VarChar(60)
   // Which cash registers (CashRegisterDefinition.registerNumber) this goal's
   // sales are measured against. Empty = the whole branch — splitting by caja
   // is opt-in, so a branch keeps exactly one goal row per month (today's
@@ -590,9 +599,9 @@ model SalesGoal {
   // branch legitimately has several rows for the same month; the API layer
   // enforces at most one empty-registerNumbers ("general") row per month.
   registerNumbers String[] @default([]) @map("REGISTER_NUMBERS")
-  createdById  String   @map("CREATED_BY_ID") @db.VarChar(36) // who last set this target
-  createdAt    DateTime @default(now()) @map("CREATED_AT")
-  updatedAt    DateTime @updatedAt @map("UPDATED_AT")
+  createdById     String   @map("CREATED_BY_ID") @db.VarChar(36) // who last set this target
+  createdAt       DateTime @default(now()) @map("CREATED_AT")
+  updatedAt       DateTime @updatedAt @map("UPDATED_AT")
 
   branch    Branch @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   createdBy User   @relation(fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -601,24 +610,24 @@ model SalesGoal {
 }
 
 model Sale {
-  id             String    @id @default(cuid()) @map("ID") @db.VarChar(36)
-  invoiceNumber  String    @unique @map("INVOICE_NUMBER") @db.VarChar(50)
+  id                     String    @id @default(cuid()) @map("ID") @db.VarChar(36)
+  invoiceNumber          String    @unique @map("INVOICE_NUMBER") @db.VarChar(50)
   // Client-generated UUID, set only for sales created via the offline queue
   // (see dengo-frontend/src/lib/offlineDb.ts). Lets a retried sync POST be
   // safely replayed — if a sale with this id already exists, the backend
   // returns it as-is instead of creating a second one (network can time out
   // *after* the server committed but *before* the client saw the response).
-  clientRequestId String? @unique @map("CLIENT_REQUEST_ID") @db.VarChar(64)
-  branchId       String    @map("BRANCH_ID") @db.VarChar(36)
-  cashierId      String    @map("CASHIER_ID") @db.VarChar(36)
-  customerId     String?   @map("CUSTOMER_ID") @db.VarChar(36)
-  cashRegisterId String?   @map("CASH_REGISTER_ID") @db.VarChar(36)
-  subtotal       Decimal   @map("SUBTOTAL") @db.Decimal(18, 2)
-  tax            Decimal   @default(0) @map("TAX") @db.Decimal(18, 2)
-  discount       Decimal   @default(0) @map("DISCOUNT") @db.Decimal(18, 2)
-  total          Decimal   @map("TOTAL") @db.Decimal(18, 2)
-  paymentMethod          String    @map("PAYMENT_METHOD") @db.VarChar(20)  // CASH | CARD | TRANSFER | MIXED | CREDIT
-  saleType               String    @default("CASH") @map("SALE_TYPE") @db.VarChar(10)  // CASH | CREDIT
+  clientRequestId        String?   @unique @map("CLIENT_REQUEST_ID") @db.VarChar(64)
+  branchId               String    @map("BRANCH_ID") @db.VarChar(36)
+  cashierId              String    @map("CASHIER_ID") @db.VarChar(36)
+  customerId             String?   @map("CUSTOMER_ID") @db.VarChar(36)
+  cashRegisterId         String?   @map("CASH_REGISTER_ID") @db.VarChar(36)
+  subtotal               Decimal   @map("SUBTOTAL") @db.Decimal(18, 2)
+  tax                    Decimal   @default(0) @map("TAX") @db.Decimal(18, 2)
+  discount               Decimal   @default(0) @map("DISCOUNT") @db.Decimal(18, 2)
+  total                  Decimal   @map("TOTAL") @db.Decimal(18, 2)
+  paymentMethod          String    @map("PAYMENT_METHOD") @db.VarChar(20) // CASH | CARD | TRANSFER | MIXED | CREDIT
+  saleType               String    @default("CASH") @map("SALE_TYPE") @db.VarChar(10) // CASH | CREDIT
   dueDate                DateTime? @map("DUE_DATE")
   isPaid                 Boolean   @default(true) @map("IS_PAID")
   paidAmount             Decimal?  @map("PAID_AMOUNT") @db.Decimal(18, 2)
@@ -655,15 +664,41 @@ model Sale {
   felAuthNumber    String?   @map("FEL_AUTH_NUMBER") @db.VarChar(60)
   felCertifiedAt   DateTime? @map("FEL_CERTIFIED_AT")
   felError         String?   @map("FEL_ERROR") @db.VarChar(500)
+  // What the certifier/SAT returned (lib/fel). felAuthNumber above is the SAT
+  // "número de autorización"; serie/número here are the SAT's own (not the
+  // internal invoiceSeries/invoiceSeqNumber), and are what the printed
+  // representation of the DTE must show.
+  felDocType       String?   @map("FEL_DOC_TYPE") @db.VarChar(10) // FACT | FPEQ | FAPE | …
+  felSatSerie      String?   @map("FEL_SAT_SERIE") @db.VarChar(40)
+  felSatNumber     String?   @map("FEL_SAT_NUMBER") @db.VarChar(40)
+  felPdfUrl        String?   @map("FEL_PDF_URL") @db.VarChar(500)
+  felXmlUrl        String?   @map("FEL_XML_URL") @db.VarChar(500)
+  felCertifierName String?   @map("FEL_CERTIFIER_NAME") @db.VarChar(150)
+  felCertifierNit  String?   @map("FEL_CERTIFIER_NIT") @db.VarChar(30)
+  felEnvironment   String?   @map("FEL_ENVIRONMENT") @db.VarChar(20) // mock | stage | production — anything but production is not a valid tax document
+  felAttempts      Int       @default(0) @map("FEL_ATTEMPTS")
+  felLastAttemptAt DateTime? @map("FEL_LAST_ATTEMPT_AT")
+  // Annulment of the DTE when the sale is voided (SAT allows it until the end
+  // of the month after issue).
+  felVoidStatus    String    @default("NONE") @map("FEL_VOID_STATUS") @db.VarChar(20) // NONE | VOIDED | FAILED
+  felVoidedAt      DateTime? @map("FEL_VOIDED_AT")
+  felVoidError     String?   @map("FEL_VOID_ERROR") @db.VarChar(500)
 
-  branch          Branch          @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  cashier         User            @relation("CashierSales", fields: [cashierId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  customer        Customer?       @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  cashRegister    CashRegister?   @relation(fields: [cashRegisterId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  voidedBy        User?           @relation("VoidedSales", fields: [voidedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  items           SaleItem[]
-  creditPayments  CreditPayment[]
-  quotation       Quotation?
+  branch         Branch           @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cashier        User             @relation("CashierSales", fields: [cashierId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customer       Customer?        @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cashRegister   CashRegister?    @relation(fields: [cashRegisterId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  voidedBy       User?            @relation("VoidedSales", fields: [voidedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  // Website coupon redeemed on this sale (see PromotionCoupon). The
+  // discount is spread over the lines it applies to (SaleItem.promoDiscount)
+  // so per-product revenue and profit stay correct.
+  couponId       String?          @unique @map("COUPON_ID") @db.VarChar(36)
+  promoDiscount  Decimal?         @map("PROMO_DISCOUNT") @db.Decimal(18, 2)
+  coupon         PromotionCoupon? @relation("CouponSale", fields: [couponId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  items          SaleItem[]
+  creditPayments CreditPayment[]
+  creditNotes    CreditNote[]
+  quotation      Quotation?
 
   @@index([branchId, createdAt])
   @@index([cashRegisterId])
@@ -673,7 +708,7 @@ model Sale {
 }
 
 model CreditPayment {
-  id          String   @id @default(cuid()) @map("ID") @db.VarChar(36)
+  id                     String   @id @default(cuid()) @map("ID") @db.VarChar(36)
   // Optional on purpose: an abono is always against the customer's ACCOUNT
   // (customerId, always set), not against a document. saleId is set only
   // when this abono happened to be allocated against a real Sale row that
@@ -689,7 +724,7 @@ model CreditPayment {
   // customer is still reachable via sale.customerId.
   customerId             String?  @map("CUSTOMER_ID") @db.VarChar(36)
   amount                 Decimal  @map("AMOUNT") @db.Decimal(18, 2)
-  paymentMethod          String   @map("PAYMENT_METHOD") @db.VarChar(20)  // CASH | CARD | TRANSFER
+  paymentMethod          String   @map("PAYMENT_METHOD") @db.VarChar(20) // CASH | CARD | TRANSFER
   transferDocumentNumber String?  @map("TRANSFER_DOCUMENT_NUMBER") @db.VarChar(100)
   transferBank           String?  @map("TRANSFER_BANK") @db.VarChar(100)
   notes                  String?  @map("NOTES") @db.VarChar(500)
@@ -708,28 +743,63 @@ model CreditPayment {
   @@map("CREDIT_PAYMENTS")
 }
 
+// A charge to a customer's credit account with no sale behind it: debt
+// carried over from before DENGO (the import didn't bring the balances) or a
+// correction. It raises customer.creditUsed like a credit sale does, shows in
+// the account statement (GET /api/customers/:id/account) and is paid off by
+// ordinary abonos. Gated by customers.addCharge (no default role has it).
+// Never deleted: a mistake is voided, which takes the amount back off the
+// balance and keeps the record for the audit trail.
+model CreditCharge {
+  id          String    @id @default(cuid()) @map("ID") @db.VarChar(36)
+  customerId  String    @map("CUSTOMER_ID") @db.VarChar(36)
+  amount      Decimal   @map("AMOUNT") @db.Decimal(18, 2)
+  concept     String    @map("CONCEPT") @db.VarChar(200)
+  reference   String?   @map("REFERENCE") @db.VarChar(100) // e.g. the old system's invoice or ledger number
+  chargeDate  DateTime  @map("CHARGE_DATE") // when the debt arose, which may be before it was entered here
+  dueDate     DateTime? @map("DUE_DATE")
+  createdById String    @map("CREATED_BY_ID") @db.VarChar(36)
+  createdAt   DateTime  @default(now()) @map("CREATED_AT")
+  isVoided    Boolean   @default(false) @map("IS_VOIDED")
+  voidedById  String?   @map("VOIDED_BY_ID") @db.VarChar(36)
+  voidedAt    DateTime? @map("VOIDED_AT")
+  voidReason  String?   @map("VOID_REASON") @db.VarChar(500)
+
+  customer  Customer @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy User     @relation("CreditChargeCreatedBy", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  voidedBy  User?    @relation("CreditChargeVoidedBy", fields: [voidedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([customerId])
+  @@map("CREDIT_CHARGES")
+}
+
 model SaleItem {
-  id          String   @id @default(cuid()) @map("ID") @db.VarChar(36)
-  saleId      String   @map("SALE_ID") @db.VarChar(36)
+  id            String   @id @default(cuid()) @map("ID") @db.VarChar(36)
+  saleId        String   @map("SALE_ID") @db.VarChar(36)
   // Null = a product sold that isn't in the catalog (typed in at the POS,
   // or a custom quotation line). It has no stock or per-product tracking;
   // customName is its name. Never creates a Product row.
-  productId   String?  @map("PRODUCT_ID") @db.VarChar(36)
-  customName  String?  @map("CUSTOM_NAME") @db.VarChar(200)
-  variationId String?  @map("VARIATION_ID") @db.VarChar(36)
-  quantity    Decimal  @map("QUANTITY") @db.Decimal(18, 4)
-  unitPrice   Decimal  @map("UNIT_PRICE") @db.Decimal(18, 2)
-  discount    Decimal  @default(0) @map("DISCOUNT") @db.Decimal(5, 4)
-  total       Decimal  @map("TOTAL") @db.Decimal(18, 2)
+  productId     String?  @map("PRODUCT_ID") @db.VarChar(36)
+  customName    String?  @map("CUSTOM_NAME") @db.VarChar(200)
+  variationId   String?  @map("VARIATION_ID") @db.VarChar(36)
+  quantity      Decimal  @map("QUANTITY") @db.Decimal(18, 4)
+  unitPrice     Decimal  @map("UNIT_PRICE") @db.Decimal(18, 2)
+  discount      Decimal  @default(0) @map("DISCOUNT") @db.Decimal(5, 4)
+  total         Decimal  @map("TOTAL") @db.Decimal(18, 2)
   // Cost of ONE sold unit (product cost × presentation factor) frozen at
   // sale time, so editing a product's cost later never rewrites past
   // profit. Null on sales made before this column existed — reports fall
   // back to the product's current cost for those (see lib/saleCost.ts).
-  unitCost    Decimal? @map("UNIT_COST") @db.Decimal(18, 4)
+  // Part of this line's `total` reduction that came from the sale's coupon
+  // (on top of the manual `discount`). 0/null = no promotion on this line.
+  promoDiscount Decimal? @map("PROMO_DISCOUNT") @db.Decimal(18, 2)
+  unitCost      Decimal? @map("UNIT_COST") @db.Decimal(18, 4)
 
   sale      Sale              @relation(fields: [saleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   product   Product?          @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   variation ProductVariation? @relation(fields: [variationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  creditNoteItems CreditNoteItem[]
 
   @@index([saleId])
   @@index([productId])
@@ -740,7 +810,7 @@ model Transfer {
   id            String    @id @default(cuid()) @map("ID") @db.VarChar(36)
   fromBranchId  String    @map("FROM_BRANCH_ID") @db.VarChar(36)
   toBranchId    String    @map("TO_BRANCH_ID") @db.VarChar(36)
-  status        String    @default("PENDING") @map("STATUS") @db.VarChar(20)  // PENDING | APPROVED | IN_TRANSIT | RECEIVED | REJECTED | CANCELLED
+  status        String    @default("PENDING") @map("STATUS") @db.VarChar(20) // PENDING | APPROVED | IN_TRANSIT | RECEIVED | REJECTED | CANCELLED
   notes         String?   @map("NOTES")
   requestedById String    @map("REQUESTED_BY_ID") @db.VarChar(36)
   approvedById  String?   @map("APPROVED_BY_ID") @db.VarChar(36)
@@ -767,12 +837,12 @@ model Transfer {
 }
 
 model TransferItem {
-  id         String  @id @default(cuid()) @map("ID") @db.VarChar(36)
-  transferId String  @map("TRANSFER_ID") @db.VarChar(36)
-  productId  String  @map("PRODUCT_ID") @db.VarChar(36)
+  id               String   @id @default(cuid()) @map("ID") @db.VarChar(36)
+  transferId       String   @map("TRANSFER_ID") @db.VarChar(36)
+  productId        String   @map("PRODUCT_ID") @db.VarChar(36)
   // In the presentation's own unit ("2 cajas") when variationId is set —
   // the stock impact is always quantity * conversionFactor base units.
-  quantity   Decimal @map("QUANTITY") @db.Decimal(18, 4)
+  quantity         Decimal  @map("QUANTITY") @db.Decimal(18, 4)
   variationId      String?  @map("VARIATION_ID") @db.VarChar(36)
   // Snapshotted at creation so approve/receive/void always move the same
   // number of base units even if the variation's factor is edited meanwhile.
@@ -780,8 +850,8 @@ model TransferItem {
   // Per presentation unit, snapshotted at creation. Null on transfers made
   // before these columns existed — readers fall back to the product's
   // current cost/basePrice.
-  unitCost   Decimal? @map("UNIT_COST") @db.Decimal(18, 4)
-  unitPrice  Decimal? @map("UNIT_PRICE") @db.Decimal(18, 2)
+  unitCost         Decimal? @map("UNIT_COST") @db.Decimal(18, 4)
+  unitPrice        Decimal? @map("UNIT_PRICE") @db.Decimal(18, 2)
 
   transfer  Transfer          @relation(fields: [transferId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   product   Product           @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -792,21 +862,21 @@ model TransferItem {
 }
 
 model Quotation {
-  id                String    @id @default(cuid()) @map("ID") @db.VarChar(36)
-  quotationNumber   String    @unique @map("QUOTATION_NUMBER") @db.VarChar(30)
-  branchId          String    @map("BRANCH_ID") @db.VarChar(36)
-  customerId        String    @map("CUSTOMER_ID") @db.VarChar(36)
-  subtotal          Decimal   @map("SUBTOTAL") @db.Decimal(18, 2)
-  tax               Decimal   @default(0) @map("TAX") @db.Decimal(18, 2)
-  discount          Decimal   @default(0) @map("DISCOUNT") @db.Decimal(18, 2)
-  total             Decimal   @map("TOTAL") @db.Decimal(18, 2)
-  status            String    @default("DRAFT") @map("STATUS") @db.VarChar(20)  // DRAFT | SENT | ACCEPTED | REJECTED | EXPIRED | CONVERTED | CANCELLED
-  validUntil        DateTime  @map("VALID_UNTIL")
-  notes             String?   @map("NOTES")
-  createdById       String    @map("CREATED_BY_ID") @db.VarChar(36)
-  convertedToSaleId String?   @unique @map("CONVERTED_TO_SALE_ID") @db.VarChar(36)
-  createdAt         DateTime  @default(now()) @map("CREATED_AT")
-  updatedAt         DateTime  @updatedAt @map("UPDATED_AT")
+  id                String   @id @default(cuid()) @map("ID") @db.VarChar(36)
+  quotationNumber   String   @unique @map("QUOTATION_NUMBER") @db.VarChar(30)
+  branchId          String   @map("BRANCH_ID") @db.VarChar(36)
+  customerId        String   @map("CUSTOMER_ID") @db.VarChar(36)
+  subtotal          Decimal  @map("SUBTOTAL") @db.Decimal(18, 2)
+  tax               Decimal  @default(0) @map("TAX") @db.Decimal(18, 2)
+  discount          Decimal  @default(0) @map("DISCOUNT") @db.Decimal(18, 2)
+  total             Decimal  @map("TOTAL") @db.Decimal(18, 2)
+  status            String   @default("DRAFT") @map("STATUS") @db.VarChar(20) // DRAFT | SENT | ACCEPTED | REJECTED | EXPIRED | CONVERTED | CANCELLED
+  validUntil        DateTime @map("VALID_UNTIL")
+  notes             String?  @map("NOTES")
+  createdById       String   @map("CREATED_BY_ID") @db.VarChar(36)
+  convertedToSaleId String?  @unique @map("CONVERTED_TO_SALE_ID") @db.VarChar(36)
+  createdAt         DateTime @default(now()) @map("CREATED_AT")
+  updatedAt         DateTime @updatedAt @map("UPDATED_AT")
 
   branch          Branch          @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   customer        Customer        @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -821,22 +891,22 @@ model Quotation {
 }
 
 model QuotationItem {
-  id          String   @id @default(cuid()) @map("ID") @db.VarChar(36)
-  quotationId String   @map("QUOTATION_ID") @db.VarChar(36)
+  id          String  @id @default(cuid()) @map("ID") @db.VarChar(36)
+  quotationId String  @map("QUOTATION_ID") @db.VarChar(36)
   // Nullable: a line can instead be a one-off item typed directly into this
   // quotation (ej. something the business doesn't normally sell, but wants
   // included just this once) — see customName below. Deliberately NOT
   // backed by a real Product row (even a hidden/inactive one): the client
   // asked specifically that this never show up as a catalog/POS product.
-  productId   String?  @map("PRODUCT_ID") @db.VarChar(36)
-  variationId String?  @map("VARIATION_ID") @db.VarChar(36)
+  productId   String? @map("PRODUCT_ID") @db.VarChar(36)
+  variationId String? @map("VARIATION_ID") @db.VarChar(36)
   // Only set when productId is null — the display name for a custom line,
   // since there's no Product to read a name from.
-  customName  String?  @map("CUSTOM_NAME") @db.VarChar(200)
-  quantity    Decimal  @map("QUANTITY") @db.Decimal(18, 4)
-  unitPrice   Decimal  @map("UNIT_PRICE") @db.Decimal(18, 2)
-  discount    Decimal  @default(0) @map("DISCOUNT") @db.Decimal(5, 4)
-  total       Decimal  @map("TOTAL") @db.Decimal(18, 2)
+  customName  String? @map("CUSTOM_NAME") @db.VarChar(200)
+  quantity    Decimal @map("QUANTITY") @db.Decimal(18, 4)
+  unitPrice   Decimal @map("UNIT_PRICE") @db.Decimal(18, 2)
+  discount    Decimal @default(0) @map("DISCOUNT") @db.Decimal(5, 4)
+  total       Decimal @map("TOTAL") @db.Decimal(18, 2)
 
   quotation Quotation         @relation(fields: [quotationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   product   Product?          @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -932,6 +1002,10 @@ model School {
   departamento String?  @map("DEPARTAMENTO") @db.VarChar(100)
   opfContact   String?  @map("OPF_CONTACT") @db.VarChar(150)
   opfPhone     String?  @map("OPF_PHONE") @db.VarChar(30)
+  // Facturas of portal orders go to the school (usually its OPF), not to the
+  // teacher or the quotation's customer — see lib/fel/service.ts buyerFor().
+  nit          String?  @map("NIT") @db.VarChar(30)
+  invoiceName  String?  @map("INVOICE_NAME") @db.VarChar(200)
   isActive     Boolean  @default(true) @map("IS_ACTIVE")
   createdAt    DateTime @default(now()) @map("CREATED_AT")
   updatedAt    DateTime @updatedAt @map("UPDATED_AT")
@@ -950,19 +1024,19 @@ model Teacher {
   createdAt DateTime @default(now()) @map("CREATED_AT")
   updatedAt DateTime @updatedAt @map("UPDATED_AT")
 
-  user    User            @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  schools TeacherSchool[]
-  orders  PortalOrder[]
-  messages PortalMessage[]
+  user              User               @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  schools           TeacherSchool[]
+  orders            PortalOrder[]
+  messages          PortalMessage[]
   pushSubscriptions PushSubscription[]
 
   @@map("TEACHERS")
 }
 
 model TeacherSchool {
-  id        String  @id @default(cuid()) @map("ID") @db.VarChar(36)
-  teacherId String  @map("TEACHER_ID") @db.VarChar(36)
-  schoolId  String  @map("SCHOOL_ID") @db.VarChar(36)
+  id               String  @id @default(cuid()) @map("ID") @db.VarChar(36)
+  teacherId        String  @map("TEACHER_ID") @db.VarChar(36)
+  schoolId         String  @map("SCHOOL_ID") @db.VarChar(36)
   grade            String? @map("GRADE") @db.VarChar(100)
   section          String? @map("SECTION") @db.VarChar(10)
   educationalLevel String? @map("EDUCATIONAL_LEVEL") @db.VarChar(20)
@@ -996,39 +1070,39 @@ model ProgramConfig {
 }
 
 model PortalOrder {
-  id           String    @id @default(cuid()) @map("ID") @db.VarChar(36)
-  orderNumber  String    @unique @map("ORDER_NUMBER") @db.VarChar(30)
-  teacherId    String    @map("TEACHER_ID") @db.VarChar(36)
-  schoolId     String    @map("SCHOOL_ID") @db.VarChar(36)
+  id                String    @id @default(cuid()) @map("ID") @db.VarChar(36)
+  orderNumber       String    @unique @map("ORDER_NUMBER") @db.VarChar(30)
+  teacherId         String    @map("TEACHER_ID") @db.VarChar(36)
+  schoolId          String    @map("SCHOOL_ID") @db.VarChar(36)
   grade             String?   @map("GRADE") @db.VarChar(100)
   educationalLevel  String?   @map("EDUCATIONAL_LEVEL") @db.VarChar(20)
   studentCount      Int?      @map("STUDENT_COUNT")
   orderGradeSummary String?   @map("ORDER_GRADE_SUMMARY") @db.VarChar(300)
   programType       String    @map("PROGRAM_TYPE") @db.VarChar(30)
-  status       String    @default("PENDING") @map("STATUS") @db.VarChar(20)
-  notes        String?   @map("NOTES")
-  totalAmount  Decimal   @default(0) @map("TOTAL_AMOUNT") @db.Decimal(18, 2)
-  adminNotes    String?   @map("ADMIN_NOTES")
-  approvedById  String?   @map("APPROVED_BY_ID") @db.VarChar(36)
-  approvedAt    DateTime? @map("APPROVED_AT")
-  deliveryDate  DateTime? @map("DELIVERY_DATE")
-  deliveryTime  String?   @map("DELIVERY_TIME") @db.VarChar(10)
-  deliveryNotes String?   @map("DELIVERY_NOTES") @db.VarChar(500)
+  status            String    @default("PENDING") @map("STATUS") @db.VarChar(20)
+  notes             String?   @map("NOTES")
+  totalAmount       Decimal   @default(0) @map("TOTAL_AMOUNT") @db.Decimal(18, 2)
+  adminNotes        String?   @map("ADMIN_NOTES")
+  approvedById      String?   @map("APPROVED_BY_ID") @db.VarChar(36)
+  approvedAt        DateTime? @map("APPROVED_AT")
+  deliveryDate      DateTime? @map("DELIVERY_DATE")
+  deliveryTime      String?   @map("DELIVERY_TIME") @db.VarChar(10)
+  deliveryNotes     String?   @map("DELIVERY_NOTES") @db.VarChar(500)
   // Set when an admin generates a Quotation from this order (POST
   // /orders/:id/quote) — the only reliable path from a portal order to the
   // eventual Sale/factura it becomes, via Quotation.convertedToSale. Needed
   // so generating an invoice for that sale can flip this order's status to
   // INVOICED instead of leaving it stuck at QUOTED forever.
-  quotationId   String?   @unique @map("QUOTATION_ID") @db.VarChar(36)
+  quotationId       String?   @unique @map("QUOTATION_ID") @db.VarChar(36)
   // Last time the provider corrected the order's products or student counts.
-  adjustedAt    DateTime? @map("ADJUSTED_AT")
-  createdAt     DateTime  @default(now()) @map("CREATED_AT")
-  updatedAt     DateTime  @updatedAt @map("UPDATED_AT")
+  adjustedAt        DateTime? @map("ADJUSTED_AT")
+  createdAt         DateTime  @default(now()) @map("CREATED_AT")
+  updatedAt         DateTime  @updatedAt @map("UPDATED_AT")
 
-  teacher    Teacher             @relation(fields: [teacherId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  school     School              @relation(fields: [schoolId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  approvedBy User?               @relation("ApprovedPortalOrders", fields: [approvedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  quotation  Quotation?          @relation(fields: [quotationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  teacher    Teacher            @relation(fields: [teacherId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  school     School             @relation(fields: [schoolId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvedBy User?              @relation("ApprovedPortalOrders", fields: [approvedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  quotation  Quotation?         @relation(fields: [quotationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   items      PortalOrderItem[]
   grades     PortalOrderGrade[]
   messages   PortalMessage[]
@@ -1040,15 +1114,15 @@ model PortalOrder {
 }
 
 model PortalOrderItem {
-  id            String  @id @default(cuid()) @map("ID") @db.VarChar(36)
-  portalOrderId String  @map("PORTAL_ORDER_ID") @db.VarChar(36)
+  id            String   @id @default(cuid()) @map("ID") @db.VarChar(36)
+  portalOrderId String   @map("PORTAL_ORDER_ID") @db.VarChar(36)
   // Null = a product the provider typed in that isn't in the catalog
   // (productName is its name). Becomes a custom line on the quotation.
-  productId     String? @map("PRODUCT_ID") @db.VarChar(36)
-  productName   String  @map("PRODUCT_NAME") @db.VarChar(200)
-  quantity      Decimal @map("QUANTITY") @db.Decimal(18, 4)
-  unitPrice     Decimal @map("UNIT_PRICE") @db.Decimal(18, 2)
-  total         Decimal @map("TOTAL") @db.Decimal(18, 2)
+  productId     String?  @map("PRODUCT_ID") @db.VarChar(36)
+  productName   String   @map("PRODUCT_NAME") @db.VarChar(200)
+  quantity      Decimal  @map("QUANTITY") @db.Decimal(18, 4)
+  unitPrice     Decimal  @map("UNIT_PRICE") @db.Decimal(18, 2)
+  total         Decimal  @map("TOTAL") @db.Decimal(18, 2)
   // Per-student kit orders: units of this product in ONE student's kit.
   // `quantity` is always the full amount (kit × students) — what gets
   // quoted, invoiced and bought; this is what the packing sheet shows.
@@ -1057,7 +1131,7 @@ model PortalOrderItem {
   // cost, or what the provider typed). PROVIDER ONLY — never sent to the
   // teacher portal. Feeds the school/program profit reports.
   unitCost      Decimal? @map("UNIT_COST") @db.Decimal(18, 4)
-  notes         String? @map("NOTES") @db.VarChar(500)
+  notes         String?  @map("NOTES") @db.VarChar(500)
 
   portalOrder PortalOrder @relation(fields: [portalOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   product     Product?    @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -1158,13 +1232,13 @@ model PortalMessage {
 
 // A teacher's phone/computer that accepted notifications (Web Push).
 model PushSubscription {
-  id         String   @id @default(cuid()) @map("ID") @db.VarChar(36)
-  teacherId  String   @map("TEACHER_ID") @db.VarChar(36)
-  endpoint   String   @unique @map("ENDPOINT") @db.VarChar(1000)
-  p256dh     String   @map("P256DH") @db.VarChar(200)
-  auth       String   @map("AUTH") @db.VarChar(100)
-  userAgent  String?  @map("USER_AGENT") @db.VarChar(300)
-  createdAt  DateTime @default(now()) @map("CREATED_AT")
+  id         String    @id @default(cuid()) @map("ID") @db.VarChar(36)
+  teacherId  String    @map("TEACHER_ID") @db.VarChar(36)
+  endpoint   String    @unique @map("ENDPOINT") @db.VarChar(1000)
+  p256dh     String    @map("P256DH") @db.VarChar(200)
+  auth       String    @map("AUTH") @db.VarChar(100)
+  userAgent  String?   @map("USER_AGENT") @db.VarChar(300)
+  createdAt  DateTime  @default(now()) @map("CREATED_AT")
   lastUsedAt DateTime? @map("LAST_USED_AT")
 
   teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -1270,11 +1344,11 @@ model NotificationPreference {
 // login inside this client's own system can reach it, by design.
 model LicenseConfig {
   id              String   @id @default(cuid()) @map("ID") @db.VarChar(36)
-  pageEnabled     Boolean  @default(true) @map("PAGE_ENABLED")     // portal público con marca propia (dengo-portal Landing); si es false, /login del portal es un formulario genérico
+  pageEnabled     Boolean  @default(true) @map("PAGE_ENABLED") // portal público con marca propia (dengo-portal Landing); si es false, /login del portal es un formulario genérico
   maestrosEnabled Boolean  @default(true) @map("MAESTROS_ENABLED") // funcionalidad de pedidos del portal de maestros
-  posEnabled      Boolean  @default(true) @map("POS_ENABLED")      // el sistema POS completo
-  felEnabled      Boolean  @default(false) @map("FEL_ENABLED")     // facturación electrónica (Guatemala FEL) — oculta "generar factura" en POS hasta que esté certificada para este cliente
-  aiEnabled       Boolean  @default(true) @map("AI_ENABLED")       // add-on de IA (analista de datos + recomendaciones en reportes); apagado = se oculta y el servidor rechaza las llamadas
+  posEnabled      Boolean  @default(true) @map("POS_ENABLED") // el sistema POS completo
+  felEnabled      Boolean  @default(false) @map("FEL_ENABLED") // facturación electrónica (Guatemala FEL) — oculta "generar factura" en POS hasta que esté certificada para este cliente
+  aiEnabled       Boolean  @default(true) @map("AI_ENABLED") // add-on de IA (analista de datos + recomendaciones en reportes); apagado = se oculta y el servidor rechaza las llamadas
   aiMonthlyLimit  Int?     @default(100) @map("AI_MONTHLY_LIMIT") // consultas de IA por mes calendario (hora de Guatemala); null = sin límite
   updatedAt       DateTime @updatedAt @map("UPDATED_AT")
 
@@ -1286,11 +1360,11 @@ model LicenseConfig {
 // cost. No FK to User on purpose: the log must survive a user being deleted.
 model AiUsage {
   id               String   @id @default(cuid()) @map("ID") @db.VarChar(36)
-  kind             String   @map("KIND") @db.VarChar(20)        // ANALYST | RECOMMENDATION | QUERY
+  kind             String   @map("KIND") @db.VarChar(20) // ANALYST | RECOMMENDATION | QUERY
   userId           String   @map("USER_ID") @db.VarChar(36)
   userName         String   @map("USER_NAME") @db.VarChar(150)
   branchId         String?  @map("BRANCH_ID") @db.VarChar(36)
-  question         String   @map("QUESTION") @db.VarChar(1000)  // the question, or the report name for RECOMMENDATION
+  question         String   @map("QUESTION") @db.VarChar(1000) // the question, or the report name for RECOMMENDATION
   success          Boolean  @map("SUCCESS")
   model            String   @map("MODEL") @db.VarChar(60)
   inputTokens      Int      @default(0) @map("INPUT_TOKENS")
@@ -1318,4 +1392,172 @@ model InternalMessage {
 
   @@index([toUserId])
   @@map("INTERNAL_MESSAGES")
+}
+
+// -- Pagina web: sitio publico, promociones y cupones -------------------------
+
+// One row per client (each client has its own database). What the public
+// website shows. `site` picks the design: "plantilla" = the block-based
+// template edited from the POS; any other key = a custom design in
+// dengo-web/src/sites/<key> (built for that client, billed separately).
+model SiteConfig {
+  id             String   @id @default(cuid()) @map("ID") @db.VarChar(36)
+  site           String   @default("plantilla") @map("SITE") @db.VarChar(60)
+  theme          String   @default("clasico") @map("THEME") @db.VarChar(40)
+  published      Boolean  @default(false) @map("PUBLISHED")
+  publicUrl      String?  @map("PUBLIC_URL") @db.VarChar(200)
+  // Where "Ingresar" on the site sends people after they log in there:
+  // the POS (staff) and the teachers' portal. Null = that door is hidden.
+  posUrl         String?  @map("POS_URL") @db.VarChar(200)
+  portalUrl      String?  @map("PORTAL_URL") @db.VarChar(200)
+  businessName   String?  @map("BUSINESS_NAME") @db.VarChar(150)
+  tagline        String?  @map("TAGLINE") @db.VarChar(200)
+  about          String?  @map("ABOUT") @db.Text
+  heroTitle      String?  @map("HERO_TITLE") @db.VarChar(200)
+  heroSubtitle   String?  @map("HERO_SUBTITLE") @db.VarChar(400)
+  heroImage      String?  @map("HERO_IMAGE") @db.Text
+  logo           String?  @map("LOGO") @db.Text
+  primaryColor   String?  @map("PRIMARY_COLOR") @db.VarChar(9)
+  accentColor    String?  @map("ACCENT_COLOR") @db.VarChar(9)
+  // Ordered blocks for the template: [{ id, type, enabled, props }]
+  sections       String?  @map("SECTIONS") @db.Text
+  whatsapp       String?  @map("WHATSAPP") @db.VarChar(30)
+  phone          String?  @map("PHONE") @db.VarChar(30)
+  email          String?  @map("EMAIL") @db.VarChar(150)
+  facebook       String?  @map("FACEBOOK") @db.VarChar(200)
+  instagram      String?  @map("INSTAGRAM") @db.VarChar(200)
+  tiktok         String?  @map("TIKTOK") @db.VarChar(200)
+  seoTitle       String?  @map("SEO_TITLE") @db.VarChar(120)
+  seoDescription String?  @map("SEO_DESCRIPTION") @db.VarChar(300)
+  // Branches shown on the site (JSON array of ids); null = all active.
+  branchIds      String?  @map("BRANCH_IDS") @db.Text
+  createdAt      DateTime @default(now()) @map("CREATED_AT")
+  updatedAt      DateTime @updatedAt @map("UPDATED_AT")
+
+  @@map("SITE_CONFIG")
+}
+
+// An offer. type: PERCENT | FIXED | BUY_X_GET_Y | SPECIAL_PRICE
+// scope: ALL | CATEGORY | PRODUCT (what the offer applies to)
+model Promotion {
+  id                  String    @id @default(cuid()) @map("ID") @db.VarChar(36)
+  name                String    @map("NAME") @db.VarChar(120)
+  slug                String    @unique @map("SLUG") @db.VarChar(140)
+  description         String?   @map("DESCRIPTION") @db.Text
+  terms               String?   @map("TERMS") @db.Text
+  image               String?   @map("IMAGE") @db.Text
+  type                String    @map("TYPE") @db.VarChar(20)
+  scope               String    @default("ALL") @map("SCOPE") @db.VarChar(20)
+  productIds          String?   @map("PRODUCT_IDS") @db.Text
+  categoryIds         String?   @map("CATEGORY_IDS") @db.Text
+  branchIds           String?   @map("BRANCH_IDS") @db.Text
+  percent             Decimal?  @map("PERCENT") @db.Decimal(6, 2)
+  amount              Decimal?  @map("AMOUNT") @db.Decimal(18, 2)
+  specialPrice        Decimal?  @map("SPECIAL_PRICE") @db.Decimal(18, 2)
+  buyQty              Int?      @map("BUY_QTY")
+  payQty              Int?      @map("PAY_QTY")
+  minPurchase         Decimal?  @map("MIN_PURCHASE") @db.Decimal(18, 2)
+  maxDiscount         Decimal?  @map("MAX_DISCOUNT") @db.Decimal(18, 2)
+  // Whether the cashier may ALSO give a manual discount / lower price on
+  // the lines this offer applies to. Decided by the admin per offer.
+  allowManualDiscount Boolean   @default(false) @map("ALLOW_MANUAL_DISCOUNT")
+  startsAt            DateTime? @map("STARTS_AT")
+  endsAt              DateTime? @map("ENDS_AT")
+  isActive            Boolean   @default(true) @map("IS_ACTIVE")
+  showOnWebsite       Boolean   @default(true) @map("SHOW_ON_WEBSITE")
+  featured            Boolean   @default(false) @map("FEATURED")
+  maxCoupons          Int?      @map("MAX_COUPONS")
+  perPhoneLimit       Int       @default(1) @map("PER_PHONE_LIMIT")
+  couponValidDays     Int?      @map("COUPON_VALID_DAYS")
+  createdById         String?   @map("CREATED_BY_ID") @db.VarChar(36)
+  createdAt           DateTime  @default(now()) @map("CREATED_AT")
+  updatedAt           DateTime  @updatedAt @map("UPDATED_AT")
+
+  coupons PromotionCoupon[]
+
+  @@index([isActive, endsAt])
+  @@map("PROMOTIONS")
+}
+
+// A single-use coupon issued to one person (name + phone) for one offer.
+// The code is what the QR / barcode carries. status: ISSUED | REDEEMED | VOID
+model PromotionCoupon {
+  id             String    @id @default(cuid()) @map("ID") @db.VarChar(36)
+  code           String    @unique @map("CODE") @db.VarChar(16)
+  promotionId    String    @map("PROMOTION_ID") @db.VarChar(36)
+  name           String    @map("NAME") @db.VarChar(120)
+  phone          String    @map("PHONE") @db.VarChar(20)
+  email          String?   @map("EMAIL") @db.VarChar(150)
+  status         String    @default("ISSUED") @map("STATUS") @db.VarChar(12)
+  source         String    @default("WEB") @map("SOURCE") @db.VarChar(10)
+  issuedAt       DateTime  @default(now()) @map("ISSUED_AT")
+  expiresAt      DateTime? @map("EXPIRES_AT")
+  redeemedAt     DateTime? @map("REDEEMED_AT")
+  branchId       String?   @map("BRANCH_ID") @db.VarChar(36)
+  redeemedById   String?   @map("REDEEMED_BY_ID") @db.VarChar(36)
+  discountAmount Decimal?  @map("DISCOUNT_AMOUNT") @db.Decimal(18, 2)
+  customerId     String?   @map("CUSTOMER_ID") @db.VarChar(36)
+  userAgent      String?   @map("USER_AGENT") @db.VarChar(300)
+
+  promotion Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  customer  Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  sale      Sale?     @relation("CouponSale")
+
+  @@index([promotionId, status])
+  @@index([phone])
+  @@index([issuedAt])
+  @@map("PROMOTION_COUPONS")
+}
+
+// Nota de crédito (FEL NCRE) against a certified factura: a partial (or full)
+// return/correction that keeps the original invoice valid. Annulling the whole
+// invoice is Sale void (felVoidStatus); this is for "the customer returned 2
+// of the 10 notebooks". See lib/fel/service.ts certifyCreditNote().
+model CreditNote {
+  id               String    @id @default(cuid()) @map("ID") @db.VarChar(36)
+  saleId           String    @map("SALE_ID") @db.VarChar(36)
+  branchId         String    @map("BRANCH_ID") @db.VarChar(36)
+  number           Int       @map("NUMBER") // per-branch correlativo, internal (NC-<number>)
+  reason           String    @map("REASON") @db.VarChar(500)
+  total            Decimal   @map("TOTAL") @db.Decimal(18, 2)
+  returnStock      Boolean   @default(true) @map("RETURN_STOCK")
+  isCancelled      Boolean   @default(false) @map("IS_CANCELLED") // never sent / rejected and dropped
+  createdById      String    @map("CREATED_BY_ID") @db.VarChar(36)
+  createdAt        DateTime  @default(now()) @map("CREATED_AT")
+  felStatus        String    @default("PENDING") @map("FEL_STATUS") @db.VarChar(20) // PENDING | CERTIFIED | FAILED
+  felUuid          String?   @map("FEL_UUID") @db.VarChar(60)
+  felAuthNumber    String?   @map("FEL_AUTH_NUMBER") @db.VarChar(60)
+  felSatSerie      String?   @map("FEL_SAT_SERIE") @db.VarChar(40)
+  felSatNumber     String?   @map("FEL_SAT_NUMBER") @db.VarChar(40)
+  felCertifiedAt   DateTime? @map("FEL_CERTIFIED_AT")
+  felPdfUrl        String?   @map("FEL_PDF_URL") @db.VarChar(500)
+  felXmlUrl        String?   @map("FEL_XML_URL") @db.VarChar(500)
+  felEnvironment   String?   @map("FEL_ENVIRONMENT") @db.VarChar(20)
+  felError         String?   @map("FEL_ERROR") @db.VarChar(500)
+  felAttempts      Int       @default(0) @map("FEL_ATTEMPTS")
+  felLastAttemptAt DateTime? @map("FEL_LAST_ATTEMPT_AT")
+
+  sale      Sale             @relation(fields: [saleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy User             @relation("CreditNoteCreatedBy", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  items     CreditNoteItem[]
+
+  @@unique([branchId, number])
+  @@index([saleId])
+  @@index([createdAt])
+  @@map("CREDIT_NOTES")
+}
+
+model CreditNoteItem {
+  id           String  @id @default(cuid()) @map("ID") @db.VarChar(36)
+  creditNoteId String  @map("CREDIT_NOTE_ID") @db.VarChar(36)
+  saleItemId   String  @map("SALE_ITEM_ID") @db.VarChar(36)
+  quantity     Decimal @map("QUANTITY") @db.Decimal(18, 4)
+  amount       Decimal @map("AMOUNT") @db.Decimal(18, 2) // what this line credits (net of every discount)
+
+  creditNote CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  saleItem   SaleItem   @relation(fields: [saleItemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([creditNoteId])
+  @@index([saleItemId])
+  @@map("CREDIT_NOTE_ITEMS")
 }

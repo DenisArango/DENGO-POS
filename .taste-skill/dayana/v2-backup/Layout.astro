@@ -1,0 +1,85 @@
+---
+// Variedades Dayana — page shell: head, the inner-page bar, the quiet footer
+// with the photo credits, and the shared entrance script. The home page
+// draws its own header inside the hero.
+import './dayana.css'
+import Seo from '../../core/Seo.astro'
+import { canLogin } from '../../core/api'
+import { BRAND, PHOTOS } from './data'
+import type { SiteContent } from '../../core/types'
+
+interface Props { content: SiteContent; title?: string; description?: string; noindex?: boolean; home?: boolean; credits?: boolean }
+const { content, title, description, noindex, home, credits = true } = Astro.props
+const login = canLogin(content)
+const year = new Date().getFullYear()
+const offer = content.promotions.find(p => p.featured) ?? content.promotions[0]
+const used = Object.values(PHOTOS)
+---
+<!doctype html>
+<html lang="es" data-site="dayana">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#00184a" />
+    <link rel="icon" type="image/svg+xml" href="/sites/dayana/logo.svg" />
+    <link rel="preload" href="/sites/dayana/fonts/Switzer-Variable.woff2" as="font" type="font/woff2" crossorigin />
+    <Seo content={content} title={title} description={description} noindex={noindex} image="/sites/dayana/logo-600.png" />
+    <script is:inline>document.documentElement.classList.add('d-d-js')</script>
+  </head>
+  <body>
+    {!home && (
+      <header class="d-bar-top">
+        <a class="d-top__logo" href="/" aria-label={`${BRAND.name}, inicio`}><img src="/sites/dayana/logo.svg" alt="" width="64" height="64" /></a>
+        <nav class="d-nav" aria-label="Principal">
+          <a href="/#historia">Historia</a>
+          <a href="/ofertas">Ofertas</a>
+          <a href="/#tiendas">Tiendas</a>
+          {login && <a href="/ingresar">Ingresar</a>}
+          {offer ? <a class="d-btn" href={`/ofertas/${offer.slug}`}>Obtener cupón</a> : <a class="d-btn" href="/#contacto">Escríbenos</a>}
+          <details class="d-nav__menu">
+            <summary>Menú</summary>
+            <ul>
+              <li><a href="/#historia">Historia</a></li>
+              <li><a href="/ofertas">Ofertas</a></li>
+              <li><a href="/#destacados">Destacados</a></li>
+              <li><a href="/#servicios">Servicios</a></li>
+              <li><a href="/#tiendas">Tiendas</a></li>
+              {login && <li><a href="/ingresar">Ingresar</a></li>}
+            </ul>
+          </details>
+        </nav>
+      </header>
+    )}
+
+    <main><slot /></main>
+
+    <footer class="d-foot">
+      <p>{BRAND.name} · librería en Rabinal y Cubulco</p>
+      <nav aria-label="Pie de página">
+        <a href="/#historia">Historia</a>
+        <a href="/ofertas">Ofertas</a>
+        <a href="/#tiendas">Tiendas</a>
+        {login && <a href="/ingresar">Ingresar</a>}
+      </nav>
+      <p class="d-foot__r">© {year} {BRAND.name}</p>
+    </footer>
+    {credits && (
+      <details class="d-credits">
+        <summary>Créditos de las fotografías{used.some(p => p.ref) ? ' de referencia' : ''}</summary>
+        <p>{used.map(p => p.credit).join(' · ')}.</p>
+      </details>
+    )}
+
+    <script>
+      // Entrances: each part of a section rises in once, staggered by --i.
+      const els = document.querySelectorAll<HTMLElement>('[data-in]')
+      if (!('IntersectionObserver' in window)) els.forEach(e => e.classList.add('d-is-in'))
+      else {
+        const io = new IntersectionObserver(entries => {
+          for (const e of entries) if (e.isIntersecting) { e.target.classList.add('d-is-in'); io.unobserve(e.target) }
+        }, { rootMargin: '0px 0px -8% 0px' })
+        els.forEach(e => io.observe(e))
+      }
+    </script>
+  </body>
+</html>

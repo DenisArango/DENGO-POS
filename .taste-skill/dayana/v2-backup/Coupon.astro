@@ -1,0 +1,41 @@
+---
+// The coupon: a ticket with the logo, the value, the QR and the barcode.
+import Layout from './Layout.astro'
+import { qrSvg, barcodeSvg } from '../../core/codes'
+import { offerHeadline, fmtDay } from '../../core/api'
+import { BRAND } from './data'
+import type { CouponView, SiteContent } from '../../core/types'
+
+const { content, coupon: c, already } = Astro.props as { content: SiteContent; coupon: CouponView; already?: boolean }
+const usable = c.status === 'ISSUED'
+const stamp = { ISSUED: already ? 'Ya lo tenías' : 'Listo', REDEEMED: 'Usado', VOID: 'Anulado', EXPIRED: 'Vencido' }[c.status]
+---
+<Layout content={content} title={`Cupón ${c.display}`} noindex credits={false}>
+  <section class="d-page" aria-labelledby="h-c">
+    <div class="d-page__in" style="text-align:center">
+      <h1 id="h-c" data-in>{usable ? `${c.firstName}, este es tu cupón` : 'Este cupón ya no sirve'}</h1>
+      <p class="d-page__sub" data-in style="--i:1; margin-inline:auto">{usable ? 'Muéstralo en caja antes de pagar. Toma una captura para tenerlo a mano.' : 'Mira las ofertas vigentes para pedir otro.'}</p>
+      <article class="d-ticket" data-in style="--i:2">
+        <div class="d-ticket__top">
+          <img src="/sites/dayana/logo.svg" alt="" width="64" height="64" />
+          <div style="text-align:left">
+            <p class="d-ticket__v">{offerHeadline(c.promotion)}</p>
+            <p>{c.promotion.name}</p>
+          </div>
+        </div>
+        <div class="d-ticket__body">
+          <span class:list={['d-ticket__stamp', { 'd-ok': usable }]}>{stamp}</span>
+          <div class="d-ticket__qr" set:html={qrSvg(c.payload, '#001f5f')} role="img" aria-label={`Código QR del cupón ${c.display}`} />
+          <p class="d-ticket__code">{c.display}</p>
+          <div class="d-ticket__bar" set:html={barcodeSvg(c.payload, '#001f5f')} aria-hidden="true" />
+          <p class="d-soft">Para {c.firstName} · un solo uso{usable && c.expiresAt ? ` · válido hasta el ${fmtDay(c.expiresAt)}` : ''}</p>
+        </div>
+      </article>
+      <p class="d-actions">
+        <button class="d-btn d-btn--navy" type="button" onclick="window.print()">Imprimir</button>
+        <a class="d-btn" href="/ofertas">Más ofertas</a>
+      </p>
+      <p class="d-terms" style="margin-inline:auto">{c.promotion.terms ?? `Preséntalo en cualquier tienda de ${BRAND.name}.`}</p>
+    </div>
+  </section>
+</Layout>

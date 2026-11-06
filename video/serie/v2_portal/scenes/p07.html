@@ -1,0 +1,19 @@
+    #p07-list, #p07-ap, #p07-q, #p07-ph { opacity: 0; }
+<!--markup-->
+    <browser id="p07-list" src="ui/pa_pedidos.png" url="DENGO POS · Pedidos del Portal" at="470 110 1380" />
+    <ring id="p07-r1" on="p07-list" box="283 325 1292 50" pad="6" />
+    <browser id="p07-ap" src="rec/pa_aprobar.mp4" url="DENGO POS · Pedidos del Portal" at="470 110 1380" start="{T:reviso:1:-0.3}" dur="5.300" />
+    <browser id="p07-q" src="rec/pa_cotizar.mp4" url="DENGO POS · Pedidos del Portal" at="470 110 1380" start="{T:clic:1:-0.6}" mstart="0.6" />
+    <phone id="p07-ph" src="ui/m_t_mensajes.png" at="1460 70 380" />
+    <ring id="p07-r2" on="p07-ph" box="32 528 262 195" pad="6" />
+<!--script-->
+    lift("#p07-list", 0.2); ring("#p07-r1", {T:aviso:1:-0.4}, 1.6);
+    tl.set("#p07-ap", { opacity: 1 }, {T:reviso:1:-0.3});
+    tl.set("#p07-q", { opacity: 1 }, {T:clic:1:-0.6}); tl.set("#p07-ap, #p07-list", { opacity: 0 }, {T:clic:1:-0.5});
+    tl.to("#p07-q", { x: -260, scale: 0.86, transformOrigin: "0% 50%", duration: 0.7, ease: "power3.inOut" }, {T:cotizacion:2:-0.3});
+    tl.fromTo("#p07-ph", { opacity: 0, x: 140 }, { opacity: 1, x: 0, duration: 0.6, ease: "expo.out" }, {T:cotizacion:2});
+    ring("#p07-r2", {T:bandeja});
+<!--sfx-->
+click-soft {T:apruebo} 0.5
+click-soft {T:clic} 0.5
+notification {T:bandeja:1:-0.3} 0.45

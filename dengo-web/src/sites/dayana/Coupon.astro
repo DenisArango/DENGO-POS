@@ -1,0 +1,122 @@
+---
+// The coupon, once issued: the ticket with the value, the QR and the barcode
+// on a sky field full of crayon-coloured bubbles. The stamp slams down, the
+// crew cheers around it and confetti falls — or, if the coupon can't be used
+// any more, the crew is asleep. Printing shows only the ticket.
+import Layout from './Layout.astro'
+import Crayon from './Crayon.astro'
+import { qrSvg, barcodeSvg } from '../../core/codes'
+import { offerHeadline, fmtDay } from '../../core/api'
+import { BRAND } from './data'
+import type { CouponView, SiteContent } from '../../core/types'
+
+const { content, coupon: c, already } = Astro.props as { content: SiteContent; coupon: CouponView; already?: boolean }
+const usable = c.status === 'ISSUED'
+const stamp = { ISSUED: already ? '¡Ya lo tenías!' : '¡Listo!', REDEEMED: 'Usado', VOID: 'Anulado', EXPIRED: 'Vencido' }[c.status]
+const dots = ['var(--red)', 'var(--yellow)', 'var(--green)', 'var(--pink)', 'var(--orange)', 'var(--navy)']
+---
+<Layout content={content} title={`Cupón ${c.display}`} noindex credits={false}>
+  <section class="cp" aria-labelledby="h-c" data-usable={usable ? '1' : '0'}>
+    <div class="cp__dots" aria-hidden="true">{dots.concat(dots).map((d, i) => <span style={`--c:${d}; --x:${i % 2 ? 84 + (i * 7) % 13 : 1 + (i * 11) % 12}%; --y:${12 + (i * 53) % 84}%; --s:${18 + (i * 13) % 46}px; --d:${(i % 5) * 0.7}s`}></span>)}</div>
+    <div class="cp__head">
+      <p class="cp__kick dy-hand" data-in>{usable ? (already ? 'Aquí está otra vez' : '¡Lo recortaste!') : 'Lo sentimos'}</p>
+      <h1 id="h-c" class="cp__title" data-in style="--i:1">{usable ? `${c.firstName}, este es tu cupón` : 'Este cupón ya no sirve'}</h1>
+      <p class="cp__sub" data-in style="--i:2">{usable ? 'Muéstralo en caja antes de pagar. Toma una captura para tenerlo a mano.' : 'Mira las ofertas vigentes para pedir otro.'}</p>
+    </div>
+
+    <div class="cp__stage">
+      <div class="cp__crew cp__crew--a" aria-hidden="true" data-crew><Crayon who="roja" pose={usable ? 'cheer' : 'idle'} face="grin" asleep={!usable} /></div>
+      <div class="cp__crew cp__crew--b" aria-hidden="true" data-crew><Crayon who="azul" pose={usable ? 'cheer' : 'idle'} acc={['glasses']} asleep={!usable} /></div>
+      <article class="tk" data-ticket>
+        <div class="tk__top">
+          <img src="/sites/dayana/logo.svg" alt="" width="64" height="64" />
+          <div>
+            <p class="tk__v">{offerHeadline(c.promotion)}</p>
+            <p class="tk__n">{c.promotion.name}</p>
+          </div>
+        </div>
+        <div class="tk__body">
+          <span class:list={['tk__stamp', { 'tk__stamp--ok': usable }]} data-stamp>{stamp}</span>
+          <div class="tk__qr" set:html={qrSvg(c.payload, '#001f5f')} role="img" aria-label={`Código QR del cupón ${c.display}`} />
+          <p class="tk__code">{c.display}</p>
+          <div class="tk__bar" set:html={barcodeSvg(c.payload, '#001f5f')} aria-hidden="true" />
+          <p class="tk__meta">Para {c.firstName} · un solo uso{usable && c.expiresAt ? ` · válido hasta el ${fmtDay(c.expiresAt)}` : ''}</p>
+        </div>
+      </article>
+      <div class="cp__crew cp__crew--c" aria-hidden="true" data-crew><Crayon who="sol" pose={usable ? 'wave' : 'idle'} acc={['cap']} style="--cap:#e8141c" asleep={!usable} /></div>
+      <div class="cp__crew cp__crew--d" aria-hidden="true" data-crew><Crayon who="pino" pose={usable ? 'wave' : 'idle'} face="grin" flip asleep={!usable} /></div>
+    </div>
+
+    <p class="cp__actions">
+      <button class="dy-btn dy-btn--navy" type="button" onclick="window.print()">Imprimir</button>
+      <a class="dy-btn dy-btn--yellow" href="/ofertas">Más ofertas</a>
+    </p>
+    <p class="cp__terms">{c.promotion.terms ?? `Preséntalo en cualquier tienda de ${BRAND.name}.`}</p>
+  </section>
+</Layout>
+
+<script>
+  import gsap from 'gsap'
+  import { confettiFrom } from './fx'
+
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const section = document.querySelector<HTMLElement>('.cp')!
+  const ticket = document.querySelector<HTMLElement>('[data-ticket]')!
+  const stamp = document.querySelector<HTMLElement>('[data-stamp]')!
+  const crew = [...document.querySelectorAll<HTMLElement>('[data-crew]')]
+  const usable = section.dataset.usable === '1'
+
+  if (!reduce) {
+    const tl = gsap.timeline({ delay: 0.2 })
+    tl.from(ticket, { y: 160, rotate: 8, scale: 0.85, opacity: 0, duration: 1.2, ease: 'elastic.out(1, 0.6)' })
+      .from(crew, { y: 180, opacity: 0, duration: 0.8, ease: 'back.out(2)', stagger: 0.1 }, 0.5)
+      .fromTo(stamp, { scale: 3, rotate: -40, opacity: 0 }, { scale: 1, rotate: -10, opacity: 1, duration: 0.45, ease: 'back.out(2.4)' }, 0.9)
+      .to(ticket, { y: 6, duration: 0.08, yoyo: true, repeat: 1 }, 1.25)
+    if (usable) tl.add(() => confettiFrom(ticket, 120), 1.25)
+  }
+</script>
+
+<style>
+  .cp { position: relative; min-height: 100svh; padding: clamp(130px, 16vh, 170px) var(--m) clamp(80px, 10vw, 130px); background: var(--sky); color: var(--ink); overflow: hidden; isolation: isolate; text-align: center; }
+  .cp[data-usable='0'] { background: var(--paper-2); }
+  .cp__dots { position: absolute; inset: 0; z-index: -1; }
+  .cp__dots span { position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s); border-radius: 50%; background: var(--c); border: 3px solid var(--ink); opacity: 0.9; animation: cp-bob 5s ease-in-out var(--d) infinite; }
+  @keyframes cp-bob { 50% { transform: translateY(-16px) scale(1.06); } }
+  .cp__head { display: grid; justify-items: center; }
+  .cp__kick { font-size: clamp(2rem, 1.4rem + 2vw, 3.2rem); font-weight: 700; color: var(--red); line-height: 1; transform: rotate(-3deg); }
+  .cp__title { margin-top: 10px; font-size: clamp(2.8rem, 1.4rem + 5vw, 6.4rem); max-width: 16ch; }
+  .cp__sub { margin-top: 18px; max-width: 46ch; font-size: var(--step-lead); line-height: 1.35; }
+  .cp__stage { position: relative; display: flex; justify-content: center; align-items: end; gap: clamp(4px, 1.5vw, 20px); margin-top: clamp(40px, 5vw, 64px); }
+  .cp__crew { width: clamp(70px, 8vw, 120px); flex: none; }
+  .cp__crew--a, .cp__crew--d { margin-bottom: -10px; }
+  .cp__crew--b, .cp__crew--c { margin-bottom: 60px; width: clamp(60px, 6.5vw, 100px); }
+
+  .tk { width: min(440px, 100%); flex: none; background: var(--paper); border-radius: var(--r); overflow: hidden; border: 3px solid var(--ink); box-shadow: 0 14px 0 var(--ink); text-align: center; }
+  .tk__top { display: flex; gap: 16px; align-items: center; padding: 24px 26px; background: var(--red); color: #fff; text-align: left; }
+  .tk__top img { width: 64px; height: 64px; background: #fff; border-radius: 50%; padding: 3px; border: 3px solid var(--ink); flex: none; }
+  .tk__v { font: 900 clamp(2.8rem, 2rem + 3vw, 4.4rem)/0.9 var(--display); font-variation-settings: var(--soft); letter-spacing: -0.04em; }
+  .tk__n { font-weight: 600; }
+  .tk__body { position: relative; padding: 28px 26px; display: grid; gap: 12px; justify-items: center; border-top: 4px dashed var(--ink); }
+  .tk__stamp { position: absolute; right: 16px; top: 18px; padding: 6px 16px; border: 4px solid var(--red); border-radius: 14px; color: var(--red); background: rgb(255 248 236 / 0.85); font: 900 1.6rem/1 var(--display); font-variation-settings: var(--soft); text-transform: uppercase; rotate: -10deg; z-index: 2; }
+  .tk__stamp--ok { border-color: var(--green); color: var(--green); }
+  .tk__qr { width: min(240px, 66vw); background: #fff; padding: 12px; border-radius: 14px; border: 3px solid var(--ink); }
+  .tk__qr :global(svg), .tk__bar :global(svg) { width: 100%; height: auto; display: block; }
+  .tk__code { font-size: var(--step-lead); font-weight: 800; letter-spacing: 0.06em; color: var(--navy); }
+  .tk__bar { width: 100%; max-width: 320px; background: #fff; padding: 10px; border-radius: 10px; }
+  .tk__meta { color: var(--muted); font-size: var(--step-small); }
+  .cp__actions { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-top: 44px; }
+  .cp__terms { max-width: 70ch; margin: 22px auto 0; font-size: var(--step-small); }
+
+  @media (max-width: 640px) {
+    .cp__crew--b, .cp__crew--c { display: none; }
+    .cp__stage { gap: 0; }
+    .cp__crew--a { position: absolute; left: -8px; bottom: -40px; width: 70px; z-index: 2; }
+    .cp__crew--d { position: absolute; right: -8px; top: -70px; width: 64px; }
+  }
+  @media print {
+    .cp { background: #fff; padding: 0; min-height: 0; }
+    .cp__dots, .cp__crew, .cp__actions, .cp__kick, :global(.dy-top), :global(.dy-foot), :global(.dy-bar) { display: none !important; }
+    .tk { box-shadow: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .cp__dots span { animation: none; } }
+</style>

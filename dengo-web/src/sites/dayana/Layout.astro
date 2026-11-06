@@ -1,0 +1,207 @@
+---
+// Variedades Dayana — page shell. The crayon box: a floating header, a crayon
+// that grows across the top as you read (home), and a navy footer where the
+// whole crew waves goodbye under the shop's name in giant crayon letters.
+import '@fontsource-variable/fraunces/full.css'
+import '@fontsource/caveat/500.css'
+import '@fontsource/caveat/700.css'
+import './dayana.css'
+import Seo from '../../core/Seo.astro'
+import Crayon from './Crayon.astro'
+import { canLogin, waLink } from '../../core/api'
+import { BRAND, PHOTOS } from './data'
+import type { SiteContent } from '../../core/types'
+
+// dark: the page opens on a dark field, so the header starts see-through and light (like home).
+interface Props { content: SiteContent; title?: string; description?: string; noindex?: boolean; home?: boolean; dark?: boolean; credits?: boolean }
+const { content, title, description, noindex, home, dark, credits = true } = Astro.props
+const login = canLogin(content)
+const year = new Date().getFullYear()
+const offer = content.promotions.find(p => p.featured) ?? content.promotions[0]
+const used = Object.values(PHOTOS).filter(p => p.ref) // only the borrowed photos need a credit
+const phone = content.contact.whatsapp || BRAND.whatsapp
+const wa = waLink(phone, `Hola ${BRAND.name}, tengo una pregunta.`)
+const fb = content.contact.facebook || BRAND.facebook.url
+const ig = content.contact.instagram || BRAND.instagram.url
+const tt = content.contact.tiktok || BRAND.tiktok.url
+const letters = BRAND.short.split('')
+const tones = ['var(--red)', 'var(--yellow)', 'var(--sky)', 'var(--green)', 'var(--orange)', 'var(--pink)']
+---
+<!doctype html>
+<html lang="es" data-site="dayana">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#00143f" />
+    <link rel="icon" type="image/svg+xml" href="/sites/dayana/logo.svg" />
+    <link rel="preload" href="/sites/dayana/fonts/Switzer-Variable.woff2" as="font" type="font/woff2" crossorigin />
+    <Seo content={content} title={title} description={description} noindex={noindex} image="/sites/dayana/logo-600.png" />
+    <script is:inline>
+      document.documentElement.classList.add('d-js')
+      try {
+        if (location.pathname === '/' && !sessionStorage.getItem('dayana-pre') && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('d-pre')
+      } catch (e) {}
+    </script>
+  </head>
+  <body class:list={{ 'is-home': home }}>
+    {home && (
+      <div class="dy-pre" aria-hidden="true">
+        <div class="dy-pre__crew">
+          <Crayon who="roja" face="grin" /><Crayon who="sol" /><Crayon who="azul" /><Crayon who="pino" face="grin" />
+        </div>
+        <p class="dy-pre__word">{BRAND.name}</p>
+      </div>
+    )}
+    {home && <div class="dy-bar" aria-hidden="true"><span class="dy-bar__body"></span><span class="dy-bar__tip"></span></div>}
+
+    <header class:list={['dy-top', { 'dy-top--home': home || dark }]} data-top>
+      <a class="dy-top__logo" href="/" aria-label={`${BRAND.name}, inicio`}>
+        <span class="dy-top__mark"><img src="/sites/dayana/logo.svg" alt="" width="48" height="48" /></span>
+        <span class="dy-top__name">Variedades <b>Dayana</b></span>
+      </a>
+      <nav class="dy-top__links" aria-label="Principal">
+        <a href="/#historia">Historia</a>
+        <a href="/#destacados">Destacados</a>
+        <a href="/#servicios">Servicios</a>
+        <a href="/#tiendas">Tiendas</a>
+        <a href="/ofertas">Ofertas</a>
+      </nav>
+      <div class="dy-top__end">
+        {login && <a class="dy-top__in" href="/ingresar">Ingresar</a>}
+        {offer ? <a class="dy-btn dy-btn--yellow dy-top__cta" href={home ? '#cupon' : `/ofertas/${offer.slug}`}>Obtener cupón</a> : <a class="dy-btn dy-btn--yellow dy-top__cta" href="/#contacto">Escríbenos</a>}
+        <details class="dy-top__menu">
+          <summary aria-label="Menú">Menú</summary>
+          <ul>
+            <li><a href="/#historia">Historia</a></li>
+            <li><a href="/#destacados">Destacados</a></li>
+            <li><a href="/#cupon">Black November</a></li>
+            <li><a href="/#servicios">Servicios</a></li>
+            <li><a href="/#tiendas">Tiendas</a></li>
+            <li><a href="/ofertas">Todas las ofertas</a></li>
+            {login && <li><a href="/ingresar">Ingresar</a></li>}
+          </ul>
+        </details>
+      </div>
+    </header>
+
+    <main><slot /></main>
+
+    <footer class="dy-foot" id="contacto" data-say="contacto">
+      <div class="dy-foot__top">
+        <div class="dy-foot__ask">
+          <h2 class="dy-foot__h">¿Tienes una pregunta?</h2>
+          <p class="dy-foot__p">Escríbenos por WhatsApp y te respondemos desde la tienda.</p>
+          {wa && <a class="dy-foot__wa" href={wa} target="_blank" rel="noopener">{phone}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>}
+        </div>
+        <div class="dy-foot__cols">
+          <nav class="dy-foot__col" aria-label="Pie de página">
+            <p class="dy-foot__k">La página</p>
+            <a href="/#historia">Nuestra historia</a>
+            <a href="/#destacados">Destacados</a>
+            <a href="/#servicios">Servicios</a>
+            <a href="/#tiendas">Tiendas y horarios</a>
+            <a href="/ofertas">Ofertas</a>
+            {login && <a href="/ingresar">Ingresar (equipo y maestros)</a>}
+          </nav>
+          <div class="dy-foot__col">
+            <p class="dy-foot__k">Síguenos</p>
+            <a href={fb} target="_blank" rel="noopener">Facebook · {BRAND.facebook.label}</a>
+            <a href={ig} target="_blank" rel="noopener">Instagram · {BRAND.instagram.label}</a>
+            <a href={tt} target="_blank" rel="noopener">TikTok · {BRAND.tiktok.label}</a>
+          </div>
+        </div>
+      </div>
+      <p class="dy-foot__word" aria-hidden="true">
+        {letters.map((ch, i) => <span style={`--c:${tones[i % tones.length]}; --i:${i}`}>{ch}</span>)}
+      </p>
+      <div class="dy-foot__crew" aria-hidden="true">
+        <Crayon who="pino" pose="wave" /><Crayon who="azul" pose="cheer" /><Crayon who="roja" pose="cheer" face="grin" /><Crayon who="sol" pose="wave" />
+      </div>
+      <p class="dy-foot__slogan">{BRAND.slogan}.</p>
+      <div class="dy-foot__base">
+        <small>© {year} {BRAND.name} · Rabinal y Cubulco, Baja Verapaz</small>
+        {credits && (
+          <details class="dy-foot__credits">
+            <summary>Créditos de las fotografías{used.some(p => p.ref) ? ' de referencia' : ''}</summary>
+            <p>{used.map(p => p.credit).join(' · ')}.</p>
+          </details>
+        )}
+      </div>
+    </footer>
+
+    <script>
+      const root = document.documentElement
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+      type W = Window & { __dayanaReady?: boolean }
+      const markReady = () => { (window as W).__dayanaReady = true; window.dispatchEvent(new Event('dayana:ready')) }
+
+      // ── Preloader: the crew drops in, first visit of the session only ──
+      if (root.classList.contains('d-pre')) {
+        const pre = document.querySelector<HTMLElement>('.dy-pre')!
+        pre.addEventListener('animationend', e => {
+          if ((e as AnimationEvent).animationName !== 'pre-out') return
+          root.classList.remove('d-pre')
+          try { sessionStorage.setItem('dayana-pre', '1') } catch {}
+        })
+        setTimeout(markReady, 1500)
+      } else requestAnimationFrame(markReady)
+
+      // ── Header: solid after the first screen, hides going down ──
+      const top = document.querySelector<HTMLElement>('[data-top]')!
+      let lastY = scrollY
+      const onScroll = () => {
+        const y = scrollY
+        top.classList.toggle('is-scrolled', y > 40)
+        if (y > 500 && y > lastY + 6) top.classList.add('is-hidden')
+        else if (y < lastY - 6 || y < 500) top.classList.remove('is-hidden')
+        lastY = y
+      }
+      addEventListener('scroll', onScroll, { passive: true }); onScroll()
+
+      // ── The crayon across the top grows as you read ──
+      const body = document.querySelector<HTMLElement>('.dy-bar__body')
+      const tip = document.querySelector<HTMLElement>('.dy-bar__tip')
+      if (body && tip) {
+        const setBar = () => {
+          const max = root.scrollHeight - innerHeight
+          const p = max > 0 ? Math.min(1, scrollY / max) : 0
+          body.style.transform = `scaleX(${p})`
+          tip.style.transform = `translateX(${p * innerWidth}px)`
+        }
+        addEventListener('scroll', setBar, { passive: true }); addEventListener('resize', setBar); setBar()
+      }
+
+      // ── Every crayon on screen looks at the pointer ──
+      const crayons = new Set<SVGElement>()
+      const seen = new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? crayons.add(e.target as SVGElement) : crayons.delete(e.target as SVGElement)))
+      document.querySelectorAll<SVGElement>('svg.cr').forEach(c => seen.observe(c))
+      let px = innerWidth / 2, py = innerHeight / 2, queued = false
+      const look = () => {
+        queued = false
+        crayons.forEach(c => {
+          if (c.classList.contains('cr--read')) return
+          const r = c.getBoundingClientRect()
+          const flip = c.classList.contains('cr--flip') ? -1 : 1
+          const dx = (px - (r.left + r.width / 2)) / Math.max(200, r.width * 3)
+          const dy = (py - (r.top + r.height * 0.47)) / Math.max(200, r.height * 2)
+          c.style.setProperty('--lx', (Math.max(-1, Math.min(1, dx)) * 3.4 * flip).toFixed(2))
+          c.style.setProperty('--ly', (Math.max(-1, Math.min(1, dy)) * 3.4).toFixed(2))
+        })
+      }
+      if (!reduce) addEventListener('pointermove', e => { px = e.clientX; py = e.clientY; if (!queued) { queued = true; requestAnimationFrame(look) } }, { passive: true })
+
+      // ── Entrances on the inner pages: each part rises in once ──
+      const ins = document.querySelectorAll<HTMLElement>('[data-in]')
+      const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target) } }), { rootMargin: '0px 0px -8% 0px' })
+      ins.forEach(e => io.observe(e))
+
+      // ── Tap a crayon and it hops ──
+      document.addEventListener('click', e => {
+        const c = (e.target as Element).closest?.('svg.cr')
+        if (!c || reduce || (e.target as Element).closest('a, button:not([data-guide-me])')) return
+        c.classList.remove('cr-hop'); void (c as SVGElement).getBoundingClientRect(); c.classList.add('cr-hop')
+        setTimeout(() => c.classList.remove('cr-hop'), 750)
+      })
+    </script>
+  </body>
+</html>

@@ -1,0 +1,14 @@
+    #p08-c { opacity: 0; }
+    #p08-p1 { left: 1060px; top: 60px; opacity: 0; }
+<!--markup-->
+    <shot id="p08-c" src="ui/x_consolidado.png" crop="205 60 1395 800" at="470 150 1380" />
+    <ring id="p08-r1" on="p08-c" box="282 275 416 101" />
+    <ring id="p08-r2" on="p08-c" box="715 275 420 101" />
+    <ring id="p08-r3" on="p08-c" box="1155 275 420 101" />
+    <div id="p08-p1" class="pill sun">Antes: un fin de semana con la calculadora</div>
+<!--script-->
+    lift("#p08-c", 0.3);
+    ring("#p08-r1", {T:necesito}, 1.8);
+    ring("#p08-r2", {T:tengo:2}, 1.0);
+    ring("#p08-r3", {T:falta});
+    pop("#p08-p1", {T:antes});

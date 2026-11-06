@@ -1,0 +1,115 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Outfit", sans-serif; color: #1b2233; overflow: hidden; }
+    .mask { display: block; overflow: hidden; padding-bottom: 0.08em; }
+    .mask > span { display: block; }
+    .time { position: absolute; left: 96px; top: 76px; z-index: 6; }
+    .time > span { font-size: 64px; font-weight: 700; color: #b9532f; letter-spacing: -0.02em; line-height: 1.1; }
+    .h { font-weight: 700; color: #1e4d68; letter-spacing: -0.025em; line-height: 1.04; }
+    .sub { font-size: 38px; line-height: 1.3; color: #1b2233; }
+    .card { position: absolute; background: #fff; border: 1px solid #e6dfd2; border-radius: 22px; box-shadow: 0 24px 60px rgba(27, 34, 51, 0.16); }
+    .shot { position: absolute; overflow: hidden; background: #fff; border: 1px solid #e6dfd2; border-radius: 18px; box-shadow: 0 24px 60px rgba(27, 34, 51, 0.16); }
+    .shot > img { position: absolute; max-width: none; }
+    .shot.flat { box-shadow: none; }
+    .phone { position: absolute; background: #1b2233; border-radius: 62px; padding: 18px; box-shadow: 0 30px 70px rgba(27, 34, 51, 0.28); }
+    .phone .screen { position: relative; overflow: hidden; border-radius: 46px; background: #fff; }
+    .phone video.fill, .browser video.fill { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; }
+    .browser { position: absolute; overflow: hidden; background: #fff; border: 1px solid #e6dfd2; border-radius: 18px; box-shadow: 0 26px 64px rgba(27, 34, 51, 0.18); }
+    .browser .bar { height: 56px; background: #f3eee5; display: flex; align-items: center; gap: 9px; padding: 0 18px; border-bottom: 1px solid #e6dfd2; }
+    .browser .bar i { width: 13px; height: 13px; border-radius: 50%; background: #d8cfbf; display: block; }
+    .browser .bar span { margin-left: 18px; font-size: 26px; color: #6b6458; background: #fff; border-radius: 999px; padding: 4px 18px; }
+    .browser .view { position: relative; overflow: hidden; }
+    .browser .view > img { max-width: none; }
+    .ring { position: absolute; border: 6px solid #e07a5f; border-radius: 14px; opacity: 0; z-index: 5; }
+    .pill { position: absolute; display: inline-flex; align-items: center; gap: 14px; background: #1e4d68; color: #fff; font-size: 34px; font-weight: 600; padding: 16px 30px; border-radius: 999px; box-shadow: 0 16px 40px rgba(30, 77, 104, 0.3); z-index: 6; }
+    .pill.coral { background: #b9532f; box-shadow: 0 16px 40px rgba(224, 122, 95, 0.35); }
+    .pill.sun { background: #f2c14e; color: #1b2233; box-shadow: 0 16px 40px rgba(242, 193, 78, 0.35); }
+    .cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; transform-origin: 0 0; z-index: 8; background: #fbf6ee; box-shadow: 0 30px 80px rgba(27, 34, 51, 0.3); }
+    .cam video, .cam .poster { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+    .cam .tag { position: absolute; left: 96px; bottom: 96px; background: #fff; border-radius: 22px; padding: 22px 34px; opacity: 0; box-shadow: 0 20px 50px rgba(27, 34, 51, 0.2); }
+    .cam .tag b { display: block; font-size: 46px; color: #1e4d68; letter-spacing: -0.02em; }
+    .cam .tag span { display: block; font-size: 30px; color: #6b6458; margin-top: 2px; }
+    .badge { position: absolute; left: 56px; bottom: 56px; display: flex; align-items: center; gap: 20px; z-index: 9; opacity: 0; }
+    .badge .face { width: 168px; height: 168px; border-radius: 50%; overflow: hidden; border: 6px solid #fff; box-shadow: 0 18px 44px rgba(27, 34, 51, 0.22); background: #fbf6ee; }
+    .badge .face img { width: 100%; height: 100%; object-fit: cover; }
+    .badge .who { background: #fff; border-radius: 18px; padding: 12px 22px 14px; box-shadow: 0 14px 34px rgba(27, 34, 51, 0.14); }
+    .badge .who b { display: block; font-size: 28px; color: #1e4d68; }
+    .badge .bars { display: flex; gap: 6px; align-items: center; height: 30px; margin-top: 4px; }
+    .badge .bars i { display: block; width: 8px; height: 30px; border-radius: 4px; background: #e07a5f; transform: scaleY(0.18); }
+    .nbk { position: absolute; width: 230px; height: 300px; border-radius: 10px 20px 20px 10px; box-shadow: 0 20px 44px rgba(27, 34, 51, 0.25); z-index: 9; opacity: 0; padding: 36px 22px; color: #fff; font-size: 30px; font-weight: 700; line-height: 1.2; }
+    .nbk::before { content: ""; position: absolute; left: 16px; top: 0; bottom: 0; width: 6px; background: rgba(255, 255, 255, 0.35); }
+    .sign2 { position: absolute; width: 250px; padding: 26px 20px; background: #fffdf7; border-radius: 6px; box-shadow: 0 18px 40px rgba(27, 34, 51, 0.22); z-index: 9; opacity: 0; text-align: center; font-size: 48px; font-weight: 800; color: #e07a5f; }
+    #e11-hex { position: absolute; left: 1460px; top: 330px; width: 300px; height: 330px; z-index: 10; opacity: 0; }
+    .chat { position: absolute; left: 760px; top: 140px; width: 640px; background: #f3eee5; border-radius: 26px; overflow: hidden; box-shadow: 0 26px 64px rgba(27, 34, 51, 0.18); opacity: 0; }
+    .chat .head { background: #1e4d68; color: #fff; padding: 22px 28px; }
+    .chat .head b { display: block; font-size: 30px; }
+    .chat .head span { display: block; font-size: 24px; opacity: 0.85; }
+    .chat .body { padding: 26px 24px 30px; display: flex; flex-direction: column; gap: 16px; }
+    .msg { max-width: 84%; font-size: 28px; line-height: 1.35; padding: 16px 20px 14px; border-radius: 20px; opacity: 0; }
+    .msg small { display: block; font-size: 22px; opacity: 0.6; margin-top: 6px; text-align: right; }
+    .msg.me { align-self: flex-end; background: #d9f2df; }
+    .msg.them { align-self: flex-start; background: #fff; }
+    #e11-p1 { left: 760px; top: 640px; opacity: 0; }
+
+  </style>
+  <div id="root" data-composition-id="e11" data-width="1920" data-height="1080" data-layout-allow-overflow data-layout-allow-overlap>
+    
+
+    <div id="e11-n1" class="nbk" style="left:1220px;top:120px;background:#1e4d68">Ventas<br>de la tienda</div>
+    <div id="e11-n2" class="nbk" style="left:1500px;top:170px;background:#b9532f">Pedidos de<br>maestros</div>
+    <div id="e11-s" class="sign2" style="left:1360px;top:560px">¡OFERTAS!</div>
+    <svg id="e11-hex" viewBox="5 5 120 135"><path d="M 65,15 L 115,44 L 115,101 L 65,130 L 15,101 L 15,44 Z" fill="#fff" stroke="#1E4D68" stroke-width="10" stroke-linejoin="round"/><line x1="15" y1="101" x2="115" y2="44" stroke="#1E4D68" stroke-width="7" stroke-linecap="round"/><path d="M 28,107 L 65,42 L 102,107" fill="none" stroke="#E07A5F" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <div id="e11-chat" class="chat">
+      <div class="head"><b>Soporte DENGO</b><span>WhatsApp · responde de 7:00 a.m. a 7:00 p.m.</span></div>
+      <div class="body">
+        <div id="e11-m1" class="msg me">¿Cómo saco el reporte de cupones de este mes?<small>8:05 a.m.</small></div>
+        <div id="e11-m2" class="msg them">¡Buenos días, María José! En Página web → Rendimiento, elija «30 días». Le mando el paso a paso.<small>8:09 a.m.</small></div>
+      </div>
+    </div>
+    <div id="e11-p1" class="pill coral">Soporte personalizado · 7 a 7</div>
+
+    <div id="e11-cam" class="cam"><img class="poster" src="assets/avatar/e11_last.jpg" alt="" /><video id="e11-camv" class="clip" src="assets/avatar/e11.mp4" muted playsinline data-start="0" data-duration="14.916"></video><div id="e11-tag" class="tag"><b>María José</b><span></span></div></div>
+    
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const DUR = 15.566;
+    const rise = (s, t, d = 0.55) => tl.fromTo(s, { yPercent: 115 }, { yPercent: 0, duration: d, ease: "expo.out" }, t);
+    const lift = (s, t, d = 0.7) => tl.fromTo(s, { opacity: 0, y: 46, scale: 0.965 }, { opacity: 1, y: 0, scale: 1, duration: d, ease: "expo.out" }, t);
+    const pop = (s, t) => tl.fromTo(s, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.9)" }, t);
+    const slide = (s, t, x = -140) => tl.fromTo(s, { x, opacity: 0 }, { x: 0, opacity: 1, duration: 0.65, ease: "expo.out" }, t);
+    const out = (s, t, d = 0.35) => tl.to(s, { opacity: 0, y: -16, duration: d, ease: "power2.in" }, t);
+    const ring = (s, t, hold = 0) => { tl.fromTo(s, { opacity: 0, scale: 1.08 }, { opacity: 1, scale: 1, duration: 0.32, ease: "back.out(2.2)" }, t); if (hold) tl.to(s, { opacity: 0, duration: 0.25 }, t + hold); };
+    const pan = (s, t, vars, d = 1.2) => tl.to(s, { ...vars, duration: d, ease: "power3.inOut" }, t);
+    const count = (s, t, from, to, d = 0.9, fmt = (v) => Math.round(v).toString()) => {
+      const o = { v: from };
+      tl.to(o, { v: to, duration: d, ease: "power2.out", onUpdate: () => { const el = document.querySelector(s); if (el) el.textContent = fmt(o.v); } }, t);
+    };
+    // on camera: full frame, the lower-third tag, then pip(t) shrinks it to a window
+    const CAM = "#e11-cam";
+    const pip = (t, where = "bl", d = 0.8) => {
+      const s = 0.25, W = 1920 * s, H = 1080 * s;
+      const x = where === "br" ? 1920 - 56 - W : where === "tr" ? 1920 - 56 - W : 56;
+      const y = where === "tr" ? 56 : 1080 - 56 - H;
+      tl.to(CAM, { x, y, scale: s, borderRadius: 120, duration: d, ease: "power3.inOut" }, t);
+      tl.to(CAM + " .tag", { opacity: 0, duration: 0.2 }, t);
+    };
+    const unpip = (t, d = 0.7) => tl.to(CAM, { x: 0, y: 0, scale: 1, borderRadius: 0, duration: d, ease: "power3.inOut" }, t);
+    const tag = (t, hold = 3.4) => {
+      tl.fromTo(CAM + " .tag", { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.5, ease: "expo.out" }, t);
+      tl.to(CAM + " .tag", { opacity: 0, x: -20, duration: 0.35, ease: "power2.in" }, t + hold);
+    };
+
+    tl.set("#e11-n1", { rotation: -6 }, 0); tl.set("#e11-n2", { rotation: 5 }, 0); tl.set("#e11-s", { rotation: -4 }, 0);
+    pop("#e11-n1", 1.237); pop("#e11-n2", 2.688); pop("#e11-s", 5.347);
+    tl.to("#e11-n1, #e11-n2, #e11-s", { x: (i) => [380, 120, 220][i], y: (i) => [300, 230, -120][i], scale: 0.2, opacity: 0, rotation: 0, duration: 0.7, ease: "power3.in", stagger: 0.06 }, 6.328);
+    tl.fromTo("#e11-hex", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.8)" }, 7.352);
+    tl.to("#e11-hex", { opacity: 0, scale: 0.8, duration: 0.35 }, 9.182);
+    pip(9.082, "bl");
+    lift("#e11-chat", 9.282);
+    pop("#e11-m1", 9.879); pop("#e11-m2", 10.634);
+    pop("#e11-p1", 12.127);
+
+    window.__timelines["e11"] = tl;
+  </script>
+</template>

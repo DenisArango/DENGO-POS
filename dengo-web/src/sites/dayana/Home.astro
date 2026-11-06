@@ -1,0 +1,937 @@
+---
+// Variedades Dayana — the home page, "la caja de crayones".
+// Idea: the crayons on Dayana's shelves come alive and show you the shop.
+// Roja and Azul (the logo's red and navy) stand in a 3D night of floating
+// supplies and look at you; Roja then walks you down the page from the
+// corner. The family's story is a drawing notebook whose pages turn as you
+// scroll while a crayon draws the house at each stage. The featured lines
+// slide past sideways, each minded by a crayon; two crayons in sunglasses
+// hold up the Black November sign over the coupon you clip right there; a
+// crayon draws the path through the services; and at each store a crayon is
+// awake while it's open and asleep when it's closed.
+import Layout from './Layout.astro'
+import Crayon from './Crayon.astro'
+import Drawing from './Drawing.astro'
+import CouponForm from '../../core/CouponForm.astro'
+import { offerHeadline, fmtDay, mapsLink } from '../../core/api'
+import { BRAND, GUIDE, PHOTOS, STORY, FEATURED, SHELVES, SERVICES, SERVICE_NOTES, MISSION, HOURS, shopState, storeCard, visibleBranches, title, type CrewKey } from './data'
+import type { SiteContent } from '../../core/types'
+
+const { content } = Astro.props as { content: SiteContent }
+const offer = content.promotions.find(p => p.featured) ?? content.promotions[0]
+const branches = visibleBranches(content.branches)
+const cards = branches.map(storeCard)
+const NUM = ['Cero', 'Una', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete', 'Ocho', 'Nueve', 'Diez']
+const storesTitle = branches.length === 1 ? 'Ven a la tienda' : `${NUM[branches.length] ?? branches.length} tiendas, la misma atención`
+const storeCrew: CrewKey[] = ['azul', 'roja', 'pino', 'sol']
+const storeTone = [['var(--red)', '#fff'], ['var(--navy)', '#fff'], ['var(--yellow)', 'var(--ink)'], ['var(--green)', '#fff']]
+
+const head = offer ? offerHeadline(offer) : ''
+const gtDate = (iso: string | null) => iso ? new Date(new Date(iso).getTime() - 6 * 3_600_000) : null
+const s0 = gtDate(offer?.startsAt ?? null), e0 = gtDate(offer?.endsAt ?? null)
+const wholeNovember = !!(s0 && e0 && s0.getUTCMonth() === 10 && s0.getUTCDate() === 1 && ((e0.getUTCMonth() === 10 && e0.getUTCDate() === 30) || (e0.getUTCMonth() === 11 && e0.getUTCDate() === 1)))
+const when = offer ? (wholeNovember ? 'Todo noviembre' : offer.endsAt ? `Hasta el ${fmtDay(offer.endsAt)}` : 'Por tiempo limitado') : ''
+const isTotto = !!offer && /totto/i.test(offer.name)
+const ring = offer ? `${title(offer.name)} • ${when} • cupón en línea • `.toUpperCase() : ''
+
+const words1 = ['Útiles escolares', 'Totto', 'Parker', 'Sheaffer', 'Acrílicos', 'Leyes y códigos', 'Obras literarias', 'Manualidades', 'Fiestas', 'Abarrotes']
+const words2 = [BRAND.slogan, 'Rabinal y Cubulco', 'Desde 2010', 'Cuatro sucursales']
+const now = shopState()
+const leaves = STORY.length
+const P = PHOTOS
+---
+<Layout content={content} home>
+  <svg class="defs" width="0" height="0" aria-hidden="true" focusable="false">
+    <defs>
+      <filter id="wax" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="n" />
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" />
+      </filter>
+      {[['r', '#e8141c'], ['n', '#173a9e'], ['y', '#f0a800'], ['g', '#12a356'], ['s', '#2b9be0'], ['o', '#ff7a1a'], ['b', '#9a5b2e'], ['k', '#1a1433']].map(([k, c]) => (
+        <pattern id={`hx-${k}`} width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+          <path d="M0 3.5 H7" stroke={c} stroke-width="3" stroke-linecap="round" opacity="0.75" />
+        </pattern>
+      ))}
+    </defs>
+  </svg>
+
+  <!-- ═════ HERO: Roja and Azul in a night of floating supplies ═════ -->
+  <section class="hero" id="inicio" data-hero aria-labelledby="h-hero">
+    <canvas class="hero__canvas" data-hero3d aria-hidden="true"></canvas>
+    <div class="hero__glow" aria-hidden="true"></div>
+    <div class="hero__fallback" aria-hidden="true"><Crayon who="roja" pose="wave" face="grin" /><Crayon who="azul" /></div>
+    <div class="hero__in">
+      <p class="hero__kick dy-hand" aria-hidden="true" data-hero-in>En servicio y calidad,</p>
+      <h1 id="h-hero" class="hero__title"><span class="sr-only">{BRAND.name}. En servicio y calidad, </span><span class="hero__l">nadie nos</span> <span class="hero__l hero__l--2"><em>gana.</em><svg class="hero__scrib" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true"><path d="M6 26 C 120 6, 260 8, 380 18 S 560 34, 594 10" /></svg></span></h1>
+      <p class="hero__sub" data-hero-in>Útiles escolares, oficina, Totto, arte, leyes y la canasta básica. Cuatro tiendas en Rabinal y Cubulco desde 2010.</p>
+      <div class="hero__actions" data-hero-in>
+        {offer && <a class="dy-btn dy-btn--yellow" href="#cupon">Recorta tu {head}{isTotto ? ' en Totto' : ''} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>}
+        <a class="dy-btn dy-btn--light" href="#historia">Abre nuestro cuaderno</a>
+      </div>
+    </div>
+
+    {offer && (
+      <a class="badge" href="#cupon" data-hero-in aria-label={`${title(offer.name)}: ${head}. Obtener cupón`}>
+        <svg class="badge__ring" viewBox="0 0 200 200" aria-hidden="true">
+          <defs><path id="ring" d="M100 100 m -78 0 a 78 78 0 1 1 156 0 a 78 78 0 1 1 -156 0" /></defs>
+          <text><textPath href="#ring" textLength="486">{ring}</textPath></text>
+        </svg>
+        <span class="badge__v">{head}</span>
+      </a>
+    )}
+    <p class="hero__hint dy-hand" aria-hidden="true" data-hint>¡Tócanos!<svg viewBox="0 0 80 50"><path d="M4 8 C 30 4, 58 14, 70 40 M58 34 l12 8 l2 -14" /></svg></p>
+    <div class="hero__say dy-hand" data-hero-say aria-hidden="true"></div>
+
+    {branches.length > 0 && (
+      <ul class="hero__stores" data-hero-in aria-label="Tiendas">
+        {cards.map(c => (
+          <li><span class="dy-live" data-open-flag={now.open ? '1' : '0'} data-store>{c.short}</span></li>
+        ))}
+      </ul>
+    )}
+  </section>
+
+  <!-- ═════ Two ribbons of what's on the shelves ═════ -->
+  <div class="ribbons" aria-hidden="true">
+    <div class="ribbon ribbon--a" data-ribbon>
+      <div class="ribbon__track">{[0, 1].map(() => words1.map(w => <span>{w}<svg viewBox="0 0 40 16"><path d="M2 8 L10 2 H38 V14 H10 Z" /></svg></span>))}</div>
+    </div>
+    <div class="ribbon ribbon--b" data-ribbon data-dir="-1">
+      <div class="ribbon__track">{[0, 1, 2].map(() => words2.map(w => <span>{w}<svg viewBox="0 0 24 24"><path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" /></svg></span>))}</div>
+    </div>
+  </div>
+
+  <!-- ═════ THE NOTEBOOK: the story, page by page, drawn in crayon ═════ -->
+  <section class="nb" id="historia" data-say="historia" aria-labelledby="h-nb">
+    <div class="nb__stage" data-nb-stage>
+      <h2 id="h-nb" class="h-big nb__title" data-split>El cuaderno de Dayana</h2>
+      <p class="nb__hint dy-hand" aria-hidden="true">Sigue bajando para pasar la página</p>
+      <div class="book" data-book>
+        <!-- the last page, under every leaf -->
+        <div class="page page--base">
+          <div class="pg">
+            <p class="pg__mark dy-hand">{STORY[leaves - 1]!.mark}</p>
+            <h3 class="pg__t dy-hand">{STORY[leaves - 1]!.title}</h3>
+            <p class="pg__x dy-hand">{STORY[leaves - 1]!.text}</p>
+            <div class="pg__mini"><Drawing n={STORY[leaves - 1]!.draw} class={`sc-${leaves}`} /><img class="pg__photo" src={P[STORY[leaves - 1]!.photo].src} alt={P[STORY[leaves - 1]!.photo].alt} width={P[STORY[leaves - 1]!.photo].w} height={P[STORY[leaves - 1]!.photo].h} loading="lazy" decoding="async" /></div>
+            <p class="pg__n dy-hand">{leaves} / {leaves}</p>
+          </div>
+        </div>
+        {STORY.map((s, i) => (
+          <div class="leaf" data-leaf>
+            {i === 0 ? (
+              <div class="face face--front cover">
+                <div class="cover__label">
+                  <p class="cover__brand">{BRAND.short}</p>
+                  <p class="cover__row"><span>Materia</span><b class="dy-hand">Nuestra historia</b></p>
+                  <p class="cover__row"><span>Nombre</span><b class="dy-hand">{BRAND.name}</b></p>
+                  <p class="cover__row"><span>Desde</span><b class="dy-hand">{BRAND.since}, {BRAND.origin.split(',')[0]}</b></p>
+                </div>
+                <div class="cover__crew" aria-hidden="true"><Crayon who="roja" pose="point" face="grin" /></div>
+                <span class="cover__elastic" aria-hidden="true"></span>
+              </div>
+            ) : (
+              <div class="face face--front page">
+                <div class="pg">
+                  <p class="pg__mark dy-hand">{STORY[i - 1]!.mark}</p>
+                  <h3 class="pg__t dy-hand">{STORY[i - 1]!.title}</h3>
+                  <p class="pg__x dy-hand">{STORY[i - 1]!.text}</p>
+                  <div class="pg__mini"><Drawing n={STORY[i - 1]!.draw} class={`sc-${i}`} /><img class="pg__photo" src={P[STORY[i - 1]!.photo].src} alt={P[STORY[i - 1]!.photo].alt} width={P[STORY[i - 1]!.photo].w} height={P[STORY[i - 1]!.photo].h} loading="lazy" decoding="async" /></div>
+                  <p class="pg__n dy-hand">{i} / {leaves}</p>
+                </div>
+              </div>
+            )}
+            <div class="face face--back page">
+              <div class="pg pg--left">
+                <p class="pg__mark dy-hand">{s.mark}</p>
+                <Drawing n={s.draw} class={`sc-${i + 1}`} />
+                <figure class="polaroid" style={`--rot:${i % 2 ? 4 : -4}deg`}>
+                  <img src={P[s.photo].src} alt={P[s.photo].alt} width={P[s.photo].w} height={P[s.photo].h} loading="lazy" decoding="async" />
+                  <figcaption class="dy-hand">{P[s.photo].caption}</figcaption>
+                  <span class="tape" aria-hidden="true"></span>
+                </figure>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div class="nb__crew nb__crew--l" aria-hidden="true"><Crayon who="pino" pose="wave" acc={['beret', 'brush']} style="--beret:#173a9e;--paint:#ffb800" /></div>
+      <div class="nb__crew nb__crew--r" aria-hidden="true"><Crayon who="azul" acc={['glasses']} flip /></div>
+    </div>
+  </section>
+
+  <!-- ═════ FEATURED: the lines people ask for by name, sliding sideways ═════ -->
+  <section class="aisles" id="destacados" data-say="destacados" aria-labelledby="h-feat">
+    <div class="aisles__pin" data-aisles>
+      <div class="aisles__track" data-aisles-track>
+        <div class="aisle aisle--intro">
+          <h2 id="h-feat" class="h-big" data-split>Lo que más nos piden</h2>
+          <p class="aisles__lead">Las marcas que la gente pide por su nombre, y todo lo de la escuela, la oficina y la casa.</p>
+          <svg class="aisles__arrow" viewBox="0 0 120 40" aria-hidden="true"><path d="M2 20h108M92 4l18 16-18 16" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </div>
+        {FEATURED.map(f => (
+          <article class="aisle aisle--feat" style={`--c:${f.color}; --i:${f.ink}`} data-feat aria-labelledby={`h-${f.id}`}>
+            <div class="aisle__crew" aria-hidden="true"><Crayon who={f.crew.who} pose={f.crew.pose} acc={f.crew.acc} style={f.crew.style} /></div>
+            <div class="aisle__img">
+              {f.choices.map((ch, j) => (
+                <img class:list={['aisle__pic', { 'is-on': j === 0 }]} data-fig={j} src={P[ch.photo].src} alt={P[ch.photo].alt} width={P[ch.photo].w} height={P[ch.photo].h} loading="lazy" decoding="async" />
+              ))}
+            </div>
+            <div class="aisle__body">
+              <p class="aisle__brand dy-hand">{f.brand}</p>
+              <h3 id={`h-${f.id}`} class="aisle__t">{f.title}</h3>
+              <p class="aisle__x">{f.text}</p>
+              {f.choices.length > 1 && (
+                <div class="chips" role="group" aria-label={`Ver ${f.brand}`}>
+                  {f.choices.map((ch, j) => <button type="button" class="chip" data-pick={j} aria-pressed={j === 0 ? 'true' : 'false'}>{ch.label}</button>)}
+                </div>
+              )}
+              {f.also && <p class="aisle__also">{f.also}</p>}
+              {f.id === 'totto' && isTotto && <a class="aisle__tag" href="#cupon">{head} · {when.toLowerCase()}</a>}
+            </div>
+          </article>
+        ))}
+        {SHELVES.map(s => (
+          <article class="aisle aisle--shelf" style={`--c:${s.color}; --i:${s.ink}`} aria-label={s.name}>
+            <div class="aisle__img"><img class="aisle__pic is-on" src={P[s.photo].src} alt={P[s.photo].alt} width={P[s.photo].w} height={P[s.photo].h} loading="lazy" decoding="async" /></div>
+            <div class="aisle__body">
+              <h3 class="aisle__t">{s.name}</h3>
+              <p class="aisle__note dy-hand">{s.note}</p>
+            </div>
+          </article>
+        ))}
+        <div class="aisle aisle--more">
+          <p class="aisle__more dy-hand">Y mucho más…</p>
+          <p class="aisles__lead">Ven a cualquiera de nuestras cuatro tiendas y pregunta por lo que buscas.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════ BLACK NOVEMBER: two crayons in sunglasses hold the sign ═════ -->
+  {offer && (
+    <section class="bn" id="cupon" data-say="cupon" aria-labelledby="h-bn">
+      <div class="bn__head">
+        <p class="bn__kick dy-hand">{when}</p>
+        <h2 id="h-bn" class="bn__title" data-split>{title(offer.name)}</h2>
+        {offer.description && <p class="bn__desc">{offer.description}</p>}
+      </div>
+      <div class="bn__stage">
+        <div class="bn__sign" data-sign>
+          <svg class="bn__board" viewBox="0 0 800 420" preserveAspectRatio="none" aria-hidden="true"><path d="M18 30 Q14 12 34 12 L770 8 Q790 8 790 28 L794 392 Q794 410 774 410 L30 414 Q10 414 10 394 Z" /></svg>
+          <p class="bn__v" aria-hidden="true">{head}</p>
+          <p class="bn__s">{offer.summary}</p>
+          <svg class="bn__circle" viewBox="0 0 300 160" preserveAspectRatio="none" aria-hidden="true"><path d="M150 14 C 60 10, 10 50, 18 92 C 28 140, 130 152, 210 140 C 290 126, 300 60, 240 30 C 200 10, 120 12, 90 24" /></svg>
+        </div>
+        <div class="bn__crew">
+          <Crayon who="roja" pose="hold" acc={['shades']} face="grin" />
+          <Crayon who="azul" pose="hold" acc={['shades']} />
+        </div>
+      </div>
+      {offer.endsAt && (
+        <p class="bn__clock" data-clock={offer.endsAt} role="timer" aria-label="Tiempo que le queda a la oferta">
+          <span>Quedan</span> <b data-u="d">–</b> <span data-l="d">días</span> <span>y</span> <b data-u="h">–</b> <span data-l="h">horas</span>
+        </p>
+      )}
+      <div class="ticket" data-ticket>
+        <span class="ticket__sc" aria-hidden="true"><svg viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="5"><circle cx="14" cy="18" r="9" /><circle cx="14" cy="46" r="9" /></g><path d="M21 23 60 42" stroke="currentColor" stroke-width="5" stroke-linecap="round" /><path d="M21 41 60 22" stroke="currentColor" stroke-width="5" stroke-linecap="round" /></svg></span>
+        <div class="ticket__l">
+          <p class="ticket__v">{head}</p>
+          <p class="ticket__n">{offer.name}</p>
+          <p class="ticket__m">{offer.summary}{offer.endsAt ? ` · hasta el ${fmtDay(offer.endsAt)}` : ''}</p>
+        </div>
+        <div class="ticket__r">
+          <h3 class="ticket__h">Recórtalo aquí mismo</h3>
+          <CouponForm slug={offer.slug} formClass="t-form" inputClass="t-input" buttonClass="dy-btn t-btn" noteClass="t-note" buttonLabel="Recortar mi cupón" />
+        </div>
+      </div>
+      {offer.terms && <p class="bn__terms">{offer.terms}</p>}
+      <p class="bn__all"><a class="bn__link" href="/ofertas">Ver todas las ofertas</a></p>
+    </section>
+  )}
+
+  <!-- ═════ SERVICES: a crayon draws the path through them ═════ -->
+  <section class="path" id="servicios" data-say="servicios" aria-labelledby="h-serv">
+    <h2 id="h-serv" class="h-big path__title" data-split>También lo hacemos en la tienda</h2>
+    <div class="path__body" data-path>
+      <svg class="path__svg" aria-hidden="true"><path class="path__line" /></svg>
+      <div class="path__crayon" aria-hidden="true"><svg viewBox="0 0 130 30"><path d="M128 15 L104 4 V26 Z" fill="#ff2a2a" stroke="#1a1433" stroke-width="3" stroke-linejoin="round" /><rect x="6" y="4" width="98" height="22" rx="4" fill="#e8141c" stroke="#1a1433" stroke-width="3" /><path d="M18 4 v22 M90 4 v22" stroke="#9e0710" stroke-width="5" /><rect x="40" y="9" width="34" height="12" rx="6" fill="#fff" /></svg></div>
+      <ol class="steps">
+        {SERVICES.map((s, i) => (
+          <li class="step" data-step>
+            <span class="step__n" aria-hidden="true">{i + 1}</span>
+            <figure class="step__card"><img src={P[s.photo].src} alt={P[s.photo].alt} width={P[s.photo].w} height={P[s.photo].h} loading="lazy" decoding="async" /></figure>
+            <h3 class="step__t">{s.name}</h3>
+            <p class="step__x">{s.note}</p>
+            {s.only && <p class="step__only">Solo en {s.only}</p>}
+          </li>
+        ))}
+      </ol>
+    </div>
+    <div class="path__notes">
+      <p class="path__note"><b class="dy-hand">OPF, mayoristas e instituciones</b>{SERVICE_NOTES.groups.replace(/^Atención/, ' Atención')}</p>
+      <p class="path__note"><b class="dy-hand">Formas de pago</b> {SERVICE_NOTES.pay}</p>
+    </div>
+  </section>
+
+  <!-- ═════ MISSION AND VISION, with two crayons sitting on the title ═════ -->
+  <section class="mv" id="nosotros" data-say="mueve" aria-labelledby="h-mv">
+    <div class="mv__head">
+      <div class="mv__crew" aria-hidden="true"><Crayon who="azul" acc={['glasses']} /><Crayon who="roja" pose="wave" /></div>
+      <h2 id="h-mv" class="h-big" data-split>Lo que nos mueve</h2>
+    </div>
+    <div class="mv__grid">
+      <div class="mv__col">
+        <p class="mv__k dy-hand">Nuestra misión</p>
+        <p class="mv__t">{MISSION.mission.before}<mark class="wax">{MISSION.mission.mark}</mark>{MISSION.mission.after}</p>
+      </div>
+      <div class="mv__col">
+        <p class="mv__k dy-hand">Nuestra visión</p>
+        <p class="mv__t">{MISSION.vision}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════ STORES: awake when open, asleep when closed ═════ -->
+  {branches.length > 0 && (
+    <section class="stores" id="tiendas" data-say="tiendas" aria-labelledby="h-stores">
+      <h2 id="h-stores" class="h-big" data-split>{storesTitle}</h2>
+      <p class="stores__lead">Mira a cada crayón: si está despierto, la tienda está abierta ahora mismo. Si duerme, vuelve en el horario de abajo.</p>
+      <ul class="hours" aria-label="Horario de atención, todas las tiendas">
+        {HOURS.map(h => <li><span class="dy-hand">{h.days}</span><b>{h.from} a {h.to}</b></li>)}
+      </ul>
+      <ul class="stores__list">
+        {cards.map((card, i) => { const [c, ink] = storeTone[i % 4]!; const ph = P[card.photo]; const logo = card.logo ? P[card.logo] : null; return (
+          <li class="store" style={`--c:${c}; --i:${ink}`} data-store-card>
+            <div class="store__crew" aria-hidden="true"><Crayon who={storeCrew[i % 4]!} pose="wave" asleep={!now.open} /></div>
+            <figure class="store__pic">
+              <img src={ph.src} alt={ph.alt} width={ph.w} height={ph.h} loading="lazy" decoding="async" />
+              {logo && <img class="store__logo" src={logo.src} alt="" width={logo.w} height={logo.h} loading="lazy" decoding="async" />}
+              <span class="store__n" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+            </figure>
+            <h3 class="store__t">{card.name}</h3>
+            <p class="store__a">{card.address}</p>
+            <p class="dy-live store__live" data-open-flag={now.open ? '1' : '0'} data-store data-label>{now.label}</p>
+            {card.main && <p class="store__main dy-hand">Aquí empezó todo, en 2010</p>}
+            <p class="store__act">
+              <a class="dy-btn dy-btn--light" href={mapsLink({ name: card.name, address: card.street, city: card.town })} target="_blank" rel="noopener">Cómo llegar</a>
+              {card.phone && <a class="store__tel" href={`tel:+502${card.phone.replace(/\D/g, '')}`}>{card.phone}</a>}
+            </p>
+          </li>
+        ) })}
+      </ul>
+    </section>
+  )}
+
+  <!-- ═════ The guide: Roja in the corner, talking you down the page ═════ -->
+  <aside class="guide" data-guide aria-label="Roja, la guía de la página">
+    <div class="guide__bubble dy-hand" data-guide-bubble aria-hidden="true"><p data-guide-text>{GUIDE.hola}</p></div>
+    <button class="guide__me" type="button" data-guide-me aria-label="Tocar a Roja"><Crayon who="roja" pose="wave" /></button>
+    <button class="guide__x" type="button" data-guide-x aria-label="Ocultar a Roja"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+  </aside>
+  <button class="guide__back" type="button" data-guide-back aria-label="Mostrar a Roja, la guía"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 34 L14 14 Q20 6 26 14 L32 34 Z" /></svg></button>
+</Layout>
+
+<script>
+  import gsap from 'gsap'
+  import { ScrollTrigger } from 'gsap/ScrollTrigger'
+  import { SplitText } from 'gsap/SplitText'
+  import { mountHero, type HeroScene } from './hero3d'
+  import { CREW, GUIDE, STORY, shopState } from './data'
+
+  gsap.registerPlugin(ScrollTrigger, SplitText)
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const mm = gsap.matchMedia()
+  type W = Window & { __dayanaReady?: boolean }
+  const onReady = (fn: () => void) => { if ((window as W).__dayanaReady) fn(); else addEventListener('dayana:ready', fn, { once: true }) }
+  const hopEl = (c: Element | null | undefined) => {
+    if (!c || reduce) return
+    c.classList.remove('cr-hop'); void (c as SVGElement).getBoundingClientRect(); c.classList.add('cr-hop')
+    setTimeout(() => c.classList.remove('cr-hop'), 750)
+  }
+
+  // ── Stores: open/closed, live; the crayon sleeps when its store is closed ──
+  const stores = () => document.querySelectorAll<HTMLElement>('[data-store]').forEach(el => {
+    const s = shopState()
+    el.setAttribute('data-open-flag', s.open ? '1' : '0')
+    if (el.hasAttribute('data-label')) el.textContent = s.label
+    el.closest('[data-store-card]')?.querySelector('svg.cr')?.classList.toggle('is-asleep', !s.open)
+  })
+  stores(); setInterval(stores, 30_000)
+
+  // ── Hero: the 3D crew ───────────────────────────────────────────────
+  const heroEl = document.querySelector<HTMLElement>('[data-hero]')!
+  const canvas = heroEl.querySelector<HTMLCanvasElement>('[data-hero3d]')
+  const bubble = heroEl.querySelector<HTMLElement>('[data-hero-say]')!
+  const hint = heroEl.querySelector<HTMLElement>('[data-hint]')
+  const LINES: Record<string, string[]> = {
+    Roja: ['¡Hola! Soy Roja.', '¡Otra vez, otra vez!', '¿Ya viste la oferta de abajo?', 'Baja, te enseño la tienda.'],
+    Azul: ['Hola, soy Azul.', 'Con calma, que me mareo.', 'Yo cuido las leyes y las plumas.', 'Roja habla mucho, ¿verdad?'],
+  }
+  const count: Record<string, number> = {}
+  let bubbleT = 0
+  const onHit = (name: string, x: number, y: number) => {
+    hint?.classList.add('is-gone')
+    const list = LINES[name] ?? ['¡Hola!']
+    const k = count[name] = ((count[name] ?? -1) + 1) % list.length
+    const r = heroEl.getBoundingClientRect()
+    bubble.textContent = list[k]!
+    bubble.style.left = `${Math.min(r.width - 140, Math.max(140, x - r.left))}px`
+    bubble.style.top = `${Math.max(90, y - r.top)}px`
+    bubble.classList.remove('is-on'); void bubble.offsetWidth; bubble.classList.add('is-on')
+    clearTimeout(bubbleT); bubbleT = window.setTimeout(() => bubble.classList.remove('is-on'), 2200)
+  }
+  let hero: HeroScene | null = null
+  const fontsReady = Promise.race([document.fonts.load('700 66px Caveat').catch(() => null), new Promise(r => setTimeout(r, 1200))])
+  const heroReady = fontsReady.then(() => {
+    hero = canvas ? mountHero(canvas, { crew: [CREW.roja, CREW.azul], count: innerWidth < 760 ? 18 : 34, still: reduce, onHit }) : null
+    if (!hero) heroEl.classList.add('no-3d')
+  })
+
+  const heroTitle = heroEl.querySelector<HTMLElement>('.hero__title')!
+  const heroIn = heroEl.querySelectorAll<HTMLElement>('[data-hero-in]')
+  const scrib = heroEl.querySelector<SVGPathElement>('.hero__scrib path')
+  const intro = () => {
+    heroReady.then(() => hero?.reveal())
+    if (reduce) { gsap.set([heroIn, heroTitle], { opacity: 1 }); return }
+    const split = SplitText.create(heroTitle.querySelectorAll('.hero__l'), { type: 'chars', charsClass: 'ch' })
+    gsap.set(heroTitle, { opacity: 1 })
+    const tl = gsap.timeline()
+    tl.from(split.chars, { yPercent: 120, rotate: () => gsap.utils.random(-20, 20), duration: 1.1, ease: 'expo.out', stagger: 0.035 }, 0.15)
+    if (scrib) { const L = scrib.getTotalLength(); tl.fromTo(scrib, { strokeDasharray: L, strokeDashoffset: L }, { strokeDashoffset: 0, duration: 0.9, ease: 'power2.inOut' }, 0.8) }
+    tl.fromTo(heroIn, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out', stagger: 0.1 }, 0.4)
+  }
+  onReady(intro)
+
+  if (!reduce) {
+    ScrollTrigger.create({ trigger: heroEl, start: 'top top', end: 'bottom top', scrub: true, onUpdate: s => hero?.setProgress(s.progress) })
+    gsap.to('.hero__in', { yPercent: -24, opacity: 0.15, ease: 'none', scrollTrigger: { trigger: heroEl, start: 'top top', end: 'bottom top', scrub: true } })
+    gsap.to('.badge__ring', { rotate: 360, duration: 20, ease: 'none', repeat: -1 })
+  }
+
+  // ── Ribbons: speed follows the scroll ─────────────────────────────────
+  document.querySelectorAll<HTMLElement>('[data-ribbon]').forEach(r => {
+    if (reduce) return
+    const track = r.querySelector<HTMLElement>('.ribbon__track')!
+    const dir = Number(r.dataset.dir ?? 1)
+    const loop = gsap.to(track, { xPercent: dir > 0 ? -50 : 0, startAt: { xPercent: dir > 0 ? 0 : -50 }, duration: 30, ease: 'none', repeat: -1 })
+    ScrollTrigger.create({
+      trigger: r, start: 'top bottom', end: 'bottom top',
+      onUpdate: s => {
+        const v = s.getVelocity() / 300
+        gsap.to(loop, { timeScale: 1 + Math.min(6, Math.abs(v)), duration: 0.2, overwrite: true, onComplete: () => { gsap.to(loop, { timeScale: 1, duration: 1.2 }) } })
+        gsap.to(track, { skewX: gsap.utils.clamp(-12, 12, -v * 2 * dir), duration: 0.4, overwrite: 'auto' })
+      },
+    })
+  })
+
+  // ── Section titles: the letters rise in ───────────────────────────────
+  if (!reduce) document.querySelectorAll<HTMLElement>('[data-split]').forEach(h => {
+    const split = SplitText.create(h, { type: 'chars,words', wordsClass: 'w' })
+    gsap.from(split.chars, { yPercent: 110, rotate: 8, opacity: 0, duration: 0.9, ease: 'expo.out', stagger: 0.02, scrollTrigger: { trigger: h, start: 'top 86%', once: true } })
+  })
+
+  // ── Crayon drawings: each stroke drawn in order, a crayon on its tip ──
+  const drawn = new WeakSet<Element>()
+  const drawings = [...document.querySelectorAll<SVGSVGElement>('svg[data-draw]')]
+  if (!reduce) drawings.forEach(svg => {
+    svg.querySelectorAll<SVGPathElement>('.dw-ln').forEach(p => p.style.setProperty('--len', String(Math.ceil(p.getTotalLength()) + 4)))
+    svg.classList.add('is-pending')
+  })
+  const draw = (svg: SVGSVGElement) => {
+    if (reduce || drawn.has(svg)) return
+    drawn.add(svg)
+    const tip = svg.querySelector<SVGGElement>('.dw-tip')!
+    const tl = gsap.timeline({ delay: 0.35 })
+    tl.set(tip, { opacity: 1 })
+    svg.querySelectorAll<SVGPathElement>('.dw-ln').forEach(p => {
+      const L = p.getTotalLength()
+      const o = { v: 0 }
+      tl.to(o, {
+        v: 1, duration: Math.max(0.14, Math.min(0.62, L / 700)), ease: 'none',
+        onStart: () => tip.style.setProperty('--tip', getComputedStyle(p).stroke),
+        onUpdate: () => {
+          p.style.strokeDashoffset = String((L + 4) * (1 - o.v))
+          const pt = p.getPointAtLength(L * o.v)
+          tip.setAttribute('transform', `translate(${pt.x} ${pt.y})`)
+        },
+      })
+    })
+    tl.to(tip, { opacity: 0, duration: 0.25 })
+    tl.to(svg.querySelectorAll('.dw-fl'), { opacity: 0.85, duration: 0.5, stagger: 0.08 }, '-=0.2')
+    tl.to(svg.querySelectorAll('.dw-w'), { opacity: 1, duration: 0.4, stagger: 0.1 }, '<')
+  }
+  const drawScene = (k: number) => document.querySelectorAll<SVGSVGElement>(`svg.sc-${k}`).forEach(s => { if (s.getBoundingClientRect().width > 0) draw(s) })
+
+  // ── The guide ─────────────────────────────────────────────────────────
+  const guide = document.querySelector<HTMLElement>('[data-guide]')!
+  const gBubble = guide.querySelector<HTMLElement>('[data-guide-bubble]')!
+  const gText = guide.querySelector<HTMLElement>('[data-guide-text]')!
+  const gMe = guide.querySelector<HTMLButtonElement>('[data-guide-me]')!
+  const gBack = document.querySelector<HTMLButtonElement>('[data-guide-back]')!
+  let off = false
+  try { off = localStorage.getItem('dayana-guia') === 'off' } catch {}
+  let inHero = true, inFoot = false, gT = 0, nextLine = GUIDE.hola!
+  const show = () => {
+    const on = !off && !inHero && !inFoot
+    guide.classList.toggle('is-on', on)
+    gBack.classList.toggle('is-on', off && !inHero && !inFoot)
+  }
+  const say = (line: string | undefined) => {
+    if (!line) return
+    nextLine = line
+    if (!guide.classList.contains('is-on')) return
+    if (gText.textContent === line && gBubble.classList.contains('is-on')) return
+    gBubble.classList.remove('is-on')
+    window.setTimeout(() => {
+      gText.textContent = nextLine
+      gBubble.classList.add('is-on')
+      hopEl(gMe.querySelector('svg.cr'))
+      clearTimeout(gT); gT = window.setTimeout(() => gBubble.classList.remove('is-on'), innerWidth < 760 ? 4200 : 6500)
+    }, 220)
+  }
+  const jokes = ['¡Jiji, cosquillas!', 'Sigue bajando, falta lo mejor.', '¿Sabías que soy del color del logo?', '¡Me encanta que me toquen!']
+  let jk = 0
+  // out of the way while someone types (the coupon form)
+  document.addEventListener('focusin', e => { if ((e.target as Element).matches?.('input, textarea')) guide.classList.add('is-typing') })
+  document.addEventListener('focusout', () => guide.classList.remove('is-typing'))
+  gMe.addEventListener('click', () => { say(jokes[jk++ % jokes.length]) })
+  guide.querySelector('[data-guide-x]')!.addEventListener('click', () => { off = true; try { localStorage.setItem('dayana-guia', 'off') } catch {} show() })
+  gBack.addEventListener('click', () => { off = false; try { localStorage.removeItem('dayana-guia') } catch {} show(); say('¡Volví!') })
+
+  // ── The notebook turns its pages ──────────────────────────────────────
+  const book = document.querySelector<HTMLElement>('[data-book]')
+  if (book && !reduce) {
+    book.classList.add('is-3d')
+    const leaves = [...book.querySelectorAll<HTMLElement>('[data-leaf]')]
+    const n = leaves.length
+    let spread = -1
+    const stack = () => {
+      let turned = 0
+      leaves.forEach((l, i) => {
+        const rot = Number(gsap.getProperty(l, 'rotateY'))
+        if (rot < -90) turned++
+        l.style.zIndex = String(rot < -90 ? 10 + i : 10 + n - i)
+      })
+      if (turned !== spread) {
+        spread = turned
+        if (turned > 0) { drawScene(turned); say(STORY[turned - 1]?.say) }
+      }
+    }
+    mm.add({ wide: '(min-width: 861px)', narrow: '(max-width: 860px)' }, ctx => {
+      const wide = ctx.conditions?.wide
+      gsap.set(book, { xPercent: 0, rotateX: 10 })
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: '[data-nb-stage]', start: 'top top', end: `+=${n * 95 + 40}%`, pin: true, scrub: 0.7, anticipatePin: 1 },
+        onUpdate: stack,
+      })
+      tl.to('.nb__hint', { opacity: 0, duration: 0.3 }, 0)
+      if (wide) tl.to(book, { xPercent: 50, duration: 1, ease: 'power2.inOut' }, 0)
+      tl.to(book, { rotateX: 4, duration: n * 1.2 }, 0)
+      leaves.forEach((l, i) => {
+        tl.to(l, { rotateY: -180, duration: 1, ease: 'power2.inOut' }, i * 1.2)
+        if (!wide) tl.to(l, { opacity: 0, duration: 0.25 }, i * 1.2 + 0.75)
+      })
+      tl.to({}, { duration: 0.6 })
+      spread = -1; stack()
+      return () => { gsap.set([book, ...leaves], { clearProps: 'all' }) }
+    })
+  }
+
+  // ── Featured: pinned sideways scroll on wide screens; chips swap photos ──
+  document.querySelectorAll<HTMLElement>('[data-feat]').forEach(card => {
+    const imgs = card.querySelectorAll<HTMLElement>('[data-fig]')
+    const chips = card.querySelectorAll<HTMLButtonElement>('[data-pick]')
+    chips.forEach(ch => ch.addEventListener('click', () => {
+      chips.forEach(c => c.setAttribute('aria-pressed', String(c === ch)))
+      imgs.forEach(im => im.classList.toggle('is-on', im.dataset.fig === ch.dataset.pick))
+      hopEl(card.querySelector('svg.cr'))
+    }))
+  })
+  mm.add('(min-width: 861px) and (prefers-reduced-motion: no-preference)', () => {
+    const track = document.querySelector<HTMLElement>('[data-aisles-track]')!
+    const dist = () => track.scrollWidth - innerWidth
+    const tween = gsap.to(track, { x: () => -dist(), ease: 'none', scrollTrigger: { trigger: '[data-aisles]', start: 'top top', end: () => `+=${dist()}`, pin: true, scrub: 0.8, invalidateOnRefresh: true } })
+    track.querySelectorAll<HTMLElement>('.aisle:not(.aisle--intro)').forEach((card, i) => {
+      gsap.fromTo(card, { rotate: i % 2 ? 6 : -6, y: 70 }, { rotate: i % 2 ? 1.5 : -1.5, y: 0, ease: 'none', scrollTrigger: { trigger: card, containerAnimation: tween, start: 'left right', end: 'center center', scrub: true } })
+      const pics = card.querySelectorAll('.aisle__pic')
+      if (pics.length) gsap.fromTo(pics, { xPercent: -8, scale: 1.22 }, { xPercent: 8, scale: 1.1, ease: 'none', scrollTrigger: { trigger: card, containerAnimation: tween, start: 'left right', end: 'right left', scrub: true } })
+      const crew = card.querySelector('.aisle__crew')
+      if (crew) gsap.fromTo(crew, { y: 90, rotate: -12 }, { y: 0, rotate: 0, ease: 'back.out(2)', scrollTrigger: { trigger: card, containerAnimation: tween, start: 'left 85%', end: 'left 45%', scrub: true } })
+    })
+    gsap.to('.aisles__arrow', { x: 24, duration: 0.7, repeat: -1, yoyo: true, ease: 'sine.inOut' })
+  })
+
+  // ── Black November: the clock, the sign, the ticket ───────────────────
+  const clock = document.querySelector<HTMLElement>('[data-clock]')
+  if (clock) {
+    const end = new Date(clock.dataset.clock!).getTime()
+    const u = (k: string) => clock.querySelector<HTMLElement>(`[data-u="${k}"]`)!
+    const l = (k: string) => clock.querySelector<HTMLElement>(`[data-l="${k}"]`)!
+    const tick = () => {
+      let s = Math.max(0, Math.floor((end - Date.now()) / 1000))
+      if (s <= 0) { clock.textContent = 'La oferta terminó'; return }
+      const d = Math.floor(s / 86400); s -= d * 86400
+      const h = Math.floor(s / 3600)
+      u('d').textContent = String(d); l('d').textContent = d === 1 ? 'día' : 'días'
+      u('h').textContent = String(h); l('h').textContent = h === 1 ? 'hora' : 'horas'
+    }
+    tick(); setInterval(tick, 30_000)
+  }
+  if (!reduce) {
+    gsap.from('[data-sign]', { y: 160, rotate: -8, scale: 0.85, duration: 1.3, ease: 'elastic.out(1, 0.55)', scrollTrigger: { trigger: '[data-sign]', start: 'top 85%', once: true } })
+    gsap.from('.bn__crew svg', { y: 220, duration: 1, ease: 'back.out(1.6)', stagger: 0.12, scrollTrigger: { trigger: '[data-sign]', start: 'top 85%', once: true } })
+    const circ = document.querySelector<SVGPathElement>('.bn__circle path')
+    if (circ) { const L = circ.getTotalLength(); gsap.fromTo(circ, { strokeDasharray: L, strokeDashoffset: L }, { strokeDashoffset: 0, duration: 1.2, ease: 'power2.inOut', scrollTrigger: { trigger: '[data-sign]', start: 'top 60%', once: true } }) }
+    gsap.from('[data-ticket]', { y: 120, rotate: -6, scale: 0.92, duration: 1.2, ease: 'elastic.out(1, 0.6)', scrollTrigger: { trigger: '[data-ticket]', start: 'top 88%', once: true } })
+    gsap.to('.ticket__sc', { left: 'calc(100% - 40px)', duration: 3.4, ease: 'sine.inOut', repeat: -1, yoyo: true })
+  }
+
+  // ── Services: the crayon draws the path ───────────────────────────────
+  const pathBox = document.querySelector<HTMLElement>('[data-path]')
+  if (pathBox) {
+    const svg = pathBox.querySelector<SVGSVGElement>('.path__svg')!
+    const line = svg.querySelector<SVGPathElement>('.path__line')!
+    const pen = pathBox.querySelector<HTMLElement>('.path__crayon')!
+    const steps = [...pathBox.querySelectorAll<HTMLElement>('[data-step]')]
+    let L = 0
+    let st: ScrollTrigger | null = null
+    const build = () => {
+      const box = pathBox.getBoundingClientRect()
+      const w = box.width, h = box.height
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`)
+      const pts = [{ x: w * 0.5, y: 0 }, ...steps.map(s => {
+        const b = s.querySelector<HTMLElement>('.step__n')!.getBoundingClientRect()
+        return { x: b.left - box.left + b.width / 2, y: b.top - box.top + b.height / 2 }
+      }), { x: w * 0.5, y: h }]
+      let d = `M${pts[0]!.x} ${pts[0]!.y}`
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1]!, b = pts[i]!
+        const swing = (i % 2 ? 1 : -1) * Math.min(w * 0.35, 260)
+        d += ` C ${a.x + swing} ${a.y + (b.y - a.y) * 0.35}, ${b.x - swing} ${a.y + (b.y - a.y) * 0.65}, ${b.x} ${b.y}`
+      }
+      line.setAttribute('d', d)
+      L = line.getTotalLength()
+      line.style.strokeDasharray = `${L}`
+      if (!st) line.style.strokeDashoffset = reduce ? '0' : `${L}`
+    }
+    const place = (p: number) => {
+      line.style.strokeDashoffset = `${L * (1 - p)}`
+      const at = Math.max(0.5, L * p)
+      const a = line.getPointAtLength(at), b = line.getPointAtLength(Math.max(0, at - 2))
+      const ang = Math.atan2(a.y - b.y, a.x - b.x) * 180 / Math.PI
+      pen.style.transform = `translate(${a.x}px, ${a.y}px) rotate(${ang}deg)`
+      steps.forEach((s, i) => s.classList.toggle('on', p >= (i + 0.6) / (steps.length + 1) - 0.08))
+    }
+    build()
+    if (reduce) { steps.forEach(s => s.classList.add('on')); pen.style.display = 'none' }
+    else {
+      st = ScrollTrigger.create({ trigger: pathBox, start: 'top 70%', end: 'bottom 70%', scrub: 0.6, onUpdate: s => place(s.progress), onRefresh: s => { build(); place(s.progress) } })
+      place(0)
+    }
+  }
+
+  // ── Mission: the wax highlighter; stores: the cards drop in ───────────
+  if (!reduce) {
+    gsap.fromTo('.wax', { '--wax': '0%' }, { '--wax': '100%', ease: 'none', scrollTrigger: { trigger: '.wax', start: 'top 82%', end: 'top 45%', scrub: true } })
+    gsap.from('.mv__crew svg', { y: 120, opacity: 0, duration: 0.9, ease: 'back.out(1.8)', stagger: 0.15, scrollTrigger: { trigger: '.mv__head', start: 'top 80%', once: true } })
+    gsap.from('[data-store-card]', { y: 140, rotate: (i: number) => [-8, 5, -4, 6][i % 4], opacity: 0, duration: 1, ease: 'back.out(1.6)', stagger: 0.12, scrollTrigger: { trigger: '.stores__list', start: 'top 82%', once: true } })
+  }
+
+  // The guide's cues are made last, so they measure the page after the pinned sections add their length.
+  ScrollTrigger.create({ trigger: heroEl, start: 'bottom 55%', onEnter: () => { inHero = false; show(); say(nextLine) }, onLeaveBack: () => { inHero = true; show() } })
+  ScrollTrigger.create({ trigger: '#contacto', start: 'top 75%', onEnter: () => { inFoot = true; show() }, onLeaveBack: () => { inFoot = false; show() } })
+  document.querySelectorAll<HTMLElement>('[data-say]').forEach(sec => {
+    const key = sec.dataset.say!
+    if (key === 'contacto') return
+    ScrollTrigger.create({ trigger: sec, start: 'top 55%', end: 'bottom 55%', onToggle: s => { if (s.isActive) say(GUIDE[key]) } })
+  })
+  ScrollTrigger.refresh()
+</script>
+
+<style>
+  .defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+  .h-big { font-size: var(--step-head); font-weight: 900; }
+  :global(.ch), :global(.w) { display: inline-block; }
+
+  /* ── Hero ───────────────────────────────────────────── */
+  .hero { position: relative; min-height: 100svh; background: var(--night); color: #fff; overflow: hidden; display: grid; align-items: center; padding: 130px var(--m) 120px; isolation: isolate; }
+  .hero__canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; }
+  .hero__glow { position: absolute; inset: -20%; z-index: -2; background: radial-gradient(38% 48% at 22% 42%, #10399e 0%, transparent 70%), radial-gradient(34% 40% at 76% 70%, #6b0e2b 0%, transparent 70%), var(--night); }
+  .hero__fallback { display: none; }
+  .hero:global(.no-3d) .hero__fallback { display: flex; align-items: end; gap: 10px; position: absolute; right: 7vw; bottom: 16vh; width: min(30vw, 380px); z-index: -1; }
+  .hero__fallback > :global(svg) { flex: 1; }
+  .hero__in { position: relative; max-width: min(62vw, 980px); }
+  .hero__kick { font-size: clamp(2.1rem, 1.3rem + 2.4vw, 3.8rem); font-weight: 700; line-height: 1; color: var(--yellow); transform: rotate(-3deg); transform-origin: left; }
+  .hero__title { margin-top: 10px; font-size: clamp(4.2rem, 1rem + 10.4vw, 12rem); font-weight: 900; line-height: 0.84; letter-spacing: -0.03em; }
+  :global(.d-js) .hero__title { opacity: 0; }
+  .hero__l { display: block; }
+  .hero__l--2 { position: relative; width: max-content; }
+  .hero__l--2 em { font-style: normal; color: #ff4141; }
+  .hero__scrib { position: absolute; left: 0; right: 0; bottom: -0.1em; width: 100%; height: 0.22em; overflow: visible; }
+  .hero__scrib path { fill: none; stroke: var(--yellow); stroke-width: 10; stroke-linecap: round; }
+  .hero__sub { font-size: var(--step-lead); margin-top: clamp(30px, 3.2vw, 46px); max-width: 34ch; line-height: 1.35; color: rgb(255 255 255 / 0.92); }
+  .hero__actions { display: flex; flex-wrap: wrap; gap: 14px 16px; margin-top: 32px; }
+  :global(.d-js) [data-hero-in] { opacity: 0; }
+
+  .badge { position: absolute; right: clamp(16px, 4vw, 70px); top: clamp(104px, 14vh, 140px); width: clamp(120px, 11vw, 170px); aspect-ratio: 1; display: grid; place-items: center; text-decoration: none; color: var(--ink); z-index: 2; }
+  .badge__ring { position: absolute; inset: 0; width: 100%; height: 100%; background: var(--yellow); border-radius: 50%; border: 3px solid var(--ink); }
+  .badge__ring text { font: 800 12.5px var(--font); letter-spacing: 0.04em; fill: var(--ink); }
+  .badge__v { position: relative; font: 900 clamp(1.8rem, 1.1rem + 1.8vw, 3rem)/1 var(--display); font-variation-settings: var(--soft); letter-spacing: -0.04em; background: var(--red); color: #fff; width: 60%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; border: 3px solid var(--ink); transition: transform 300ms var(--ease-spring); }
+  @media (hover: hover) { .badge:hover .badge__v { transform: scale(1.12) rotate(-8deg); } }
+
+  .hero__hint { position: absolute; right: 31vw; bottom: 17vh; display: flex; align-items: end; gap: 4px; font-size: 2rem; font-weight: 700; color: var(--yellow); transform: rotate(-6deg); transition: opacity 0.4s; pointer-events: none; }
+  .hero__hint svg { width: 70px; height: 44px; fill: none; stroke: var(--yellow); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; transform: scaleX(-1) rotate(30deg); }
+  .hero__hint:global(.is-gone) { opacity: 0; }
+  .hero:global(.no-3d) .hero__hint { display: none; }
+  .hero__say { position: absolute; z-index: 3; translate: -50% -100%; padding: 10px 18px 12px; border-radius: 22px; background: #fff; color: var(--ink); border: 3px solid var(--ink); box-shadow: 0 5px 0 var(--ink); font-size: 1.7rem; font-weight: 700; line-height: 1; white-space: nowrap; opacity: 0; scale: 0.6; transform-origin: 50% 100%; transition: opacity 0.2s, scale 0.35s var(--ease-spring); pointer-events: none; }
+  .hero__say::after { content: ''; position: absolute; left: 50%; bottom: -14px; width: 20px; height: 20px; background: #fff; border: solid var(--ink); border-width: 0 3px 3px 0; transform: translateX(-50%) rotate(45deg); }
+  .hero__say:global(.is-on) { opacity: 1; scale: 1; }
+
+  .hero__stores { position: absolute; left: var(--m); right: 40%; bottom: 28px; display: flex; flex-wrap: wrap; gap: 10px 26px; color: #fff; font-size: 1rem; }
+
+  @media (max-width: 760px) {
+    .hero { align-items: end; padding: 100px var(--m) 104px; min-height: max(100svh, 680px); }
+    .hero__in { max-width: none; }
+    .hero__kick { font-size: 2rem; }
+    .hero__title { font-size: clamp(3.6rem, 19vw, 6rem); }
+    .hero__sub { margin-top: 26px; font-size: 1.1875rem; }
+    .hero__actions .dy-btn { flex: 1 1 auto; }
+    .badge, .hero__hint { display: none; }
+    .hero__stores { right: var(--m); bottom: 22px; gap: 6px 16px; font-size: 0.9375rem; }
+    .hero:global(.no-3d) .hero__fallback { right: auto; left: 50%; translate: -50% 0; top: 90px; bottom: auto; width: 62vw; }
+  }
+
+  /* ── Ribbons ─────────────────────────────────────────── */
+  .ribbons { position: relative; height: clamp(150px, 18vw, 250px); background: var(--paper); overflow: hidden; }
+  .ribbon { position: absolute; left: -5%; right: -5%; top: 50%; padding: clamp(14px, 1.5vw, 22px) 0; overflow: hidden; border-block: 3px solid var(--ink); }
+  .ribbon--a { background: var(--yellow); color: var(--ink); transform: translateY(-72%) rotate(-3.5deg); z-index: 2; box-shadow: 0 10px 0 var(--ink); }
+  .ribbon--b { background: var(--red); color: #fff; transform: translateY(-16%) rotate(2.5deg); }
+  .ribbon__track { display: flex; width: max-content; }
+  .ribbon__track span { display: inline-flex; align-items: center; gap: clamp(16px, 2vw, 30px); padding-right: clamp(16px, 2vw, 30px); font: 900 clamp(1.8rem, 1rem + 3vw, 4rem)/1 var(--display); font-variation-settings: var(--soft); letter-spacing: -0.02em; white-space: nowrap; }
+  .ribbon__track svg { width: 1.1em; height: 0.45em; fill: currentColor; }
+  .ribbon--a svg { fill: var(--red); }
+  .ribbon--b svg { width: 0.6em; height: 0.6em; fill: var(--yellow); }
+
+  /* ── Notebook ────────────────────────────────────────── */
+  .nb { background: var(--red); color: #fff; }
+  .nb__stage { position: relative; min-height: 100svh; display: grid; grid-template-rows: auto auto 1fr; justify-items: center; padding: clamp(90px, 10vh, 120px) var(--m) clamp(30px, 5vh, 60px); overflow: hidden; perspective: 2400px;
+    background-image: radial-gradient(circle at 20% 30%, rgb(255 255 255 / 0.08) 0 2px, transparent 3px), radial-gradient(circle at 70% 70%, rgb(0 0 0 / 0.08) 0 2px, transparent 3px); background-size: 26px 26px, 34px 34px; }
+  .nb__title { text-align: center; color: #fff; }
+  .nb__hint { font-size: 1.7rem; font-weight: 700; margin-top: 6px; color: var(--yellow); }
+  .book { --pw: min(40vw, calc(66svh / 1.32), 520px); --ph: calc(var(--pw) * 1.32); position: relative; width: var(--pw); height: var(--ph); margin-top: clamp(16px, 3vh, 36px); align-self: center; }
+  .book:global(.is-3d) { transform-style: preserve-3d; }
+  .page, .face { container-type: inline-size; }
+  .page { background: var(--paper); color: var(--ink); border-radius: 6px 20px 20px 6px; overflow: hidden; box-shadow: inset 18px 0 30px -18px rgb(0 0 0 / 0.35); }
+  .page--base { position: absolute; inset: 0; }
+  .book:not(:global(.is-3d)) { width: min(1100px, 100%); height: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 18px; }
+  .book:not(:global(.is-3d)) .page--base { position: relative; order: 9; }
+  .book:not(:global(.is-3d)) .leaf { display: contents; }
+  .book:not(:global(.is-3d)) .face { position: relative; min-height: 460px; }
+  .book:not(:global(.is-3d)) .pg { position: relative; inset: auto; height: 100%; }
+  .book:not(:global(.is-3d)) .pg__mini { display: none; }
+  .book:global(.is-3d) .leaf { position: absolute; inset: 0; transform-origin: left center; transform-style: preserve-3d; }
+  .book:global(.is-3d) .face { position: absolute; inset: 0; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+  .book:global(.is-3d) .face--back { transform: rotateY(180deg); border-radius: 20px 6px 6px 20px; box-shadow: inset -18px 0 30px -18px rgb(0 0 0 / 0.35); }
+  .book:global(.is-3d)::after { content: ''; position: absolute; left: -100%; right: 0; bottom: -40px; height: 40px; background: radial-gradient(50% 50% at 75% 50%, rgb(0 0 0 / 0.35), transparent 70%); transform: translateZ(-1px); }
+
+  .cover { position: relative; background: var(--navy); color: #fff; border-radius: 6px 20px 20px 6px; display: grid; place-items: center; overflow: hidden; border-left: 14px solid #00103a;
+    background-image: radial-gradient(circle at 20% 20%, rgb(255 255 255 / 0.12) 0 2px, transparent 3px), radial-gradient(circle at 70% 60%, rgb(0 0 0 / 0.16) 0 2px, transparent 3px); background-size: 22px 22px, 30px 30px; }
+  .cover__label { width: 78%; background: var(--paper); color: var(--ink); border-radius: 14px; padding: 7cqw 7cqw 5cqw; display: grid; gap: 3cqw; box-shadow: 0 10px 0 rgb(0 0 0 / 0.25); border: 3px solid var(--ink); margin-bottom: 24cqw; }
+  .cover__brand { font: 900 15cqw/0.85 var(--display); font-variation-settings: var(--soft); letter-spacing: -0.04em; color: var(--red); }
+  .cover__row { display: grid; grid-template-columns: auto 1fr; gap: 3cqw; align-items: end; font-size: 3.4cqw; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .cover__row b { border-bottom: 2px solid var(--ink); font-size: 6.2cqw; text-transform: none; letter-spacing: 0; line-height: 1.1; color: var(--navy); }
+  .cover__crew { position: absolute; left: 50%; bottom: -3cqw; width: 30cqw; translate: -50% 0; }
+  .cover__elastic { position: absolute; right: 9%; top: 0; bottom: 0; width: 4%; background: var(--red); }
+
+  .pg { position: absolute; inset: 0; padding: 8cqw 8cqw 8cqw 16cqw; display: grid; align-content: start; gap: 2.6cqw;
+    background: linear-gradient(90deg, transparent 12.5cqw, rgb(232 20 28 / 0.55) 12.5cqw 13cqw, transparent 13cqw), repeating-linear-gradient(transparent 0 calc(7cqw - 1px), rgb(23 58 158 / 0.2) calc(7cqw - 1px) 7cqw); }
+  .pg--left { padding: 8cqw 14cqw 8cqw 8cqw; background: radial-gradient(circle at 1px 1px, rgb(23 58 158 / 0.22) 1px, transparent 1.6px) 0 0 / 5cqw 5cqw, var(--paper); }
+  .pg__mark { font-size: 6cqw; font-weight: 700; color: var(--red); line-height: 1; }
+  .pg__t { font-size: 9.6cqw; font-weight: 700; line-height: 0.95; color: var(--navy); font-family: var(--hand); font-variation-settings: normal; letter-spacing: 0; }
+  .pg__x { font-size: 5.7cqw; font-weight: 500; line-height: 1.16; color: #1d2a7a; }
+  .pg__n { position: absolute; right: 8cqw; bottom: 5cqw; font-size: 5cqw; color: var(--red); }
+  .pg__mini { display: none; }
+  .pg--left :global(.dw) { margin-top: 1cqw; }
+  .polaroid { position: absolute; right: 8cqw; bottom: 6cqw; width: 58%; background: #fff; padding: 2.6cqw 2.6cqw 1.4cqw; box-shadow: 0 12px 26px -10px rgb(0 0 0 / 0.45); transform: rotate(var(--rot)); }
+  .polaroid img { aspect-ratio: 4 / 3; object-fit: cover; width: 100%; }
+  .polaroid figcaption { margin-top: 1.4cqw; font-size: 4.2cqw; line-height: 1.05; text-align: center; color: var(--ink); }
+  .tape { position: absolute; top: -3cqw; left: 50%; width: 34%; height: 6.5cqw; translate: -50% 0; rotate: -4deg; background: rgb(255 184 0 / 0.75); }
+  .book:not(:global(.is-3d)) .polaroid { position: relative; right: auto; bottom: auto; justify-self: end; margin-top: 2cqw; }
+
+  .nb__crew { position: absolute; bottom: -10px; width: clamp(110px, 9vw, 150px); }
+  .nb__crew--l { right: calc(clamp(16px, 4vw, 70px) + clamp(100px, 8vw, 140px)); }
+  .nb__crew--r { right: clamp(16px, 4vw, 70px); }
+  @media (max-width: 860px) {
+    .book { --pw: min(86vw, calc(64svh / 1.32)); }
+    .nb__crew { display: none; }
+    .pg { padding: 7cqw 7cqw 7cqw 15cqw; gap: 2cqw; }
+    .pg__t { font-size: 8.6cqw; }
+    .pg__x { font-size: 5.2cqw; }
+    .pg__mini { display: grid; grid-template-columns: 1fr 1fr; gap: 3cqw; align-items: center; margin-top: 1cqw; }
+    .pg__photo { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; padding: 1.6cqw; background: #fff; box-shadow: 0 8px 18px -8px rgb(0 0 0 / 0.45); rotate: 3deg; }
+  }
+
+  /* ── Featured, sideways ─────────────────────────────── */
+  /* a cream table of colourful stickers (it was navy: the client found the demo more cheerful) */
+  .aisles { --pic: clamp(150px, 26svh, 290px); background: var(--paper-2); color: var(--ink); overflow: clip;
+    background-image: radial-gradient(circle at 12px 12px, rgb(232 20 28 / 0.22) 2.5px, transparent 3.5px), radial-gradient(circle at 30px 34px, rgb(42 86 214 / 0.2) 2.5px, transparent 3.5px), radial-gradient(circle at 44px 10px, rgb(255 184 0 / 0.35) 2.5px, transparent 3.5px); background-size: 56px 48px; }
+  .aisles__pin { min-height: 100svh; display: flex; align-items: center; }
+  .aisles__track { display: flex; gap: clamp(18px, 2.2vw, 36px); padding: clamp(140px, 19vh, 190px) var(--m) clamp(40px, 6vh, 70px); align-items: stretch; will-change: transform; }
+  .aisle { position: relative; flex: 0 0 clamp(310px, 32vw, 500px); background: var(--c); color: var(--i); border-radius: var(--r); display: grid; grid-template-rows: var(--pic) auto; align-content: start; border: 3px solid var(--ink); box-shadow: 0 10px 0 var(--ink); }
+  .aisle--intro { flex-basis: clamp(300px, 40vw, 660px); background: none; border: 0; box-shadow: none; display: flex; flex-direction: column; justify-content: center; gap: 24px; color: var(--ink); }
+  .aisles__lead { font-size: var(--step-lead); max-width: 26ch; line-height: 1.35; }
+  .aisles__arrow { width: 120px; color: var(--red); }
+  .aisle__crew { position: absolute; right: 22px; bottom: 100%; margin-bottom: -10px; width: 118px; z-index: 2; }
+  .bn__crew > :global(svg), .hero__fallback > :global(svg) { --line: #fff; }
+  .aisle__img { position: relative; overflow: hidden; background: var(--ink); border-radius: calc(var(--r) - 4px) calc(var(--r) - 4px) 0 0; }
+  .aisle__pic { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.45s var(--ease-out); }
+  .aisle__pic:global(.is-on) { opacity: 1; }
+  .aisle__body { padding: clamp(16px, 1.6vw, 26px); display: grid; align-content: start; gap: clamp(4px, 0.9svh, 8px); }
+  .aisle__brand { font-size: min(1.9rem, 3.6svh); font-weight: 700; line-height: 1; }
+  .aisle__t { font-size: min(clamp(1.7rem, 1.1rem + 1.5vw, 2.7rem), 5.4svh); }
+  .aisle__x { font-size: min(1.0625rem, 2.3svh); line-height: 1.38; }
+  .aisle__also { font-weight: 700; font-size: 1rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .chip { min-height: min(44px, 5.6svh); padding: 0 14px; border-radius: 999px; border: 2.5px solid currentColor; background: transparent; font-weight: 700; font-size: 0.9375rem; cursor: pointer; transition: background-color 0.2s, color 0.2s, transform 0.15s var(--ease-out); }
+  .chip:hover { transform: translateY(-2px); }
+  .chip[aria-pressed='true'] { background: var(--i); color: var(--c); border-color: var(--i); }
+  .aisle__tag { justify-self: start; margin-top: 4px; font-weight: 800; font-size: 0.9375rem; padding: 8px 14px; border-radius: 999px; background: var(--yellow); color: var(--ink); border: 2.5px solid var(--ink); text-decoration: none; }
+  .aisle__note { font-size: 1.7rem; font-weight: 700; line-height: 1; }
+  .aisle--shelf { grid-template-rows: calc(var(--pic) * 1.25) auto; }
+  .aisle--shelf .aisle__note { font-size: min(1.9rem, 3.8svh); }
+  .aisle--more { flex-basis: clamp(280px, 26vw, 420px); background: #fff; border: 3px dashed var(--ink); box-shadow: none; display: flex; flex-direction: column; justify-content: center; gap: 18px; padding: 32px; color: var(--ink); }
+  .aisle__more { font-size: clamp(2.6rem, 2rem + 2vw, 3.8rem); font-weight: 700; line-height: 1; color: var(--red); }
+  @media (max-width: 860px) {
+    .aisles__pin { display: block; min-height: 0; }
+    .aisles__track { overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding-block: 170px 70px; scrollbar-width: none; }
+    .aisles { --pic: 220px; }
+    .aisle { flex-basis: 84vw; scroll-snap-align: center; }
+    .aisle--shelf { grid-template-rows: 260px auto; }
+    .aisle--intro { flex-basis: 84vw; min-height: 0; }
+    .aisle__crew { width: 100px; }
+  }
+
+  /* ── Black November ─────────────────────────────────── */
+  .bn { background: #0b0a12; color: #fff; padding: clamp(80px, 11vw, 160px) var(--m); display: grid; justify-items: center; gap: clamp(30px, 4vw, 56px); overflow: hidden; text-align: center;
+    background-image: radial-gradient(circle at 15% 20%, rgb(255 184 0 / 0.5) 0 1.5px, transparent 2.5px), radial-gradient(circle at 80% 60%, rgb(85 194 255 / 0.5) 0 1.5px, transparent 2.5px), radial-gradient(circle at 40% 80%, rgb(255 65 65 / 0.5) 0 1.5px, transparent 2.5px); background-size: 140px 140px, 190px 190px, 230px 230px; }
+  .bn__kick { font-size: clamp(2rem, 1.4rem + 2vw, 3.2rem); font-weight: 700; color: var(--yellow); line-height: 1; transform: rotate(-3deg); }
+  .bn__title { margin-top: 10px; font-size: clamp(3.4rem, 1.4rem + 8vw, 10rem); font-weight: 900; letter-spacing: -0.03em; }
+  .bn__desc { margin: 20px auto 0; max-width: 46ch; font-size: var(--step-lead); line-height: 1.35; color: rgb(255 255 255 / 0.88); }
+  .bn__stage { position: relative; width: min(880px, 100%); display: grid; justify-items: center; }
+  .bn__sign { position: relative; z-index: 2; width: 100%; padding: clamp(28px, 4vw, 56px) clamp(20px, 4vw, 60px) clamp(34px, 4vw, 56px); color: var(--ink); }
+  .bn__board { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; filter: url(#wax); }
+  .bn__board path { fill: var(--paper); stroke: var(--red); stroke-width: 10; stroke-linejoin: round; }
+  .bn__v { position: relative; font: 900 clamp(7rem, 3rem + 15vw, 17rem)/0.82 var(--display); font-variation-settings: var(--soft); letter-spacing: -0.05em; color: var(--red); }
+  .bn__s { margin-top: 14px; font: 700 clamp(1.6rem, 1.1rem + 1.6vw, 2.6rem)/1.05 var(--hand); color: var(--navy); }
+  .bn__circle { position: absolute; left: 50%; top: 46%; width: 76%; height: 92%; translate: -50% -50%; overflow: visible; pointer-events: none; }
+  .bn__circle path { fill: none; stroke: var(--yellow); stroke-width: 6; stroke-linecap: round; filter: url(#wax); }
+  .bn__crew { --cw: clamp(130px, 15vw, 210px); position: relative; z-index: 1; display: flex; justify-content: space-between; width: 72%; margin-top: calc(var(--cw) * -0.58); }
+  .bn__crew > :global(svg) { width: var(--cw); }
+  .bn__clock { font-size: var(--step-lead); color: rgb(255 255 255 / 0.8); line-height: 1.1; }
+  .bn__clock b { font: 900 clamp(2.8rem, 1.6rem + 3.4vw, 5rem)/1 var(--display); font-variation-settings: var(--soft); color: #fff; font-variant-numeric: tabular-nums; }
+  .ticket { position: relative; width: min(1100px, 100%); display: grid; grid-template-columns: 1fr 1.1fr; background: var(--paper); color: var(--ink); border-radius: 30px; outline: 4px dashed rgb(255 255 255 / 0.85); outline-offset: 14px; box-shadow: 0 16px 0 var(--red); text-align: left; margin-top: 20px; }
+  .ticket__sc { position: absolute; left: 0; top: -38px; width: 40px; height: 40px; color: #fff; z-index: 2; }
+  .ticket__l { padding: clamp(28px, 4vw, 56px); border-right: 4px dashed var(--ink); display: grid; align-content: center; gap: 12px; }
+  .ticket__v { font: 900 clamp(5.4rem, 3rem + 8vw, 12rem)/0.8 var(--display); font-variation-settings: var(--soft); letter-spacing: -0.05em; color: var(--red); }
+  .ticket__n { font: 800 clamp(1.4rem, 1.1rem + 1vw, 2rem)/1.08 var(--display); font-variation-settings: var(--soft); }
+  .ticket__m { font-size: 1.0625rem; color: var(--muted); }
+  .ticket__r { padding: clamp(28px, 4vw, 56px); display: grid; align-content: center; gap: 16px; }
+  .ticket__h { font-size: clamp(1.8rem, 1.3rem + 1.4vw, 2.6rem); }
+  .ticket :global(.t-form) { display: grid; gap: 14px; }
+  .ticket :global(.t-input) { height: 62px; border: 3px solid var(--ink); border-radius: 18px; padding: 0 20px; background: #fff; color: var(--ink); font: 600 1.125rem var(--font); transition: box-shadow 200ms var(--ease-out), transform 200ms var(--ease-out); }
+  .ticket :global(.t-input::placeholder) { color: var(--muted); }
+  .ticket :global(.t-input:focus) { outline: none; box-shadow: 0 6px 0 var(--sky); transform: translateY(-2px); }
+  .ticket :global(.t-btn) { height: 62px; font-size: 1.1875rem; }
+  .ticket :global(.t-note) { font-size: var(--step-small); color: var(--muted); }
+  .bn__terms { max-width: 70ch; font-size: var(--step-small); color: rgb(255 255 255 / 0.72); }
+  .bn__link { color: var(--yellow); font-weight: 700; text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 5px; }
+  @media (max-width: 760px) {
+    .ticket { grid-template-columns: 1fr; }
+    .ticket__l { border-right: 0; border-bottom: 4px dashed var(--ink); }
+    .bn__crew { width: 96%; }
+  }
+
+  /* ── Services path ──────────────────────────────────── */
+  .path { background: var(--yellow); padding: clamp(80px, 10vw, 150px) var(--m); overflow: hidden; }
+  .path__title { text-align: center; margin-bottom: clamp(40px, 6vw, 90px); }
+  .path__body { position: relative; max-width: 1200px; margin-inline: auto; }
+  .path__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  .path__line { fill: none; stroke: var(--red); stroke-width: 7; stroke-linecap: round; }
+  .path__crayon { position: absolute; left: 0; top: 0; width: 130px; height: 30px; margin: -15px 0 0 -128px; transform-origin: 128px 15px; pointer-events: none; z-index: 3; }
+  .path__crayon svg { width: 100%; height: 100%; overflow: visible; }
+  .steps { display: grid; gap: clamp(70px, 9vw, 130px); position: relative; z-index: 2; }
+  .step { display: grid; grid-template-columns: auto 1fr; grid-template-areas: 'n card' 'n t' 'n x' 'n o'; gap: 12px 26px; width: min(540px, 100%); opacity: 0.3; transform: translateY(30px) scale(0.96); transition: opacity 500ms ease, transform 700ms var(--ease-spring); }
+  .step:nth-child(even) { justify-self: end; }
+  .step:global(.on) { opacity: 1; transform: none; }
+  .step__n { grid-area: n; width: 74px; height: 74px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--yellow); font: 900 2.2rem/1 var(--display); font-variation-settings: var(--soft); }
+  .step__card { grid-area: card; border: 3px solid var(--ink); border-radius: 22px; overflow: hidden; box-shadow: 0 10px 0 var(--ink); background: var(--paper); }
+  .step__card img { aspect-ratio: 16 / 10; object-fit: cover; width: 100%; }
+  .step__t { grid-area: t; font-size: clamp(1.8rem, 1.2rem + 1.6vw, 2.8rem); margin-top: 10px; background: var(--yellow); }
+  .step__x { grid-area: x; font-size: 1.125rem; line-height: 1.4; max-width: 38ch; background: var(--yellow); }
+  .step__only { grid-area: o; justify-self: start; margin-top: 4px; padding: 6px 14px; border-radius: 999px; background: var(--ink); color: var(--yellow); font-weight: 800; font-size: 0.9375rem; }
+  .path__notes { position: relative; z-index: 2; max-width: 1200px; margin: clamp(60px, 8vw, 110px) auto 0; display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; }
+  .path__note { padding: 24px 28px; border-radius: 22px; background: var(--paper); border: 3px solid var(--ink); box-shadow: 0 8px 0 var(--ink); font-size: var(--step-lead); line-height: 1.35; }
+  .path__note b { display: block; font-size: 1.9rem; line-height: 1; color: var(--red); margin-bottom: 8px; }
+  @media (max-width: 760px) {
+    .step, .step:nth-child(even) { justify-self: stretch; grid-template-columns: 1fr; grid-template-areas: 'n' 'card' 't' 'x' 'o'; }
+    .path__notes { grid-template-columns: 1fr; }
+    .step__n { width: 60px; height: 60px; font-size: 1.8rem; justify-self: center; }
+    .path__crayon { width: 96px; height: 22px; margin: -11px 0 0 -94px; transform-origin: 94px 11px; }
+  }
+
+  /* ── Mission and vision ─────────────────────────────── */
+  .mv { background: var(--paper); padding: clamp(150px, 15vw, 220px) var(--m) clamp(80px, 10vw, 150px); }
+  .mv__head { position: relative; max-width: 1200px; margin: 0 auto; }
+  .mv__crew { position: absolute; left: 0; bottom: 100%; display: flex; gap: 4px; width: clamp(170px, 16vw, 250px); margin-bottom: -6px; }
+  .mv__crew > :global(svg) { flex: 1; }
+  .mv__grid { max-width: 1200px; margin: clamp(36px, 5vw, 64px) auto 0; display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px, 5vw, 80px); }
+  .mv__col { border-top: 4px solid var(--ink); padding-top: 20px; }
+  .mv__k { font-size: 2.2rem; font-weight: 700; color: var(--red); line-height: 1; }
+  .mv__t { margin-top: 14px; font-size: var(--step-lead); line-height: 1.4; letter-spacing: -0.01em; }
+  .wax { --wax: 100%; color: inherit; background: linear-gradient(transparent 55%, var(--yellow) 55% 92%, transparent 92%) no-repeat 0 0 / var(--wax) 100%; padding: 0 2px; font-weight: 700; }
+  @media (max-width: 760px) { .mv__grid { grid-template-columns: 1fr; } }
+
+  /* ── Stores ──────────────────────────────────────────── */
+  .stores { background: var(--sky); padding: clamp(80px, 10vw, 150px) var(--m); }
+  .stores__lead { margin-top: 20px; font-size: var(--step-lead); max-width: 44ch; line-height: 1.35; }
+  .stores__list { margin-top: clamp(140px, 14vw, 180px); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); gap: 150px clamp(16px, 2vw, 28px); }
+  .store { position: relative; background: var(--c); color: var(--i); border: 3px solid var(--ink); border-radius: var(--r); box-shadow: 0 12px 0 var(--ink); padding: clamp(24px, 2.6vw, 36px); display: grid; gap: 10px; align-content: start; }
+  .store__crew { position: absolute; right: 18px; bottom: 100%; margin-bottom: -7px; width: 92px; }
+  .store__pic { position: relative; margin: 0 0 6px; border-radius: 16px; overflow: hidden; border: 3px solid var(--ink); aspect-ratio: 4 / 3; background: var(--ink); }
+  .store__pic img { width: 100%; height: 100%; object-fit: cover; }
+  .store__pic .store__logo { position: absolute; right: 10px; bottom: 10px; width: 34%; height: auto; border-radius: 50%; background: #fff; border: 3px solid var(--ink); object-fit: contain; }
+  .store__n { position: absolute; left: 12px; top: 8px; font: 900 clamp(3rem, 2.4rem + 2vw, 4.6rem)/0.8 var(--display); font-variation-settings: var(--soft); letter-spacing: -0.05em; color: #fff; -webkit-text-stroke: 2px var(--ink); paint-order: stroke; }
+  .hours { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 12px; }
+  .hours li { display: grid; gap: 2px; padding: 14px 22px; border-radius: 20px; background: var(--paper); border: 3px solid var(--ink); box-shadow: 0 6px 0 var(--ink); }
+  .hours span { font-size: 1.6rem; font-weight: 700; line-height: 1; color: var(--red); }
+  .hours b { font: 800 clamp(1.3rem, 1.1rem + 0.8vw, 1.8rem)/1.1 var(--display); font-variation-settings: var(--soft); }
+  .store__t { font-size: clamp(1.6rem, 1.2rem + 1.1vw, 2.3rem); margin-top: 6px; }
+  .store__a { font-size: 1.0625rem; }
+  .store__live { padding: 8px 14px; border-radius: 999px; background: var(--paper); color: var(--ink); justify-self: start; font-size: 0.9375rem; border: 2px solid var(--ink); }
+  .store__main { font-size: 1.6rem; font-weight: 700; line-height: 1.05; }
+  .store__act { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-top: 8px; }
+  .store__tel { font-weight: 800; }
+
+  /* ── The guide ───────────────────────────────────────── */
+  .guide { position: fixed; left: 14px; bottom: 10px; z-index: 45; display: flex; align-items: end; gap: 6px; pointer-events: none; transform: translateY(130%); transition: transform 0.6s var(--ease-spring); }
+  .guide:global(.is-on) { transform: none; }
+  .guide:global(.is-on.is-typing) { transform: translateY(130%); }
+  .guide__me { pointer-events: auto; width: 92px; padding: 0; border: 0; background: none; cursor: pointer; filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.25)); }
+  .guide__x { pointer-events: auto; position: absolute; left: -4px; top: -6px; width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid var(--ink); background: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; opacity: 0; transition: opacity 0.2s; }
+  .guide:hover .guide__x, .guide__x:focus-visible { opacity: 1; }
+  .guide__x svg { width: 14px; height: 14px; stroke: var(--ink); stroke-width: 3.5; stroke-linecap: round; }
+  .guide__bubble { order: 2; margin-bottom: 92px; max-width: 280px; padding: 12px 18px 14px; border-radius: 22px 22px 22px 6px; background: #fff; color: var(--ink); border: 3px solid var(--ink); box-shadow: 0 5px 0 var(--ink); font-size: 1.55rem; font-weight: 700; line-height: 1.02; opacity: 0; scale: 0.6; transform-origin: 0 100%; transition: opacity 0.2s, scale 0.35s var(--ease-spring); }
+  .guide__bubble:global(.is-on) { opacity: 1; scale: 1; }
+  .guide__back { position: fixed; left: 14px; bottom: 14px; z-index: 45; width: 46px; height: 46px; border-radius: 50%; border: 3px solid var(--ink); background: var(--red); display: grid; place-items: center; cursor: pointer; padding: 0; box-shadow: 0 4px 0 var(--ink); opacity: 0; pointer-events: none; transform: scale(0.6); transition: transform 0.4s var(--ease-spring), opacity 0.2s; }
+  .guide__back:global(.is-on) { transform: none; opacity: 1; pointer-events: auto; }
+  .guide__back svg { width: 24px; height: 24px; fill: #ffb3b3; stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; }
+  @media (max-width: 760px) {
+    .guide { left: 6px; bottom: 4px; }
+    .guide__me { width: 64px; }
+    .guide__bubble { margin-bottom: 70px; max-width: min(250px, calc(100vw - 96px)); font-size: 1.3rem; padding: 10px 14px 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .guide, .guide__bubble, .hero__say { transition: opacity 0.2s; }
+  }
+</style>

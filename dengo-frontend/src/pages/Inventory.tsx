@@ -133,6 +133,7 @@ function getMovementTypeLabel(type: string, reason?: string) {
     return { label: 'Traslado (entrada)', color: 'text-teal-700 bg-teal-50' }
   }
   switch (type) {
+    case 'SALE': return { label: 'Venta', color: 'text-blue-700 bg-blue-50' }
     case 'IN': return { label: 'Entrada', color: 'text-green-700 bg-green-50' }
     case 'OUT': return { label: 'Salida', color: 'text-red-700 bg-red-50' }
     case 'ADJUSTMENT': return { label: 'Ajuste', color: 'text-blue-700 bg-blue-50' }
@@ -801,7 +802,9 @@ export default function Inventory() {
                   <div className="space-y-2">
                     {movements.map(mv => {
                       const { label, color } = getMovementTypeLabel(mv.type, mv.reason)
-                      const qty = Number(mv.quantity ?? 0)
+                      // Quantities are stored unsigned; the type says which way stock moved.
+                      const raw = Number(mv.quantity ?? 0)
+                      const qty = ['SALE', 'OUT', 'TRANSFER'].includes(mv.type) ? -Math.abs(raw) : raw
                       // Purchases have no dedicated entity — a "compra" is
                       // just every StockMovement sharing one referenceId
                       // "COMPRA-N" (see inventory.ts's /intake route), so the

@@ -9,6 +9,7 @@ import PortalLicenseGuard from './components/auth/PortalLicenseGuard'
 // Lazy loading de páginas
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Login = lazy(() => import('./pages/Login'))
+const Entrar = lazy(() => import('./pages/Entrar'))
 const POS = lazy(() => import('./pages/POS'))
 const Products = lazy(() => import('./pages/Products'))
 const Inventory = lazy(() => import('./pages/Inventory'))
@@ -36,6 +37,7 @@ const PortalMessages = lazy(() => import('./pages/portal/PortalMessages'))
 const PortalLandingConfig = lazy(() => import('./pages/portal/PortalLandingConfig'))
 const PortalMetrics = lazy(() => import('./pages/portal/PortalMetrics'))
 const Messages = lazy(() => import('./pages/Messages'))
+const Website = lazy(() => import('./pages/website/Website'))
 
 // Páginas de configuración
 const UsersManagement = lazy(() => import('./pages/Users'))
@@ -51,6 +53,7 @@ const BackupSettings = lazy(() => import('./pages/settings/Backup'))
 const AppearanceSettings = lazy(() => import('./pages/settings/Appearance'))
 const LocalizationSettings = lazy(() => import('./pages/settings/Localization'))
 const SecuritySettings = lazy(() => import('./pages/settings/Security'))
+const FelSettings = lazy(() => import('./pages/settings/Fel'))
 
 // Páginas de reportes
 const DailySalesReport = lazy(() => import('./pages/reports/DailySalesReport'))
@@ -76,6 +79,7 @@ export default function Router() {
         {/* Rutas públicas */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
+          <Route path="/entrar" element={<Entrar />} />
         </Route>
 
         {/* Rutas protegidas */}
@@ -106,6 +110,7 @@ export default function Router() {
             <Route path="/portal/program-options" element={<PortalProgramOptions />} />
             <Route path="/portal/consolidated" element={<PortalConsolidated />} />
             <Route path="/portal/metrics" element={<PortalMetrics />} />
+            <Route path="/website" element={<Website />} />
             <Route path="/portal/messages" element={<PortalMessages />} />
             <Route path="/portal/config" element={<PortalLandingConfig />} />
           </Route>
@@ -144,6 +149,7 @@ export default function Router() {
           <Route path="/settings/appearance" element={<AppearanceSettings />} />
           <Route path="/settings/localization" element={<LocalizationSettings />} />
           <Route path="/settings/security" element={<SecuritySettings />} />
+          <Route path="/settings/fel" element={<FelSettings />} />
         </Route>
 
         {/* 404 */}

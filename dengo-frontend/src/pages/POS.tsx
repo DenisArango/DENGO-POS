@@ -13,13 +13,15 @@ import { api, ApiError } from '../lib/api'
 import { toast } from 'sonner'
 import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
-import ThermalReceipt from '../components/print/ThermalReceipt'
+import ThermalReceipt, { type ThermalReceiptData } from '../components/print/ThermalReceipt'
 import SalesGoalWidget from '../components/SalesGoalWidget'
 import { CustomerThumb } from '../components/common/CustomerThumb'
 import { queuePendingSale, setCache, getCache, addSaleToRegisterTally } from '../lib/offlineDb'
 import { trySync, refreshPendingCount, getLocallyClosingRegisterIds } from '../lib/offlineSync'
 import { getAdjustmentReasons, type AdjustmentReason } from '../lib/inventoryReasons'
 import { matchesSearch } from '../lib/search'
+import { useCoupon, isCouponScan } from '../hooks/useCoupon'
+import CouponPanel from '../components/pos/CouponPanel'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -96,6 +98,7 @@ interface CompletedSale {
   items: CompletedSaleItem[]
   subtotal: number
   total: number
+  coupon?: { label: string; code: string; amount: number }
   paymentMethod: PaymentMethodType
   saleType: SaleTypeValue
   customerName?: string
@@ -107,6 +110,9 @@ interface CompletedSale {
   buyerNit?: string | null
   buyerName?: string | null
   felStatus?: string | null
+  /** SAT data of the certified factura, printed on the receipt. */
+  fel?: Pick<ThermalReceiptData, 'felSatSerie' | 'felSatNumber' | 'felAuthNumber' | 'felCertifiedAt' | 'felCertifierName' | 'felCertifierNit' | 'felEnvironment' | 'felDocType'>
+  felError?: string | null
   pendingSync?: boolean
   cardReference?: string | null
   transferReference?: string | null
@@ -356,6 +362,23 @@ export default function POS() {
 
   // Factura — discrecional, apagado por defecto (solo recibo)
   const [wantsInvoice, setWantsInvoice] = useState(false)
+  const [nitLookupBusy, setNitLookupBusy] = useState(false)
+  // NIT → nombre registrado en la SAT (a través del certificador; /api/fel/tax-id).
+  const lookupInvoiceNit = async () => {
+    const nit = invoiceBuyerNit.trim()
+    if (!nit) return
+    setNitLookupBusy(true)
+    try {
+      const r = await api.get<{ found?: boolean; name?: string; taxId?: string; note?: string }>(`/api/fel/tax-id/NIT/${encodeURIComponent(nit)}`)
+      if (r.found && r.name) { setInvoiceBuyerName(r.name); toast.success('NIT verificado') }
+      else if (r.note) toast(`NIT válido. ${r.note}`)
+      else toast.error('La SAT no encontró ese NIT')
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setNitLookupBusy(false)
+    }
+  }
   const [invoiceBuyerNit, setInvoiceBuyerNit] = useState('')
   const [invoiceBuyerName, setInvoiceBuyerName] = useState('')
   const [saleNotes, setSaleNotes] = useState('')
@@ -581,13 +604,34 @@ export default function POS() {
   }
 
   const subtotal = cartItems.reduce((s, item) => s + getLineTotal(item), 0)
-  const total = subtotal
+
+  // Website coupon: the server computes how much each line gets off.
+  const couponLines = cartItems.map(item => {
+    const isRealVariation = item.variation && !item.variation.id.endsWith('-default')
+    return {
+      productId: item.product.id,
+      ...(isRealVariation ? { variationId: item.variation!.id } : {}),
+      quantity: item.quantity,
+      unitPrice: getItemPrice(item),
+      discount: (itemDiscounts[getItemKey(item.product.id, item.variation?.id)] || 0) / 100,
+    }
+  })
+  const coupon = useCoupon(BRANCH_ID || undefined, couponLines)
+  const couponDiscount = coupon.total
+  const hasManualDiscountOnEligible = !!coupon.info?.eligible?.some((e, k) => {
+    if (!e) return false
+    const item = cartItems[k]
+    if (!item) return false
+    const catalog = item.variation ? item.variation.price : item.product.basePrice
+    return couponLines[k]!.discount > 0 || couponLines[k]!.unitPrice + 0.005 < Number(catalog)
+  })
+  const total = Math.max(0, Math.round((subtotal - couponDiscount) * 100) / 100)
   const itemCount = cartItems.reduce((s, item) => s + item.quantity, 0)
 
   const canSellOnCredit = !!selectedCustomer && !!selectedCustomer.creditEnabled &&
     (selectedCustomer.creditAvailable === null || (selectedCustomer.creditAvailable ?? 0) > 0)
 
-  const canComplete = cartItems.length > 0 && !saving &&
+  const canComplete = cartItems.length > 0 && !saving && !coupon.busy &&
     !!selectedCustomer &&
     !!selectedRegisterId &&
     (!wantsInvoice || invoiceBuyerNit.trim().length > 0) &&
@@ -666,6 +710,7 @@ export default function POS() {
   }
 
   function clearCart() {
+    coupon.remove()
     setCartItems([])
     setItemDiscounts({})
     setItemQtyStrings({})
@@ -824,6 +869,15 @@ export default function POS() {
   const handleBarcodeScan = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || !searchTerm) return
     const barcode = searchTerm.trim()
+    // A website coupon scanned into the product field (QR or barcode).
+    if (isCouponScan(barcode)) {
+      setSearchTerm('')
+      setShowSearchResults(false)
+      const r = await coupon.apply(barcode)
+      if (r) toast.success(r.applies ? `Cupón aplicado: ${r.promotion.name}` : `Cupón de ${r.coupon.name}: ${r.message ?? 'no aplica a esta venta'}`)
+      else toast.error('No se pudo aplicar el cupón')
+      return
+    }
     // Case-insensitive: a scanner or manual entry can send different casing
     // than what's stored, and "no encontrado" on a real scan is confusing.
     const barcodeEq = (b?: string) => !!b && b.toUpperCase() === barcode.toUpperCase()
@@ -1028,24 +1082,27 @@ export default function POS() {
         cashRegisterId: selectedRegisterId || undefined,
         saleType,
         paymentMethod: effectivePaymentMethod,
-        items: cartItems.map(item => {
+        items: cartItems.map((item, idx) => {
           const key = getItemKey(item.product.id, item.variation?.id)
           const unitPrice = getItemPrice(item)
           const discPct = itemDiscounts[key] || 0
           const isRealVariation = item.variation && !item.variation.id.endsWith('-default')
+          const promo = coupon.applies ? (coupon.lines[idx] ?? 0) : 0
           return {
             productId: item.product.id,
             variationId: isRealVariation ? item.variation!.id : undefined,
             quantity: item.quantity,
             unitPrice,
             discount: discPct / 100,
-            total: unitPrice * item.quantity * (1 - discPct / 100),
+            ...(promo > 0 ? { promoDiscount: promo } : {}),
+            total: Math.round((unitPrice * item.quantity * (1 - discPct / 100) - promo) * 100) / 100,
           }
         }),
-        subtotal,
+        subtotal: total,
         tax: 0,
         discount: 0,
         total,
+        ...(coupon.applies && coupon.code ? { couponCode: coupon.code } : {}),
         requiresInvoice: wantsInvoice,
         notes: saleNotes.trim() || undefined,
       }
@@ -1104,6 +1161,7 @@ export default function POS() {
           }),
           subtotal,
           total,
+          ...(coupon.applies && coupon.info ? { coupon: { label: coupon.info.promotion.name, code: coupon.info.coupon.display, amount: couponDiscount } } : {}),
           paymentMethod: created?.paymentMethod ?? effectivePaymentMethod,
           saleType,
           customerName: selectedCustomer ? getCustomerName(selectedCustomer) : undefined,
@@ -1115,6 +1173,12 @@ export default function POS() {
           buyerNit: created?.buyerNit,
           buyerName: created?.buyerName,
           felStatus: pendingSync ? 'NONE' : created?.felStatus,
+          ...(created && created.felStatus === 'CERTIFIED' ? { fel: {
+            felSatSerie: created.felSatSerie, felSatNumber: created.felSatNumber, felAuthNumber: created.felAuthNumber,
+            felCertifiedAt: created.felCertifiedAt, felCertifierName: created.felCertifierName, felCertifierNit: created.felCertifierNit,
+            felEnvironment: created.felEnvironment, felDocType: created.felDocType,
+          } } : {}),
+          felError: created?.felError ?? null,
           pendingSync,
           // Gated on saleType !== 'CREDIT' too, not just the raw paymentMethod
           // selector — that selector isn't reset for a credit sale, so on
@@ -1177,6 +1241,13 @@ export default function POS() {
       try {
         const created = await api.post<any>('/api/sales', payload)
         finishLocally(created, false, '¡Venta completada!')
+        // The sale is done either way; a factura that didn't certify is told
+        // to the cashier now (it can be retried from the sale's detail).
+        if (created?.requiresInvoice && created.felStatus === 'FAILED') {
+          toast.error(`La factura no se certificó: ${created.felError ?? 'error del certificador'}. Puedes reintentar desde el detalle de la venta.`, { duration: 9000 })
+        } else if (created?.requiresInvoice && created.felStatus === 'PENDING' && created.felError) {
+          toast(`Factura pendiente: ${created.felError}. Se reintentará sola.`, { duration: 7000 })
+        }
       } catch (err) {
         // A raw fetch() failure (server unreachable) throws a TypeError, and
         // a 5xx (ApiError.status >= 500) means the server itself broke —
@@ -1757,6 +1828,7 @@ export default function POS() {
               <span>Subtotal</span>
               <span>Q{subtotal.toFixed(2)}</span>
             </div>
+            {cartItems.length > 0 && <CouponPanel coupon={coupon} hasManualDiscountOnEligible={hasManualDiscountOnEligible} />}
             {cartItems.length > 0 && (
               <div className="flex justify-between items-center text-sm text-gray-500 mb-2">
                 <span>Descuento general</span>
@@ -1802,8 +1874,15 @@ export default function POS() {
               {!wantsInvoice && <p className="text-xs text-gray-400 mt-1">Por defecto se imprime solo el recibo.</p>}
               {wantsInvoice && (
                 <div className="mt-3 space-y-2">
-                  <input type="text" value={invoiceBuyerNit} onChange={e => setInvoiceBuyerNit(e.target.value)}
-                    placeholder="NIT del cliente" className="input w-full text-sm" />
+                  <div className="flex gap-2">
+                    <input type="text" value={invoiceBuyerNit} onChange={e => setInvoiceBuyerNit(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); lookupInvoiceNit() } }}
+                      placeholder="NIT del cliente" className="input w-full text-sm" />
+                    <button type="button" onClick={lookupInvoiceNit} disabled={nitLookupBusy || !invoiceBuyerNit.trim()}
+                      className="btn-outline btn-sm whitespace-nowrap" title="Valida el NIT y trae el nombre registrado en la SAT">
+                      {nitLookupBusy ? '…' : 'Buscar'}
+                    </button>
+                  </div>
                   <input type="text" value={invoiceBuyerName} onChange={e => setInvoiceBuyerName(e.target.value)}
                     placeholder="Nombre para la factura" className="input w-full text-sm" />
                   {!invoiceBuyerNit.trim() && (
@@ -2505,6 +2584,12 @@ export default function POS() {
                       </>
                     ) : null
                   })()}
+                  {completedSale.coupon && completedSale.coupon.amount > 0 && (
+                    <div className="flex justify-between text-sm text-emerald-600 font-medium">
+                      <span>Cupón {completedSale.coupon.code} · {completedSale.coupon.label}</span>
+                      <span>-Q{completedSale.coupon.amount.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-lg">
                     <span>TOTAL:</span>
                     <span className="text-primary-600">Q{completedSale.total.toFixed(2)}</span>
@@ -2567,6 +2652,7 @@ export default function POS() {
             items: completedSale.items,
             subtotal: completedSale.subtotal,
             total: completedSale.total,
+            ...(completedSale.coupon ? { coupon: completedSale.coupon } : {}),
             paymentMethodLabel: paymentMethodLabel[completedSale.paymentMethod],
             cashReceived: completedSale.paymentMethod === 'CASH' && lastCashReceived ? parseFloat(lastCashReceived) : undefined,
             change: completedSale.paymentMethod === 'CASH' && lastCashReceived ? parseFloat(lastCashReceived) - completedSale.total : undefined,
@@ -2578,6 +2664,7 @@ export default function POS() {
             buyerNit: completedSale.buyerNit,
             buyerName: completedSale.buyerName,
             felStatus: completedSale.felStatus,
+            ...(completedSale.fel ?? {}),
             pendingSync: completedSale.pendingSync,
             offlineRef: completedSale.offlineRef,
             cardReference: completedSale.cardReference,

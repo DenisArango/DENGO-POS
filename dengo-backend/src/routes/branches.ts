@@ -29,6 +29,10 @@ const branchSchema = z.object({
   // (not nullish): empty string just means "no prefix yet", same default as
   // the column, no need to round-trip null.
   receiptSeries: z.string().max(10).optional(),
+  // FEL: this establishment's "empresa" id in FELplex (blank = FELPLEX_ENTITY_ID
+  // from .env) and its SAT código de establecimiento (reference only).
+  felEntityId: z.string().trim().max(60).nullish().transform(v => (v ? v : null)),
+  felEstablishmentCode: z.string().trim().max(10).nullish().transform(v => (v ? v : null)),
   salesReconciliationEnabled: z.boolean().default(false),
   // Company branding — capped well above what a reasonable logo needs (client
   // already caps the source file at 2MB; base64 adds ~37% overhead) so a

@@ -1,0 +1,88 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Outfit", sans-serif; color: #1b2233; overflow: hidden; }
+    .mask { display: block; overflow: hidden; padding-bottom: 0.08em; }
+    .mask > span { display: block; }
+    .time { position: absolute; left: 96px; top: 76px; z-index: 6; }
+    .time > span { font-size: 64px; font-weight: 700; color: #b9532f; letter-spacing: -0.02em; line-height: 1.1; }
+    .h { font-weight: 700; color: #1e4d68; letter-spacing: -0.025em; line-height: 1.04; }
+    .sub { font-size: 38px; line-height: 1.3; color: #1b2233; }
+    .card { position: absolute; background: #fff; border: 1px solid #e6dfd2; border-radius: 22px; box-shadow: 0 24px 60px rgba(27, 34, 51, 0.16); }
+    .shot { position: absolute; overflow: hidden; background: #fff; border: 1px solid #e6dfd2; border-radius: 18px; box-shadow: 0 24px 60px rgba(27, 34, 51, 0.16); }
+    .shot > img { position: absolute; max-width: none; }
+    .shot.flat { box-shadow: none; }
+    .phone { position: absolute; background: #1b2233; border-radius: 62px; padding: 18px; box-shadow: 0 30px 70px rgba(27, 34, 51, 0.28); }
+    .phone .screen { position: relative; overflow: hidden; border-radius: 46px; background: #fff; }
+    .phone video.fill, .browser video.fill { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; }
+    .browser { position: absolute; overflow: hidden; background: #fff; border: 1px solid #e6dfd2; border-radius: 18px; box-shadow: 0 26px 64px rgba(27, 34, 51, 0.18); }
+    .browser .bar { height: 56px; background: #f3eee5; display: flex; align-items: center; gap: 9px; padding: 0 18px; border-bottom: 1px solid #e6dfd2; }
+    .browser .bar i { width: 13px; height: 13px; border-radius: 50%; background: #d8cfbf; display: block; }
+    .browser .bar span { margin-left: 18px; font-size: 26px; color: #6b6458; background: #fff; border-radius: 999px; padding: 4px 18px; }
+    .browser .view { position: relative; overflow: hidden; }
+    .browser .view > img { max-width: none; }
+    .ring { position: absolute; border: 6px solid #e07a5f; border-radius: 14px; opacity: 0; z-index: 5; }
+    .pill { position: absolute; display: inline-flex; align-items: center; gap: 14px; background: #1e4d68; color: #fff; font-size: 34px; font-weight: 600; padding: 16px 30px; border-radius: 999px; box-shadow: 0 16px 40px rgba(30, 77, 104, 0.3); z-index: 6; }
+    .pill.coral { background: #b9532f; box-shadow: 0 16px 40px rgba(224, 122, 95, 0.35); }
+    .pill.sun { background: #f2c14e; color: #1b2233; box-shadow: 0 16px 40px rgba(242, 193, 78, 0.35); }
+    .cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; transform-origin: 0 0; z-index: 8; background: #fbf6ee; box-shadow: 0 30px 80px rgba(27, 34, 51, 0.3); }
+    .cam video, .cam .poster { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+    .cam .tag { position: absolute; left: 96px; bottom: 96px; background: #fff; border-radius: 22px; padding: 22px 34px; opacity: 0; box-shadow: 0 20px 50px rgba(27, 34, 51, 0.2); }
+    .cam .tag b { display: block; font-size: 46px; color: #1e4d68; letter-spacing: -0.02em; }
+    .cam .tag span { display: block; font-size: 30px; color: #6b6458; margin-top: 2px; }
+    .badge { position: absolute; left: 56px; bottom: 56px; display: flex; align-items: center; gap: 20px; z-index: 9; opacity: 0; }
+    .badge .face { width: 168px; height: 168px; border-radius: 50%; overflow: hidden; border: 6px solid #fff; box-shadow: 0 18px 44px rgba(27, 34, 51, 0.22); background: #fbf6ee; }
+    .badge .face img { width: 100%; height: 100%; object-fit: cover; }
+    .badge .who { background: #fff; border-radius: 18px; padding: 12px 22px 14px; box-shadow: 0 14px 34px rgba(27, 34, 51, 0.14); }
+    .badge .who b { display: block; font-size: 28px; color: #1e4d68; }
+    .badge .bars { display: flex; gap: 6px; align-items: center; height: 30px; margin-top: 4px; }
+    .badge .bars i { display: block; width: 8px; height: 30px; border-radius: 4px; background: #e07a5f; transform: scaleY(0.18); }
+    .push { position: absolute; left: 560px; top: 46px; width: 800px; background: rgba(255, 255, 255, 0.97); border-radius: 30px; padding: 22px 28px; display: flex; gap: 22px; align-items: center; box-shadow: 0 24px 60px rgba(27, 34, 51, 0.28); z-index: 10; opacity: 0; }
+    .push .ic { width: 76px; height: 76px; border-radius: 18px; background: #1e4d68; display: grid; place-items: center; flex-shrink: 0; }
+    .push small { display: block; font-size: 22px; color: #6b6458; }
+    .push b { display: block; font-size: 32px; color: #1b2233; margin-top: 2px; }
+    .push span { display: block; font-size: 28px; color: #1b2233; margin-top: 2px; }
+
+  </style>
+  <div id="root" data-composition-id="p06" data-width="1920" data-height="1080" data-layout-allow-overflow data-layout-allow-overlap>
+    
+
+    <div id="p06-push" class="push"><div class="ic"><svg width="44" height="40" viewBox="0 0 24 22" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M12 2 1 7l11 5 11-5-11-5Z"/><path d="M5 9.5V15c0 1.5 3 3 7 3s7-1.5 7-3V9.5"/></svg></div><div><small>Portal de maestros · Librería Aurora · ahora</small><b>Tu pedido PED-2026-006 fue aprobado</b><span>Entrega: viernes, 20 de noviembre a las 09:00.</span></div></div>
+
+    <div id="p06-cam" class="cam"><img class="poster" src="assets/avatar/p06_last.jpg" alt="" /><video id="p06-camv" class="clip" src="assets/avatar/p06.mp4" muted playsinline data-start="0" data-duration="5.642"></video><div id="p06-tag" class="tag"><b>Gabriela</b><span></span></div></div>
+    
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const DUR = 6.292;
+    const rise = (s, t, d = 0.55) => tl.fromTo(s, { yPercent: 115 }, { yPercent: 0, duration: d, ease: "expo.out" }, t);
+    const lift = (s, t, d = 0.7) => tl.fromTo(s, { opacity: 0, y: 46, scale: 0.965 }, { opacity: 1, y: 0, scale: 1, duration: d, ease: "expo.out" }, t);
+    const pop = (s, t) => tl.fromTo(s, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.9)" }, t);
+    const slide = (s, t, x = -140) => tl.fromTo(s, { x, opacity: 0 }, { x: 0, opacity: 1, duration: 0.65, ease: "expo.out" }, t);
+    const out = (s, t, d = 0.35) => tl.to(s, { opacity: 0, y: -16, duration: d, ease: "power2.in" }, t);
+    const ring = (s, t, hold = 0) => { tl.fromTo(s, { opacity: 0, scale: 1.08 }, { opacity: 1, scale: 1, duration: 0.32, ease: "back.out(2.2)" }, t); if (hold) tl.to(s, { opacity: 0, duration: 0.25 }, t + hold); };
+    const pan = (s, t, vars, d = 1.2) => tl.to(s, { ...vars, duration: d, ease: "power3.inOut" }, t);
+    const count = (s, t, from, to, d = 0.9, fmt = (v) => Math.round(v).toString()) => {
+      const o = { v: from };
+      tl.to(o, { v: to, duration: d, ease: "power2.out", onUpdate: () => { const el = document.querySelector(s); if (el) el.textContent = fmt(o.v); } }, t);
+    };
+    // on camera: full frame, the lower-third tag, then pip(t) shrinks it to a window
+    const CAM = "#p06-cam";
+    const pip = (t, where = "bl", d = 0.8) => {
+      const s = 0.25, W = 1920 * s, H = 1080 * s;
+      const x = where === "br" ? 1920 - 56 - W : where === "tr" ? 1920 - 56 - W : 56;
+      const y = where === "tr" ? 56 : 1080 - 56 - H;
+      tl.to(CAM, { x, y, scale: s, borderRadius: 120, duration: d, ease: "power3.inOut" }, t);
+      tl.to(CAM + " .tag", { opacity: 0, duration: 0.2 }, t);
+    };
+    const unpip = (t, d = 0.7) => tl.to(CAM, { x: 0, y: 0, scale: 1, borderRadius: 0, duration: d, ease: "power3.inOut" }, t);
+    const tag = (t, hold = 3.4) => {
+      tl.fromTo(CAM + " .tag", { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.5, ease: "expo.out" }, t);
+      tl.to(CAM + " .tag", { opacity: 0, x: -20, duration: 0.35, ease: "power2.in" }, t + hold);
+    };
+
+    tl.fromTo("#p06-push", { opacity: 0, y: -140 }, { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" }, 3.128);
+    tl.to("#p06-push", { opacity: 0, y: -100, duration: 0.4, ease: "power2.in" }, 5.642);
+
+    window.__timelines["p06"] = tl;
+  </script>
+</template>

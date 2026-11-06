@@ -1,0 +1,99 @@
+---
+// The "Ingresar" form every design uses (like CouponForm: plain markup,
+// styled through class props, same behaviour everywhere). One form for staff
+// and teachers: the backend looks at the account and sends each one to the
+// POS or the teachers' portal with a one-time code.
+//
+// While it works the <form> carries data-state="busy" | "ok" | "error", and
+// on success it fires a "site:login" event ({ app, name, redirect }) (and
+// "site:login-error" when it fails) so a
+// design can play its own animation; it then waits data-delay ms (default
+// 700) before leaving. Without JavaScript it posts to /ingresar, which does
+// the same on the server.
+
+interface Props {
+  formClass?: string
+  fieldClass?: string
+  labelClass?: string
+  inputClass?: string
+  toggleClass?: string
+  buttonClass?: string
+  noteClass?: string
+  buttonLabel?: string
+  delay?: number
+  error?: string | null
+}
+const {
+  formClass = '', fieldClass = '', labelClass = '', inputClass = '', toggleClass = '', buttonClass = '', noteClass = '',
+  buttonLabel = 'Entrar', delay = 700, error = null,
+} = Astro.props
+---
+<form class={formClass} method="post" action="/ingresar" data-login-form data-delay={delay} novalidate>
+  <label class={fieldClass}>
+    <span class={labelClass}>Correo</span>
+    <input class={inputClass} name="email" type="email" inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" required maxlength="150" placeholder="tucorreo@ejemplo.com" />
+  </label>
+  <label class={fieldClass}>
+    <span class={labelClass}>Contraseña</span>
+    <span style="position:relative;display:block">
+      <input class={inputClass} name="password" type="password" autocomplete="current-password" required maxlength="200" placeholder="••••••••" style="padding-right:64px" />
+      <button class={toggleClass} type="button" data-toggle aria-label="Mostrar contraseña" aria-pressed="false">Ver</button>
+    </span>
+  </label>
+  <button class={buttonClass} type="submit"><span data-label>{buttonLabel}</span></button>
+  <p class={noteClass} data-note role="status" aria-live="polite">{error ?? 'Maestros y equipo de la tienda: entra con el correo y la contraseña que te dieron.'}</p>
+</form>
+
+<script>
+  for (const form of document.querySelectorAll<HTMLFormElement>('[data-login-form]')) {
+    if (form.dataset.bound) continue
+    form.dataset.bound = '1'
+    const note = form.querySelector<HTMLElement>('[data-note]')!
+    const label = form.querySelector<HTMLElement>('[data-label]')!
+    const btn = form.querySelector<HTMLButtonElement>('button[type=submit]')!
+    const pass = form.querySelector<HTMLInputElement>('[name=password]')!
+    const toggle = form.querySelector<HTMLButtonElement>('[data-toggle]')!
+    toggle.addEventListener('click', () => {
+      const show = pass.type === 'password'
+      pass.type = show ? 'text' : 'password'
+      toggle.textContent = show ? 'Ocultar' : 'Ver'
+      toggle.setAttribute('aria-pressed', String(show))
+      toggle.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña')
+    })
+    const fail = (msg: string, field?: string) => {
+      form.dataset.state = 'error'
+      note.textContent = msg
+      if (field) form.querySelector<HTMLInputElement>(`[name=${field}]`)?.focus()
+      // replay the shake on every failed try
+      form.classList.remove('is-shake'); void form.offsetWidth; form.classList.add('is-shake')
+      form.dispatchEvent(new CustomEvent('site:login-error', { bubbles: true, detail: { message: msg } }))
+    }
+    form.addEventListener('submit', async e => {
+      e.preventDefault()
+      if (form.dataset.state === 'busy' || form.dataset.state === 'ok') return
+      const data = Object.fromEntries(new FormData(form)) as Record<string, string>
+      if (!/^\S+@\S+\.\S+$/.test((data.email ?? '').trim())) return fail('Escribe tu correo.', 'email')
+      if (!data.password) return fail('Escribe tu contraseña.', 'password')
+      form.dataset.state = 'busy'
+      btn.disabled = true
+      const original = label.textContent
+      label.textContent = 'Revisando…'
+      try {
+        const res = await fetch('/api/site/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: data.email, password: data.password }) })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok || !body.redirect) throw new Error(body.error || 'No se pudo iniciar sesión. Intenta de nuevo.')
+        form.dataset.state = 'ok'
+        label.textContent = body.app === 'portal' ? 'Entrando al portal…' : 'Entrando al sistema…'
+        note.textContent = `¡Hola, ${body.name}!`
+        form.dispatchEvent(new CustomEvent('site:login', { bubbles: true, detail: body }))
+        const wait = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : Number(form.dataset.delay ?? 700)
+        setTimeout(() => location.assign(body.redirect), wait)
+      } catch (err) {
+        btn.disabled = false
+        label.textContent = original
+        pass.value = ''
+        fail(err instanceof Error ? err.message : 'No se pudo iniciar sesión.', 'password')
+      }
+    })
+  }
+</script>

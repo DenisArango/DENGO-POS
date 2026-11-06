@@ -1,0 +1,15 @@
+---
+import Layout from './Layout.astro'
+import type { SiteContent } from '../../core/types'
+const { content } = Astro.props as { content: SiteContent }
+---
+<Layout content={content} title="Página no encontrada" noindex credits={false}>
+  <section class="d-nf">
+    <p class="d-nf__l" aria-hidden="true">4<span>0</span>4</p>
+    <div class="d-gate__r">
+      <h1 style="font-size:var(--step-head);font-weight:600;letter-spacing:-.04em;line-height:1.02">Esta página no está en el estante</h1>
+      <p class="d-gate__sub d-soft">Puede que la hayan movido. Lo que buscas seguro está en la portada o entre las ofertas.</p>
+      <p class="d-hero__actions"><a class="d-btn" href="/">Ir a la portada</a><a class="d-btn d-btn--navy" href="/ofertas">Ver ofertas</a></p>
+    </div>
+  </section>
+</Layout>

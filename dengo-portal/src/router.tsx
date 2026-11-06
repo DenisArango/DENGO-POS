@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 
 const Landing = lazy(() => import('./pages/Landing'))
 const Login = lazy(() => import('./pages/Login'))
+const Entrar = lazy(() => import('./pages/Entrar'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const NewOrder = lazy(() => import('./pages/orders/NewOrder'))
 const OrderHistory = lazy(() => import('./pages/orders/OrderHistory'))
@@ -26,6 +27,7 @@ export default function Router() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/entrar" element={<Entrar />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/orders/new" element={<ProtectedRoute><NewOrder /></ProtectedRoute>} />
         <Route path="/orders" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />

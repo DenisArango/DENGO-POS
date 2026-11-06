@@ -1,0 +1,24 @@
+    #fin-end { position: absolute; left: 0; right: 0; top: 250px; text-align: center; }
+    #fin-lock { display: flex; justify-content: center; align-items: center; gap: 40px; }
+    #fin-iso { width: 150px; height: 168px; overflow: visible; }
+    #fin-word { font-family: "Inter", sans-serif; font-size: 136px; font-weight: 700; letter-spacing: 0.05em; color: #1e4d68; line-height: 1; }
+    #fin-c1 { font-size: 54px; margin-top: 70px; }
+    #fin-c2 { font-size: 84px; font-weight: 700; color: #1e4d68; margin-top: 8px; letter-spacing: -0.01em; }
+    #fin-chips { display: flex; justify-content: center; gap: 18px; margin-top: 64px; }
+    #fin-chips span { font-size: 30px; font-weight: 600; padding: 12px 26px; border-radius: 999px; background: #fff; border: 2px solid #e6dfd2; color: #1e4d68; opacity: 0; }
+    #fin-chips span:nth-child(2) { border-color: #e07a5f; color: #c15f45; }
+    #fin-chips span:nth-child(3) { border-color: #f2c14e; color: #8a6510; }
+<!--markup-->
+    <div id="fin-end">
+      <div id="fin-lock"><svg id="fin-iso" viewBox="5 5 120 135"><path id="fin-hex" d="M 65,15 L 115,44 L 115,101 L 65,130 L 15,101 L 15,44 Z" fill="none" stroke="#1E4D68" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/><line id="fin-diag" x1="15" y1="101" x2="115" y2="44" stroke="#1E4D68" stroke-width="8" stroke-linecap="round"/><path id="fin-chev" d="M 28,107 L 65,42 L 102,107" fill="none" stroke="#E07A5F" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/></svg><div class="mask"><span id="fin-word">DENGO</span></div></div>
+      <div class="mask"><span id="fin-c1">Agende su demo por WhatsApp</span></div>
+      <div class="mask"><span id="fin-c2" data-var-text="whatsapp">+502 5568-3004</span></div>
+      <div id="fin-chips"><span>Punto de venta</span><span>Página web</span><span>Portal de maestros</span></div>
+    </div>
+<!--script-->
+    tl.fromTo("#fin-hex", { strokeDasharray: 360, strokeDashoffset: 360 }, { strokeDashoffset: 0, duration: 0.8, ease: "power2.inOut" }, 0.3);
+    tl.fromTo("#fin-diag", { strokeDasharray: 120, strokeDashoffset: 120 }, { strokeDashoffset: 0, duration: 0.4 }, 0.9);
+    tl.fromTo("#fin-chev", { strokeDasharray: 160, strokeDashoffset: 160 }, { strokeDashoffset: 0, duration: 0.5, ease: "power3.out" }, 1.1);
+    tl.fromTo("#fin-word", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.6, ease: "power3.inOut" }, 1.4);
+    rise("#fin-c1", 1.9); rise("#fin-c2", 2.2);
+    tl.fromTo("#fin-chips span", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.45, ease: "expo.out", stagger: 0.12 }, 2.7);

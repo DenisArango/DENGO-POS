@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -22,6 +22,26 @@ export default function Login() {
   const login = useAuthStore((state) => state.login)
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  // When the business's website is published with «Ingresar» pointing here,
+  // its /ingresar is the front door: forward there. ?directo keeps this form
+  // (an emergency way in), and if the site can't be reached in time
+  // (offline, site down) the form shows as always.
+  const direct = new URLSearchParams(window.location.search).has('directo')
+  const [checkingSite, setCheckingSite] = useState(!direct)
+  useEffect(() => {
+    if (direct) return
+    const ctl = new AbortController()
+    const giveUp = window.setTimeout(() => { ctl.abort(); setCheckingSite(false) }, 2500)
+    fetch(`${import.meta.env.VITE_API_URL}/api/site/entry`, { signal: ctl.signal })
+      .then(r => (r.ok ? r.json() : null))
+      .then((d: { url?: string | null } | null) => {
+        if (d?.url && /^https?:\/\//.test(d.url) && new URL(d.url).host !== window.location.host) window.location.replace(d.url)
+        else setCheckingSite(false)
+      })
+      .catch(() => setCheckingSite(false))
+      .finally(() => window.clearTimeout(giveUp))
+    return () => { window.clearTimeout(giveUp); ctl.abort() }
+  }, [direct])
 
   const {
     register,
@@ -64,6 +84,14 @@ export default function Login() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (checkingSite) {
+    return (
+      <div className="bg-white rounded-2xl shadow-xl p-8 flex justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" aria-label="Cargando" />
+      </div>
+    )
   }
 
   return (

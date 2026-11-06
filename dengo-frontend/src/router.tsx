@@ -110,11 +110,13 @@ export default function Router() {
             <Route path="/portal/program-options" element={<PortalProgramOptions />} />
             <Route path="/portal/consolidated" element={<PortalConsolidated />} />
             <Route path="/portal/metrics" element={<PortalMetrics />} />
-            <Route path="/website" element={<Website />} />
             <Route path="/portal/messages" element={<PortalMessages />} />
             <Route path="/portal/config" element={<PortalLandingConfig />} />
           </Route>
           <Route path="/messages" element={<Messages />} />
+          {/* Página web: its own module, NOT part of the teacher portal (it used to sit
+              inside PortalLicenseGuard, which bounced it to the dashboard when the portal is off) */}
+          <Route path="/website" element={<Website />} />
 
           {/* Rutas de reportes */}
           <Route path="/reports/daily-sales" element={<DailySalesReport />} />

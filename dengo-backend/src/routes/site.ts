@@ -59,6 +59,19 @@ async function livePromotions() {
 export default async function siteRoutes(fastify: FastifyInstance) {
   // Everything the site needs in one request (rendered on the server by
   // Astro; cached briefly by the browser/CDN).
+  // GET /api/site/entry — where the POS should send people to sign in. When
+  // the site is published with «Ingresar» pointing at the POS, the site's own
+  // /ingresar is the front door (it signs them into the POS through a
+  // one-time handoff), so the POS's /login forwards there. null = keep the
+  // POS's own login (no site, not published, or no POS door).
+  fastify.get('/entry', async (_request, reply) => {
+    const license = await getLicense()
+    if (!license.pageEnabled) return reply.send({ url: null })
+    const cfg = await getSiteConfig()
+    const url = cfg.published && cfg.publicUrl && cfg.posUrl ? `${cfg.publicUrl.replace(/\/+$/, '')}/ingresar` : null
+    return reply.send({ url })
+  })
+
   fastify.get('/content', async (_request, reply) => {
     const license = await getLicense()
     if (!license.pageEnabled) return reply.status(404).send({ error: 'Sitio no disponible' })

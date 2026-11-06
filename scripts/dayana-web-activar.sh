@@ -78,6 +78,9 @@ for env in "${ENVS[@]}"; do
   # in its own shell, so the client's variables never leak into the builds
   ( cd "$APP/dengo-backend" && set -a && . "$env" && set +a && npx prisma db push --accept-data-loss --skip-generate )
 done
+# the backend's build doesn't regenerate the Prisma client: without this it runs the new code
+# against the old client, which doesn't know the new tables (every new route answers 500)
+( cd "$APP/dengo-backend" && npx prisma generate )
 
 say "3/7 Compilar backend y POS"
 ( cd "$APP/dengo-backend" && npm run build )

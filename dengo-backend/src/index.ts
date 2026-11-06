@@ -52,6 +52,30 @@ const fastify = Fastify({
   },
 })
 
+// Spanish names for the unique columns a person can collide with.
+const UNIQUE_FIELDS: Record<string, string> = {
+  barcode: 'código de barras', sku: 'SKU', code: 'código', nit: 'NIT', email: 'correo', name: 'nombre',
+  slug: 'dirección', invoicenumber: 'número de factura', quotationnumber: 'número de cotización', ordernumber: 'número de pedido',
+}
+
+/** A Prisma known-request error as an HTTP status and a message a person can act on; null for anything else. */
+function prismaKnownError(error: unknown): { status: number; message: string } | null {
+  const e = error as { name?: string; code?: string; meta?: { target?: unknown; field_name?: unknown } }
+  if (e?.name !== 'PrismaClientKnownRequestError' || typeof e.code !== 'string') return null
+  switch (e.code) {
+    case 'P2002': {
+      const target = Array.isArray(e.meta?.target) ? e.meta!.target.map(String) : String(e.meta?.target ?? '').split(/[_,]/)
+      const field = target.map(t => UNIQUE_FIELDS[t.toLowerCase().replace(/[^a-z]/g, '')]).find(Boolean)
+      return { status: 409, message: field ? `Ya existe un registro con ese ${field}.` : 'Ya existe un registro con esos datos.' }
+    }
+    case 'P2000': return { status: 400, message: 'Uno de los textos es demasiado largo para guardarse. Acórtalo e intenta de nuevo.' }
+    case 'P2003': return { status: 409, message: 'No se puede: está ligado a otros registros.' }
+    case 'P2025': return { status: 404, message: 'No se encontró el registro (puede que alguien más lo haya cambiado o borrado).' }
+    case 'P2024': return { status: 503, message: 'El servidor está muy ocupado en este momento. Intenta de nuevo en unos segundos.' }
+    default: return null
+  }
+}
+
 async function bootstrap() {
   // Security
   await fastify.register(helmet, { contentSecurityPolicy: false })
@@ -117,8 +141,19 @@ async function bootstrap() {
   // Global error handler — set BEFORE the routes: in Fastify a route plugin
   // registered earlier keeps the default handler, which echoes internal
   // error text (e.g. Prisma's) to the client on a 500.
-  fastify.setErrorHandler((error: FastifyError, _request, reply) => {
-    if ((error.statusCode ?? 500) >= 500) fastify.log.error(error)
+  fastify.setErrorHandler((error: FastifyError, request, reply) => {
+    // Prisma's known errors are mostly the DATA's fault, not the server's: a
+    // duplicate barcode, a text too long for its column, a missing row. Left
+    // as 500s they reached the till as «Sin conexión con el servidor» (the POS
+    // shows that for every 5xx and re-checks the connection), so a cashier who
+    // typed a repeated barcode thought the system had gone down.
+    const known = prismaKnownError(error)
+    if (known) {
+      if (known.status >= 500) fastify.log.error(error)
+      else fastify.log.warn({ code: (error as { code?: string }).code, url: request.url }, known.message)
+      return reply.status(known.status).send({ error: known.message })
+    }
+    if ((error.statusCode ?? 500) >= 500) fastify.log.error({ err: error, url: request.url, method: request.method }, error.message)
     if (error.validation) {
       return reply.status(400).send({ error: 'Datos inválidos', details: error.validation })
     }

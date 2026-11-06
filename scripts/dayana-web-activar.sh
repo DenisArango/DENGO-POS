@@ -4,17 +4,21 @@
 #
 #   bash ~/dengo/app/scripts/dayana-web-activar.sh <dominio-de-la-pagina> [url-del-POS] [url-del-portal]
 #
-#   ej.: bash ~/dengo/app/scripts/dayana-web-activar.sh variedadesdayana.com https://pos.variedadesdayana.com https://maestros.variedadesdayana.com
+#   ej.: bash ~/dengo/app/scripts/dayana-web-activar.sh variedadesdayana.com https://pos.variedadesdayana.com
 #
-# Las URL del POS y del portal son para el botón «Ingresar» de la página (si no se
-# dan, se conserva lo que ya hubiera; sin ellas el botón no aparece).
+# Las URL del POS y del portal son para el botón «Ingresar» de la página: se guarda
+# exactamente lo que se pase, y lo que no se pase queda vacío (esa puerta no aparece).
+# El portal de maestros está apagado para Dayana: no pases su URL y no se compila
+# (BUILD_PORTAL=1 bash … lo compila, para cuando se active).
 #
 # Qué hace, en orden (se detiene ante el primer error):
 #   1. Respalda la base de CADA cliente de ~/dengo/clients/*/.env (pg_dump) en ~/dengo/backups/.
-#   2. Compila backend, POS y portal como siempre (npm install && npm run build).
-#   3. `prisma db push` en la base de cada cliente (el código es compartido: todos necesitan
-#      las tablas nuevas). Solo agrega tablas y columnas; el único aviso de Prisma es por un
-#      índice único sobre una columna nueva y vacía (Sale.COUPON_ID), por eso --accept-data-loss.
+#   2. `prisma db push` en la base de cada cliente (el código es compartido: todos necesitan
+#      las tablas nuevas). Va ANTES de compilar: agregar tablas y columnas no molesta al backend
+#      que sigue corriendo, y así nunca queda código nuevo sobre una base vieja. El único aviso de
+#      Prisma es por un índice único sobre una columna nueva y vacía (Sale.COUPON_ID), por eso
+#      --accept-data-loss.
+#   3. Compila backend y POS como siempre (npm install && npm run build); el portal solo con BUILD_PORTAL=1.
 #   4. Carga los datos de la página de Dayana (SITE_CONFIG): diseño «dayana», publicada,
 #      contacto, redes y SEO. Los textos, fotos y horarios van en el código (dengo-web).
 #   5. Compila dengo-web y lo arranca en pm2 como «VariedadesDayana-web».
@@ -67,17 +71,22 @@ for env in "$CLIENTS"/*/.env; do
 done
 [ ${#ENVS[@]} -gt 0 ] || die "No encontré ningún .env con DATABASE_URL en $CLIENTS"
 
-say "2/7 Compilar backend, POS y portal"
-( cd "$APP/dengo-backend" && npm install --no-audit --no-fund && npm run build )
-( cd "$APP/dengo-frontend" && npm install --no-audit --no-fund && npm run build )
-if [ -d "$APP/dengo-portal" ]; then ( cd "$APP/dengo-portal" && npm install --no-audit --no-fund && npm run build ); fi
-
-say "3/7 Tablas nuevas (prisma db push) en cada cliente"
+say "2/7 Tablas nuevas (prisma db push) en cada cliente"
+( cd "$APP/dengo-backend" && npm install --no-audit --no-fund )
 for env in "${ENVS[@]}"; do
   echo "  $(basename "$(dirname "$env")")"
   # in its own shell, so the client's variables never leak into the builds
   ( cd "$APP/dengo-backend" && set -a && . "$env" && set +a && npx prisma db push --accept-data-loss --skip-generate )
 done
+
+say "3/7 Compilar backend y POS"
+( cd "$APP/dengo-backend" && npm run build )
+( cd "$APP/dengo-frontend" && npm install --no-audit --no-fund && npm run build )
+if [ "${BUILD_PORTAL:-0}" = "1" ] && [ -d "$APP/dengo-portal" ]; then
+  # a node_modules copied from Windows (it used to be in the repo) has no exec bits and Windows binaries
+  if [ -d "$APP/dengo-portal/node_modules" ] && [ ! -x "$APP/dengo-portal/node_modules/.bin/tsc" ]; then rm -rf "$APP/dengo-portal/node_modules"; fi
+  ( cd "$APP/dengo-portal" && npm install --no-audit --no-fund && npm run build )
+fi
 
 say "4/7 Datos de la página de Variedades Dayana"
 DURL="$(db_url "$DAYANA_ENV")"
@@ -95,8 +104,8 @@ UPDATE "SITE_CONFIG" SET
   "SITE" = 'dayana',
   "PUBLISHED" = true,
   "PUBLIC_URL" = :'url',
-  "POS_URL" = COALESCE(NULLIF(:'pos', ''), "POS_URL"),
-  "PORTAL_URL" = COALESCE(NULLIF(:'portal', ''), "PORTAL_URL"),
+  "POS_URL" = NULLIF(:'pos', ''),
+  "PORTAL_URL" = NULLIF(:'portal', ''),
   "BUSINESS_NAME" = 'Variedades Dayana',
   "TAGLINE" = 'En servicio y calidad nadie nos gana',
   "WHATSAPP" = '5912 5855',

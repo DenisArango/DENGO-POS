@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
+import { imageUrlsFor } from '../lib/productImages.js'
 import { validateUser, logLogin } from '../services/auth.service.js'
 import { log } from '../services/audit.service.js'
 import { getLicense } from './license.js'
@@ -294,12 +295,13 @@ export default async function portalRoutes(fastify: FastifyInstance) {
       },
       include: {
         items: {
-          include: { product: { select: { id: true, name: true, basePrice: true, imageUrl: true, brand: true } } },
+          include: { product: { select: { id: true, name: true, basePrice: true, brand: true } } },
         },
         levels: true,
       },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     })
+    const images = await imageUrlsFor(options.flatMap(o => o.items.map(i => i.product.id)), request)
     return reply.send(options.map(o => ({
       id: o.id,
       programType: o.programType,
@@ -313,7 +315,7 @@ export default async function portalRoutes(fastify: FastifyInstance) {
         productName: i.productName,
         quantity: Number(i.quantity),
         basePrice: Number(i.product.basePrice),
-        imageUrl: i.product.imageUrl,
+        imageUrl: images.get(i.product.id) ?? null,
       })),
     })))
   })
@@ -359,6 +361,7 @@ export default async function portalRoutes(fastify: FastifyInstance) {
       }),
     ])
 
+    const images = await imageUrlsFor(products.map(p => p.id), request)
     return reply.send({
       data: products.map(p => ({
         id: p.id,
@@ -366,7 +369,7 @@ export default async function portalRoutes(fastify: FastifyInstance) {
         brand: p.brand,
         description: p.description,
         basePrice: Number(p.basePrice),
-        imageUrl: p.imageUrl,
+        imageUrl: images.get(p.id) ?? null,
         category: p.category,
       })),
       total,

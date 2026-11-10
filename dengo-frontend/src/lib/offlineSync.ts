@@ -11,6 +11,7 @@ import {
   getPendingRegisterOps, removePendingRegisterOp, updatePendingRegisterOp, type PendingRegisterOp,
 } from './offlineDb'
 import { api, ApiError } from './api'
+import { logConn, explainBadStatus, explainNetworkFailure, reportConnLog, startConnLogListeners } from './connLog'
 
 const BASE_URL = import.meta.env.VITE_API_URL as string
 
@@ -75,24 +76,72 @@ export async function getLocallyClosingRegisterIds(): Promise<Set<string>> {
 // busy for a moment, or when the store's shared IP ran out of unauthenticated
 // requests (that ping was rate-limited, by IP). Now: /api/health (no database
 // work, exempt from the limit), 8 s, and only offline after a second miss.
-async function pingOnce(ms: number): Promise<boolean> {
+//
+// Every miss is written to the connection log (lib/connLog.ts) with HOW it
+// failed — that's what the «Detalle técnico» panel shows.
+type PingResult = { ok: true; ms: number } | { ok: false; ms: number; why: string; status?: number; err?: string }
+
+async function pingOnce(ms: number): Promise<PingResult> {
   const ctrl = new AbortController()
-  const timeout = setTimeout(() => ctrl.abort(), ms)
+  let timedOut = false
+  const timeout = setTimeout(() => { timedOut = true; ctrl.abort() }, ms)
+  const started = performance.now()
   try {
     const res = await fetch(`${BASE_URL}/api/health`, { signal: ctrl.signal, cache: 'no-store' })
+    const took = Math.round(performance.now() - started)
     // any answer from the backend proves it's reachable; only a gateway error (Caddy can't reach it) doesn't
-    return res.status !== 502 && res.status !== 503 && res.status !== 504
-  } catch {
-    return false
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      return { ok: false, ms: took, status: res.status, why: explainBadStatus(res.status) }
+    }
+    noteServerUptime(res)
+    return { ok: true, ms: took }
+  } catch (err) {
+    const took = Math.round(performance.now() - started)
+    return { ok: false, ms: took, err: err instanceof Error ? err.message : String(err), why: explainNetworkFailure(took, err, timedOut ? ms : undefined) }
   } finally {
     clearTimeout(timeout)
   }
 }
 
-async function pingBackend(): Promise<boolean> {
-  if (await pingOnce(8000)) return true
+// /api/health reports the backend's uptime: if it's lower than it should be
+// since the last ping, the process restarted in between (crash + pm2
+// restart, or a deploy) — which on the till looks exactly like a dropped
+// connection, so it goes in the log.
+let lastUptime: { s: number; at: number } | null = null
+function noteServerUptime(res: Response) {
+  res.clone().json().then((j: { uptime?: unknown }) => {
+    if (typeof j?.uptime !== 'number') return
+    const now = Date.now()
+    if (lastUptime && j.uptime + 10 < lastUptime.s + (now - lastUptime.at) / 1000) {
+      logConn({ kind: 'ping', bad: true, path: '/api/health', msg: `el SERVIDOR SE REINICIÓ (lleva ${j.uptime} s encendido) — caída del proceso o actualización` })
+    }
+    lastUptime = { s: j.uptime, at: now }
+  }).catch(() => { /* older backend without uptime */ })
+}
+
+async function pingBackend(): Promise<{ online: boolean; why?: string }> {
+  const first = await pingOnce(8000)
+  if (first.ok) {
+    if (first.ms > 2500) logConn({ kind: 'ping', bad: false, path: '/api/health', ms: first.ms, msg: `servidor alcanzable pero lento: ${(first.ms / 1000).toFixed(1)} s` })
+    return { online: true }
+  }
+  logConn({ kind: 'ping', bad: true, path: '/api/health', status: first.status, ms: first.ms, err: first.err, msg: `ping 1/2 falló: ${first.why}` })
   await new Promise(r => setTimeout(r, 1500))
-  return pingOnce(8000)
+  const second = await pingOnce(8000)
+  if (second.ok) {
+    logConn({ kind: 'ping', bad: false, path: '/api/health', ms: second.ms, msg: `ping 2/2 respondió (${second.ms} ms) — fue un fallo pasajero` })
+    return { online: true }
+  }
+  logConn({ kind: 'ping', bad: true, path: '/api/health', status: second.status, ms: second.ms, err: second.err, msg: `ping 2/2 falló: ${second.why}` })
+  return { online: false, why: second.why }
+}
+
+/** Single place the online flag changes, so every flip is logged with its reason. */
+function setOnline(online: boolean, why: string) {
+  if (state.isOnline !== online) {
+    logConn({ kind: 'state', bad: !online, msg: online ? `CONECTADO de nuevo (${why})` : `pasó a SIN CONEXIÓN — ${why}` })
+  }
+  setState({ isOnline: online })
 }
 
 type PostResult = { ok: true } | { ok: false; networkError: boolean; message: string }
@@ -142,9 +191,11 @@ export async function trySync(): Promise<void> {
   syncing = true
   setState({ syncing: true })
   try {
-    const online = await pingBackend()
-    setState({ isOnline: online })
-    if (!online) return
+    const ping = await pingBackend()
+    setOnline(ping.online, ping.online ? 'el servidor respondió' : (ping.why ?? 'el servidor no respondió'))
+    if (!ping.online) return
+    // Back (or still) online: hand any logged failures to the server's logs.
+    void reportConnLog(BASE_URL)
 
     const pending = await getPendingSales()
     for (const sale of pending) {
@@ -157,7 +208,7 @@ export async function trySync(): Promise<void> {
       }
       if (result.networkError) {
         await updatePendingSale(sale.localId, { status: 'pending' })
-        setState({ isOnline: false })
+        setOnline(false, `al sincronizar una venta pendiente: ${result.message}`)
         break // stop here — still offline, preserve order for next attempt
       }
       // Server actively rejected it (e.g. stale stock check for a non-offline
@@ -184,7 +235,7 @@ export async function trySync(): Promise<void> {
       }
       if (result.networkError) {
         await updatePendingRegisterOp(op.localId, { status: 'pending' })
-        setState({ isOnline: false })
+        setOnline(false, `al sincronizar un movimiento de caja pendiente: ${result.message}`)
         break
       }
       await updatePendingRegisterOp(op.localId, { status: 'failed', lastError: result.message, attempts: (op.attempts ?? 0) + 1 })
@@ -214,7 +265,8 @@ export function startOfflineSync(): void {
 
   refreshPendingCount()
   window.addEventListener('online', () => { trySync() })
-  window.addEventListener('offline', () => setState({ isOnline: false }))
+  window.addEventListener('offline', () => setOnline(false, 'el navegador reporta que el dispositivo perdió la red'))
+  startConnLogListeners()
   window.addEventListener('dengo:connectivity-check', () => { trySync() })
 
   setInterval(() => { trySync() }, 30_000)

@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { prisma } from '../lib/prisma.js'
+import { imageUrlsFor } from '../lib/productImages.js'
 import { getBusinessDayBounds, toBusinessDateKey, getBusinessHour, parseBusinessDateParam } from '../lib/timezone.js'
 import { computeSales, sessionTotals } from './cash-registers.js'
 import { resolveBranchScope } from '../lib/branch-scope.js'
@@ -464,7 +465,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     return reply.send({
       product: {
         id: product.id, name: product.name, barcode: product.barcode, sku: product.sku,
-        imageUrl: product.imageUrl, category: product.category?.name ?? null,
+        imageUrl: (await imageUrlsFor([product.id], request)).get(product.id) ?? null, category: product.category?.name ?? null,
         baseUnit: product.baseUnit?.abbreviation ?? null, basePrice: Number(product.basePrice ?? 0),
         cost: Number(product.cost ?? 0),
       },

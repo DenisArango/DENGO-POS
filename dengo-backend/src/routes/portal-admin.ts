@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { isValidGtNit, normalizeNit } from '../lib/nit.js'
 import { prisma } from '../lib/prisma.js'
+import { imageUrlsFor } from '../lib/productImages.js'
 import { Prisma } from '@prisma/client'
 import { log } from '../services/audit.service.js'
 import { hashPassword } from '../services/auth.service.js'
@@ -703,12 +704,13 @@ export default async function portalAdminRoutes(fastify: FastifyInstance) {
       where: q.programType ? { programType: q.programType } : {},
       include: {
         items: {
-          include: { product: { select: { id: true, name: true, basePrice: true, imageUrl: true } } },
+          include: { product: { select: { id: true, name: true, basePrice: true } } },
         },
         levels: true,
       },
       orderBy: [{ programType: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
     })
+    const images = await imageUrlsFor(options.flatMap(o => o.items.map(i => i.product.id)), request)
     return reply.send(options.map(o => ({
       id: o.id,
       programType: o.programType,
@@ -724,7 +726,7 @@ export default async function portalAdminRoutes(fastify: FastifyInstance) {
         productName: i.productName,
         quantity: Number(i.quantity),
         basePrice: Number(i.product.basePrice),
-        imageUrl: i.product.imageUrl,
+        imageUrl: images.get(i.product.id) ?? null,
       })),
     })))
   })

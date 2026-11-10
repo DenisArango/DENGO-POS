@@ -1,4 +1,6 @@
 import Fastify, { type FastifyError } from 'fastify'
+import { randomBytes } from 'node:crypto'
+import { monitorEventLoopDelay } from 'node:perf_hooks'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import compress from '@fastify/compress'
@@ -40,14 +42,25 @@ import websiteRoutes from './routes/website.js'
 import felRoutes from './routes/fel.js'
 import { startFelWorker } from './lib/fel.js'
 import siteRoutes from './routes/site.js'
+import diagRoutes from './routes/diag.js'
 
 const fastify = Fastify({
   // Behind Caddy on the same machine: trust X-Forwarded-For only from the
   // loopback proxy, so request.ip is the real client (login rate limit and
   // login history) instead of 127.0.0.1 for everyone.
   trustProxy: '127.0.0.1,::1',
+  // The POS sends its own X-Request-Id (see dengo-frontend/src/lib/api.ts) and
+  // shows it in the «Detalle técnico» panel: using it as the log reqId lets a
+  // failure on a cashier's screenshot be found here with a plain grep.
+  requestIdHeader: false,
+  genReqId: (req) => {
+    const h = req.headers['x-request-id']
+    return typeof h === 'string' && /^[A-Za-z0-9-]{4,40}$/.test(h) ? h : randomBytes(5).toString('hex')
+  },
   logger: {
-    level: config.isDev ? 'info' : 'warn',
+    // LOG_LEVEL=info in the client's .env (then pm2 restart) logs EVERY request
+    // with its reqId — handy while chasing disconnections, noisy otherwise.
+    level: process.env['LOG_LEVEL'] ?? (config.isDev ? 'info' : 'warn'),
     transport: config.isDev ? { target: 'pino-pretty', options: { colorize: true } } : undefined,
   },
 })
@@ -149,11 +162,11 @@ async function bootstrap() {
     // typed a repeated barcode thought the system had gone down.
     const known = prismaKnownError(error)
     if (known) {
-      if (known.status >= 500) fastify.log.error(error)
-      else fastify.log.warn({ code: (error as { code?: string }).code, url: request.url }, known.message)
+      if (known.status >= 500) request.log.error(error)
+      else request.log.warn({ code: (error as { code?: string }).code, url: request.url }, known.message)
       return reply.status(known.status).send({ error: known.message })
     }
-    if ((error.statusCode ?? 500) >= 500) fastify.log.error({ err: error, url: request.url, method: request.method }, error.message)
+    if ((error.statusCode ?? 500) >= 500) request.log.error({ err: error, url: request.url, method: request.method }, error.message)
     if (error.validation) {
       return reply.status(400).send({ error: 'Datos inválidos', details: error.validation })
     }
@@ -161,6 +174,25 @@ async function bootstrap() {
     reply.status(statusCode).send({
       error: statusCode === 500 ? 'Error interno del servidor' : error.message,
     })
+  })
+
+  // ── Connection diagnostics ───────────────────────────────────────────
+  // Production logs only WARN and up, so normally a request leaves no trace.
+  // These three cover what a «Sin conexión» on a till usually comes down to:
+  // a request that took too long, a request the client gave up on, and the
+  // whole process being blocked (then EVERY request, the health ping too,
+  // stalls at once — exactly what makes all tills flip to offline together).
+  const SLOW_MS = Number(process.env['SLOW_REQUEST_MS'] ?? 3000)
+  fastify.addHook('onSend', async (request, reply, payload) => {
+    reply.header('x-request-id', request.id)
+    return payload
+  })
+  fastify.addHook('onResponse', async (request, reply) => {
+    const ms = Math.round(reply.elapsedTime)
+    if (ms >= SLOW_MS) request.log.warn({ tag: 'lenta', method: request.method, url: request.url.split('?')[0], status: reply.statusCode, ms, ip: request.ip }, `solicitud lenta: ${request.method} ${request.url.split('?')[0]} ${ms} ms`)
+  })
+  fastify.addHook('onRequestAbort', async (request) => {
+    request.log.warn({ tag: 'abortada', method: request.method, url: request.url.split('?')[0], ip: request.ip }, `el cliente cerró la conexión antes de recibir respuesta: ${request.method} ${request.url.split('?')[0]}`)
   })
 
   // Auth (JWT + authenticate decorator)
@@ -171,7 +203,9 @@ async function bootstrap() {
   // online, and devices in one store share an IP (an unauthenticated request
   // is keyed by IP), so a busy store could get its own pings refused and every
   // till would flip to "Sin conexión" at once.
-  const health = async () => ({ status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() })
+  // uptime lets the POS notice (and log) that the process restarted — a pm2
+  // crash-restart looks to a cashier exactly like a dropped connection.
+  const health = async () => ({ status: 'ok', version: '1.0.0', timestamp: new Date().toISOString(), uptime: Math.round(process.uptime()) })
   fastify.get('/health', { config: { rateLimit: false } }, health)
   // Same, under /api: Caddy only forwards /api/* to the backend, so this is the
   // one the POS can reach on its own domain to tell "online" (no database touched,
@@ -213,6 +247,7 @@ async function bootstrap() {
   await fastify.register(websiteRoutes,      { prefix: '/api/website' })
   await fastify.register(felRoutes,          { prefix: '/api/fel' })
   await fastify.register(siteRoutes,         { prefix: '/api/site' })
+  await fastify.register(diagRoutes,         { prefix: '/api/diag' })
 
   // 404 handler
   fastify.setNotFoundHandler((_request, reply) => {
@@ -232,6 +267,26 @@ async function bootstrap() {
   fastify.log.info(`🚀 DENGO POS API running on http://${config.host}:${config.port}`)
   // Facturas that never reached the certifier (no connection) are retried in the background.
   startFelWorker(msg => fastify.log.info(msg))
+  startEventLoopWatch()
+}
+
+// Node runs every request on one thread: a heavy synchronous job (a huge
+// report, a big JSON, an import) freezes ALL of them, the health ping
+// included, for as long as it runs. Logged once a minute when it happened,
+// with memory, so it can be lined up with the tills' «Sin conexión».
+function startEventLoopWatch() {
+  const h = monitorEventLoopDelay({ resolution: 20 })
+  h.enable()
+  setInterval(() => {
+    const maxMs = Math.round(h.max / 1e6)
+    const p99 = Math.round(h.percentile(99) / 1e6)
+    if (maxMs >= 1000) {
+      const mem = process.memoryUsage()
+      fastify.log.warn({ tag: 'bloqueo', maxMs, p99, rssMB: Math.round(mem.rss / 1048576), heapMB: Math.round(mem.heapUsed / 1048576) },
+        `servidor bloqueado hasta ${maxMs} ms en el último minuto (p99 ${p99} ms) — todas las solicitudes esperaron`)
+    }
+    h.reset()
+  }, 60_000).unref()
 }
 
 // Graceful shutdown

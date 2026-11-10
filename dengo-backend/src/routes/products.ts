@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
+import { attachImageUrls, resolveIncomingImage } from '../lib/productImages.js'
 import { log } from '../services/audit.service.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
 import { resolveBranchScope } from '../lib/branch-scope.js'
@@ -113,6 +114,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
         totalValue += stock * Number(p.basePrice ?? 0)
       }
 
+      await attachImageUrls(products, request)
       return reply.send({
         data: products.map(p => ({ ...p, stock: stockByProduct.get(p.id) ?? 0 })),
         total,
@@ -128,6 +130,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
     // whole catalog over the wire. The dropdowns show a scrollable subset of
     // this, not a hard top-N cutoff.
     const products = await prisma.product.findMany({ where, include, orderBy: { name: 'asc' }, take: 50 })
+    await attachImageUrls(products, request)
     return reply.send(products.map(p => ({ ...p, stock: stockByProduct.get(p.id) ?? 0 })))
   })
 
@@ -149,7 +152,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
       where: { barcode: { equals: code, mode: 'insensitive' }, isActive: true },
       include,
     })
-    if (product) return reply.send({ product, variation: undefined })
+    if (product) { await attachImageUrls([product], request); return reply.send({ product, variation: undefined }) }
 
     // Try variation barcode — here the scanned code unambiguously IS that
     // one variation's own, so (unlike above) resolving to it is correct.
@@ -157,7 +160,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
       where: { barcode: { equals: code, mode: 'insensitive' } },
       include: { product: { include } },
     })
-    if (variation) return reply.send({ product: variation.product, variation })
+    if (variation) { await attachImageUrls([variation.product], request); return reply.send({ product: variation.product, variation }) }
 
     // Try alternate barcodes — same as the main barcode: these belong to the
     // product itself (ProductBarcode has no variationId), not to any one
@@ -166,7 +169,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
       where: { barcode: { equals: code, mode: 'insensitive' } },
       include: { product: { include } },
     })
-    if (altBarcode) return reply.send({ product: altBarcode.product, variation: undefined })
+    if (altBarcode) { await attachImageUrls([altBarcode.product], request); return reply.send({ product: altBarcode.product, variation: undefined }) }
 
     return reply.status(404).send({ error: 'Producto no encontrado' })
   })
@@ -176,7 +179,28 @@ export default async function productRoutes(fastify: FastifyInstance) {
     const { id } = request.params as { id: string }
     const product = await prisma.product.findUnique({ where: { id }, include })
     if (!product) return reply.status(404).send({ error: 'Producto no encontrado' })
+    await attachImageUrls([product], request)
     return reply.send(product)
+  })
+
+  // GET /api/products/:id/image — the photo itself (see lib/productImages.ts).
+  // Public: an <img> can't send the bearer token, and a catalog photo isn't
+  // sensitive. Not rate-limited: a page of thumbnails is many requests at
+  // once from one store IP; each is a one-row lookup, and the browser caches
+  // the answer for good (the URL's ?v= changes when the photo does).
+  fastify.get('/:id/image', { config: { rateLimit: false } }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const row = await prisma.product.findUnique({ where: { id }, select: { imageUrl: true } })
+    const src = row?.imageUrl
+    if (!src) return reply.status(404).send({ error: 'Sin imagen' })
+    const m = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(src)
+    if (!m) return reply.redirect(src) // an external URL saved before photos were embedded
+    const bytes = m[2] ? Buffer.from(m[3]!, 'base64') : Buffer.from(decodeURIComponent(m[3]!))
+    return reply
+      .header('Content-Type', m[1] || 'application/octet-stream')
+      .header('Cache-Control', 'public, max-age=31536000, immutable')
+      .header('Cross-Origin-Resource-Policy', 'cross-origin')
+      .send(bytes)
   })
 
   // POST /api/products
@@ -190,6 +214,10 @@ export default async function productRoutes(fastify: FastifyInstance) {
     }
 
     const { variations, ...productData } = body.data
+    // A duplicated product arrives with the original's photo URL: copy the photo.
+    const img = await resolveIncomingImage(productData.imageUrl)
+    if (img.set) productData.imageUrl = img.value
+    else delete productData.imageUrl
     try {
       const product = await prisma.product.create({
         data: {
@@ -215,7 +243,9 @@ export default async function productRoutes(fastify: FastifyInstance) {
         })
       }
 
-      await log({ userId: request.user.id, action: 'CREATE', entity: 'Product', entityId: product.id, newValues: productData })
+      // The photo itself never goes in the audit log (it's up to MBs of base64).
+      await log({ userId: request.user.id, action: 'CREATE', entity: 'Product', entityId: product.id, newValues: { ...productData, imageUrl: productData.imageUrl ? '[imagen]' : productData.imageUrl } })
+      await attachImageUrls([product], request)
       return reply.status(201).send(product)
     } catch (err: any) {
       if (err.code === 'P2002') {
@@ -297,6 +327,10 @@ export default async function productRoutes(fastify: FastifyInstance) {
     }
 
     const { variations, ...productData } = body.data
+    // The edit form sends back the photo URL it received: that means «unchanged».
+    const img = await resolveIncomingImage(productData.imageUrl, id)
+    if (img.set) productData.imageUrl = img.value
+    else delete productData.imageUrl
     try {
       const old = await prisma.product.findUnique({ where: { id }, select: { basePrice: true, cost: true } })
 
@@ -357,6 +391,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
       }
 
       await log({ userId: request.user.id, action: 'UPDATE', entity: 'Product', entityId: id })
+      await attachImageUrls([product], request)
       return reply.send(product)
     } catch (err: any) {
       if (err.code === 'P2025') return reply.status(404).send({ error: 'Producto no encontrado' })
@@ -439,6 +474,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
 
     const product = await prisma.product.update({ where: { id }, data: { isActive: true }, include })
     await log({ userId: request.user.id, action: 'UPDATE', entity: 'Product', entityId: id, newValues: { isActive: true, note: 'Producto reactivado' } })
+    await attachImageUrls([product], request)
     return reply.send(product)
   })
 

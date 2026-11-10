@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma.js'
+import { attachImageUrls } from '../lib/productImages.js'
 import { updateStock, setStock } from '../services/inventory.service.js'
 import { resolveBranchScope, canAccessBranch } from '../lib/branch-scope.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
@@ -121,6 +122,7 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
           branch: { select: { id: true, name: true } },
         },
       }) : []
+      await attachImageUrls(items.map(it => it.product), request)
       const byId = new Map(items.map(it => [it.id, it]))
       const data = ids.map(id => byId.get(id)).filter((x): x is typeof items[number] => !!x)
 
@@ -152,6 +154,7 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
       },
       orderBy: { product: { name: 'asc' } },
     })
+    await attachImageUrls(inventory.map(it => it.product), request)
     return reply.send(inventory)
   })
 

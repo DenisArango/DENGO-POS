@@ -13,6 +13,9 @@
 
 generator client {
   provider = "prisma-client-js"
+  // omitApi: lets lib/prisma.ts leave PRODUCTS.IMAGE_URL (base64 photos) out
+  // of every query by default — see lib/productImages.ts.
+  previewFeatures = ["omitApi"]
 }
 
 datasource db {

@@ -1,4 +1,5 @@
 // Central API client — reads JWT from localStorage, handles 401 globally
+import { logConn, newRequestId, explainNetworkFailure, explainBadStatus } from './connLog'
 
 const BASE_URL = import.meta.env.VITE_API_URL as string
 
@@ -68,6 +69,13 @@ async function apiFetch<T = unknown>(
   const headers: Record<string, string> = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (token) headers['Authorization'] = `Bearer ${token}`
+  // Same id ends up as the backend's log reqId, so a failure in the
+  // «Detalle técnico» panel can be found in `pm2 logs` (see lib/connLog.ts).
+  const reqId = newRequestId()
+  headers['X-Request-Id'] = reqId
+  // Query strings can carry search text — the log only needs the route.
+  const logPath = path.split('?')[0]
+  const started = performance.now()
 
   let res: Response
   try {
@@ -77,6 +85,8 @@ async function apiFetch<T = unknown>(
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
   } catch (err) {
+    const ms = Math.round(performance.now() - started)
+    logConn({ kind: 'request', bad: true, method, path: logPath, ms, reqId, err: err instanceof Error ? err.message : String(err), msg: `sin respuesta: ${explainNetworkFailure(ms, err)}` })
     window.dispatchEvent(new CustomEvent(CONNECTIVITY_CHECK_EVENT))
     console.error(`API network failure on ${method} ${path}:`, err)
     // A real TypeError (not just one with this message) — every existing
@@ -101,6 +111,8 @@ async function apiFetch<T = unknown>(
   try { data = await res.json() } catch { data = {} }
 
   if (res.status >= 500) {
+    const serverMsg = (data as Record<string, string>)?.error
+    logConn({ kind: 'request', bad: true, method, path: logPath, status: res.status, ms: Math.round(performance.now() - started), reqId, msg: explainBadStatus(res.status, serverMsg) })
     window.dispatchEvent(new CustomEvent(CONNECTIVITY_CHECK_EVENT))
     // Log what actually broke for whoever's debugging — only the message
     // shown to the cashier gets normalized, not what lands in the console.

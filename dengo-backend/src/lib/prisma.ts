@@ -6,6 +6,11 @@ const globalForPrisma = globalThis as unknown as { _prisma?: ReturnType<typeof m
 function makePrisma() {
   const client = new PrismaClient({
     log: config.isDev ? ['query', 'warn', 'error'] : ['warn', 'error'],
+    // Product photos are base64 in this column: never load them unless a
+    // query asks with `omit: { imageUrl: false }` / `select: { imageUrl: true }`.
+    // Loading them in lists is what ran the server out of memory (OOM-killed
+    // every ~30 s, Nov 2026) — see lib/productImages.ts.
+    omit: { product: { imageUrl: true } },
   })
 
   // Automatic retry on P1001 (connection refused) — happens when SQL Server

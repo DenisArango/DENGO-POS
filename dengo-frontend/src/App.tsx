@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { StoreProvider } from './contexts/StoreContext'
 import { CONNECTIVITY_ERROR_MESSAGE, api } from './lib/api'
 import { useLicenseStore } from './store'
+import { ConnectionLogModal, SHOW_CONN_LOG_EVENT } from './components/common/ConnectionDetails'
 
 // Dozens of call sites across the app do `.catch(e => toast.error(e.message))`
 // with no knowledge of each other — a moment offline can fail several
@@ -16,10 +17,17 @@ import { useLicenseStore } from './store'
 // caller regardless of which file imports it) reuses sonner's own `id`
 // dedup instead of stacking one toast per failed request. Any other message
 // (a genuine 4xx business error) passes through unchanged.
+// It also gets a «Ver detalle» button (the connection log, see
+// lib/connLog.ts) and stays up longer, so there's time to take a screenshot.
 const originalToastError = toast.error
 toast.error = ((message: Parameters<typeof toast.error>[0], data?: Parameters<typeof toast.error>[1]) => {
   if (message === CONNECTIVITY_ERROR_MESSAGE) {
-    return originalToastError(message, { ...data, id: 'connectivity-error' })
+    return originalToastError(message, {
+      duration: 8000,
+      ...data,
+      id: 'connectivity-error',
+      action: { label: 'Ver detalle', onClick: () => window.dispatchEvent(new CustomEvent(SHOW_CONN_LOG_EVENT)) },
+    })
   }
   return originalToastError(message, data)
 }) as typeof toast.error
@@ -61,6 +69,7 @@ function App() {
       <StoreProvider>
         <BrowserRouter>
           <Router />
+          <ConnectionLogModal />
           <Toaster
             position="top-right"
             richColors

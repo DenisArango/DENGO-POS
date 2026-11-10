@@ -8,6 +8,7 @@ import Header from './Header'
 import { useAppStore } from '../../store'
 import { subscribeSyncState, startOfflineSync, trySync, type SyncState } from '../../lib/offlineSync'
 import FailedOfflineItemsModal from '../common/FailedOfflineItemsModal'
+import { ConnectionDetailsToggle } from '../common/ConnectionDetails'
 
 // Pages that still make sense with no connection: POS queues sales locally
 // (see lib/offlineSync.ts), and cash-register open/close is where a cashier
@@ -78,7 +79,8 @@ export default function MainLayout() {
         {/* Connectivity banner — shown on every page, not just POS, since
             navigation itself is restricted while offline */}
         {(!syncState.isOnline || syncState.pendingCount > 0 || syncState.pendingRegisterCount > 0) && (
-          <div className="mx-4 md:mx-6 mt-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 flex items-center justify-between gap-3">
+          <div className="mx-4 md:mx-6 mt-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
+          <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-amber-800 font-medium flex items-center gap-2">
               <AlertCircle size={16} />
               {!syncState.isOnline
@@ -90,6 +92,9 @@ export default function MainLayout() {
                 Reintentar ahora
               </button>
             )}
+          </div>
+          {/* The arrow the cashier opens to screenshot/copy for support */}
+          {!syncState.isOnline && <ConnectionDetailsToggle className="mt-1.5 ml-6" />}
           </div>
         )}
 

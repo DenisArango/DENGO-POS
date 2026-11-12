@@ -9,6 +9,8 @@ import { useAuthStore } from '../../store'
 import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
+import { CreditCard as PageCreditCard } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 const PM_COLOR: Record<string, string> = { CASH: '#10B981', CARD: '#3B82F6', TRANSFER: '#8B5CF6', CREDIT: '#F59E0B', MIXED: '#6B7280' }
 
@@ -63,16 +65,16 @@ export default function CashFlowReport() {
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Flujo de Caja</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageCreditCard} color="emerald" />Flujo de Caja</h1>
           <p className="text-gray-600 text-sm mt-0.5">Sesiones de caja y ventas por método de pago</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-wrap items-center gap-3">
         <Calendar size={16} className="text-gray-400" />
-        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input" />
+        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input w-auto" />
         <span className="text-gray-400">–</span>
-        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input" />
+        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input w-auto" />
         <ReportFilters value={filters} onChange={setFilters} showRegister={false} />
         {loading && <span className="text-sm text-gray-400">Cargando...</span>}
       </div>
@@ -84,15 +86,15 @@ export default function CashFlowReport() {
           { label: 'Tarjeta/Trans.', value: `Q${(totalCard + totalTransfer).toFixed(2)}`, icon: CreditCard, color: 'text-purple-600 bg-purple-100' },
           { label: 'Sesiones de caja', value: String(totalCount), icon: TrendingDown, color: 'text-orange-600 bg-orange-100' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg ${s.color}`}><s.icon size={20} /></div>
-            <div><p className="text-xs text-gray-400">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
+            <div className={`stat-tile p-2.5 rounded-xl ${s.color}`}><s.icon size={20} /></div>
+            <div><p className="text-xs text-gray-500">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
           </div>
         ))}
       </div>
 
       {chartData.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-4">Ventas por método de pago por día</h2>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={chartData}>
@@ -109,7 +111,7 @@ export default function CashFlowReport() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b"><h2 className="text-sm font-semibold text-gray-700">Sesiones de caja</h2></div>
         {registers.length === 0
           ? <div className="flex items-center justify-center py-12 text-gray-400 text-sm">Sin sesiones en el período seleccionado</div>
@@ -129,7 +131,7 @@ export default function CashFlowReport() {
                             {format(new Date(r.openedAt), "d 'de' MMMM, HH:mm", { locale: es })}
                             {r.closedAt && ` → ${format(new Date(r.closedAt), 'HH:mm')}`}
                           </p>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-gray-500">
                             Abierta por {r.openedBy?.name ?? '–'}
                             {r.closedBy ? ` · Cerrada por ${r.closedBy.name}` : ''}
                           </p>
@@ -140,12 +142,12 @@ export default function CashFlowReport() {
                       </div>
                       <div className="flex items-center gap-6 text-right">
                         <div>
-                          <p className="text-xs text-gray-400">Ventas</p>
+                          <p className="text-xs text-gray-500">Ventas</p>
                           <p className="text-sm font-semibold text-gray-800">Q{Number(r.totalSales ?? 0).toFixed(2)}</p>
                         </div>
                         {r.difference != null && (
                           <div>
-                            <p className="text-xs text-gray-400">Diferencia</p>
+                            <p className="text-xs text-gray-500">Diferencia</p>
                             <p className={`text-sm font-semibold ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-500' : 'text-gray-500'}`}>
                               {diff > 0 ? '+' : ''}Q{diff.toFixed(2)}
                             </p>
@@ -157,14 +159,14 @@ export default function CashFlowReport() {
                     {expanded === r.id && (
                       <div className="bg-gray-50 px-5 py-3 text-sm space-y-3">
                         <div className="grid grid-cols-3 gap-4">
-                          <div><p className="text-xs text-gray-400">Monto inicial</p><p className="font-medium">Q{Number(r.initialAmount).toFixed(2)}</p></div>
-                          {r.finalAmount != null && <div><p className="text-xs text-gray-400">Monto final</p><p className="font-medium">Q{Number(r.finalAmount).toFixed(2)}</p></div>}
-                          {r.expectedAmount != null && <div><p className="text-xs text-gray-400">Esperado</p><p className="font-medium">Q{Number(r.expectedAmount).toFixed(2)}</p></div>}
+                          <div><p className="text-xs text-gray-500">Monto inicial</p><p className="font-medium">Q{Number(r.initialAmount).toFixed(2)}</p></div>
+                          {r.finalAmount != null && <div><p className="text-xs text-gray-500">Monto final</p><p className="font-medium">Q{Number(r.finalAmount).toFixed(2)}</p></div>}
+                          {r.expectedAmount != null && <div><p className="text-xs text-gray-500">Esperado</p><p className="font-medium">Q{Number(r.expectedAmount).toFixed(2)}</p></div>}
                         </div>
                         <div className="grid grid-cols-3 gap-4">
-                          <div><p className="text-xs text-gray-400">Efectivo</p><p className="font-medium text-green-700">Q{Number(r.cashSales ?? 0).toFixed(2)}</p></div>
-                          <div><p className="text-xs text-gray-400">Tarjeta</p><p className="font-medium text-blue-700">Q{Number(r.cardSales ?? 0).toFixed(2)}</p></div>
-                          <div><p className="text-xs text-gray-400">Transferencia</p><p className="font-medium text-purple-700">Q{Number(r.transferSales ?? 0).toFixed(2)}</p></div>
+                          <div><p className="text-xs text-gray-500">Efectivo</p><p className="font-medium text-green-700">Q{Number(r.cashSales ?? 0).toFixed(2)}</p></div>
+                          <div><p className="text-xs text-gray-500">Tarjeta</p><p className="font-medium text-blue-700">Q{Number(r.cardSales ?? 0).toFixed(2)}</p></div>
+                          <div><p className="text-xs text-gray-500">Transferencia</p><p className="font-medium text-purple-700">Q{Number(r.transferSales ?? 0).toFixed(2)}</p></div>
                         </div>
                         {r.movements?.length > 0 && (
                           <div>

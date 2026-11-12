@@ -3,6 +3,9 @@ import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { Plus, Edit2, X, CheckCircle, XCircle, BookOpen } from 'lucide-react'
 import { api } from '../../lib/api'
+import { BookOpen as PageBookOpen } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
+import { ProgramTile } from '../../lib/ProgramIcon'
 
 interface Program {
   id: string
@@ -118,7 +121,7 @@ export default function PortalPrograms() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Programas Educativos</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageBookOpen} color="violet" />Programas Educativos</h1>
           <p className="text-gray-600 mt-1">Los maestros solo ven los programas que tengas activos.</p>
         </div>
         <button onClick={openCreate} className="btn-primary btn-md flex items-center gap-2"><Plus size={20} /> Nuevo Programa</button>
@@ -128,7 +131,7 @@ export default function PortalPrograms() {
         <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" /></div>
       ) : programs.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <BookOpen size={48} className="mx-auto text-gray-400 mb-4" />
+          <span className="empty-tile mb-4"><BookOpen size={26} aria-hidden /></span>
           <p className="text-gray-600">No hay programas configurados.</p>
           <button onClick={openCreate} className="btn-primary btn-md mt-4">Crear primer programa</button>
         </div>
@@ -137,9 +140,9 @@ export default function PortalPrograms() {
           {programs.map(p => {
             const meta = typeMeta(p.type)
             return (
-              <motion.div key={p.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
+              <motion.div key={p.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="group bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5">
                 <div className="flex items-start justify-between">
-                  <div className="text-4xl">{meta.icon}</div>
+                  <ProgramTile type={p.type} />
                   <div className="flex items-center gap-2">
                     <span className={`inline-flex items-center gap-1 text-xs font-medium ${p.isActive ? 'text-green-700' : 'text-gray-500'}`}>
                       {p.isActive ? <CheckCircle size={12} /> : <XCircle size={12} />}{p.isActive ? 'Visible para maestros' : 'Oculto'}

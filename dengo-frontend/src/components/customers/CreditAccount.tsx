@@ -61,9 +61,9 @@ export function ChargeModal({ customer, onClose, onSaved }: { customer: ChargeCu
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b">
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <FilePlus2 size={20} className="text-orange-600" /> Cargar saldo
@@ -216,8 +216,8 @@ export function AccountStatement({ customerId, canVoid, onChanged }: { customerI
       )}
 
       {voiding && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6 space-y-4">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
             <div>
               <h3 className="text-lg font-semibold text-gray-800">Anular cargo</h3>
               <p className="text-sm text-gray-500 mt-1">{voiding.description} · {q(voiding.debit)}. El monto se resta del saldo y el cargo queda en el historial como anulado.</p>

@@ -13,6 +13,8 @@ import { api } from '../lib/api'
 import { useAuthStore } from '../store'
 import { usePermissions } from '../hooks/usePermissions'
 import { matchesSearch } from '../lib/search'
+import { PackageCheck as PagePackageCheck } from 'lucide-react'
+import PageIcon from '../components/common/PageIcon'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface StockMovement {
@@ -664,7 +666,7 @@ export default function Purchases() {
       <div className="flex flex-col gap-3 md:h-[calc(100vh-7rem)]">
 
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => { resetForm(); setView('list') }}
             className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-800 transition-colors"
@@ -672,7 +674,7 @@ export default function Purchases() {
             <ArrowLeft size={20} />
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-bold text-gray-800">
+            <h1 className="text-lg font-bold tracking-tight text-gray-900">
               {editingReferenceId
                 ? `Editar Compra${editingReferenceId.startsWith('COMPRA-') ? ` #${editingReferenceId.slice('COMPRA-'.length)}` : ''}`
                 : 'Nuevo Ingreso de Mercancía'}
@@ -695,7 +697,7 @@ export default function Purchases() {
         <div className="flex flex-col md:flex-row gap-3 flex-1 overflow-auto md:overflow-hidden md:min-h-0">
 
           {/* LEFT: search + item list */}
-          <div className="flex-1 bg-white rounded-lg shadow-sm flex flex-col min-h-[280px] md:min-h-0">
+          <div className="flex-1 bg-white rounded-xl border border-gray-200/80 shadow-sm flex flex-col min-h-[280px] md:min-h-0">
 
             {/* Search bar */}
             <div className="p-3 border-b relative">
@@ -747,7 +749,7 @@ export default function Purchases() {
             <div className="flex-1 overflow-y-auto">
               {intakeItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
-                  <Package size={40} strokeWidth={1.5} />
+                  <span className="empty-tile mb-1"><Package size={26} aria-hidden /></span>
                   <p className="text-sm">Busca productos para agregarlos al ingreso</p>
                 </div>
               ) : (
@@ -897,7 +899,7 @@ export default function Purchases() {
           <div className="w-full md:w-72 flex flex-col gap-3">
 
             {/* Branch */}
-            <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Sucursal de destino</h3>
               <div className="relative">
                 <select
@@ -920,7 +922,7 @@ export default function Purchases() {
             </div>
 
             {/* Supplier */}
-            <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
               <h3 className="text-sm font-semibold text-gray-700 mb-2">Proveedor</h3>
               <div className="flex items-center gap-2">
                 {selectedSupplier ? (
@@ -980,7 +982,7 @@ export default function Purchases() {
             </div>
 
             {/* Notes */}
-            <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
               <h3 className="text-sm font-semibold text-gray-700 mb-2">Notas (opcional)</h3>
               <textarea
                 value={notes}
@@ -992,7 +994,7 @@ export default function Purchases() {
             </div>
 
             {/* Summary + confirm */}
-            <div className="bg-white rounded-lg shadow-sm p-4 flex flex-col gap-3">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-col gap-3">
               <h3 className="text-sm font-semibold text-gray-700">Resumen del ingreso</h3>
 
               <div className="space-y-1.5 text-sm">
@@ -1033,7 +1035,7 @@ export default function Purchases() {
           {showQuickSupplierModal && (
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4"
               onClick={() => setShowQuickSupplierModal(false)}
             >
               <motion.div
@@ -1104,7 +1106,7 @@ export default function Purchases() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4"
               onClick={() => { setShowVariationModal(false); setSelectedForVariation(null); setChangingItem(null) }}
             >
               <motion.div
@@ -1174,7 +1176,7 @@ export default function Purchases() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Ingresos de Mercancía</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PagePackageCheck} color="lime" />Ingresos de Mercancía</h1>
           <p className="text-sm text-gray-500 mt-0.5">Registra entradas de productos al inventario</p>
         </div>
         {canCreatePurchase && (
@@ -1189,14 +1191,14 @@ export default function Purchases() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
           <div className="p-2.5 bg-blue-100 rounded-lg"><Package size={20} className="text-blue-600" /></div>
           <div>
             <p className="text-xs text-gray-400">Ingresos hoy</p>
             <p className="text-xl font-bold text-gray-800">{purchaseStats.todayCount}</p>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
           <div className="p-2.5 bg-green-100 rounded-lg"><TrendingUp size={20} className="text-green-600" /></div>
           <div>
             <p className="text-xs text-gray-400">Unidades hoy</p>
@@ -1205,7 +1207,7 @@ export default function Purchases() {
             </p>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
           <div className="p-2.5 bg-primary-100 rounded-lg"><DollarSign size={20} className="text-primary-700" /></div>
           <div>
             <p className="text-xs text-gray-400">Costo hoy</p>
@@ -1214,7 +1216,7 @@ export default function Purchases() {
             </p>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
           <div className="p-2.5 bg-purple-100 rounded-lg"><CheckCircle size={20} className="text-purple-600" /></div>
           <div>
             <p className="text-xs text-gray-400">Total registros</p>
@@ -1224,7 +1226,7 @@ export default function Purchases() {
       </div>
 
       {/* Intake history */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-gray-700 flex-shrink-0">Historial de ingresos</h2>
           <div className="relative w-full max-w-xs">
@@ -1245,7 +1247,7 @@ export default function Purchases() {
           </div>
         ) : purchaseGroups.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
-            <Package size={40} strokeWidth={1.5} />
+            <span className="empty-tile mb-1"><Package size={26} aria-hidden /></span>
             <p className="text-sm">{historySearch.trim() ? 'Sin resultados para esa búsqueda' : 'No hay ingresos registrados'}</p>
           </div>
         ) : (

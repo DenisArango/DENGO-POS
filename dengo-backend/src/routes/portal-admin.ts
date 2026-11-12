@@ -284,7 +284,13 @@ export default async function portalAdminRoutes(fastify: FastifyInstance) {
   // gets a phone notification if they turned them on.
   fastify.post('/orders/:id/send-document', requireAdmin, async (request, reply) => {
     const { id } = request.params as { id: string }
-    const body = z.object({ kind: z.enum(['QUOTATION', 'INVOICE']), message: z.string().trim().max(2000).optional() }).safeParse(request.body)
+    const body = z.object({
+      kind: z.enum(['QUOTATION', 'INVOICE']),
+      message: z.string().trim().max(2000).optional(),
+      // QUOTATION only: send one of the order's alternates (the same quotation
+      // from another business/branch) instead of the original.
+      quotationId: z.string().optional(),
+    }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: 'Datos inválidos' })
 
     const order = await prisma.portalOrder.findUnique({
@@ -294,7 +300,14 @@ export default async function portalAdminRoutes(fastify: FastifyInstance) {
     if (!order) return reply.status(404).send({ error: 'Pedido no encontrado' })
     if (!order.quotation) return reply.status(400).send({ error: 'Este pedido todavía no tiene cotización' })
 
-    const quotation = order.quotation
+    let quotation = order.quotation
+    let issuedBy: string | null = null
+    if (body.data.kind === 'QUOTATION' && body.data.quotationId && body.data.quotationId !== quotation.id) {
+      const alt = await prisma.quotation.findUnique({ where: { id: body.data.quotationId }, include: { convertedToSale: true, branch: { select: { name: true, companyName: true } } } })
+      if (!alt || alt.sourceQuotationId !== quotation.id) return reply.status(400).send({ error: 'Esa cotización no es de este pedido' })
+      quotation = alt
+      issuedBy = alt.branch.companyName || alt.branch.name
+    }
     const sale = quotation.convertedToSale
     if (body.data.kind === 'INVOICE' && (!sale || !sale.requiresInvoice)) {
       return reply.status(400).send({ error: 'La venta de este pedido todavía no tiene factura' })
@@ -309,7 +322,9 @@ export default async function portalAdminRoutes(fastify: FastifyInstance) {
         kind: body.data.kind,
         quotationId: body.data.kind === 'QUOTATION' ? quotation.id : null,
         saleId: body.data.kind === 'INVOICE' ? sale!.id : null,
-        body: body.data.message || `Te enviamos la ${label.toLowerCase().startsWith('cot') ? 'cotización' : 'factura'} de tu pedido ${order.orderNumber}.`,
+        body: body.data.message || (issuedBy
+          ? `Te enviamos la cotización de ${issuedBy} para tu pedido ${order.orderNumber}.`
+          : `Te enviamos la ${label.toLowerCase().startsWith('cot') ? 'cotización' : 'factura'} de tu pedido ${order.orderNumber}.`),
         portalOrderId: id,
         isRead: false,
       },

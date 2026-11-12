@@ -6,6 +6,8 @@ import {
   CheckCircle, XCircle, Phone,
 } from 'lucide-react'
 import { api } from '../../lib/api'
+import { GraduationCap as PageGraduationCap } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 interface School { id: string; name: string }
 interface Assignment { id: string; grade?: string; section?: string; school: { id: string; name: string } }
@@ -118,7 +120,7 @@ export default function PortalTeachers() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Maestros</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageGraduationCap} color="teal" />Maestros</h1>
           <p className="text-gray-600 mt-1">Gestiona las cuentas de acceso al portal</p>
         </div>
         <button onClick={openCreate} className="btn-primary btn-md flex items-center gap-2"><Plus size={20} /> Nuevo Maestro</button>
@@ -128,14 +130,14 @@ export default function PortalTeachers() {
         <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" /></div>
       ) : teachers.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <GraduationCap size={48} className="mx-auto text-gray-400 mb-4" />
+          <span className="empty-tile mb-4"><GraduationCap size={26} aria-hidden /></span>
           <p className="text-gray-600">No hay maestros registrados.</p>
           <button onClick={openCreate} className="btn-primary btn-md mt-4">Agregar primer maestro</button>
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50/70 border-b border-gray-200/80">
               <tr>{['Maestro', 'Contacto', 'Escuelas / Grados', 'Estado', 'Acciones'].map(h => (
                 <th key={h} className="text-left px-4 py-3 font-semibold text-gray-600">{h}</th>
               ))}</tr>

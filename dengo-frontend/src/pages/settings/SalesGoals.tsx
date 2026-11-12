@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { useStore } from '../../contexts/StoreContext'
 import { usePermissions } from '../../hooks/usePermissions'
+import PageIcon from '../../components/common/PageIcon'
 
 interface GoalProgress {
   id: string
@@ -132,11 +133,11 @@ export default function SalesGoals() {
           <button onClick={() => navigate('/settings')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Target size={28} /> Metas de Venta
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+            <PageIcon icon={Target} color="cyan" /> Metas de Venta
           </h1>
         </div>
-        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-8 text-center">
           <Lock className="mx-auto text-gray-400 mb-3" size={32} />
           <p className="text-gray-600">No tienes permiso para configurar metas de venta.</p>
         </div>
@@ -151,8 +152,8 @@ export default function SalesGoals() {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Target size={28} /> Metas de Venta
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+            <PageIcon icon={Target} color="cyan" /> Metas de Venta
           </h1>
           <p className="text-gray-600 text-sm mt-1">
             Meta mensual de ventas para {currentStore?.name ?? 'esta sucursal'} — visible para todo el equipo en el Dashboard y el Punto de Venta.
@@ -160,7 +161,7 @@ export default function SalesGoals() {
         </div>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-sm p-6 space-y-5">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6 space-y-5">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label">Mes</label>

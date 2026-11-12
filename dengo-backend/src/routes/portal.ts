@@ -633,15 +633,28 @@ export default async function portalRoutes(fastify: FastifyInstance) {
 
     const quotation = await prisma.quotation.findUnique({
       where: { id },
-      include: { customer: { select: { name: true, nit: true } }, items: { include: { product: { select: { name: true } }, variation: { select: { name: true } } } } },
+      include: { branch: true, customer: { select: { name: true, nit: true } }, items: { include: { product: { select: { name: true } }, variation: { select: { name: true } } } } },
     })
     if (!quotation) return reply.status(404).send({ error: 'Documento no encontrado' })
+    // An alternate is issued by the other business (its branch's own company
+    // name, NIT, logo and contact) — not by the portal's main company.
+    const b = quotation.branch
+    const quotationIssuer = quotation.sourceQuotationId ? {
+      name: b.companyName || b.name,
+      tradeName: b.companyName || b.name,
+      taxId: b.companyTaxId ?? null,
+      address: b.address || null,
+      city: null,
+      phone: b.phone || null,
+      email: null,
+      logo: b.logo || null,
+    } : issuer
     return reply.send({
       kind: 'QUOTATION',
       number: quotation.quotationNumber,
       date: quotation.createdAt,
       validUntil: quotation.validUntil,
-      issuer,
+      issuer: quotationIssuer,
       order: orderInfo,
       customer: { name: quotation.customer.name, nit: quotation.customer.nit || 'CF' },
       items: quotation.items.map(i => ({

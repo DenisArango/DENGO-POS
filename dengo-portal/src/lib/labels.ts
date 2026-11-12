@@ -33,15 +33,15 @@ export interface StatusStyle {
 }
 
 export const ORDER_STATUS: Record<string, StatusStyle> = {
-  PENDING: { label: 'En revisión', className: 'bg-yellow-100 text-yellow-700' },
-  APPROVED: { label: 'Aprobado', className: 'bg-green-100 text-green-700' },
-  REJECTED: { label: 'Rechazado', className: 'bg-red-100 text-red-700' },
-  QUOTED: { label: 'Cotizado', className: 'bg-blue-100 text-blue-700' },
-  INVOICED: { label: 'Facturado', className: 'bg-purple-100 text-purple-700' },
+  PENDING: { label: 'En revisión', className: 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-600/20' },
+  APPROVED: { label: 'Aprobado', className: 'bg-emerald-50 text-emerald-800 ring-1 ring-inset ring-emerald-600/20' },
+  REJECTED: { label: 'Rechazado', className: 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20' },
+  QUOTED: { label: 'Cotizado', className: 'bg-sky-50 text-sky-800 ring-1 ring-inset ring-sky-600/20' },
+  INVOICED: { label: 'Facturado', className: 'bg-violet-50 text-violet-800 ring-1 ring-inset ring-violet-600/20' },
 }
 
 export function statusStyle(status: string): StatusStyle {
-  return ORDER_STATUS[status] ?? { label: status, className: 'bg-gray-100 text-gray-600' }
+  return ORDER_STATUS[status] ?? { label: status, className: 'bg-gray-100 text-gray-700 ring-1 ring-inset ring-gray-500/20' }
 }
 
 export function money(value: number | string): string {

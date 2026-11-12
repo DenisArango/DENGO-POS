@@ -10,7 +10,9 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { api } from '../lib/api'
+import StatStrip from '../components/common/StatStrip'
 import { usePermissions } from '../hooks/usePermissions'
+import PageIcon from '../components/common/PageIcon'
 
 interface Supplier {
   id: string
@@ -198,8 +200,8 @@ export default function Suppliers() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Users size={28} />
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+            <PageIcon icon={Users} color="orange" />
             Proveedores
           </h1>
           <p className="text-gray-600 text-sm mt-1">
@@ -225,62 +227,27 @@ export default function Suppliers() {
       </div>
 
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-lg shadow-sm p-4"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Total Proveedores</span>
-            <Building2 className="text-blue-600" size={20} />
-          </div>
-          <p className="text-2xl font-bold text-gray-800">{stats.total}</p>
-          <p className="text-xs text-gray-500 mt-1">{stats.active} activos</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-lg shadow-sm p-4"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Proveedores Activos</span>
-            <CheckCircle className="text-green-600" size={20} />
-          </div>
-          <p className="text-2xl font-bold text-gray-800">{stats.active}</p>
-          <p className="text-xs text-green-600 mt-1">{((stats.active / stats.total) * 100 || 0).toFixed(0)}% del total</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white rounded-lg shadow-sm p-4"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Calificación Promedio</span>
-            <Star className="text-yellow-600" size={20} />
-          </div>
-          <div className="flex items-baseline gap-1">
-            <p className="text-2xl font-bold text-gray-800">{stats.averageRating.toFixed(1)}</p>
-            <span className="text-sm text-gray-500">/5</span>
-          </div>
-          <div className="flex gap-0.5 mt-1">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Star
-                key={star}
-                size={12}
-                className={star <= stats.averageRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
-              />
-            ))}
-          </div>
-        </motion.div>
-      </div>
+      <StatStrip
+        stats={[
+          { label: 'Total Proveedores', color: 'blue' as const, value: stats.total, icon: Building2, hint: `${stats.active} activos` },
+          { label: 'Proveedores Activos', color: 'emerald' as const, value: stats.active, icon: CheckCircle, hint: `${((stats.active / stats.total) * 100 || 0).toFixed(0)}% del total` },
+          {
+            label: 'Calificación Promedio', color: 'amber' as const,
+            icon: Star,
+            value: <>{stats.averageRating.toFixed(1)}<span className="ml-1 text-sm font-normal text-gray-500">/5</span></>,
+            hint: (
+              <span className="flex gap-0.5" aria-hidden>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <Star key={star} size={12} className={star <= stats.averageRating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'} />
+                ))}
+              </span>
+            ),
+          },
+        ]}
+      />
 
       {/* Filtros */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -307,8 +274,8 @@ export default function Suppliers() {
 
       {/* Lista de proveedores */}
       {suppliers.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-          <AlertCircle size={48} className="mx-auto text-gray-400 mb-4" />
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-12 text-center">
+          <span className="empty-tile mb-4"><AlertCircle size={26} aria-hidden /></span>
           <p className="text-gray-600">
             {searchTerm ? 'No se encontraron proveedores' : 'No hay proveedores registrados'}
           </p>
@@ -326,7 +293,7 @@ export default function Suppliers() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.05 }}
-              className="bg-white rounded-lg shadow-sm hover:shadow-lg transition-all"
+              className="bg-white rounded-xl border border-gray-200/80 shadow-sm hover:shadow-lg transition-all"
             >
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
@@ -418,7 +385,7 @@ export default function Suppliers() {
       )}
 
       {totalPages > 1 && (
-        <div className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center justify-between">
           <p className="text-sm text-gray-600">
             Página {page} de {totalPages} · {totalCount} proveedores
           </p>
@@ -443,11 +410,11 @@ export default function Suppliers() {
 
       {/* Modal de crear/editar proveedor */}
       {(showCreateModal || showEditModal) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
           >
             <h2 className="text-xl font-bold text-gray-800 mb-4">
               {showCreateModal ? 'Nuevo Proveedor' : 'Editar Proveedor'}
@@ -647,11 +614,11 @@ export default function Suppliers() {
 
       {/* Modal de detalles */}
       {showDetailsModal && selectedSupplier && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-800">
@@ -788,11 +755,11 @@ export default function Suppliers() {
 
       {/* Delete Confirmation */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-start gap-4">
               <div className="p-3 bg-red-100 rounded-full">

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, Lock, Key, Shield, AlertTriangle, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
+import PageIcon from '../../components/common/PageIcon'
 
 export default function Security() {
   const navigate = useNavigate()
@@ -27,8 +28,8 @@ export default function Security() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Lock size={28} />
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+              <PageIcon icon={Lock} color="slate" />
               Seguridad
             </h1>
             <p className="text-gray-600 text-sm mt-1">Políticas de contraseña y configuración de seguridad</p>
@@ -39,7 +40,7 @@ export default function Security() {
         </button>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-sm p-6">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <Key size={20} />
           Políticas de Contraseña
@@ -125,7 +126,7 @@ export default function Security() {
         </div>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-lg shadow-sm p-6">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <Shield size={20} />
           Autenticación de Dos Factores
@@ -151,7 +152,7 @@ export default function Security() {
         </div>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-lg shadow-sm p-6">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Sesiones</h2>
 
         <div>

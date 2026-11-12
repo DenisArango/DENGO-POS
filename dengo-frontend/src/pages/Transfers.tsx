@@ -11,10 +11,12 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { api } from '../lib/api'
+import StatStrip from '../components/common/StatStrip'
 import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
 import { ThermalTransferSlip } from '../components/print/ThermalTransferSlip'
+import PageIcon from '../components/common/PageIcon'
 
 interface Branch {
   id: string
@@ -673,7 +675,7 @@ export default function StoreTransfers() {
       <div className="flex flex-col gap-3 md:h-[calc(100vh-7rem)]">
 
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => { resetCreateForm(); setView('list') }}
             className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-800 transition-colors"
@@ -681,7 +683,7 @@ export default function StoreTransfers() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-lg font-bold text-gray-800">
+            <h1 className="text-lg font-bold tracking-tight text-gray-900">
               {editingTransfer ? `Editar Traslado ${editingTransfer.code ?? editingTransfer.id.slice(0, 8)}` : 'Nueva Transferencia'}
             </h1>
             <p className="text-xs text-gray-500">
@@ -701,7 +703,7 @@ export default function StoreTransfers() {
         <div className="flex flex-col md:flex-row gap-3 flex-1 overflow-auto md:overflow-hidden md:min-h-0">
 
           {/* LEFT: Search + items */}
-          <div className="flex-1 bg-white rounded-lg shadow-sm flex flex-col min-h-[280px] md:min-h-0">
+          <div className="flex-1 bg-white rounded-xl border border-gray-200/80 shadow-sm flex flex-col min-h-[280px] md:min-h-0">
 
             {/* Search bar */}
             <div className="p-3 border-b relative">
@@ -866,7 +868,7 @@ export default function StoreTransfers() {
           <div className="w-full md:w-72 flex flex-col gap-3">
 
             {/* Branch selection */}
-            <div className="bg-white rounded-lg shadow-sm p-4 space-y-3">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 space-y-3">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
                 <Building2 size={12} /> Tiendas
               </p>
@@ -895,7 +897,7 @@ export default function StoreTransfers() {
             </div>
 
             {/* Notes */}
-            <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">
                 Comentario
               </label>
@@ -935,8 +937,8 @@ export default function StoreTransfers() {
             variations (the base is already its own line); switching an
             existing line also offers "Pieza" so you can go back to the base. */}
         {showVariationModal && selectedProductForVariation && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full">
+          <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full">
               <h3 className="text-lg font-bold text-gray-800 mb-1">
                 {changingItem ? 'Cambiar presentación' : 'Agregar presentación'}
               </h3>
@@ -996,8 +998,8 @@ export default function StoreTransfers() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <ArrowUpDown size={28} />
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+            <PageIcon icon={ArrowUpDown} color="pink" />
             Transferencias entre Tiendas
           </h1>
           <p className="text-gray-600 text-sm mt-1">
@@ -1035,53 +1037,25 @@ export default function StoreTransfers() {
 
       {/* Stats */}
       {!loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Total Transferencias</span>
-              <ArrowUpDown className="text-blue-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-gray-800">{stats.total}</p>
-            <p className="text-xs text-gray-500 mt-1">Este mes</p>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Pendientes</span>
-              <Clock className="text-yellow-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-gray-800">{stats.pending}</p>
-            <p className="text-xs text-yellow-600 mt-1">Por enviar</p>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">En Tránsito</span>
-              <Truck className="text-blue-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-gray-800">{stats.inTransit}</p>
-            <p className="text-xs text-blue-600 mt-1">En camino</p>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Completadas</span>
-              <CheckCircle className="text-green-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-gray-800">{stats.completed}</p>
-            <p className="text-xs text-green-600 mt-1">Recibidas</p>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Valor Total</span>
-              <Package className="text-purple-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-gray-800">Q{stats.totalPriceValue.toLocaleString('es-GT', { maximumFractionDigits: 2 })}</p>
-            <p className="text-xs text-purple-600 mt-1">Precio de venta · costo Q{stats.totalValue.toLocaleString('es-GT', { maximumFractionDigits: 2 })}</p>
-          </motion.div>
-        </div>
+        <StatStrip
+          stats={[
+            { label: 'Total Transferencias', color: 'blue' as const, value: stats.total, icon: ArrowUpDown, hint: 'Este mes' },
+            { label: 'Pendientes', color: 'amber' as const, value: stats.pending, icon: Clock, valueTone: stats.pending > 0 ? 'warn' : 'neutral', hint: 'Por enviar' },
+            { label: 'En Tránsito', color: 'sky' as const, value: stats.inTransit, icon: Truck, hint: 'En camino' },
+            { label: 'Completadas', color: 'emerald' as const, value: stats.completed, icon: CheckCircle, hint: 'Recibidas' },
+            {
+              label: 'Valor Total', color: 'violet' as const,
+              value: `Q${stats.totalPriceValue.toLocaleString('es-GT', { maximumFractionDigits: 2 })}`,
+              icon: Package,
+              hint: `Precio de venta · costo Q${stats.totalValue.toLocaleString('es-GT', { maximumFractionDigits: 2 })}`,
+            },
+          ]}
+        />
       )}
 
       {/* Filters */}
       {!loading && (
-        <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -1117,19 +1091,19 @@ export default function StoreTransfers() {
 
       {/* Transfer list */}
       {!loading && (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50/70 border-b border-gray-200/80">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Código</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Origen</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Destino</th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Items</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Valor</th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Estado</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Fecha</th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Acciones</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Código</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Origen</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Destino</th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Items</th>
+                  <th className="text-right py-3 px-4 text-xs font-medium text-gray-500">Valor</th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Estado</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Fecha</th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -1260,11 +1234,11 @@ export default function StoreTransfers() {
 
       {/* Details modal */}
       {showDetailsModal && selectedTransfer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-800">Detalles de Transferencia</h2>
@@ -1344,13 +1318,13 @@ export default function StoreTransfers() {
                 <h3 className="font-medium text-gray-800 mb-3">Productos Transferidos</h3>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-gray-50/70 border-b border-gray-200/80">
                       <tr>
-                        <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Producto</th>
-                        <th className="text-center py-2 px-3 text-sm font-medium text-gray-700">Cantidad</th>
-                        <th className="text-right py-2 px-3 text-sm font-medium text-gray-700">Precio U.</th>
-                        <th className="text-right py-2 px-3 text-sm font-medium text-gray-700">Total</th>
-                        <th className="text-right py-2 px-3 text-sm font-medium text-gray-700">Costo</th>
+                        <th className="text-left py-2 px-3 text-xs font-medium text-gray-500">Producto</th>
+                        <th className="text-center py-2 px-3 text-xs font-medium text-gray-500">Cantidad</th>
+                        <th className="text-right py-2 px-3 text-xs font-medium text-gray-500">Precio U.</th>
+                        <th className="text-right py-2 px-3 text-xs font-medium text-gray-500">Total</th>
+                        <th className="text-right py-2 px-3 text-xs font-medium text-gray-500">Costo</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1437,8 +1411,8 @@ export default function StoreTransfers() {
       )}
 
       {voidTarget && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
             <h3 className="text-lg font-bold text-gray-800 mb-1">Anular traslado {voidTarget.code ?? voidTarget.id.slice(0, 8)}</h3>
             <p className="text-sm text-gray-600 mb-4">
               {voidTarget.status === 'completed'

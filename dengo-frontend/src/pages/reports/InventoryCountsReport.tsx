@@ -5,6 +5,8 @@ import { format, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../store'
+import { ClipboardCheck as PageClipboardCheck } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 interface CountItem {
   id: string
@@ -84,28 +86,28 @@ export default function InventoryCountsReport() {
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Conteos de Inventario</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageClipboardCheck} color="emerald" />Conteos de Inventario</h1>
           <p className="text-gray-600 text-sm mt-0.5">Tareas de conteo físico, diferencias encontradas y ajustes aplicados</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-wrap items-center gap-3">
         <Calendar size={16} className="text-gray-400" />
-        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input text-sm" />
+        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input w-auto text-sm" />
         <span className="text-gray-400">–</span>
-        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input text-sm" />
+        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input w-auto text-sm" />
         {isAdmin && (
-          <select value={branchId} onChange={e => setBranchId(e.target.value)} className="input text-sm">
+          <select value={branchId} onChange={e => setBranchId(e.target.value)} className="input w-auto text-sm">
             <option value="">Todas las sucursales</option>
             {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         )}
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input text-sm">
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input w-auto text-sm">
           <option value="">Todos los estados</option>
           <option value="IN_PROGRESS">En progreso</option>
           <option value="COMPLETED">Completado</option>
         </select>
-        <select value={userFilter} onChange={e => setUserFilter(e.target.value)} className="input text-sm">
+        <select value={userFilter} onChange={e => setUserFilter(e.target.value)} className="input w-auto text-sm">
           <option value="">Todos los usuarios</option>
           {userOptions.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
         </select>
@@ -119,17 +121,17 @@ export default function InventoryCountsReport() {
           { label: 'Líneas con diferencia', value: String(totalDiscrepant), icon: AlertTriangle, color: 'text-orange-600 bg-orange-100' },
           { label: 'Diferencias sin ajustar', value: String(totalUnadjusted), icon: Clock, color: 'text-red-600 bg-red-100' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg ${s.color}`}><s.icon size={20} /></div>
-            <div><p className="text-xs text-gray-400">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
+            <div className={`stat-tile p-2.5 rounded-xl ${s.color}`}><s.icon size={20} /></div>
+            <div><p className="text-xs text-gray-500">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
-            <ClipboardCheck size={40} strokeWidth={1.5} />
+            <span className="empty-tile mb-1"><ClipboardCheck size={26} aria-hidden /></span>
             <p className="text-sm">Sin conteos en el período seleccionado</p>
           </div>
         ) : (
@@ -153,7 +155,7 @@ export default function InventoryCountsReport() {
                           <span className="font-normal text-gray-600">{count.items.length} producto{count.items.length !== 1 ? 's' : ''}</span>
                           {diffItems.length > 0 && <span className="font-normal text-orange-600"> · {diffItems.length} con diferencia</span>}
                         </p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-gray-500">
                           {format(new Date(count.createdAt), "d MMM yyyy, HH:mm", { locale: es })} · {count.createdBy.name}
                           {count.status === 'COMPLETED' && count.completedAt && (
                             <span> · Completado {format(new Date(count.completedAt), "d MMM, HH:mm", { locale: es })}</span>

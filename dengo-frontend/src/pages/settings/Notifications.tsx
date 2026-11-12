@@ -4,6 +4,7 @@ import { ArrowLeft, Bell, Mail, Smartphone, Package, AlertTriangle, Users, Trend
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
+import PageIcon from '../../components/common/PageIcon'
 
 interface NotificationPref {
   event: string
@@ -96,8 +97,8 @@ export default function Notifications() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Bell size={28} />
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+              <PageIcon icon={Bell} color="yellow" />
               Notificaciones
             </h1>
             <p className="text-gray-600 text-sm mt-1">
@@ -124,27 +125,27 @@ export default function Notifications() {
       ) : (
       <>
       {/* Tabla de notificaciones */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50/70 border-b border-gray-200/80">
               <tr>
-                <th className="text-left py-4 px-6 text-sm font-medium text-gray-700">
+                <th className="text-left py-4 px-6 text-xs font-medium text-gray-500">
                   Tipo de Notificación
                 </th>
-                <th className="text-center py-4 px-4 text-sm font-medium text-gray-700">
+                <th className="text-center py-4 px-4 text-xs font-medium text-gray-500">
                   <div className="flex flex-col items-center gap-1">
                     <Mail size={18} />
                     <span>Email</span>
                   </div>
                 </th>
-                <th className="text-center py-4 px-4 text-sm font-medium text-gray-700">
+                <th className="text-center py-4 px-4 text-xs font-medium text-gray-500">
                   <div className="flex flex-col items-center gap-1">
                     <Bell size={18} />
                     <span>Push</span>
                   </div>
                 </th>
-                <th className="text-center py-4 px-4 text-sm font-medium text-gray-700">
+                <th className="text-center py-4 px-4 text-xs font-medium text-gray-500">
                   <div className="flex flex-col items-center gap-1">
                     <Smartphone size={18} />
                     <span>SMS</span>

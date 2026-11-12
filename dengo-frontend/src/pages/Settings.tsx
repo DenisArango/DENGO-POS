@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '../store'
 import { usePermissions } from '../hooks/usePermissions'
+import PageIcon from '../components/common/PageIcon'
 
 interface SettingCard {
   id: string
@@ -120,7 +121,7 @@ const settingCards: SettingCard[] = [
     description: 'Configurar respaldos automáticos y restauración',
     icon: Database,
     path: '/settings/backup',
-    color: 'bg-red-500',
+    color: 'bg-cyan-500',
     category: 'system',
     adminOnly: true
   },
@@ -189,8 +190,8 @@ export default function Settings() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <SettingsIcon size={28} />
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+          <PageIcon icon={SettingsIcon} color="slate" />
           Configuración
         </h1>
       </div>
@@ -212,28 +213,29 @@ export default function Settings() {
                 return (
                   <motion.div
                     key={card.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.1 }}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1], delay: Math.min(index * 0.03, 0.2) }}
                     onClick={() => hasAccess && handleCardClick(card.path)}
-                    className={`bg-white rounded-lg shadow-sm p-6 transition-all group ${
-                      hasAccess 
-                        ? 'hover:shadow-lg cursor-pointer' 
+                    className={`bg-white rounded-xl border border-gray-200/80 shadow-sm p-5 transition-[border-color,box-shadow,transform] duration-200 group ${
+                      hasAccess
+                        ? 'hover:border-primary-200 hover:shadow-lg motion-safe:hover:-translate-y-0.5 cursor-pointer'
                         : 'opacity-50 cursor-not-allowed'
                     }`}
                   >
                     <div className="flex items-start justify-between mb-4">
-                      <div className={`p-3 rounded-lg ${card.color} bg-opacity-10`}>
-                        <card.icon className={`${card.color.replace('bg-', 'text-')}`} size={24} />
+                      {/* bg-opacity-10 on the card's colour → soft tinted tile, icon in full colour */}
+                      <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${card.color} bg-opacity-10 transition-transform duration-300 motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-6`}>
+                        <card.icon size={22} className={`${card.color.replace('bg-', 'text-')} motion-safe:group-hover:animate-wiggle`} />
                       </div>
                       {hasAccess ? (
-                        <ChevronRight className="text-gray-400 group-hover:text-gray-600 transition-colors" size={20} />
+                        <ChevronRight className="text-gray-400 group-hover:text-primary-600 transition-colors motion-safe:group-hover:animate-bounce-x" size={20} />
                       ) : (
                         <Lock className="text-gray-400" size={20} />
                       )}
                     </div>
                     
-                    <h3 className="font-semibold text-gray-800 mb-2">{card.title}</h3>
+                    <h3 className="font-semibold text-gray-900 mb-1">{card.title}</h3>
                     <p className="text-sm text-gray-600 line-clamp-2">{card.description}</p>
                     
                     {!hasAccess && (
@@ -249,7 +251,7 @@ export default function Settings() {
       ))}
 
       {/* Información del sistema */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <h3 className="font-semibold text-gray-800 mb-4">Información del Sistema</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>

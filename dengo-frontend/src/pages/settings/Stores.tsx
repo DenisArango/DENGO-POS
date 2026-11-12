@@ -7,6 +7,7 @@ import { api } from '../../lib/api'
 import { usePermissions } from '../../hooks/usePermissions'
 import { useStore } from '../../contexts/StoreContext'
 import { readAndCompressImageFile } from '../../lib/imageCompress'
+import PageIcon from '../../components/common/PageIcon'
 
 interface BranchData {
   id?: string
@@ -255,8 +256,8 @@ export default function Stores() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <StoreIcon size={28} />
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+              <PageIcon icon={StoreIcon} color="emerald" />
               Tiendas y Sucursales
             </h1>
             <p className="text-gray-600 text-sm mt-1">
@@ -286,7 +287,7 @@ export default function Stores() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-white rounded-lg shadow-sm p-6"
+            className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6"
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -360,7 +361,7 @@ export default function Stores() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
             onClick={() => setShowModal(false)}
           >
             <motion.div

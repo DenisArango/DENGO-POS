@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, Database, Download, Upload, Calendar, CheckCircle, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
+import PageIcon from '../../components/common/PageIcon'
 
 interface BackupRecord {
   id: string
@@ -50,8 +51,8 @@ export default function Backup() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Database size={28} />
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+              <PageIcon icon={Database} color="cyan" />
               Respaldos
             </h1>
             <p className="text-gray-600 text-sm mt-1">Configurar respaldos automáticos y restauración</p>
@@ -64,7 +65,7 @@ export default function Backup() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-sm p-6">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Configuración Automática</h2>
 
           <div className="space-y-4">
@@ -109,7 +110,7 @@ export default function Backup() {
           </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-lg shadow-sm p-6">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Restaurar Respaldo</h2>
 
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
@@ -133,18 +134,18 @@ export default function Backup() {
         </motion.div>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-lg shadow-sm p-6">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Historial de Respaldos</h2>
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50/70 border-b border-gray-200/80">
               <tr>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Fecha y Hora</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Tamaño</th>
-                <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Tipo</th>
-                <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Estado</th>
-                <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Acciones</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Fecha y Hora</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Tamaño</th>
+                <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Tipo</th>
+                <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Estado</th>
+                <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Acciones</th>
               </tr>
             </thead>
             <tbody>

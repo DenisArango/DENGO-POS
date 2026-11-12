@@ -13,11 +13,13 @@ import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import ProductModal from '../components/products/ProductModal'
 import { api } from '../lib/api'
+import StatStrip from '../components/common/StatStrip'
 import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
 import { getAdjustmentReasons, type AdjustmentReason } from '../lib/inventoryReasons'
 import { SortableTh, type SortState } from '../components/common/SortableTh'
+import PageIcon from '../components/common/PageIcon'
 
 interface InventoryItem {
   productId: string
@@ -400,8 +402,8 @@ export default function Inventory() {
     <div className={`space-y-6 transition-opacity ${loading && hasLoadedOnce ? 'opacity-60' : ''}`}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <Warehouse size={28} />
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+          <PageIcon icon={Warehouse} color="amber" />
           Control de Inventario
         </h1>
         <div className="flex gap-3">
@@ -442,31 +444,22 @@ export default function Inventory() {
 
       {/* Estadísticas */}
       {(!loading || hasLoadedOnce) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {[
-            { label: 'Total Productos', value: stats.totalProducts, Icon: Package, color: 'text-primary-600' },
+        <StatStrip
+          stats={[
+            { label: 'Total Productos', color: 'blue' as const, value: stats.totalProducts, icon: Package },
             ...(canViewMoneyTotals ? [
-              { label: 'Costo Total', value: `Q${stats.totalValue.toFixed(2)}`, Icon: BarChart3, color: 'text-green-600' },
-              { label: 'Valor de Venta Total', value: `Q${stats.totalSaleValue.toFixed(2)}`, Icon: BarChart3, color: 'text-primary-600' },
+              { label: 'Costo Total', color: 'emerald' as const, value: `Q${stats.totalValue.toFixed(2)}`, icon: BarChart3 },
+              { label: 'Valor de Venta Total', color: 'indigo' as const, value: `Q${stats.totalSaleValue.toFixed(2)}`, icon: BarChart3 },
             ] : []),
-            { label: 'Stock Bajo', value: stats.lowStock, Icon: TrendingDown, color: 'text-yellow-600' },
-            { label: 'Sobrestock', value: stats.overstock, Icon: TrendingUp, color: 'text-blue-600' },
-          ].map(({ label, value, Icon, color }, i) => (
-            <motion.div key={label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }} className="bg-white rounded-lg shadow-sm p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-600 text-sm">{label}</span>
-                <Icon className={color} size={20} />
-              </div>
-              <p className="text-2xl font-bold text-gray-800">{value}</p>
-            </motion.div>
-          ))}
-        </div>
+            { label: 'Stock Bajo', color: 'amber' as const, value: stats.lowStock, icon: TrendingDown, valueTone: stats.lowStock > 0 ? 'warn' as const : 'neutral' as const },
+            { label: 'Sobrestock', color: 'sky' as const, value: stats.overstock, icon: TrendingUp },
+          ]}
+        />
       )}
 
       {/* Controles */}
       {(!loading || hasLoadedOnce) && (
-        <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1 relative">
               <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
@@ -524,18 +517,18 @@ export default function Inventory() {
 
       {/* Tabla */}
       {(!loading || hasLoadedOnce) && (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50/70 border-b border-gray-200/80">
                 <tr>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">SKU / Código</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">SKU / Código</th>
                   <SortableTh label="Producto" sortKey="name" sort={sort} onSort={setSort} />
                   <SortableTh label="Categoría" sortKey="category" sort={sort} onSort={setSort} />
                   <SortableTh label="Stock Actual" sortKey="quantity" sort={sort} onSort={setSort} align="center" firstDir="desc" />
                   <SortableTh label="Mín." sortKey="minStock" sort={sort} onSort={setSort} align="center" firstDir="desc" />
                   <SortableTh label="Máx." sortKey="maxStock" sort={sort} onSort={setSort} align="center" firstDir="desc" />
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">
+                  <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">
                     <div className="flex items-center justify-center gap-2 text-xs">
                       <span>Estado</span>
                       <button type="button" onClick={() => setSort({ key: 'criticality', dir: 'asc' })}
@@ -553,7 +546,7 @@ export default function Inventory() {
                   <SortableTh label="Precio Base" sortKey="price" sort={sort} onSort={setSort} align="right" firstDir="desc" />
                   <SortableTh label="Costo Total" sortKey="value" sort={sort} onSort={setSort} align="right" firstDir="desc" />
                   <SortableTh label="Valor Venta" sortKey="saleValue" sort={sort} onSort={setSort} align="right" firstDir="desc" />
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Acciones</th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -665,7 +658,7 @@ export default function Inventory() {
       <AnimatePresence>
         {showAdjustmentModal && selectedItem && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
             onClick={() => setShowAdjustmentModal(false)}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -769,7 +762,7 @@ export default function Inventory() {
       <AnimatePresence>
         {showHistoryModal && historyItem && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
             onClick={() => setShowHistoryModal(false)}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -795,7 +788,7 @@ export default function Inventory() {
                   </div>
                 ) : movements.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">
-                    <History size={40} className="mx-auto mb-3 opacity-30" />
+                    <span className="empty-tile mb-3"><History size={26} aria-hidden /></span>
                     <p>No hay movimientos registrados para este producto</p>
                   </div>
                 ) : (

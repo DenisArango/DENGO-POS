@@ -8,6 +8,8 @@ import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
 import { SortableTh, sortRows, type SortState } from '../../components/common/SortableTh'
+import { Warehouse as PageWarehouse } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 const STATUS_CONFIG = {
   normal:    { label: 'Normal',     color: '#10B981', bg: 'bg-green-100 text-green-700' },
@@ -129,23 +131,23 @@ export default function InventoryStatusReport() {
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Estado de Inventario</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageWarehouse} color="orange" />Estado de Inventario</h1>
           <p className="text-gray-600 text-sm mt-0.5">
             {asOf ? `Niveles de stock al cierre del ${asOf}` : 'Niveles de stock actuales por producto'}
           </p>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-4 flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-wrap items-center gap-3">
         <label className="text-sm text-gray-600 flex items-center gap-2">
           Ver inventario al día:
-          <input type="date" value={asOf} onChange={e => setAsOf(e.target.value)} className="input" max={new Date().toISOString().slice(0, 10)} />
+          <input type="date" value={asOf} onChange={e => setAsOf(e.target.value)} className="input w-auto" max={new Date().toISOString().slice(0, 10)} />
         </label>
         {asOf && (
           <button onClick={() => setAsOf('')} className="btn-outline btn-sm">Volver a hoy</button>
         )}
         {asOf && (
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-500">
             Reconstruido a partir del historial de movimientos de stock — productos sin movimientos antes de esta fecha se muestran aparte, no como agotados.
           </p>
         )}
@@ -158,15 +160,15 @@ export default function InventoryStatusReport() {
           { label: 'En stock normal', value: String(statusCounts['normal'] ?? 0), icon: CheckCircle, color: 'text-green-600 bg-green-100' },
           { label: 'Valor total (costo)', value: `Q${totalValue.toFixed(2)}`, icon: XCircle, color: 'text-purple-600 bg-purple-100' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg ${s.color}`}><s.icon size={20} /></div>
-            <div><p className="text-xs text-gray-400">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
+            <div className={`stat-tile p-2.5 rounded-xl ${s.color}`}><s.icon size={20} /></div>
+            <div><p className="text-xs text-gray-500">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-4">Distribución por estado</h2>
           {pieData.length === 0 ? <p className="text-center text-gray-400 text-sm py-8">Sin datos</p>
             : <>
@@ -187,10 +189,10 @@ export default function InventoryStatusReport() {
           }
         </div>
 
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm flex flex-col">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200/80 shadow-sm flex flex-col">
           <div className="px-5 py-3 border-b flex flex-wrap items-center gap-3">
             <input type="text" placeholder="Buscar producto..." value={search} onChange={e => setSearch(e.target.value)} className="input flex-1 min-w-40" />
-            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input">
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input w-auto">
               <option value="">Todos los estados</option>
               {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
@@ -207,7 +209,7 @@ export default function InventoryStatusReport() {
                   <SortableTh label="Mín." sortKey="minStock" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
                   <SortableTh label="Máx." sortKey="maxStock" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
                   <SortableTh label="Valor (costo)" sortKey="value" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
-                  <th className="text-center px-4 py-2 text-xs text-gray-500 font-medium">
+                  <th className="text-center px-4 py-2 text-xs font-medium text-gray-500">
                     <div className="flex items-center justify-center gap-1">
                       Estado
                       <button type="button" onClick={() => setSort({ key: 'criticality', dir: 'asc' })} title="Primero los más críticos"

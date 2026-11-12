@@ -258,7 +258,7 @@ export default function SaleDetail() {
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-lg"><ArrowLeft size={20} /></button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">{sale.invoiceNumber}</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">{sale.invoiceNumber}</h1>
             <p className="text-sm text-gray-500">
               {format(new Date(sale.createdAt), "d 'de' MMMM yyyy, HH:mm", { locale: es })}
               {sale.isVoided && <span className="ml-2 text-red-500 font-semibold">— ANULADA</span>}
@@ -304,7 +304,7 @@ export default function SaleDetail() {
           { label: 'Sucursal', value: sale.branch?.name ?? '—' },
           { label: 'Caja', value: sale.cashRegister ? `${sale.cashRegister.name} #${sale.cashRegister.registerNumber}` : '—' },
         ].map(({ label, value }) => (
-          <div key={label} className="bg-white rounded-lg shadow-sm p-4">
+          <div key={label} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
             <p className="text-xs text-gray-400 mb-1">{label}</p>
             <p className="text-sm font-medium text-gray-800">{value}</p>
           </div>
@@ -312,25 +312,25 @@ export default function SaleDetail() {
       </div>
 
       {/* Payment info */}
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap gap-4 items-center">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-wrap gap-4 items-center">
         <div>
-          <p className="text-xs text-gray-400">Método</p>
+          <p className="text-xs text-gray-500">Método</p>
           <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${PM_COLOR[sale.paymentMethod] ?? ''}`}>
             {PM_LABEL[sale.paymentMethod] ?? sale.paymentMethod}
           </span>
         </div>
-        {sale.cashAmount > 0 && <div><p className="text-xs text-gray-400">Efectivo</p><p className="text-sm font-medium">Q{Number(sale.cashAmount).toFixed(2)}</p></div>}
-        {sale.transferAmount > 0 && <div><p className="text-xs text-gray-400">Transferencia</p><p className="text-sm font-medium">Q{Number(sale.transferAmount).toFixed(2)}</p></div>}
-        {sale.transferDocumentNumber && <div><p className="text-xs text-gray-400">Referencia</p><p className="text-sm font-mono">{sale.transferDocumentNumber}</p></div>}
-        {sale.cardReference && <div><p className="text-xs text-gray-400">Referencia tarjeta</p><p className="text-sm font-mono">{sale.cardReference}</p></div>}
-        {sale.notes && <div className="flex-1"><p className="text-xs text-gray-400">Notas</p><p className="text-sm text-gray-700">{sale.notes}</p></div>}
+        {sale.cashAmount > 0 && <div><p className="text-xs text-gray-500">Efectivo</p><p className="text-sm font-medium">Q{Number(sale.cashAmount).toFixed(2)}</p></div>}
+        {sale.transferAmount > 0 && <div><p className="text-xs text-gray-500">Transferencia</p><p className="text-sm font-medium">Q{Number(sale.transferAmount).toFixed(2)}</p></div>}
+        {sale.transferDocumentNumber && <div><p className="text-xs text-gray-500">Referencia</p><p className="text-sm font-mono">{sale.transferDocumentNumber}</p></div>}
+        {sale.cardReference && <div><p className="text-xs text-gray-500">Referencia tarjeta</p><p className="text-sm font-mono">{sale.cardReference}</p></div>}
+        {sale.notes && <div className="flex-1"><p className="text-xs text-gray-500">Notas</p><p className="text-sm text-gray-700">{sale.notes}</p></div>}
       </div>
 
       {/* Factura electrónica (FEL): certificación, PDF, anulación, notas de crédito */}
       {sale.requiresInvoice && <SaleFelPanel sale={sale} onChanged={fetchSale} />}
 
       {/* Items */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
         <div className="px-5 py-3 bg-gray-50 border-b flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-700">Artículos</h2>
           {editMode && <p className="text-xs text-blue-600">Modo edición — modifica cantidades, precios y descuentos</p>}
@@ -406,14 +406,14 @@ export default function SaleDetail() {
         {/* Items table */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50/70 border-b border-gray-200/80">
               <tr>
-                <th className="text-left px-5 py-2.5 text-xs text-gray-500 font-medium">Producto</th>
-                <th className="text-right px-4 py-2.5 text-xs text-gray-500 font-medium w-28">Precio</th>
-                <th className="text-center px-4 py-2.5 text-xs text-gray-500 font-medium w-24">Cantidad</th>
-                <th className="text-center px-4 py-2.5 text-xs text-gray-500 font-medium w-20">Desc. %</th>
-                <th className="text-right px-4 py-2.5 text-xs text-gray-500 font-medium w-24">Total</th>
-                <th className="text-right px-4 py-2.5 text-xs text-gray-500 font-medium w-24">Ganancia</th>
+                <th className="text-left px-5 py-2.5 text-xs font-medium text-gray-500">Producto</th>
+                <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500 w-28">Precio</th>
+                <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500 w-24">Cantidad</th>
+                <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500 w-20">Desc. %</th>
+                <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500 w-24">Total</th>
+                <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500 w-24">Ganancia</th>
                 {editMode && <th className="w-8" />}
               </tr>
             </thead>
@@ -426,7 +426,7 @@ export default function SaleDetail() {
                     <tr key={idx} className="hover:bg-gray-50">
                       <td className="px-5 py-2.5">
                         <p className="font-medium text-gray-800">{item.productName}</p>
-                        {item.variationName && <p className="text-xs text-gray-400">{item.variationName} ×{item.convFactor}</p>}
+                        {item.variationName && <p className="text-xs text-gray-500">{item.variationName} ×{item.convFactor}</p>}
                       </td>
                       <td className="px-4 py-2.5">
                         <input
@@ -476,7 +476,7 @@ export default function SaleDetail() {
                         <p className="font-medium text-gray-800">{item.product?.name ?? item.customName ?? '–'}</p>
                         {!item.productId && <p className="text-[11px] text-amber-700">Fuera del catálogo</p>}
                         {item.variation?.name && (
-                          <p className="text-xs text-gray-400">{item.variation.name} ×{convFactor}</p>
+                          <p className="text-xs text-gray-500">{item.variation.name} ×{convFactor}</p>
                         )}
                         {Number(item.discount) > 0 && (
                           <p className="text-xs text-orange-500">-{(Number(item.discount) * 100).toFixed(0)}% desc.</p>
@@ -555,7 +555,7 @@ export default function SaleDetail() {
 
       {/* Credit payments */}
       {(sale.creditPayments ?? []).length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
           <div className="px-5 py-3 bg-gray-50 border-b">
             <h2 className="text-sm font-semibold text-gray-700">Abonos Recibidos</h2>
           </div>
@@ -566,14 +566,14 @@ export default function SaleDetail() {
                 <div key={p.id} className="px-5 py-3 flex items-center justify-between text-sm">
                   <div>
                     <p className="font-medium text-gray-800">{PM_LABEL[p.paymentMethod] ?? p.paymentMethod}</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-500">
                       {format(new Date(p.createdAt), 'dd/MM/yyyy HH:mm', { locale: es })} — {p.paidBy?.name}
                       {p.transferDocumentNumber && ` · Ref: ${p.transferDocumentNumber}`}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-green-600">+Q{Number(p.amount).toFixed(2)}</p>
-                    <p className="text-xs text-gray-400">Acumulado: Q{totalPaid.toFixed(2)}</p>
+                    <p className="text-xs text-gray-500">Acumulado: Q{totalPaid.toFixed(2)}</p>
                   </div>
                 </div>
               )
@@ -590,7 +590,7 @@ export default function SaleDetail() {
 
       {/* Generate invoice */}
       {showInvoiceForm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-purple-100 rounded-lg"><Receipt size={22} className="text-purple-600" /></div>
@@ -621,7 +621,7 @@ export default function SaleDetail() {
 
       {/* Void confirm */}
       {showVoidConfirm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-red-100 rounded-lg"><AlertTriangle size={22} className="text-red-600" /></div>

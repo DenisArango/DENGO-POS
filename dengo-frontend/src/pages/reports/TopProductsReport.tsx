@@ -9,6 +9,8 @@ import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
 import { SortableTh, sortRows, type SortState } from '../../components/common/SortableTh'
+import { TrendingUp as PageTrendingUp } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 export default function TopProductsReport() {
   const navigate = useNavigate()
@@ -47,17 +49,17 @@ export default function TopProductsReport() {
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Productos Más Vendidos</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageTrendingUp} color="violet" />Productos Más Vendidos</h1>
           <p className="text-gray-600 text-sm mt-0.5">Ranking por ingresos en el período seleccionado</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-center gap-4">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-wrap items-center gap-4">
         <Calendar size={16} className="text-gray-400" />
         <label className="text-sm text-gray-600">Desde</label>
-        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input" />
+        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input w-auto" />
         <label className="text-sm text-gray-600">Hasta</label>
-        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input" />
+        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input w-auto" />
         <ReportFilters value={filters} onChange={setFilters} />
         {loading && <span className="text-sm text-gray-400">Cargando...</span>}
       </div>
@@ -68,15 +70,15 @@ export default function TopProductsReport() {
           { label: 'Unidades vendidas', value: Math.round(totalUnits).toLocaleString(), icon: Package, color: 'text-blue-600 bg-blue-100' },
           { label: 'Productos distintos', value: String(products.length), icon: TrendingUp, color: 'text-purple-600 bg-purple-100' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg ${s.color}`}><s.icon size={20} /></div>
-            <div><p className="text-xs text-gray-400">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
+            <div className={`stat-tile p-2.5 rounded-xl ${s.color}`}><s.icon size={20} /></div>
+            <div><p className="text-xs text-gray-500">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
           </div>
         ))}
       </div>
 
       {topByRevenue.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-4">Top 10 por ingresos</h2>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={topByRevenue} layout="vertical" margin={{ left: 20 }}>
@@ -90,15 +92,15 @@ export default function TopProductsReport() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b"><h2 className="text-sm font-semibold text-gray-700">Ranking completo</h2></div>
         {products.length === 0
           ? <div className="flex items-center justify-center py-16 text-gray-400 text-sm">Sin ventas en el período seleccionado</div>
           : <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50/70 border-b border-gray-200/80">
                   <tr>
-                    <th className="text-center px-3 py-2 text-xs text-gray-500 font-medium w-12">#</th>
+                    <th className="text-center px-3 py-2 text-xs font-medium text-gray-500 w-12">#</th>
                     <SortableTh label="Producto" sortKey="name" sort={sort} onSort={setSort} className="!py-2 text-xs !text-gray-500" />
                     <SortableTh label="Categoría" sortKey="category" sort={sort} onSort={setSort} className="!py-2 text-xs !text-gray-500" />
                     <SortableTh label="Unidades" sortKey="quantitySold" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />

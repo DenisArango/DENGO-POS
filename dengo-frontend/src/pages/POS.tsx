@@ -1378,7 +1378,7 @@ export default function POS() {
       {BRANCH_ID && <SalesGoalWidget branchId={BRANCH_ID} compact />}
 
       {/* ── Search bar ── */}
-      <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center gap-3 relative">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm px-4 py-3 flex items-center gap-3 relative">
         <Barcode size={20} className="text-gray-400 flex-shrink-0" />
         <div className="relative flex-1">
           <input
@@ -1389,12 +1389,13 @@ export default function POS() {
             onBlur={() => setTimeout(() => setShowSearchResults(false), 150)}
             onFocus={() => searchTerm.length > 0 && setShowSearchResults(true)}
             placeholder="Escanear código de barras o buscar producto por nombre..."
-            className="input w-full pr-8"
+            className="input w-full pr-8 h-11 text-base"
             autoFocus
           />
           {searchTerm && (
             <button onClick={() => { setSearchTerm(''); setShowSearchResults(false) }}
-              className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600">
+              aria-label="Limpiar búsqueda"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
               <X size={16} />
             </button>
           )}
@@ -1419,17 +1420,17 @@ export default function POS() {
                       )}
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-800 truncate">{product.name}</p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-gray-500">
                           {product.barcode ?? product.sku ?? ''} · {product.category?.name ?? product.categoryName ?? ''}
                         </p>
                       </div>
                     </div>
                     <div className="text-right ml-4 flex-shrink-0">
-                      <p className="text-sm font-bold text-primary-600">Q{Number(product.basePrice).toFixed(2)}</p>
+                      <p className="text-sm font-semibold text-gray-900">Q{Number(product.basePrice).toFixed(2)}</p>
                       {product.stock !== undefined && (
                         Number(product.stock) > 0
-                          ? <p className="text-xs text-green-600">Stock: {Number(product.stock)}</p>
-                          : <p className="text-xs font-medium text-red-500">Sin inventario</p>
+                          ? <p className="text-xs text-emerald-700">Stock: {Number(product.stock)}</p>
+                          : <p className="text-xs font-medium text-red-600">Sin inventario</p>
                       )}
                       {hasVariationChoice(product) && (
                         <p className="text-xs text-gray-400">{variations.length} variante{variations.length !== 1 ? 's' : ''}</p>
@@ -1442,7 +1443,7 @@ export default function POS() {
           )}
           {showSearchResults && searchTerm.length > 0 && searchResults.length === 0 && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-30 px-4 py-3">
-              <p className="text-sm text-gray-400 text-center">Sin resultados para "{searchTerm}"</p>
+              <p className="text-sm text-gray-500 text-center">Sin resultados para «{searchTerm}»</p>
             </div>
           )}
         </div>
@@ -1458,9 +1459,9 @@ export default function POS() {
       <div className="flex flex-col md:flex-row gap-3 flex-1 overflow-auto md:overflow-hidden md:min-h-0">
 
         {/* Left: Cart items table */}
-        <div className="flex-1 bg-white rounded-lg shadow-sm flex flex-col overflow-hidden min-h-[280px] md:min-h-0">
+        <div className="flex-1 bg-white rounded-xl border border-gray-200/80 shadow-sm flex flex-col overflow-hidden min-h-[280px] md:min-h-0">
           {/* Table header */}
-          <div className="grid gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide select-none min-w-[540px]"
+          <div className="grid gap-2 px-4 py-2.5 bg-gray-50/70 border-b border-gray-200/80 text-xs font-medium text-gray-500 select-none min-w-[540px]"
             style={{ gridTemplateColumns: '24px 1fr 90px 140px 110px 90px 40px' }}>
             <span>#</span>
             <span>Artículo</span>
@@ -1475,8 +1476,8 @@ export default function POS() {
           <div className="flex-1 overflow-y-auto overflow-x-auto">
             {cartItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-300">
-                <ShoppingCart size={52} />
-                <p className="text-sm">Busca o escanea un producto para comenzar</p>
+                <ShoppingCart size={44} strokeWidth={1.5} />
+                <p className="text-sm text-gray-500">Busca o escanea un producto para comenzar</p>
               </div>
             ) : (
               <AnimatePresence initial={false}>
@@ -1617,7 +1618,7 @@ export default function POS() {
                             [key]: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0))
                           }))}
                           placeholder="0"
-                          className="w-14 text-center text-sm border border-gray-200 rounded py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          className="w-14 text-center text-sm border border-gray-300 rounded-md py-0.5 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
                           min="0" max="100"
                         />
                         <span className="text-gray-400 text-xs">%</span>
@@ -1683,10 +1684,10 @@ export default function POS() {
         <div className="w-full md:w-96 flex flex-col gap-3 overflow-y-auto">
 
           {/* Customer */}
-          <div className={`bg-white rounded-lg shadow-sm p-4 ${!selectedCustomer ? 'ring-1 ring-orange-300' : ''}`}>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+          <div className={`bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 ${!selectedCustomer ? 'ring-1 ring-amber-300' : ''}`}>
+            <p className="text-xs font-medium text-gray-500 mb-2">
               Cliente <span className="text-red-500">*</span>
-              {!selectedCustomer && <span className="text-orange-500 normal-case font-normal ml-1">requerido para vender</span>}
+              {!selectedCustomer && <span className="text-amber-700 font-normal ml-1">requerido para vender</span>}
             </p>
             {selectedCustomer ? (
               <div className="bg-primary-50 border border-primary-200 rounded-lg px-3 py-2">
@@ -1695,7 +1696,7 @@ export default function POS() {
                     <p className="text-sm font-medium text-gray-800 truncate">{getCustomerName(selectedCustomer)}</p>
                     <p className="text-xs text-gray-500">NIT: {getCustomerNit(selectedCustomer)}</p>
                     {selectedCustomer.creditEnabled && (
-                      <p className="text-xs text-green-600">
+                      <p className="text-xs text-emerald-700">
                         Crédito: Q{(selectedCustomer.creditUsed ?? 0).toFixed(2)} / {selectedCustomer.creditAvailable === null ? 'Ilimitado' : `Q${(selectedCustomer.creditLimit ?? 0).toFixed(2)}`}
                       </p>
                     )}
@@ -1770,24 +1771,29 @@ export default function POS() {
           </div>
 
           {/* Sale type + Payment method */}
-          <div className="bg-white rounded-lg shadow-sm p-4 space-y-3">
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 space-y-3">
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Tipo de venta</p>
-              <div className="grid grid-cols-2 gap-1.5">
+              <p className="text-xs font-medium text-gray-500 mb-2">Tipo de venta</p>
+              <div className="grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1">
                 <button
                   onClick={() => setSaleType('CASH')}
-                  className={`py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
-                    saleType === 'CASH' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  aria-pressed={saleType === 'CASH'}
+                  className={`py-1.5 rounded-md text-sm font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                    saleType === 'CASH' ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-sm shadow-emerald-600/30' : 'text-gray-600 hover:text-gray-900 hover:bg-white/70'
                   }`}>
                   <DollarSign size={14} /> Contado
                 </button>
                 <button
                   onClick={() => canSellOnCredit && setSaleType('CREDIT')}
                   disabled={!canSellOnCredit}
-                  className={`py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
-                    saleType === 'CREDIT' ? 'bg-blue-600 text-white'
-                    : canSellOnCredit ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    : 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                  title={canSellOnCredit ? undefined
+                    : !selectedCustomer || !selectedCustomer.creditEnabled ? 'Este cliente no tiene crédito habilitado'
+                    : 'Este cliente ya no tiene crédito disponible'}
+                  aria-pressed={saleType === 'CREDIT'}
+                  className={`py-1.5 rounded-md text-sm font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                    saleType === 'CREDIT' ? 'bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-sm shadow-violet-600/30'
+                    : canSellOnCredit ? 'text-gray-600 hover:text-gray-900 hover:bg-white/70'
+                    : 'text-gray-400 cursor-not-allowed'
                   }`}>
                   <Calendar size={14} /> Crédito
                 </button>
@@ -1796,12 +1802,13 @@ export default function POS() {
 
             {saleType === 'CASH' && (
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Método de pago</p>
-                <div className="grid grid-cols-2 gap-1">
+                <p className="text-xs font-medium text-gray-500 mb-2">Método de pago</p>
+                {/* Three methods sit in one row; two or four in a 2-column grid — never one left alone. */}
+                <div className={`grid gap-1.5 ${(['CASH', 'CARD', 'TRANSFER', 'MIXED'] as const).filter(m => enabledPaymentMethods.has(m)).length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                   {([
                     { m: 'CASH' as PaymentMethodType, label: 'Efectivo', Icon: DollarSign },
                     { m: 'CARD' as PaymentMethodType, label: 'Tarjeta', Icon: CreditCard },
-                    { m: 'TRANSFER' as PaymentMethodType, label: 'Transfer.', Icon: Receipt },
+                    { m: 'TRANSFER' as PaymentMethodType, label: 'Transferencia', Icon: Receipt },
                     // 'Mixto' (efectivo + transferencia) está deshabilitado por defecto en
                     // Configuración → Métodos de Pago porque rara vez se usa en la práctica —
                     // actívalo ahí, no aquí, si un negocio lo necesita.
@@ -1810,10 +1817,11 @@ export default function POS() {
                     <button
                       key={m}
                       onClick={() => setPaymentMethod(m)}
-                      className={`py-2.5 rounded-lg text-xs font-medium flex flex-col items-center gap-0.5 transition-all ${
-                        paymentMethod === m ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      aria-pressed={paymentMethod === m}
+                      className={`group min-w-0 px-1 py-2.5 rounded-lg border text-[13px] font-medium flex flex-col items-center gap-1 transition-all ${
+                        paymentMethod === m ? 'border-transparent bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-sm shadow-primary-600/30' : 'border-gray-200 bg-white text-gray-600 hover:border-primary-200 hover:bg-primary-50/50 hover:text-primary-700'
                       }`}>
-                      <Icon size={15} />
+                      <Icon size={16} className="motion-safe:group-hover:animate-pop" />
                       {label}
                     </button>
                   ))}
@@ -1823,7 +1831,7 @@ export default function POS() {
           </div>
 
           {/* Totals */}
-          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200/80">
             <div className="flex justify-between text-sm text-gray-500 mb-2">
               <span>Subtotal</span>
               <span>Q{subtotal.toFixed(2)}</span>
@@ -1841,7 +1849,7 @@ export default function POS() {
                     onKeyDown={e => e.key === 'Enter' && ((e.target as HTMLInputElement).blur())}
                     placeholder="0"
                     min="0" max="100"
-                    className="w-14 text-center text-sm border border-gray-200 rounded py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    className="w-14 text-center text-sm border border-gray-300 rounded-md py-0.5 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
                   />
                   <span>%</span>
                 </div>
@@ -1849,15 +1857,15 @@ export default function POS() {
             )}
             <div className="border-t border-gray-100 pt-3">
               <div className="flex justify-between items-center">
-                <span className="text-base font-semibold text-gray-700">Total</span>
-                <span className="text-4xl font-extrabold text-primary-600 tracking-tight">Q{total.toFixed(2)}</span>
+                <span className="text-base font-semibold text-gray-900">Total</span>
+                <span className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-primary-600 to-violet-600 bg-clip-text text-transparent">Q{total.toFixed(2)}</span>
               </div>
             </div>
           </div>
 
           {/* Factura — oculta hasta que FEL esté activo para este cliente */}
           {felEnabled && (
-            <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
               <label className="flex items-center justify-between cursor-pointer">
                 <span className="text-sm font-medium text-gray-700">¿Generar factura?</span>
                 <input type="checkbox" checked={wantsInvoice}
@@ -1871,7 +1879,7 @@ export default function POS() {
                   }}
                   className="w-5 h-5 text-primary-600 rounded" />
               </label>
-              {!wantsInvoice && <p className="text-xs text-gray-400 mt-1">Por defecto se imprime solo el recibo.</p>}
+              {!wantsInvoice && <p className="text-xs text-gray-500 mt-1">Por defecto se imprime solo el recibo.</p>}
               {wantsInvoice && (
                 <div className="mt-3 space-y-2">
                   <div className="flex gap-2">
@@ -1886,7 +1894,7 @@ export default function POS() {
                   <input type="text" value={invoiceBuyerName} onChange={e => setInvoiceBuyerName(e.target.value)}
                     placeholder="Nombre para la factura" className="input w-full text-sm" />
                   {!invoiceBuyerNit.trim() && (
-                    <p className="text-xs text-orange-500">Se necesita un NIT válido — este cliente no tiene uno registrado.</p>
+                    <p className="text-xs text-amber-700">Se necesita un NIT válido — este cliente no tiene uno registrado.</p>
                   )}
                 </div>
               )}
@@ -1894,7 +1902,7 @@ export default function POS() {
           )}
 
           {/* Comentario de la venta — opcional, queda guardado en la venta */}
-          <div className="bg-white rounded-lg shadow-sm p-4">
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
             <label className="text-sm font-medium text-gray-700 block mb-2">Comentario (opcional)</label>
             <textarea value={saleNotes} onChange={e => setSaleNotes(e.target.value)}
               rows={2} className="input w-full text-sm resize-none"
@@ -1903,8 +1911,8 @@ export default function POS() {
 
           {/* Cash received */}
           {saleType === 'CASH' && paymentMethod === 'CASH' && (
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Efectivo recibido</p>
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
+              <p className="text-xs font-medium text-gray-500 mb-2">Efectivo recibido</p>
               <input
                 type="number"
                 value={cashReceived}
@@ -1916,9 +1924,9 @@ export default function POS() {
                 step="0.01"
               />
               {change !== null && (
-                <div className="mt-2 flex justify-between text-sm">
-                  <span className="text-gray-500">Cambio:</span>
-                  <span className="font-bold text-green-600">Q{change.toFixed(2)}</span>
+                <div className="mt-3 flex items-baseline justify-between rounded-lg bg-emerald-50 px-3 py-2">
+                  <span className="text-sm font-medium text-emerald-800">Cambio</span>
+                  <span className="text-2xl font-bold tracking-tight text-emerald-700">Q{change.toFixed(2)}</span>
                 </div>
               )}
             </div>
@@ -1928,8 +1936,8 @@ export default function POS() {
               outside DENGO; this is just the voucher's authorization number, kept
               for reconciling against the bank's settlement report at cash close. */}
           {saleType === 'CASH' && paymentMethod === 'CARD' && (
-            <div className="bg-white rounded-lg shadow-sm p-4 space-y-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Referencia de tarjeta (opcional)</p>
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 space-y-2">
+              <p className="text-xs font-medium text-gray-500">Referencia de tarjeta (opcional)</p>
               <input
                 type="text"
                 value={cardReference}
@@ -1942,8 +1950,8 @@ export default function POS() {
 
           {/* Transfer document number */}
           {saleType === 'CASH' && paymentMethod === 'TRANSFER' && (
-            <div className="bg-white rounded-lg shadow-sm p-4 space-y-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Referencia transferencia</p>
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 space-y-2">
+              <p className="text-xs font-medium text-gray-500">Referencia transferencia</p>
               <input
                 type="text"
                 value={transferDocumentNumber}
@@ -1956,8 +1964,8 @@ export default function POS() {
 
           {/* Mixed payment amounts */}
           {saleType === 'CASH' && paymentMethod === 'MIXED' && (
-            <div className="bg-white rounded-lg shadow-sm p-4 space-y-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Pago mixto</p>
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 space-y-2">
+              <p className="text-xs font-medium text-gray-500 mb-1">Pago mixto</p>
               <div className="flex items-center gap-2">
                 <DollarSign size={14} className="text-gray-400" />
                 <input type="number" value={mixedCashAmount} onChange={e => setMixedCashAmount(e.target.value)} placeholder="Efectivo" className="input flex-1 text-sm" min="0" step="0.01" />
@@ -1971,7 +1979,7 @@ export default function POS() {
                 const sum = parseFloat(mixedCashAmount || '0') + parseFloat(mixedTransferAmount || '0')
                 const rem = sum - total
                 return sum > 0 ? (
-                  <div className={`flex justify-between text-xs font-medium ${rem >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                  <div className={`flex justify-between text-sm font-semibold ${rem >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                     <span>{rem >= 0 ? 'Cambio:' : 'Faltante:'}</span>
                     <span>Q{Math.abs(rem).toFixed(2)}</span>
                   </div>
@@ -1982,9 +1990,9 @@ export default function POS() {
 
           {/* Credit info */}
           {saleType === 'CREDIT' && selectedCustomer && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-xs font-semibold text-blue-700 mb-1">Venta a crédito</p>
-              <div className="flex justify-between text-xs text-blue-600">
+            <div className="bg-violet-50 border border-violet-200 rounded-xl p-3">
+              <p className="text-sm font-semibold text-violet-800 mb-1">Venta a crédito</p>
+              <div className="flex justify-between text-sm text-violet-700">
                 <span>Crédito disponible:</span>
                 <span className="font-bold">{selectedCustomer.creditAvailable === null ? 'Ilimitado' : `Q${(selectedCustomer.creditAvailable ?? 0).toFixed(2)}`}</span>
               </div>
@@ -1995,8 +2003,8 @@ export default function POS() {
           <button
             onClick={handleCompleteSale}
             disabled={!canComplete}
-            className={`w-full py-4 rounded-xl text-white font-bold text-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm flex items-center justify-center gap-2 ${
-              saleType === 'CREDIT' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-primary-600 hover:bg-primary-700'
+            className={`w-full py-4 rounded-xl text-white font-bold text-lg tracking-tight transition-[background-color,transform] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed shadow-md flex items-center justify-center gap-2 ${
+              saleType === 'CREDIT' ? 'bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-700 hover:to-violet-600' : 'bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600'
             }`}
           >
             {saving && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />}
@@ -2017,7 +2025,7 @@ export default function POS() {
         {showOtherBranchesModal && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
             onClick={() => setShowOtherBranchesModal(false)}
           >
             <motion.div
@@ -2056,7 +2064,7 @@ export default function POS() {
         {showVariationModal && selectedProductForVariation && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
             onClick={closeVariationModal}
           >
             <motion.div
@@ -2135,7 +2143,7 @@ export default function POS() {
         {stockPrompt && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
             onClick={cancelStockAdjustment}
           >
             <motion.div
@@ -2186,7 +2194,7 @@ export default function POS() {
         {showCustomerModal && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
             onClick={() => setShowCustomerModal(false)}
           >
             <motion.div
@@ -2257,7 +2265,7 @@ export default function POS() {
 
       {/* ── Customer history modal ── */}
       {showCustomerHistory && selectedCustomer && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCustomerHistory(false)}>
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4" onClick={() => setShowCustomerHistory(false)}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0">
               <div>
@@ -2311,7 +2319,7 @@ export default function POS() {
         {showQuickCustomerModal && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
             onClick={() => setShowQuickCustomerModal(false)}
           >
             <motion.div
@@ -2397,7 +2405,7 @@ export default function POS() {
         {showRegisterPanel && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
             onClick={() => selectedRegisterId && setShowRegisterPanel(false)}
           >
             <motion.div
@@ -2442,7 +2450,7 @@ export default function POS() {
         {showStockWarning && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
@@ -2489,7 +2497,7 @@ export default function POS() {
         {showReceiptModal && completedSale && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 print:hidden"
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50 print:hidden"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}

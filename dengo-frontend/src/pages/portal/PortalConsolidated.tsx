@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
-import { BarChart2, Edit2, Check, X, RefreshCw } from 'lucide-react'
+import { BarChart2, Edit2, Check, X, RefreshCw, Package, CheckCircle2, ShoppingCart } from 'lucide-react'
 import { api } from '../../lib/api'
+import StatStrip from '../../components/common/StatStrip'
+import PageIcon from '../../components/common/PageIcon'
 
 const PROGRAM_TYPES = [
   { value: '', label: 'Todos los programas' },
@@ -104,8 +106,8 @@ export default function PortalConsolidated() {
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-            <BarChart2 size={28} className="text-primary-600" /> Vista Consolidada
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+            <PageIcon icon={BarChart2} color="violet" /> Vista Consolidada
           </h1>
           <p className="text-gray-600 mt-1">
             Total de productos necesarios vs. comprados por programa y año
@@ -142,27 +144,25 @@ export default function PortalConsolidated() {
 
       {/* Summary cards */}
       {!loading && rows.length > 0 && (
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Total Necesario</p>
-            <p className="text-2xl font-bold text-blue-800 mt-1">{qty(totalNeeded)}</p>
-            <p className="text-xs text-blue-500 mt-0.5">unidades de {rows.length} productos</p>
-          </div>
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Ya Comprado</p>
-            <p className="text-2xl font-bold text-green-800 mt-1">{qty(totalPurchased)}</p>
-            <p className="text-xs text-green-500 mt-0.5">
-              {totalNeeded > 0 ? Math.round(totalPurchased / totalNeeded * 100) : 0}% del total necesario
-            </p>
-          </div>
-          <div className={`rounded-xl p-4 border ${totalRemaining > 0 ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'}`}>
-            <p className={`text-xs font-semibold uppercase tracking-wide ${totalRemaining > 0 ? 'text-orange-600' : 'text-gray-500'}`}>Por Comprar</p>
-            <p className={`text-2xl font-bold mt-1 ${totalRemaining > 0 ? 'text-orange-800' : 'text-gray-500'}`}>{qty(totalRemaining)}</p>
-            <p className={`text-xs mt-0.5 ${totalRemaining > 0 ? 'text-orange-500' : 'text-gray-400'}`}>
-              {totalRemaining === 0 ? 'Todo comprado ✓' : 'unidades pendientes'}
-            </p>
-          </div>
-        </div>
+        <StatStrip
+          stats={[
+            { label: 'Total Necesario', color: 'blue' as const, icon: Package, value: qty(totalNeeded), hint: `unidades de ${rows.length} productos` },
+            {
+              label: 'Ya Comprado', color: 'emerald' as const,
+              icon: CheckCircle2,
+              value: qty(totalPurchased),
+              hint: `${totalNeeded > 0 ? Math.round(totalPurchased / totalNeeded * 100) : 0}% del total necesario`,
+            },
+            {
+              label: 'Por Comprar', color: 'orange' as const,
+              icon: ShoppingCart,
+              value: qty(totalRemaining),
+              valueTone: totalRemaining > 0 ? 'warn' : 'good',
+              hint: totalRemaining === 0 ? 'Todo comprado' : 'unidades pendientes',
+              hintTone: totalRemaining === 0 ? 'good' : 'neutral',
+            },
+          ]}
+        />
       )}
 
       {/* Table */}
@@ -172,7 +172,7 @@ export default function PortalConsolidated() {
         </div>
       ) : rows.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <BarChart2 size={48} className="mx-auto text-gray-300 mb-4" />
+          <span className="empty-tile mb-4"><BarChart2 size={26} aria-hidden /></span>
           <p className="text-gray-600">No hay pedidos activos para el período seleccionado.</p>
           <p className="text-gray-400 text-sm mt-1">Los pedidos en estado Pendiente, Aprobado y Cotizado aparecen aquí.</p>
         </div>
@@ -182,12 +182,12 @@ export default function PortalConsolidated() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Producto</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Programa</th>
-                  <th className="text-right px-4 py-3 font-semibold text-gray-700">Necesitado</th>
-                  <th className="text-right px-4 py-3 font-semibold text-gray-700">Comprado</th>
-                  <th className="text-right px-4 py-3 font-semibold text-gray-700">Faltante</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Notas</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Producto</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Programa</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Necesitado</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Comprado</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Faltante</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Notas</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>

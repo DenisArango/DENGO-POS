@@ -8,6 +8,8 @@ import { api } from '../../lib/api'
 import { useAuthStore } from '../../store'
 import { useStore } from '../../contexts/StoreContext'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
+import { History as PageHistory } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 interface ProductInfo {
   id: string
@@ -101,9 +103,9 @@ export default function ProductSalesHistoryReport() {
       <div className="space-y-6">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-lg"><ArrowLeft size={20} /></button>
-          <h1 className="text-2xl font-bold text-gray-800">Historial de Ventas del Producto</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageHistory} color="pink" />Historial de Ventas del Producto</h1>
         </div>
-        <div className="bg-white rounded-lg shadow-sm p-12 text-center text-gray-500">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-12 text-center text-gray-500">
           Entra a este reporte desde el botón de historial de ventas en Inventario.
         </div>
       </div>
@@ -132,9 +134,9 @@ export default function ProductSalesHistoryReport() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-center gap-3">
-        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input" />
-        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input" />
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-wrap items-center gap-3">
+        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input w-auto" />
+        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input w-auto" />
         <ReportFilters value={filters} onChange={setFilters} showRegister={false} />
         {loading && <span className="text-sm text-gray-400">Cargando...</span>}
       </div>
@@ -147,15 +149,15 @@ export default function ProductSalesHistoryReport() {
           { label: 'Ganancia', value: `Q${summary.totalProfit.toFixed(2)}`, icon: TrendingUp, color: 'text-emerald-600 bg-emerald-100' },
           { label: 'Precio promedio', value: `Q${summary.avgUnitPrice.toFixed(2)}`, icon: Tag, color: 'text-orange-600 bg-orange-100' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg ${s.color}`}><s.icon size={20} /></div>
-            <div><p className="text-xs text-gray-400">{s.label}</p><p className="text-lg font-bold text-gray-800">{s.value}</p></div>
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
+            <div className={`stat-tile p-2.5 rounded-xl ${s.color}`}><s.icon size={20} /></div>
+            <div><p className="text-xs text-gray-500">{s.label}</p><p className="text-lg font-bold text-gray-800">{s.value}</p></div>
           </div>
         ))}
       </div>
 
       {chartData.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-4">Ingresos por día (últimos días con venta)</h2>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData}>
@@ -169,10 +171,10 @@ export default function ProductSalesHistoryReport() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50/70 border-b border-gray-200/80">
               <tr>
                 {['Fecha', 'Venta', 'Cliente', 'Sucursal', 'Variante', 'Cant.', 'Precio Unit.', 'Total', 'Ganancia'].map(h => (
                   <th key={h} className="text-left py-3 px-4 text-sm font-semibold text-gray-600 whitespace-nowrap">{h}</th>

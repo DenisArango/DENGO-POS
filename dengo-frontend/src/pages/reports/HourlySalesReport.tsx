@@ -8,6 +8,8 @@ import { useAuthStore } from '../../store'
 import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
+import { Clock as PageClock } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 export default function HourlySalesReport() {
   const navigate = useNavigate()
@@ -58,14 +60,14 @@ export default function HourlySalesReport() {
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Ventas por Hora</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageClock} color="indigo" />Ventas por Hora</h1>
           <p className="text-gray-600 text-sm mt-0.5">Análisis de actividad por franja horaria</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-wrap items-center gap-3">
         <Calendar size={16} className="text-gray-400" />
-        <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="input" />
+        <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="input w-auto" />
         <ReportFilters value={filters} onChange={setFilters} />
         {loading && <span className="text-sm text-gray-400">Cargando...</span>}
       </div>
@@ -77,14 +79,14 @@ export default function HourlySalesReport() {
           { label: 'Hora pico', value: peakHour?.hour ?? '–', icon: Clock, color: 'text-red-600 bg-red-100' },
           { label: 'Ventas hora pico', value: peakHour ? `Q${peakHour.sales.toFixed(2)}` : '–', icon: TrendingUp, color: 'text-purple-600 bg-purple-100' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg ${s.color}`}><s.icon size={20} /></div>
-            <div><p className="text-xs text-gray-400">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
+            <div className={`stat-tile p-2.5 rounded-xl ${s.color}`}><s.icon size={20} /></div>
+            <div><p className="text-xs text-gray-500">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-5">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-4">Ventas por hora del día</h2>
         {sales.length === 0
           ? <div className="flex items-center justify-center h-52 text-gray-400 text-sm">Sin ventas en este día</div>
@@ -105,11 +107,11 @@ export default function HourlySalesReport() {
       </div>
 
       {hourlyData.filter(d => d.transactions > 0).length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b"><h2 className="text-sm font-semibold text-gray-700">Detalle por hora</h2></div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50/70 border-b border-gray-200/80">
                 <tr>
                   {['Hora', 'Transacciones', 'Total ventas', 'Ticket prom.', 'Actividad'].map(h => (
                     <th key={h} className={`px-4 py-2 text-xs text-gray-500 font-medium ${h === 'Hora' ? 'text-left' : h === 'Actividad' ? 'text-left' : 'text-right'}`}>{h}</th>

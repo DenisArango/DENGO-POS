@@ -99,7 +99,7 @@ function UsageDetailsModal({ onClose }: { onClose: () => void }) {
   const status = details?.status
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4" onClick={onClose}>
       <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
         className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
@@ -135,7 +135,7 @@ function UsageDetailsModal({ onClose }: { onClose: () => void }) {
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-semibold text-gray-700 mb-2">Por usuario</p>
-                {details.byUser.length === 0 ? <p className="text-xs text-gray-400">Nadie ha usado la IA este mes.</p> : (
+                {details.byUser.length === 0 ? <p className="text-xs text-gray-500">Nadie ha usado la IA este mes.</p> : (
                   <ul className="space-y-1">
                     {details.byUser.map(u => (
                       <li key={u.userId} className="flex justify-between text-sm"><span className="text-gray-700 truncate">{u.userName}</span><span className="tabular-nums text-gray-500">{u.count}</span></li>
@@ -154,7 +154,7 @@ function UsageDetailsModal({ onClose }: { onClose: () => void }) {
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-700 mb-2">Últimas consultas</p>
-              {details.recent.length === 0 ? <p className="text-xs text-gray-400">Sin consultas este mes.</p> : (
+              {details.recent.length === 0 ? <p className="text-xs text-gray-500">Sin consultas este mes.</p> : (
                 <div className="divide-y divide-gray-100 border rounded-lg">
                   {details.recent.map(r => (
                     <div key={r.id} className="px-3 py-2 text-sm">
@@ -264,11 +264,11 @@ export default function CustomReports() {
 
   if (licenseLoaded && !aiEnabled) {
     return (
-      <div className="max-w-lg mx-auto mt-16 bg-white rounded-xl shadow-sm p-8 text-center">
+      <div className="max-w-lg mx-auto mt-16 bg-white rounded-xl border border-gray-200/80 shadow-sm p-8 text-center">
         <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
           <Lock size={22} className="text-gray-500" />
         </div>
-        <h1 className="text-lg font-bold text-gray-800 mb-2">El Analista de Datos con IA no está activado</h1>
+        <h1 className="text-lg font-bold tracking-tight text-gray-900 mb-2">El Analista de Datos con IA no está activado</h1>
         <p className="text-sm text-gray-600 mb-6">
           Es un complemento de tu plan: le preguntas lo que quieras sobre tu negocio y te responde con reportes, gráficas y análisis de tus datos reales.
           Contacta a tu proveedor para activarlo.
@@ -280,7 +280,7 @@ export default function CustomReports() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)] gap-3">
-      <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center gap-3">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm px-4 py-3 flex items-center gap-3">
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500">
           <ArrowLeft size={20} />
         </button>
@@ -289,7 +289,7 @@ export default function CustomReports() {
             <Sparkles size={18} className="text-white" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-lg font-bold text-gray-800 truncate">Analista de Datos con IA</h1>
+            <h1 className="text-lg font-bold tracking-tight text-gray-900 truncate">Analista de Datos con IA</h1>
             <p className="text-xs text-gray-500 truncate">Pregunta cualquier cosa sobre tu negocio — consulta tus datos reales y razona los números</p>
           </div>
         </div>
@@ -308,7 +308,7 @@ export default function CustomReports() {
       </div>
 
       <div className="flex gap-3 flex-1 min-h-0">
-        <div className="flex-1 flex flex-col bg-white rounded-lg shadow-sm min-h-0 min-w-0">
+        <div className="flex-1 flex flex-col bg-white rounded-xl border border-gray-200/80 shadow-sm min-h-0 min-w-0">
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map((msg, i) => (
               <div key={i} className={`flex items-start gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -399,7 +399,7 @@ export default function CustomReports() {
           </div>
         </div>
 
-        <div className="hidden lg:flex w-64 flex-col bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="hidden lg:flex w-64 flex-col bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-2">
             <BookOpen size={15} className="text-gray-500" />
             <span className="text-sm font-semibold text-gray-700">Preguntas Guardadas</span>
@@ -437,7 +437,7 @@ export default function CustomReports() {
       <AnimatePresence>
         {saveModalMsg && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
               className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl" onClick={e => e.stopPropagation()}>
               <div className="flex items-center gap-2 mb-4">

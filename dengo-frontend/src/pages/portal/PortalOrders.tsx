@@ -10,6 +10,10 @@ import {
   Pencil, Printer, Plus, Trash2, Users, Send, Receipt,
 } from 'lucide-react'
 import { api } from '../../lib/api'
+import { Inbox as PageInbox } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
+import AlternateQuotes from '../../components/quotations/AlternateQuotes'
+import { Building2 as AltBranchIcon } from 'lucide-react'
 
 // ── Shared labels ──
 const PROGRAM_LABELS: Record<string, string> = {
@@ -239,6 +243,15 @@ export default function PortalOrders() {
       .finally(() => setActionBusy(false))
   }
 
+  // The order's quotation issued by another of the owner's businesses.
+  const [alternateFor, setAlternateFor] = useState<string | null>(null)
+  const sendAlternate = (quotationId: string) => {
+    if (!selected) return Promise.resolve()
+    return api.post(`/api/portal-admin/orders/${selected.id}/send-document`, { kind: 'QUOTATION', quotationId })
+      .then(() => { toast.success('Cotización enviada al maestro') })
+      .catch(e => { toast.error(e.message) })
+  }
+
   const openDetail = (order: Order) => {
     setEditing(false)
     setRejectMode(false)
@@ -333,7 +346,7 @@ export default function PortalOrders() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Pedidos del Portal</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageInbox} color="blue" />Pedidos del Portal</h1>
           <p className="text-gray-600 mt-1">Solicitudes enviadas por los maestros</p>
         </div>
         <div className="flex gap-3">
@@ -383,13 +396,13 @@ export default function PortalOrders() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <Inbox size={48} className="mx-auto text-gray-400 mb-4" />
+          <span className="empty-tile mb-4"><Inbox size={26} aria-hidden /></span>
           <p className="text-gray-600">No hay pedidos para mostrar.</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50/70 border-b border-gray-200/80">
               <tr>
                 {['Pedido', 'Maestro', 'Escuela', 'Grados', 'Programa', 'Estado', 'Monto', 'Cuadre', 'Fecha', 'Acciones'].map(h => (
                   <th key={h} className="text-left px-4 py-3 font-semibold text-gray-600 whitespace-nowrap">{h}</th>
@@ -591,6 +604,9 @@ export default function PortalOrders() {
                   {!editing && selected.quotationId && ['QUOTED', 'INVOICED'].includes(selected.status) && (
                     <button onClick={() => sendDocument('QUOTATION')} disabled={actionBusy} className="btn-secondary btn-md flex items-center gap-1.5"><Send size={16} /> Enviar cotización al maestro</button>
                   )}
+                  {!editing && selected.quotationId && ['QUOTED', 'INVOICED'].includes(selected.status) && (
+                    <button onClick={() => setAlternateFor(selected.quotationId!)} className="btn-outline btn-md flex items-center gap-1.5 text-violet-700 border-violet-300 hover:bg-violet-50"><AltBranchIcon size={16} /> Cotización de otra sucursal</button>
+                  )}
                   {!editing && selected.status === 'INVOICED' && (
                     <button onClick={() => sendDocument('INVOICE')} disabled={actionBusy} className="btn-secondary btn-md flex items-center gap-1.5"><Receipt size={16} /> Enviar factura al maestro</button>
                   )}
@@ -733,6 +749,9 @@ export default function PortalOrders() {
       )}
     </div>
     {selected && !editing && <PrepSheet order={selected} />}
+    {alternateFor && (
+      <AlternateQuotes sourceId={alternateFor} onClose={() => setAlternateFor(null)} onSendToTeacher={sendAlternate} />
+    )}
     </>
   )
 }

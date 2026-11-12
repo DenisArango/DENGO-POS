@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { Plus, School as SchoolIcon, Edit2, X, CheckCircle, XCircle, MapPin } from 'lucide-react'
 import { api } from '../../lib/api'
+import { School as PageSchool } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 interface School {
   id: string
@@ -65,7 +67,7 @@ export default function PortalSchools() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Escuelas</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageSchool} color="indigo" />Escuelas</h1>
           <p className="text-gray-600 mt-1">Establecimientos educativos atendidos</p>
         </div>
         <button onClick={openCreate} className="btn-primary btn-md flex items-center gap-2"><Plus size={20} /> Nueva Escuela</button>
@@ -75,14 +77,14 @@ export default function PortalSchools() {
         <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" /></div>
       ) : schools.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <SchoolIcon size={48} className="mx-auto text-gray-400 mb-4" />
+          <span className="empty-tile mb-4"><SchoolIcon size={26} aria-hidden /></span>
           <p className="text-gray-600">No hay escuelas registradas.</p>
           <button onClick={openCreate} className="btn-primary btn-md mt-4">Agregar primera escuela</button>
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50/70 border-b border-gray-200/80">
               <tr>{['Escuela', 'Código', 'Municipio', 'Contacto OPF', 'Estado', 'Acciones'].map(h => (
                 <th key={h} className="text-left px-4 py-3 font-semibold text-gray-600">{h}</th>
               ))}</tr>

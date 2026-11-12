@@ -12,7 +12,7 @@
 // to Postgres `text` (unbounded), the direct equivalent.
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   // omitApi: lets lib/prisma.ts leave PRODUCTS.IMAGE_URL (base64 photos) out
   // of every query by default — see lib/productImages.ts.
   previewFeatures = ["omitApi"]
@@ -878,9 +878,19 @@ model Quotation {
   notes             String?  @map("NOTES")
   createdById       String   @map("CREATED_BY_ID") @db.VarChar(36)
   convertedToSaleId String?  @unique @map("CONVERTED_TO_SALE_ID") @db.VarChar(36)
+  // Same quotation issued by another of the owner's businesses (another
+  // branch with its own company name/NIT — ej. the librería quotes, and the
+  // papelería quotes the same list too, often at a higher price because it
+  // buys those products by order). Points at the original; the alternate is
+  // a real quotation of that branch, hidden from the main list and reached
+  // through its original. markupPct records the % applied when it was made.
+  sourceQuotationId String?  @map("SOURCE_QUOTATION_ID") @db.VarChar(36)
+  markupPct         Decimal? @map("MARKUP_PCT") @db.Decimal(7, 2)
   createdAt         DateTime @default(now()) @map("CREATED_AT")
   updatedAt         DateTime @updatedAt @map("UPDATED_AT")
 
+  sourceQuotation Quotation?      @relation("QuotationAlternates", fields: [sourceQuotationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  alternates      Quotation[]     @relation("QuotationAlternates")
   branch          Branch          @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   customer        Customer        @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   createdBy       User            @relation(fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -890,6 +900,7 @@ model Quotation {
 
   @@index([branchId, createdAt])
   @@index([customerId])
+  @@index([sourceQuotationId])
   @@map("QUOTATIONS")
 }
 

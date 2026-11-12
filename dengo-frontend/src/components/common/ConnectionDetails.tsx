@@ -83,7 +83,7 @@ export function ConnectionLogModal() {
   }, [])
   if (!open) return null
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]" onClick={() => setOpen(false)}>
+    <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-[60]" onClick={() => setOpen(false)}>
       <div className="bg-white rounded-lg p-5 max-w-3xl w-full max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-base font-bold text-gray-800">Detalle técnico de la conexión</h3>

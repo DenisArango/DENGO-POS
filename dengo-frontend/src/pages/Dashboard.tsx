@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   TrendingUp,
+  TrendingDown,
   ShoppingCart,
   Package,
   DollarSign,
@@ -19,6 +20,7 @@ import { api } from '../lib/api'
 import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
+import StatStrip from '../components/common/StatStrip'
 import SalesGoalWidget from '../components/SalesGoalWidget'
 
 const ROLE_LABEL: Record<string, string> = {
@@ -81,7 +83,7 @@ const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const quickAccessLinks = [
   { path: '/pos',           label: 'Punto de Venta', icon: ShoppingCart, color: 'text-primary-600 bg-primary-100', permission: 'sales.create' },
   { path: '/inventory',     label: 'Inventario',     icon: Package,      color: 'text-green-600 bg-green-100',     permission: 'inventory.view' },
-  { path: '/purchases',     label: 'Compras',        icon: PlusCircle,   color: 'text-blue-600 bg-blue-100',       permission: 'purchases.receive' },
+  { path: '/purchases',     label: 'Compras',        icon: PlusCircle,   color: 'text-sky-600 bg-sky-100',         permission: 'purchases.receive' },
   { path: '/suppliers',     label: 'Proveedores',    icon: Truck,        color: 'text-orange-600 bg-orange-100',   permission: 'suppliers.view' },
   { path: '/reports',       label: 'Reportes',       icon: FileBarChart, color: 'text-purple-600 bg-purple-100',   permission: 'reports.sales' },
   { path: '/cash-register', label: 'Caja',           icon: DollarSign,   color: 'text-yellow-600 bg-yellow-100',   permission: 'cash.open' },
@@ -192,6 +194,7 @@ export default function Dashboard() {
   const greeting = getGreeting()
   const dateLabel = formatDate()
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const { currentStore } = useStore()
   const branchId = currentStore?.id ?? user?.branchId ?? ''
 
@@ -264,12 +267,12 @@ export default function Dashboard() {
   }
 
   const barColors = [
-    'bg-primary-500',
-    'bg-green-500',
-    'bg-blue-500',
-    'bg-orange-400',
-    'bg-purple-500',
-    'bg-gray-400',
+    'bg-gradient-to-r from-blue-500 to-sky-400',
+    'bg-gradient-to-r from-violet-500 to-fuchsia-400',
+    'bg-gradient-to-r from-emerald-500 to-teal-400',
+    'bg-gradient-to-r from-amber-500 to-orange-400',
+    'bg-gradient-to-r from-pink-500 to-rose-400',
+    'bg-gradient-to-r from-cyan-500 to-sky-400',
   ]
 
   return (
@@ -282,7 +285,7 @@ export default function Dashboard() {
       {/* ── Header ── */}
       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             Dashboard
             {user?.role && (
               <span className="flex items-center gap-1 text-xs font-medium bg-primary-50 text-primary-700 px-2 py-0.5 rounded-full">
@@ -290,7 +293,7 @@ export default function Dashboard() {
               </span>
             )}
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5 capitalize">
+          <p className="text-sm text-gray-500 mt-0.5 first-letter:uppercase">
             {greeting} &mdash; {dateLabel}
           </p>
         </div>
@@ -316,91 +319,64 @@ export default function Dashboard() {
           )}
 
           {/* ── Stats Cards ── */}
-          <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            {/* Ventas del día */}
-            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Ventas del Día</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">
-                    Q{stats.dailySales.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
-                  </p>
-                  {stats.dailySalesChange != null && (
-                    <p className={`text-xs mt-1 flex items-center gap-1 ${stats.dailySalesChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      <TrendingUp size={12} />
+          <motion.div variants={itemVariants}>
+            <StatStrip
+              stats={[
+                {
+                  label: 'Ventas del Día', color: 'blue' as const,
+                  icon: ShoppingCart,
+                  value: `Q${stats.dailySales.toLocaleString('es-GT', { minimumFractionDigits: 2 })}`,
+                  hint: stats.dailySalesChange != null && (
+                    <>
+                      {stats.dailySalesChange >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                       {stats.dailySalesChange >= 0 ? '+' : ''}{stats.dailySalesChange}% vs ayer
-                    </p>
-                  )}
-                </div>
-                <div className="p-3 bg-primary-100 rounded-lg">
-                  <ShoppingCart className="text-primary-600" size={24} />
-                </div>
-              </div>
-            </div>
-
-            {/* Transacciones */}
-            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Transacciones de Hoy</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{stats.dailyTransactions}</p>
-                  {stats.dailyTransactionsChange != null && (
-                    <p className={`text-xs mt-1 flex items-center gap-1 ${stats.dailyTransactionsChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      <TrendingUp size={12} />
+                    </>
+                  ),
+                  hintTone: stats.dailySalesChange == null ? 'neutral' : stats.dailySalesChange >= 0 ? 'good' : 'bad',
+                },
+                {
+                  label: 'Transacciones de Hoy', color: 'emerald' as const,
+                  icon: BarChart3,
+                  value: stats.dailyTransactions,
+                  hint: stats.dailyTransactionsChange != null && (
+                    <>
+                      {stats.dailyTransactionsChange >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                       {stats.dailyTransactionsChange >= 0 ? '+' : ''}{stats.dailyTransactionsChange} vs ayer
-                    </p>
-                  )}
-                </div>
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <BarChart3 className="text-green-600" size={24} />
-                </div>
-              </div>
-            </div>
-
-            {/* Stock bajo */}
-            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Productos Stock Bajo</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{stats.lowStockCount}</p>
-                  <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
-                    <AlertTriangle size={12} />
-                    Requieren atención
-                  </p>
-                </div>
-                <div className="p-3 bg-orange-100 rounded-lg">
-                  <AlertTriangle className="text-orange-600" size={24} />
-                </div>
-              </div>
-            </div>
-
-            {/* Caja actual */}
-            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Caja Actual</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">
-                    Q{stats.cashBalance.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
-                  </p>
-                  <p className={`text-xs mt-1 flex items-center gap-1 ${stats.hasOpenRegister ? 'text-blue-600' : 'text-gray-400'}`}>
-                    <DollarSign size={12} />
-                    {stats.hasOpenRegister ? 'Caja abierta' : 'Sin caja abierta'}
-                  </p>
-                </div>
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <DollarSign className="text-blue-600" size={24} />
-                </div>
-              </div>
-            </div>
+                    </>
+                  ),
+                  hintTone: stats.dailyTransactionsChange == null ? 'neutral' : stats.dailyTransactionsChange >= 0 ? 'good' : 'bad',
+                },
+                {
+                  label: 'Productos Stock Bajo', color: 'amber' as const,
+                  icon: AlertTriangle,
+                  value: stats.lowStockCount,
+                  valueTone: stats.lowStockCount > 0 ? 'warn' : 'neutral',
+                  hint: stats.lowStockCount > 0 ? 'Requieren atención' : 'Todo en orden',
+                  hintTone: stats.lowStockCount > 0 ? 'warn' : 'neutral',
+                  onClick: canViewInventory ? () => navigate('/inventory') : undefined,
+                },
+                {
+                  label: 'Caja Actual', color: 'violet' as const,
+                  icon: DollarSign,
+                  value: `Q${stats.cashBalance.toLocaleString('es-GT', { minimumFractionDigits: 2 })}`,
+                  hint: (
+                    <>
+                      <span className={`h-1.5 w-1.5 rounded-full ${stats.hasOpenRegister ? 'bg-emerald-500' : 'bg-gray-300'}`} aria-hidden />
+                      {stats.hasOpenRegister ? 'Caja abierta' : 'Sin caja abierta'}
+                    </>
+                  ),
+                },
+              ]}
+            />
           </motion.div>
 
           {/* ── Charts Row ── */}
           <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Ventas por Hora */}
-            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+            <div className="card">
               <div className="flex items-center justify-between mb-5">
-                <h2 className="text-base font-semibold text-gray-800">Ventas por Hora</h2>
-                <span className="text-xs text-gray-400">Hoy</span>
+                <h2 className="text-base font-semibold text-gray-900">Ventas por Hora</h2>
+                <span className="text-xs text-gray-500">Hoy</span>
               </div>
               {hourlySales.length > 0 ? (
                 <>
@@ -414,7 +390,7 @@ export default function Dashboard() {
                             <div className="w-full flex items-end justify-center" style={{ height: '140px' }}>
                               <div
                                 className={`w-full rounded-t-sm transition-all duration-500 ${
-                                  isTopHour ? 'bg-primary-500' : 'bg-primary-200'
+                                  isTopHour ? 'bg-gradient-to-t from-primary-600 to-violet-400' : 'bg-primary-200'
                                 }`}
                                 style={{ height: `${heightPct}%` }}
                                 title={`Q${entry.amount}`}
@@ -428,7 +404,7 @@ export default function Dashboard() {
                   </div>
                   <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
                     <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 rounded-sm bg-primary-500 inline-block" /> Hora pico
+                      <span className="w-3 h-3 rounded-sm bg-gradient-to-t from-primary-600 to-violet-400 inline-block" /> Hora pico
                     </span>
                     <span className="flex items-center gap-1">
                       <span className="w-3 h-3 rounded-sm bg-primary-200 inline-block" /> Normal
@@ -436,17 +412,17 @@ export default function Dashboard() {
                   </div>
                 </>
               ) : (
-                <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
+                <div className="flex items-center justify-center h-40 text-gray-500 text-sm">
                   Sin datos de ventas por hora
                 </div>
               )}
             </div>
 
             {/* Ventas por Categoría */}
-            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+            <div className="card">
               <div className="flex items-center justify-between mb-5">
-                <h2 className="text-base font-semibold text-gray-800">Top Categorías Hoy</h2>
-                <span className="text-xs text-gray-400">Hoy</span>
+                <h2 className="text-base font-semibold text-gray-900">Top Categorías Hoy</h2>
+                <span className="text-xs text-gray-500">Hoy</span>
               </div>
               {categorySales.length > 0 ? (
                 <div className="space-y-3">
@@ -471,7 +447,7 @@ export default function Dashboard() {
                   })}
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
+                <div className="flex items-center justify-center h-40 text-gray-500 text-sm">
                   Sin datos de ventas por categoría
                 </div>
               )}
@@ -481,10 +457,10 @@ export default function Dashboard() {
           {/* ── Bottom Row ── */}
           <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Ventas de la Semana */}
-            <div className={`bg-white rounded-lg shadow-sm p-6 border border-gray-100 ${!canViewInventory ? 'lg:col-span-2' : ''}`}>
+            <div className={`card ${!canViewInventory ? 'lg:col-span-2' : ''}`}>
               <div className="flex items-center justify-between mb-5">
-                <h2 className="text-base font-semibold text-gray-800">Ventas de la Semana</h2>
-                <span className="text-xs text-gray-400">Lun – Dom</span>
+                <h2 className="text-base font-semibold text-gray-900">Ventas de la Semana</h2>
+                <span className="text-xs text-gray-500">Lun – Dom</span>
               </div>
               {weekSales.some(d => d.amount > 0) ? (
                 <>
@@ -497,7 +473,7 @@ export default function Dashboard() {
                           <span className="text-[10px] text-gray-400">{day.amount > 0 ? `Q${day.amount.toFixed(0)}` : ''}</span>
                           <div className="w-full flex items-end justify-center" style={{ height: '120px' }}>
                             <div
-                              className={`w-full rounded-t-sm transition-all duration-500 ${day.isToday ? 'bg-primary-500' : 'bg-primary-200'}`}
+                              className={`w-full rounded-t-sm transition-all duration-500 ${day.isToday ? 'bg-gradient-to-t from-primary-600 to-violet-400' : 'bg-primary-200'}`}
                               style={{ height: `${Math.max(heightPct, day.amount > 0 ? 4 : 0)}%` }}
                               title={`Q${day.amount.toFixed(2)}`}
                             />
@@ -513,7 +489,7 @@ export default function Dashboard() {
                   </div>
                 </>
               ) : (
-                <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
+                <div className="flex items-center justify-center h-40 text-gray-500 text-sm">
                   Sin ventas registradas esta semana
                 </div>
               )}
@@ -521,9 +497,9 @@ export default function Dashboard() {
 
             {/* Alertas de Inventario — hidden for roles without inventory access */}
             {canViewInventory && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+            <div className="card p-0 overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h2 className="text-base font-semibold text-gray-800">
+                <h2 className="text-base font-semibold text-gray-900">
                   Alertas de Inventario
                   {stats.lowStockCount > 0 && (
                     <span className="ml-1.5 text-xs font-medium text-gray-400">
@@ -539,30 +515,22 @@ export default function Dashboard() {
                 </NavLink>
               </div>
               {inventoryAlerts.length > 0 ? (
-                <div className="divide-y divide-gray-50 max-h-[320px] overflow-y-auto">
+                <div className="divide-y divide-gray-100 max-h-[320px] overflow-y-auto">
                   {inventoryAlerts.map((item) => {
                     const badge = getAlertBadge(item.status)
                     return (
                       <div key={item.id} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className={`p-1.5 rounded-md flex-shrink-0 ${
-                            item.status === 'out'
-                              ? 'bg-red-100'
-                              : item.status === 'critical'
-                              ? 'bg-orange-100'
-                              : 'bg-yellow-100'
+                          <div className={`stat-tile p-1.5 rounded-lg flex-shrink-0 ${
+                            item.status === 'out' ? 'bg-rose-100 text-rose-600'
+                            : item.status === 'critical' ? 'bg-orange-100 text-orange-600'
+                            : 'bg-amber-100 text-amber-600'
                           }`}>
-                            <Package size={14} className={
-                              item.status === 'out'
-                                ? 'text-red-600'
-                                : item.status === 'critical'
-                                ? 'text-orange-600'
-                                : 'text-yellow-600'
-                            } />
+                            <Package size={15} aria-hidden />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-xs font-medium text-gray-700 truncate">{item.name}</p>
-                            <p className="text-[11px] text-gray-400">
+                            <p className="text-sm font-medium text-gray-800 truncate">{item.name}</p>
+                            <p className="text-xs text-gray-500">
                               Stock: <span className="font-semibold text-gray-600">{item.currentStock}</span>
                               {' '}/ Mín: <span className="font-semibold text-gray-600">{item.minStock}</span>
                             </p>
@@ -574,7 +542,7 @@ export default function Dashboard() {
                           </span>
                           <NavLink
                             to="/inventory"
-                            className="text-[11px] text-primary-600 hover:text-primary-700 font-medium border border-primary-200 rounded px-2 py-0.5 hover:bg-primary-50 transition-colors"
+                            className="text-xs text-primary-600 hover:text-primary-800 font-medium rounded px-1.5 py-0.5 hover:bg-primary-50 transition-colors"
                           >
                             Ver
                           </NavLink>
@@ -594,10 +562,10 @@ export default function Dashboard() {
 
           {/* ── Ventas Mensuales por Sucursal (admin only — needs cross-branch data) ── */}
           {isAdmin && (
-            <motion.div variants={itemVariants} className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+            <motion.div variants={itemVariants} className="card">
               <div className="flex items-center justify-between mb-5">
-                <h2 className="text-base font-semibold text-gray-800">Ventas Mensuales por Sucursal</h2>
-                <span className="text-xs text-gray-400">
+                <h2 className="text-base font-semibold text-gray-900">Ventas Mensuales por Sucursal</h2>
+                <span className="text-xs text-gray-500">
                   {new Date().toLocaleDateString('es-GT', { month: 'long', year: 'numeric' })}
                 </span>
               </div>
@@ -638,21 +606,20 @@ export default function Dashboard() {
           {/* ── Quick Access ── */}
           <motion.div variants={itemVariants}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-semibold text-gray-800">Acceso Rápido</h2>
+              <h2 className="text-base font-semibold text-gray-900">Acceso Rápido</h2>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {visibleQuickAccessLinks.map(({ path, label, icon: Icon, color }) => {
-                const [textClass, bgClass] = color.split(' ')
                 return (
                   <NavLink
                     key={path}
                     to={path}
-                    className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex flex-col items-center gap-2 hover:shadow-md transition-all duration-200 group"
+                    className="group flex items-center gap-3 rounded-xl border border-gray-200/80 bg-white px-4 py-3 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:border-primary-200 hover:shadow-md motion-safe:hover:-translate-y-0.5"
                   >
-                    <div className={`p-2 rounded-lg ${bgClass}`}>
-                      <Icon size={20} className={textClass} />
-                    </div>
-                    <span className="text-xs font-medium text-gray-700 text-center leading-tight group-hover:text-gray-900">{label}</span>
+                    <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg transition-transform duration-300 motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-6 ${color}`}>
+                      <Icon size={18} className="motion-safe:group-hover:animate-wiggle" aria-hidden />
+                    </span>
+                    <span className="text-sm font-medium text-gray-700 leading-tight group-hover:text-gray-900">{label}</span>
                   </NavLink>
                 )
               })}

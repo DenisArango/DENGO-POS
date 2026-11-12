@@ -7,6 +7,8 @@ import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
 import { SortableTh, sortRows, type SortState } from '../../components/common/SortableTh'
+import { Package as PagePackage } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 const STATUS_CONFIG = {
   high:     { label: 'Alta rotación',  bg: 'bg-green-100 text-green-700',  icon: TrendingUp },
@@ -52,7 +54,7 @@ export default function ProductRotationReport() {
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Rotación de Productos</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PagePackage} color="teal" />Rotación de Productos</h1>
           <p className="text-gray-600 text-sm mt-0.5">Velocidad de salida de productos (últimos 30 días)</p>
         </div>
       </div>
@@ -61,17 +63,17 @@ export default function ProductRotationReport() {
         {Object.entries(STATUS_CONFIG).map(([k, v]) => {
           const Icon = v.icon
           return (
-            <div key={k} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
+            <div key={k} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
               <div className={`p-2.5 rounded-lg ${v.bg}`}><Icon size={18} /></div>
-              <div><p className="text-xs text-gray-400">{v.label}</p><p className="text-xl font-bold text-gray-800">{counts[k] ?? 0}</p></div>
+              <div><p className="text-xs text-gray-500">{v.label}</p><p className="text-xl font-bold text-gray-800">{counts[k] ?? 0}</p></div>
             </div>
           )
         })}
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap gap-3">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-wrap gap-3">
         <input type="text" placeholder="Buscar producto..." value={search} onChange={e => setSearch(e.target.value)} className="input flex-1 min-w-48" />
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input">
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input w-auto">
           <option value="">Todos</option>
           {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
@@ -79,10 +81,10 @@ export default function ProductRotationReport() {
         {loading && <span className="text-sm text-gray-400 self-center">Cargando...</span>}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50/70 border-b border-gray-200/80">
               <tr>
                 <SortableTh label="Producto" sortKey="name" sort={sort} onSort={setSort} className="!py-2 text-xs !text-gray-500" />
                 <SortableTh label="Categoría" sortKey="category" sort={sort} onSort={setSort} className="!py-2 text-xs !text-gray-500" />
@@ -91,7 +93,7 @@ export default function ProductRotationReport() {
                 <SortableTh label="Prom. diario" sortKey="averageDailySales" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
                 <SortableTh label="Días inventario" sortKey="daysOfInventory" sort={sort} onSort={setSort} align="right" className="!py-2 text-xs !text-gray-500" />
                 <SortableTh label="Índice rotación" sortKey="rotationIndex" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />
-                <th className="text-center px-4 py-3 text-xs text-gray-500 font-medium">Estado</th>
+                <th className="text-center px-4 py-3 text-xs font-medium text-gray-500">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

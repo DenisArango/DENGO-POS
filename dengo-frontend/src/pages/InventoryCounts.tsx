@@ -13,6 +13,7 @@ import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
 import { getAdjustmentReasons, type AdjustmentReason } from '../lib/inventoryReasons'
+import PageIcon from '../components/common/PageIcon'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface CountItem {
@@ -296,7 +297,7 @@ export default function InventoryCounts() {
 
         {!activeCount ? (
           // ── Branch picker before the count exists ──
-          <div className="bg-white rounded-lg shadow-sm p-5 max-w-md space-y-4">
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5 max-w-md space-y-4">
             <div>
               <label className="label">Sucursal a contar *</label>
               <select value={newBranchId} onChange={e => setNewBranchId(e.target.value)} className="input w-full">
@@ -317,7 +318,7 @@ export default function InventoryCounts() {
           // ── Items of the active/opened count ──
           <>
             {activeCount.status === 'IN_PROGRESS' && (
-              <div className="bg-white rounded-lg shadow-sm p-3 relative">
+              <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-3 relative">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                   <input
@@ -358,16 +359,16 @@ export default function InventoryCounts() {
               </div>
             )}
 
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b">
+                  <thead className="bg-gray-50/70 border-b border-gray-200/80">
                     <tr>
-                      <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Producto</th>
-                      <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium w-28">Sistema</th>
-                      <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium w-32">Contado</th>
-                      <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium w-28">Diferencia</th>
-                      <th className="text-center px-4 py-3 text-xs text-gray-500 font-medium w-40">Ajuste</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Producto</th>
+                      <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 w-28">Sistema</th>
+                      <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 w-32">Contado</th>
+                      <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 w-28">Diferencia</th>
+                      <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 w-40">Ajuste</th>
                       <th className="w-10" />
                     </tr>
                   </thead>
@@ -447,7 +448,7 @@ export default function InventoryCounts() {
         <AnimatePresence>
           {adjustingItem && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
               onClick={() => setAdjustingItem(null)}>
               <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
                 className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full max-h-[90vh] overflow-y-auto"
@@ -499,8 +500,8 @@ export default function InventoryCounts() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <ClipboardCheck size={28} />
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+            <PageIcon icon={ClipboardCheck} color="teal" />
             Conteos de Inventario
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">Tareas de conteo físico y sus diferencias contra el sistema</p>
@@ -515,14 +516,14 @@ export default function InventoryCounts() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary-400 border-t-transparent" />
           </div>
         ) : counts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
-            <ClipboardCheck size={40} strokeWidth={1.5} />
+            <span className="empty-tile mb-1"><ClipboardCheck size={26} aria-hidden /></span>
             <p className="text-sm">No hay conteos registrados</p>
           </div>
         ) : (

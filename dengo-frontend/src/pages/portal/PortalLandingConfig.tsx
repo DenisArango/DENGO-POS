@@ -5,6 +5,8 @@ import {
   Facebook, Instagram, GraduationCap,
 } from 'lucide-react'
 import { api } from '../../lib/api'
+import { Globe as PageGlobe } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 interface PortalConfig {
   businessName: string
@@ -53,7 +55,7 @@ export default function PortalLandingConfig() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Configuración del Portal</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageGlobe} color="sky" />Configuración del Portal</h1>
           <p className="text-gray-600 mt-1">Personaliza la página pública para los maestros</p>
         </div>
         <div className="flex gap-3">
@@ -87,7 +89,7 @@ export default function PortalLandingConfig() {
         </div>
 
         {/* Live preview */}
-        <div className="lg:sticky lg:top-6 self-start">
+        <div className="lg:sticky lg:top-24 self-start">
           <p className="text-sm font-semibold text-gray-500 mb-3">Vista previa</p>
           <div className="rounded-2xl overflow-hidden shadow-lg border border-gray-200">
             <div className="bg-gradient-to-br from-orange-500 to-orange-700 text-white p-8">

@@ -4,12 +4,14 @@ import {
   Plus, Search, Eye, Trash2, Send, CheckCircle, XCircle,
   FileText, AlertCircle, X, ClipboardList,
   RefreshCw, Clock, DollarSign, ArrowLeft, Package,
-  User, ChevronDown, Ban, Printer, MessageCircle
+  User, ChevronDown, Ban, Printer, MessageCircle, Building2
 } from 'lucide-react'
+import AlternateQuotes from '../components/quotations/AlternateQuotes'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { api } from '../lib/api'
+import StatStrip from '../components/common/StatStrip'
 import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
@@ -17,6 +19,7 @@ import { matchesSearch } from '../lib/search'
 import { CustomerThumb } from '../components/common/CustomerThumb'
 import { QuotationPrint, type QuotationPrintData } from '../components/print/QuotationPrint'
 import { elementToPdfBlob, downloadBlob } from '../lib/pdfExport'
+import PageIcon from '../components/common/PageIcon'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type QuotationStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'CONVERTED' | 'CANCELLED'
@@ -50,7 +53,14 @@ interface Quotation {
   quotationNumber: string
   customer: Customer
   customerId?: string
-  branch?: { id: string; name: string }
+  // The quotation's own branch — its company name/NIT/logo go on the printout.
+  branch?: {
+    id: string; name: string; companyName?: string | null; companyTaxId?: string | null; companyTagline?: string | null
+    logo?: string | null; quotationLetterhead?: string | null; address?: string | null; phone?: string | null
+  }
+  // Same quotation issued by the owner's other businesses (see AlternateQuotes).
+  alternates?: { id: string; quotationNumber: string; total: number; branch: { id: string; name: string; companyName?: string | null } }[]
+  sourceQuotation?: { id: string; quotationNumber: string; branch?: { name: string; companyName?: string | null } } | null
   items: QuotationItem[]
   subtotal: number
   tax: number
@@ -142,6 +152,7 @@ export default function Quotations() {
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [printingQuotation, setPrintingQuotation] = useState<Quotation | null>(null)
+  const [alternateFor, setAlternateFor] = useState<string | null>(null)
   const [exportingQuotation, setExportingQuotation] = useState<Quotation | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null)
@@ -374,7 +385,8 @@ export default function Quotations() {
   // already look like it has one.
   function buildWhatsAppGreeting(q: Quotation): string {
     const firstName = q.customer?.name?.trim().split(/\s+/)[0]
-    const company = currentStore?.companyName ? ` de ${currentStore.companyName}` : ''
+    const companyName = q.branch?.companyName || currentStore?.companyName
+    const company = companyName ? ` de ${companyName}` : ''
     return [
       `Hola${firstName ? ` ${firstName}` : ''}, un gusto saludarte.`,
       `Te compartimos tu cotización ${q.quotationNumber}${company} por un total de Q${Number(q.total ?? 0).toFixed(2)}, válida hasta ${safeDate(q.validUntil)}.`,
@@ -464,13 +476,20 @@ export default function Quotations() {
     tax: Number(q.tax ?? 0),
     total: Number(q.total ?? 0),
     notes: q.notes,
-    letterhead: currentStore?.quotationLetterhead,
-    logo: currentStore?.logo,
-    companyName: currentStore?.companyName,
-    companyTaxId: currentStore?.companyTaxId,
-    companyTagline: currentStore?.companyTagline,
-    branchAddress: currentStore?.address,
-    branchPhone: currentStore?.phone,
+    // The quotation's own branch, so one made by another business prints with
+    // that business's letterhead/name/NIT; the selected store is the fallback.
+    ...(() => {
+      const b = q.branch?.id && q.branch.id !== currentStore?.id ? q.branch : null
+      return {
+        letterhead: (b ? b.quotationLetterhead : currentStore?.quotationLetterhead) ?? undefined,
+        logo: (b ? b.logo : currentStore?.logo) ?? undefined,
+        companyName: (b ? b.companyName || b.name : currentStore?.companyName) ?? undefined,
+        companyTaxId: (b ? b.companyTaxId : currentStore?.companyTaxId) ?? undefined,
+        companyTagline: (b ? b.companyTagline : currentStore?.companyTagline) ?? undefined,
+        branchAddress: (b ? b.address : currentStore?.address) ?? undefined,
+        branchPhone: (b ? b.phone : currentStore?.phone) ?? undefined,
+      }
+    })(),
   })
 
   const handleSend    = (id: string) => transitionStatus(id, 'send', 'Cotización marcada como enviada')
@@ -515,7 +534,7 @@ export default function Quotations() {
       <div className="flex flex-col gap-3 md:h-[calc(100vh-7rem)]">
 
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => { resetCreateForm(); setView('list') }}
             className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-800 transition-colors"
@@ -523,7 +542,7 @@ export default function Quotations() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-lg font-bold text-gray-800">Nueva Cotización</h1>
+            <h1 className="text-lg font-bold tracking-tight text-gray-900">Nueva Cotización</h1>
             <p className="text-xs text-gray-500">
               {draftItems.length > 0
                 ? `${draftItems.length} producto(s) · Q${grandTotal.toFixed(2)}`
@@ -536,7 +555,7 @@ export default function Quotations() {
         <div className="flex flex-col md:flex-row gap-3 flex-1 overflow-auto md:overflow-hidden md:min-h-0">
 
           {/* LEFT: Product search + items */}
-          <div className="flex-1 bg-white rounded-lg shadow-sm flex flex-col min-h-[280px] md:min-h-0">
+          <div className="flex-1 bg-white rounded-xl border border-gray-200/80 shadow-sm flex flex-col min-h-[280px] md:min-h-0">
 
             {/* Search bar */}
             <div className="p-3 border-b relative flex gap-2">
@@ -704,7 +723,7 @@ export default function Quotations() {
           <div className="w-full md:w-80 flex flex-col gap-3 overflow-y-auto">
 
             {/* Branch */}
-            <div className="bg-white rounded-lg shadow-sm p-5">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Sucursal</p>
               <div className="relative">
                 <select
@@ -722,7 +741,7 @@ export default function Quotations() {
             </div>
 
             {/* Customer */}
-            <div className="bg-white rounded-lg shadow-sm p-5 space-y-3">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5 space-y-3">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
                 <User size={12} /> Cliente
               </p>
@@ -778,7 +797,7 @@ export default function Quotations() {
             </div>
 
             {/* Dates & Discount */}
-            <div className="bg-white rounded-lg shadow-sm p-5 space-y-3">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5 space-y-3">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Detalles</p>
               <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">Válida hasta *</label>
@@ -809,7 +828,7 @@ export default function Quotations() {
             </div>
 
             {/* Notes */}
-            <div className="bg-white rounded-lg shadow-sm p-5">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5">
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">
                 Notas / Condiciones
               </label>
@@ -823,7 +842,7 @@ export default function Quotations() {
             </div>
 
             {/* Totals */}
-            <div className="bg-white rounded-lg shadow-sm p-5 space-y-2 text-sm">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5 space-y-2 text-sm">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal:</span>
                 <span>Q{itemsSubtotal.toFixed(2)}</span>
@@ -885,8 +904,8 @@ export default function Quotations() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <ClipboardList size={28} />
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+            <PageIcon icon={ClipboardList} color="indigo" />
             Cotizaciones
           </h1>
           <p className="text-gray-600 text-sm mt-1">Gestiona cotizaciones para tus clientes</p>
@@ -907,31 +926,20 @@ export default function Quotations() {
 
       {/* Stats */}
       {!loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {[
-            { label: 'Total', value: stats.total, color: 'blue', Icon: ClipboardList },
-            { label: 'Borrador', value: stats.draft, color: 'gray', Icon: FileText },
-            { label: 'Enviadas', value: stats.sent, color: 'blue', Icon: Send },
-            { label: 'Aceptadas', value: stats.accepted, color: 'green', Icon: CheckCircle },
-            { label: 'Rechaz./Venc./Canc.', value: stats.rejected, color: 'red', Icon: XCircle },
-          ].map(({ label, value, color, Icon }) => (
-            <motion.div key={label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-lg shadow-sm p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-600 text-sm">{label}</span>
-                <div className={`p-2 bg-${color}-100 rounded-lg`}>
-                  <Icon className={`text-${color}-600`} size={18} />
-                </div>
-              </div>
-              <p className={`text-2xl font-bold text-${color}-600`}>{value}</p>
-            </motion.div>
-          ))}
-        </div>
+        <StatStrip
+          stats={[
+            { label: 'Total', color: 'blue' as const, value: stats.total, icon: ClipboardList },
+            { label: 'Borrador', color: 'sky' as const, value: stats.draft, icon: FileText },
+            { label: 'Enviadas', color: 'indigo' as const, value: stats.sent, icon: Send },
+            { label: 'Aceptadas', color: 'emerald' as const, value: stats.accepted, icon: CheckCircle, valueTone: stats.accepted > 0 ? 'good' as const : 'neutral' as const },
+            { label: 'Rechaz./Venc./Canc.', color: 'rose' as const, value: stats.rejected, icon: XCircle },
+          ]}
+        />
       )}
 
       {/* Filters */}
       {!loading && (
-        <div className="bg-white rounded-lg shadow-sm p-4 flex flex-col md:flex-row gap-4">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <input
@@ -952,8 +960,8 @@ export default function Quotations() {
       {/* List */}
       {!loading && (
         filteredQuotations.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-            <ClipboardList size={48} className="mx-auto text-gray-400 mb-4" />
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-12 text-center">
+            <span className="empty-tile mb-4"><ClipboardList size={26} aria-hidden /></span>
             <p className="text-gray-600 mb-4">
               {searchTerm || filterStatus !== 'all' ? 'Sin resultados' : 'No hay cotizaciones registradas'}
             </p>
@@ -964,10 +972,10 @@ export default function Quotations() {
             )}
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50/70 border-b border-gray-200/80">
                   <tr>
                     {['Cotización', 'Cliente', 'Fecha', 'Válida hasta', 'Items', 'Total', 'Estado', 'Acciones'].map(h => (
                       <th key={h} className="text-left p-4 text-sm font-semibold text-gray-600">{h}</th>
@@ -978,7 +986,15 @@ export default function Quotations() {
                   {filteredQuotations.map(quotation => (
                     <motion.tr key={quotation.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                       className="hover:bg-gray-50">
-                      <td className="p-4 font-mono text-sm text-gray-600">{quotation.quotationNumber}</td>
+                      <td className="p-4 font-mono text-sm text-gray-600">
+                        {quotation.quotationNumber}
+                        {(quotation.alternates?.length ?? 0) > 0 && (
+                          <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-violet-50 px-1.5 py-0.5 font-sans text-[11px] font-medium text-violet-700 ring-1 ring-inset ring-violet-200"
+                            title={`También cotizada por: ${quotation.alternates!.map(a => a.branch.companyName || a.branch.name).join(', ')}`}>
+                            <Building2 size={11} /> +{quotation.alternates!.length}
+                          </span>
+                        )}
+                      </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <div className="p-1.5 bg-gray-100 rounded-lg"><User size={14} className="text-gray-500" /></div>
@@ -1059,9 +1075,9 @@ export default function Quotations() {
 
       {/* DETAILS MODAL */}
       {showDetailsModal && selectedQuotation && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
 
             <div className="p-6 border-b flex items-center justify-between">
               <div>
@@ -1087,13 +1103,27 @@ export default function Quotations() {
                 </div>
               </div>
 
+              {selectedQuotation.sourceQuotation && (
+                <p className="rounded-lg bg-violet-50 px-4 py-3 text-sm text-violet-800">
+                  Cotización de otra sucursal, hecha a partir de la <strong>{selectedQuotation.sourceQuotation.quotationNumber}</strong>
+                  {selectedQuotation.sourceQuotation.branch && <> de {selectedQuotation.sourceQuotation.branch.companyName || selectedQuotation.sourceQuotation.branch.name}</>}.
+                </p>
+              )}
+              {(selectedQuotation.alternates?.length ?? 0) > 0 && (
+                <button type="button" onClick={() => setAlternateFor(selectedQuotation.id)}
+                  className="flex w-full items-center gap-2 rounded-lg bg-violet-50 px-4 py-3 text-left text-sm text-violet-800 transition-colors hover:bg-violet-100">
+                  <Building2 size={16} className="shrink-0" />
+                  <span>También cotizada por: <strong>{selectedQuotation.alternates!.map(a => `${a.branch.companyName || a.branch.name} (Q${Number(a.total).toFixed(2)})`).join(', ')}</strong></span>
+                </button>
+              )}
+
               <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50/70 border-b border-gray-200/80">
                   <tr>
-                    <th className="text-left p-3 font-medium text-gray-600">Descripción</th>
-                    <th className="text-right p-3 font-medium text-gray-600">Cant.</th>
-                    <th className="text-right p-3 font-medium text-gray-600">Precio Unit.</th>
-                    <th className="text-right p-3 font-medium text-gray-600">Total</th>
+                    <th className="text-left p-3 text-xs font-medium text-gray-500">Descripción</th>
+                    <th className="text-right p-3 text-xs font-medium text-gray-500">Cant.</th>
+                    <th className="text-right p-3 text-xs font-medium text-gray-500">Precio Unit.</th>
+                    <th className="text-right p-3 text-xs font-medium text-gray-500">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -1137,6 +1167,11 @@ export default function Quotations() {
               <button onClick={() => handleSendWhatsApp(selectedQuotation)} className="btn-outline btn-md flex items-center gap-2 text-green-700 border-green-300 hover:bg-green-50">
                 <MessageCircle size={16} /> Enviar por WhatsApp
               </button>
+              {canManage && !selectedQuotation.sourceQuotation && (
+                <button onClick={() => setAlternateFor(selectedQuotation.id)} className="btn-outline btn-md flex items-center gap-2 text-violet-700 border-violet-300 hover:bg-violet-50">
+                  <Building2 size={16} /> Otra sucursal
+                </button>
+              )}
               {canManage && selectedQuotation.status === 'DRAFT' && (
                 <>
                   <button onClick={() => handleCancel(selectedQuotation.id)}
@@ -1181,9 +1216,9 @@ export default function Quotations() {
 
       {/* DELETE CONFIRM */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-start gap-4">
               <div className="p-3 bg-red-100 rounded-full"><AlertCircle className="text-red-600" size={24} /></div>
               <div className="flex-1">
@@ -1203,6 +1238,19 @@ export default function Quotations() {
     {/* Print-only — a true sibling of the page (not nested inside it) so
         print:hidden on the page above fully collapses it for print instead
         of leaving its height reserved — same pattern as ThermalReceipt. */}
+    {alternateFor && (
+      <AlternateQuotes
+        sourceId={alternateFor}
+        onClose={() => setAlternateFor(null)}
+        onPrint={q => setPrintingQuotation(q)}
+        onChanged={() => {
+          fetchQuotations()
+          // keep the open detail in sync (its "también cotizada por" line)
+          const id = alternateFor
+          api.get<Quotation>(`/api/quotations/${id}`).then(q => setSelectedQuotation(prev => (prev?.id === id ? q : prev))).catch(() => {})
+        }}
+      />
+    )}
     {printingQuotation && <QuotationPrint data={buildQuotationPrintData(printingQuotation)} />}
     {exportingQuotation && <QuotationPrint data={buildQuotationPrintData(exportingQuotation)} variant="export" />}
     </>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Target, CheckCircle2, XCircle, MinusCircle } from 'lucide-react'
 import { api } from '../../lib/api'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
+import PageIcon from '../../components/common/PageIcon'
 
 interface GoalBreakdown {
   id: string
@@ -60,16 +61,16 @@ export default function GoalsComplianceReport() {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Target size={28} /> Cumplimiento de Metas
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+            <PageIcon icon={Target} color="cyan" /> Cumplimiento de Metas
           </h1>
           <p className="text-gray-600 text-sm mt-0.5">Metas de ventas de cada sucursal y qué tanto se cumplieron, mes a mes</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-wrap items-center gap-3">
         <ReportFilters value={filters} onChange={setFilters} showRegister={false} />
-        <select value={months} onChange={e => setMonths(Number(e.target.value))} className="input text-sm">
+        <select value={months} onChange={e => setMonths(Number(e.target.value))} className="input w-auto text-sm">
           <option value={3}>Últimos 3 meses</option>
           <option value={6}>Últimos 6 meses</option>
           <option value={12}>Últimos 12 meses</option>
@@ -78,7 +79,7 @@ export default function GoalsComplianceReport() {
       </div>
 
       {!loading && rows.length === 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-8 text-center text-gray-400 text-sm">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-8 text-center text-gray-400 text-sm">
           No hay sucursales para mostrar.
         </div>
       )}
@@ -87,7 +88,7 @@ export default function GoalsComplianceReport() {
         const branchRows = rows.filter(r => r.branchId === branchId)
         const branchName = branchRows[0]?.branchName ?? ''
         return (
-          <div key={branchId} className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div key={branchId} className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
             <div className="px-5 py-3 border-b"><h2 className="text-sm font-semibold text-gray-700">{branchName}</h2></div>
             <div className="divide-y">
               {branchRows.map(row => {

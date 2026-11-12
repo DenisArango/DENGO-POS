@@ -8,6 +8,8 @@ import { useAuthStore } from '../../store'
 import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
+import { History as PageHistory } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 export default function InventoryAdjustmentsReport() {
   const navigate = useNavigate()
@@ -39,16 +41,16 @@ export default function InventoryAdjustmentsReport() {
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Ajustes de Inventario</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageHistory} color="rose" />Ajustes de Inventario</h1>
           <p className="text-gray-600 text-sm mt-0.5">Movimientos manuales de stock registrados</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-wrap items-center gap-3">
         <Calendar size={16} className="text-gray-400" />
-        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input" />
+        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input w-auto" />
         <span className="text-gray-400">–</span>
-        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input" />
+        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input w-auto" />
         <ReportFilters value={filters} onChange={setFilters} showRegister={false} />
         {loading && <span className="text-sm text-gray-400">Cargando...</span>}
       </div>
@@ -59,26 +61,26 @@ export default function InventoryAdjustmentsReport() {
           { label: 'Ajustes positivos', value: String(positives.length), icon: TrendingUp, color: 'text-green-600 bg-green-100' },
           { label: 'Ajustes negativos', value: String(negatives.length), icon: TrendingDown, color: 'text-red-600 bg-red-100' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg ${s.color}`}><s.icon size={20} /></div>
-            <div><p className="text-xs text-gray-400">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
+            <div className={`stat-tile p-2.5 rounded-xl ${s.color}`}><s.icon size={20} /></div>
+            <div><p className="text-xs text-gray-500">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50/70 border-b border-gray-200/80">
               <tr>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Fecha y hora</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Producto</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Sucursal</th>
-                <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Antes</th>
-                <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Después</th>
-                <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Diferencia</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Usuario</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Motivo</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Fecha y hora</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Producto</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Sucursal</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Antes</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Después</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Diferencia</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Usuario</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Motivo</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

@@ -7,6 +7,9 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '../lib/api'
+import StatStrip from '../components/common/StatStrip'
+import { Users as PageUsers } from 'lucide-react'
+import PageIcon from '../components/common/PageIcon'
 
 interface Branch {
   id: string
@@ -199,7 +202,8 @@ export default function UsersManagement() {
     if (user.customRoleId) {
       return customRoles.find(r => r.id === user.customRoleId)?.name ?? 'Rol personalizado'
     }
-    return BASE_ROLES.find(r => r.id === user.role)?.name ?? user.role
+    // TEACHER users come from the teacher portal; they aren't a selectable base role here.
+    return BASE_ROLES.find(r => r.id === user.role)?.name ?? (user.role === 'TEACHER' ? 'Maestro/a (portal)' : user.role)
   }
 
   const filteredUsers = users.filter(user => {
@@ -221,7 +225,7 @@ export default function UsersManagement() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Gestión de Usuarios</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageUsers} color="blue" />Gestión de Usuarios</h1>
             <p className="text-gray-600 text-sm mt-1">
               Administrar usuarios y sus roles
             </p>
@@ -246,7 +250,7 @@ export default function UsersManagement() {
 
       {/* Filtros */}
       {!loading && (
-        <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -275,53 +279,28 @@ export default function UsersManagement() {
 
       {/* Estadísticas */}
       {!loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Total Usuarios</span>
-              <User className="text-blue-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-gray-800">{users.length}</p>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Activos</span>
-              <CheckCircle className="text-green-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-gray-800">{users.filter(u => u.isActive).length}</p>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Administradores</span>
-              <Shield className="text-purple-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-gray-800">{users.filter(u => u.role === 'ADMIN').length}</p>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Sucursales con usuarios</span>
-              <Building2 className="text-gray-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-gray-800">{new Set(users.map(u => u.branchId)).size}</p>
-          </motion.div>
-        </div>
+        <StatStrip
+          stats={[
+            { label: 'Total Usuarios', color: 'blue' as const, value: users.length, icon: User },
+            { label: 'Activos', color: 'emerald' as const, value: users.filter(u => u.isActive).length, icon: CheckCircle },
+            { label: 'Administradores', color: 'violet' as const, value: users.filter(u => u.role === 'ADMIN').length, icon: Shield },
+            { label: 'Sucursales con usuarios', color: 'teal' as const, value: new Set(users.map(u => u.branchId)).size, icon: Building2 },
+          ]}
+        />
       )}
 
       {/* Lista de usuarios */}
       {!loading && (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50/70 border-b border-gray-200/80">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Usuario</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Rol</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Sucursal</th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Estado</th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Acciones</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Usuario</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Rol</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Sucursal</th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Estado</th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -397,11 +376,11 @@ export default function UsersManagement() {
 
       {/* Modal de crear/editar usuario */}
       {(showCreateModal || showEditModal) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
           >
             <h2 className="text-xl font-bold text-gray-800 mb-4">
               {showCreateModal ? 'Crear Nuevo Usuario' : 'Editar Usuario'}

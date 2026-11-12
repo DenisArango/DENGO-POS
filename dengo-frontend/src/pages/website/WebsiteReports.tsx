@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Info } from 'lucide-react'
+import { Info, Ticket, Store, DollarSign, TrendingUp, Receipt, Timer, Repeat, UserRoundX, type LucideIcon } from 'lucide-react'
+import { STAT_TILE, type StatColor } from '../../components/common/StatStrip'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts'
 import { api } from '../../lib/api'
 import { money } from './types'
@@ -47,14 +48,14 @@ export default function WebsiteReports() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Kpi label="Cupones obtenidos" value={k?.issued} sub={k ? `${k.uniquePeople} personas · ${k.fromWeb} desde la página` : ''} />
-        <Kpi label="Canjeados en tienda" value={k?.redeemed} sub={k ? `${k.conversion}% de conversión · ${k.pending} pendientes` : ''} />
-        <Kpi label="Ventas con cupón" value={k ? money(k.revenue) : undefined} sub={k ? `${money(k.discount)} en descuentos` : ''} />
-        <Kpi label="Retorno por quetzal" value={k ? `Q${k.returnPerQ.toFixed(2)}` : undefined} sub="vendido por cada Q1 de descuento" tip="Ventas con cupón ÷ descuento entregado. Más alto = la oferta trae más venta de la que regala." />
-        <Kpi label="Ticket con cupón" value={k ? money(k.avgTicketCoupon) : undefined} sub={k ? `${lift >= 0 ? '+' : ''}${lift}% vs. ticket promedio (${money(k.avgTicketAll)})` : ''} />
-        <Kpi label="Tiempo hasta canjear" value={k ? (k.avgHoursToRedeem < 48 ? `${k.avgHoursToRedeem.toFixed(1)} h` : `${(k.avgHoursToRedeem / 24).toFixed(1)} días`) : undefined} sub="promedio desde que lo obtienen" />
-        <Kpi label="Clientes que repiten" value={k?.repeatPeople} sub="canjearon más de un cupón" />
-        <Kpi label="Sin canjear" value={k?.pending} sub="personas para darles seguimiento" tip="Exporta la lista en Cupones → Exportar y escríbeles por WhatsApp." />
+        <Kpi icon={Ticket} color="violet" label="Cupones obtenidos" value={k?.issued} sub={k ? `${k.uniquePeople} personas · ${k.fromWeb} desde la página` : ''} />
+        <Kpi icon={Store} color="emerald" label="Canjeados en tienda" value={k?.redeemed} sub={k ? `${k.conversion}% de conversión · ${k.pending} pendientes` : ''} />
+        <Kpi icon={DollarSign} color="blue" label="Ventas con cupón" value={k ? money(k.revenue) : undefined} sub={k ? `${money(k.discount)} en descuentos` : ''} />
+        <Kpi icon={TrendingUp} color="teal" label="Retorno por quetzal" value={k ? `Q${k.returnPerQ.toFixed(2)}` : undefined} sub="vendido por cada Q1 de descuento" tip="Ventas con cupón ÷ descuento entregado. Más alto = la oferta trae más venta de la que regala." />
+        <Kpi icon={Receipt} color="sky" label="Ticket con cupón" value={k ? money(k.avgTicketCoupon) : undefined} sub={k ? `${lift >= 0 ? '+' : ''}${lift}% vs. ticket promedio (${money(k.avgTicketAll)})` : ''} />
+        <Kpi icon={Timer} color="amber" label="Tiempo hasta canjear" value={k ? (k.avgHoursToRedeem < 48 ? `${k.avgHoursToRedeem.toFixed(1)} h` : `${(k.avgHoursToRedeem / 24).toFixed(1)} días`) : undefined} sub="promedio desde que lo obtienen" />
+        <Kpi icon={Repeat} color="pink" label="Clientes que repiten" value={k?.repeatPeople} sub="canjearon más de un cupón" />
+        <Kpi icon={UserRoundX} color="orange" label="Sin canjear" value={k?.pending} sub="personas para darles seguimiento" tip="Exporta la lista en Cupones → Exportar y escríbeles por WhatsApp." />
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -124,11 +125,16 @@ export default function WebsiteReports() {
   )
 }
 
-function Kpi({ label, value, sub, tip }: { label: string; value: number | string | undefined; sub?: string; tip?: string }) {
+function Kpi({ label, value, sub, tip, icon: Icon, color }: { label: string; value: number | string | undefined; sub?: string; tip?: string; icon: LucideIcon; color: StatColor }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <p className="text-xs font-medium text-gray-500 flex items-center gap-1">{label}{tip && <span title={tip}><Info size={12} className="text-gray-400" /></span>}</p>
-      {value === undefined ? <div className="h-7 w-20 bg-gray-100 rounded mt-1.5 animate-pulse" /> : <p className="text-2xl font-bold text-gray-900 tabular-nums mt-0.5">{value}</p>}
+    <div className="group bg-white rounded-xl border border-gray-200 p-4 shadow-sm transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-medium text-gray-500 flex items-center gap-1">{label}{tip && <span title={tip}><Info size={12} className="text-gray-400" /></span>}</p>
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ring-1 ring-inset transition-transform duration-300 motion-safe:group-hover:scale-110 ${STAT_TILE[color]}`}>
+          <Icon size={16} className="motion-safe:group-hover:animate-wiggle" aria-hidden />
+        </span>
+      </div>
+      {value === undefined ? <div className="h-7 w-20 bg-gray-100 rounded mt-1 animate-pulse" /> : <p className="text-2xl font-bold text-gray-900 tabular-nums -mt-1">{value}</p>}
       {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
     </div>
   )

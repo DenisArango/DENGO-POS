@@ -4,6 +4,7 @@ import { ArrowLeft, CreditCard, DollarSign, Building2, ArrowLeftRight, type Luci
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
+import PageIcon from '../../components/common/PageIcon'
 
 interface PaymentMethodSetting {
   method: string
@@ -71,8 +72,8 @@ export default function PaymentMethods() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <CreditCard size={28} />
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+              <PageIcon icon={CreditCard} color="teal" />
               Métodos de Pago
             </h1>
             <p className="text-gray-600 text-sm mt-1">
@@ -109,7 +110,7 @@ export default function PaymentMethods() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-white rounded-lg shadow-sm p-6"
+            className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6"
           >
             <div className="flex items-start gap-4">
               <div className={`p-3 rounded-lg ${

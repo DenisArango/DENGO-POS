@@ -10,6 +10,8 @@ import {
   UserCircle, Building2, Target, Globe
 } from 'lucide-react'
 import { api } from '../lib/api'
+import { Shield as PageShield } from 'lucide-react'
+import PageIcon from '../components/common/PageIcon'
 
 interface Role {
   id: string
@@ -228,7 +230,7 @@ export default function RolesPermissions() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Roles y Permisos</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageShield} color="violet" />Roles y Permisos</h1>
             <p className="text-gray-600 text-sm mt-1">
               Crea roles personalizados y define exactamente qué puede ver y hacer cada uno
             </p>
@@ -244,7 +246,7 @@ export default function RolesPermissions() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Lista de roles */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-sm p-4">
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
             <h3 className="font-semibold text-gray-800 mb-4">Roles del Sistema</h3>
             <div className="space-y-2">
               {roles.map((role) => (
@@ -282,7 +284,7 @@ export default function RolesPermissions() {
         {/* Detalles del rol */}
         <div className="lg:col-span-2">
           {selectedRole ? (
-            <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-primary-100 text-primary-700">
@@ -423,7 +425,7 @@ export default function RolesPermissions() {
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-12 text-center">
               <Shield size={48} className="text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500">Selecciona un rol para ver sus permisos</p>
             </div>
@@ -433,8 +435,8 @@ export default function RolesPermissions() {
 
       {/* Modal crear rol */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50">
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Nuevo Rol</h2>
             <form onSubmit={handleCreateRole} className="space-y-4">
               <div>

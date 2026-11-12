@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { Globe, BarChart3, Tag, Ticket, LayoutTemplate } from 'lucide-react'
 import { useAuthStore } from '../../store'
 import { userHasPermission } from '../../hooks/usePermissions'
+import PageIcon from '../../components/common/PageIcon'
 
 const WebsiteReports = lazy(() => import('./WebsiteReports'))
 const PromotionsList = lazy(() => import('./PromotionsList'))
@@ -33,7 +34,7 @@ export default function Website() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><Globe size={24} className="text-primary-600" /> Página web</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={Globe} color="sky" /> Página web</h1>
           <p className="text-sm text-gray-500">Ofertas con cupón, su rendimiento y el contenido de tu sitio.</p>
         </div>
       </div>
@@ -45,7 +46,7 @@ export default function Website() {
             <button key={t.id} role="tab" aria-selected={active} type="button"
               onClick={() => setParams(p => { const n = new URLSearchParams(p); n.set('tab', t.id); return n }, { replace: true })}
               className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${active ? 'text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
-              {active && <motion.span layoutId="website-tab" className="absolute inset-0 bg-white rounded-lg shadow-sm" transition={{ type: 'spring', duration: 0.35, bounce: 0.15 }} />}
+              {active && <motion.span layoutId="website-tab" className="absolute inset-0 bg-white rounded-xl border border-gray-200/80 shadow-sm" transition={{ type: 'spring', duration: 0.35, bounce: 0.15 }} />}
               <t.icon size={16} className="relative" />
               <span className="relative">{t.label}</span>
             </button>

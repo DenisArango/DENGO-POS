@@ -3,6 +3,7 @@ import { ArrowLeft, PackagePlus, TrendingUp, TrendingDown, Plus, Trash2, Pencil,
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
+import PageIcon from '../../components/common/PageIcon'
 
 interface Reason {
   id: string
@@ -45,7 +46,7 @@ function ReasonColumn({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
       <div className="flex items-center gap-2 mb-4">
         <div className={`p-2 rounded-lg ${colorClass}`}>
           <Icon size={18} />
@@ -147,8 +148,8 @@ export default function InventoryReasons() {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <PackagePlus size={28} />
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+            <PageIcon icon={PackagePlus} color="lime" />
             Motivos de Ajuste de Inventario
           </h1>
           <p className="text-gray-600 text-sm mt-1">

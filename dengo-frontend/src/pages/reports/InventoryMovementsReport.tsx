@@ -8,6 +8,8 @@ import { useAuthStore } from '../../store'
 import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
+import { ArrowUpDown as PageArrowUpDown } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 const TYPE_CONFIG: Record<string, { label: string; icon: any; color: string; bg: string }> = {
   IN:         { label: 'Entrada',    icon: ArrowUpRight,  color: 'text-green-600',  bg: 'bg-green-100 text-green-700' },
@@ -52,17 +54,17 @@ export default function InventoryMovementsReport() {
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Movimientos de Inventario</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageArrowUpDown} color="cyan" />Movimientos de Inventario</h1>
           <p className="text-gray-600 text-sm mt-0.5">Todas las entradas, salidas y ajustes de stock</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-wrap items-center gap-3">
         <Calendar size={16} className="text-gray-400" />
-        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input" />
+        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input w-auto" />
         <span className="text-gray-400">–</span>
-        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input" />
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="input">
+        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input w-auto" />
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="input w-auto">
           <option value="">Todos los tipos</option>
           {Object.entries(TYPE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
@@ -72,28 +74,31 @@ export default function InventoryMovementsReport() {
 
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
         {Object.entries(TYPE_CONFIG).map(([k, v]) => (
-          <div key={k} className="bg-white rounded-lg shadow-sm p-3 text-center">
-            <p className="text-xs text-gray-400">{v.label}</p>
+          <div key={k} className="group bg-white rounded-xl border border-gray-200/80 shadow-sm p-3 text-center transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5">
+            <span className={`mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-lg transition-transform duration-300 motion-safe:group-hover:scale-110 ${v.bg}`}>
+              <v.icon size={16} className="motion-safe:group-hover:animate-wiggle" aria-hidden />
+            </span>
+            <p className="text-xs text-gray-500">{v.label}</p>
             <p className="text-xl font-bold text-gray-800">{summary[k]?.count ?? 0}</p>
             <p className="text-xs text-gray-500">{(summary[k]?.units ?? 0).toFixed(0)} u.</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50/70 border-b border-gray-200/80">
               <tr>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Fecha</th>
-                <th className="text-center px-4 py-3 text-xs text-gray-500 font-medium">Tipo</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Producto</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Sucursal</th>
-                <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Cantidad</th>
-                <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Antes</th>
-                <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Después</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Usuario</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Motivo</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Fecha</th>
+                <th className="text-center px-4 py-3 text-xs font-medium text-gray-500">Tipo</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Producto</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Sucursal</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Cantidad</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Antes</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Después</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Usuario</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Motivo</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

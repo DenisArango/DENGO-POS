@@ -6,7 +6,8 @@ import { ArrowLeft, MessageSquare, Package, CalendarClock } from 'lucide-react'
 import PortalLayout from '../../components/layout/PortalLayout'
 import { api } from '../../lib/api'
 import type { PortalOrder } from '../../types'
-import { programLabel, programIcon, statusStyle, money, formatDate } from '../../lib/labels'
+import { programLabel, statusStyle, money, formatDate } from '../../lib/labels'
+import ProgramIcon from '../../lib/ProgramIcon'
 
 const TIMELINE = ['PENDING', 'APPROVED', 'QUOTED', 'INVOICED']
 const TIMELINE_LABELS: Record<string, string> = {
@@ -68,7 +69,7 @@ export default function OrderDetail() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="font-mono text-sm text-gray-500">{order.orderNumber}</p>
-              <h1 className="text-xl font-extrabold text-gray-900 mt-1">{programIcon(order.programType)} {programLabel(order.programType)}</h1>
+              <h1 className="text-xl font-bold tracking-tight text-gray-900 mt-1 flex items-center gap-2"><ProgramIcon type={order.programType} size={20} />{programLabel(order.programType)}</h1>
               <p className="text-sm text-gray-500 mt-1">{order.school?.name}</p>
               {order.orderGradeSummary && (
                 <p className="text-xs text-gray-500 mt-0.5">Grados: {order.orderGradeSummary}</p>

@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { TrendingUp, Download, Info } from 'lucide-react'
+import { TrendingUp, Download, Info, DollarSign, Receipt, Percent, ShoppingBag, Clock } from 'lucide-react'
+import StatStrip, { type StatColor, type StatTone } from '../../components/common/StatStrip'
 import { api } from '../../lib/api'
+import { TrendingUp as PageTrendingUp } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 const PROGRAM_LABELS: Record<string, string> = {
   FOOD_PACKAGE: 'Alimentación Escolar',
@@ -68,12 +71,12 @@ export default function PortalMetrics() {
 
   const t = data?.totals
   const kpis = t ? [
-    { label: 'Venta', value: money(t.revenue), hint: 'Pedidos aprobados, cotizados y facturados' },
-    { label: 'Costo', value: money(t.cost) },
-    { label: 'Ganancia', value: money(t.profit), tone: t.profit < 0 ? 'text-red-600' : 'text-green-700' },
-    { label: 'Margen', value: t.marginPct != null ? `${t.marginPct.toFixed(1)}%` : '—' },
-    { label: 'Pedidos', value: String(t.orders), hint: `${t.students.toLocaleString('es-GT')} alumnos` },
-    { label: 'En revisión', value: money(t.pendingRevenue), hint: 'Aún no cuenta en la venta' },
+    { label: 'Venta', value: money(t.revenue), hint: 'Pedidos aprobados, cotizados y facturados', icon: DollarSign, color: 'blue' as const },
+    { label: 'Costo', value: money(t.cost), icon: Receipt, color: 'orange' as const },
+    { label: 'Ganancia', value: money(t.profit), valueTone: (t.profit < 0 ? 'bad' : 'good') as StatTone, icon: TrendingUp, color: (t.profit < 0 ? 'rose' : 'emerald') as StatColor },
+    { label: 'Margen', value: t.marginPct != null ? `${t.marginPct.toFixed(1)}%` : '—', icon: Percent, color: 'violet' as const },
+    { label: 'Pedidos', value: String(t.orders), hint: `${t.students.toLocaleString('es-GT')} alumnos`, icon: ShoppingBag, color: 'sky' as const },
+    { label: 'En revisión', value: money(t.pendingRevenue), hint: 'Aún no cuenta en la venta', icon: Clock, color: 'amber' as const },
   ] : []
 
   const exportCsv = () => {
@@ -98,7 +101,7 @@ export default function PortalMetrics() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Rentabilidad del Portal</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageTrendingUp} color="emerald" />Rentabilidad del Portal</h1>
           <p className="text-gray-600 mt-1">Venta, costo y ganancia de los pedidos escolares, aparte del resto de la tienda.</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -121,15 +124,7 @@ export default function PortalMetrics() {
         <div className="flex items-center justify-center h-48"><div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" /></div>
       ) : data && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-            {kpis.map(k => (
-              <div key={k.label} className="bg-white rounded-xl border border-gray-200 p-4">
-                <p className="text-xs text-gray-500">{k.label}</p>
-                <p className={`text-xl font-bold mt-1 ${k.tone ?? 'text-gray-900'}`}>{k.value}</p>
-                {k.hint && <p className="text-xs text-gray-400 mt-0.5">{k.hint}</p>}
-              </div>
-            ))}
-          </div>
+          <StatStrip stats={kpis} cols="grid-cols-2 lg:grid-cols-3" />
 
           <div className="bg-white rounded-xl border border-gray-200">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 p-2">
@@ -147,7 +142,7 @@ export default function PortalMetrics() {
             <div className="overflow-x-auto">
               {tab === 'byProduct' ? (
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 text-gray-600">
+                  <thead className="bg-gray-50/70 border-b border-gray-200/80 text-gray-500">
                     <tr>{['Producto', 'Cantidad', 'Venta', 'Costo', 'Ganancia', 'Margen'].map((h, i) => <th key={h} className={`px-4 py-3 font-semibold ${i ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -166,7 +161,7 @@ export default function PortalMetrics() {
                 </table>
               ) : (
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 text-gray-600">
+                  <thead className="bg-gray-50/70 border-b border-gray-200/80 text-gray-500">
                     <tr>{[TABS.find(x => x.id === tab)!.first, 'Pedidos', 'Alumnos', 'Venta', 'Costo', 'Ganancia', 'Margen', 'En revisión'].map((h, i) => <th key={h} className={`px-4 py-3 font-semibold whitespace-nowrap ${i ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">

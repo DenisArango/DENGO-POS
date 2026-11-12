@@ -9,6 +9,8 @@ import { useAuthStore } from '../../store'
 import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
+import { DollarSign as PageDollarSign } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 const PAYMENT_COLORS: Record<string, string> = { CASH: '#10B981', CARD: '#3B82F6', TRANSFER: '#8B5CF6', CREDIT: '#F59E0B', MIXED: '#6B7280' }
 const PAYMENT_LABELS: Record<string, string> = { CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia', CREDIT: 'Crédito', MIXED: 'Mixto' }
@@ -81,16 +83,16 @@ export default function DailySalesReport() {
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Ventas del Día</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageDollarSign} color="emerald" />Ventas del Día</h1>
           <p className="text-gray-600 text-sm mt-0.5">
             {format(new Date(selectedDate + 'T12:00:00'), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
           </p>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-wrap items-center gap-3">
         <Calendar className="text-gray-400" size={18} />
-        <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="input" />
+        <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="input w-auto" />
         <ReportFilters value={filters} onChange={setFilters} />
         {loading && <span className="text-sm text-gray-400">Cargando...</span>}
       </div>
@@ -104,15 +106,15 @@ export default function DailySalesReport() {
           { label: 'Costo total', value: `Q${totalCost.toFixed(2)}`, icon: DollarSign, color: 'text-gray-600 bg-gray-100' },
           { label: 'Ganancia total', value: `Q${totalProfit.toFixed(2)}`, icon: TrendingUp, color: 'text-emerald-600 bg-emerald-100' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg ${s.color}`}><s.icon size={20} /></div>
-            <div><p className="text-xs text-gray-400">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
+            <div className={`stat-tile p-2.5 rounded-xl ${s.color}`}><s.icon size={20} /></div>
+            <div><p className="text-xs text-gray-500">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-4">Ventas por hora</h2>
           {sales.length === 0
             ? <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Sin ventas en este día</div>
@@ -127,7 +129,7 @@ export default function DailySalesReport() {
           }
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-4">Métodos de pago</h2>
           {byMethod.length === 0
             ? <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Sin datos</div>
@@ -154,14 +156,14 @@ export default function DailySalesReport() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-4">Top 5 productos</h2>
           {topProducts.length === 0
             ? <p className="text-sm text-gray-400 text-center py-6">Sin datos</p>
-            : <table className="w-full text-sm"><thead className="bg-gray-50"><tr>
-                <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Producto</th>
-                <th className="text-right px-3 py-2 text-xs text-gray-500 font-medium">Cant.</th>
-                <th className="text-right px-3 py-2 text-xs text-gray-500 font-medium">Ingresos</th>
+            : <table className="w-full text-sm"><thead className="bg-gray-50/70 border-b border-gray-200/80"><tr>
+                <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Producto</th>
+                <th className="text-right px-3 py-2 text-xs font-medium text-gray-500">Cant.</th>
+                <th className="text-right px-3 py-2 text-xs font-medium text-gray-500">Ingresos</th>
               </tr></thead>
               <tbody className="divide-y divide-gray-100">
                 {topProducts.map(p => (
@@ -177,7 +179,7 @@ export default function DailySalesReport() {
         </div>
 
         {byCategory.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm p-5">
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5">
             <h2 className="text-sm font-semibold text-gray-700 mb-4">Ventas por categoría</h2>
             <div className="space-y-3">
               {byCategory.map(c => (

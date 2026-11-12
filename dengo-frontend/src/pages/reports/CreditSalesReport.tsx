@@ -10,6 +10,8 @@ import { api } from '../../lib/api'
 import { useAuthStore } from '../../store'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import { toast } from 'sonner'
+import { FileText as PageFileText } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 export default function CreditSalesReport() {
   const navigate = useNavigate()
@@ -168,7 +170,7 @@ export default function CreditSalesReport() {
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Ventas al Crédito</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageFileText} color="rose" />Ventas al Crédito</h1>
           <p className="text-gray-600 text-sm mt-0.5">Clientes con crédito activo y saldo pendiente</p>
         </div>
       </div>
@@ -180,14 +182,14 @@ export default function CreditSalesReport() {
           { label: 'Límite total', value: `Q${totalCreditLimit.toFixed(2)}`, icon: CreditCard, color: 'text-purple-600 bg-purple-100' },
           { label: 'Cerca del límite', value: String(overdueCount), icon: AlertTriangle, color: overdueCount > 0 ? 'text-red-600 bg-red-100' : 'text-green-600 bg-green-100' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg ${s.color}`}><s.icon size={20} /></div>
-            <div><p className="text-xs text-gray-400">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
+            <div className={`stat-tile p-2.5 rounded-xl ${s.color}`}><s.icon size={20} /></div>
+            <div><p className="text-xs text-gray-500">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex items-center gap-3">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
         <div className="flex rounded-lg border border-gray-200 overflow-hidden">
           <button onClick={() => setTab('customers')} className={`px-4 py-1.5 text-sm font-medium transition-colors ${tab === 'customers' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>Clientes</button>
           <button onClick={() => setTab('transactions')} className={`px-4 py-1.5 text-sm font-medium transition-colors ${tab === 'transactions' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>Transacciones</button>
@@ -200,17 +202,17 @@ export default function CreditSalesReport() {
       </div>
 
       {tab === 'customers' ? (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50/70 border-b border-gray-200/80">
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Cliente</th>
-                  <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Límite</th>
-                  <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Pendiente</th>
-                  <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Disponible</th>
-                  <th className="text-center px-4 py-3 text-xs text-gray-500 font-medium">Uso</th>
-                  <th className="text-center px-4 py-3 text-xs text-gray-500 font-medium">Estado</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Cliente</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Límite</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Pendiente</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Disponible</th>
+                  <th className="text-center px-4 py-3 text-xs font-medium text-gray-500">Uso</th>
+                  <th className="text-center px-4 py-3 text-xs font-medium text-gray-500">Estado</th>
                   <th className="w-20" />
                 </tr>
               </thead>
@@ -223,7 +225,7 @@ export default function CreditSalesReport() {
                         <tr key={c.id} className="hover:bg-gray-50">
                           <td className="px-4 py-2.5">
                             <p className="font-medium text-gray-800">{c.name}</p>
-                            <p className="text-xs text-gray-400">{c.phone ?? c.nit ?? '–'}</p>
+                            <p className="text-xs text-gray-500">{c.phone ?? c.nit ?? '–'}</p>
                           </td>
                           <td className="px-4 py-2.5 text-right text-gray-700">{c.capped ? `Q${c.creditLimit.toFixed(2)}` : <span className="text-gray-400">{c.creditEnabled ? 'Sin límite' : 'Sin crédito'}</span>}</td>
                           <td className="px-4 py-2.5 text-right font-semibold text-orange-600">Q{c.balance.toFixed(2)}</td>
@@ -260,18 +262,18 @@ export default function CreditSalesReport() {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50/70 border-b border-gray-200/80">
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Factura</th>
-                  <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Fecha</th>
-                  <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Cliente</th>
-                  <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Total</th>
-                  <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Abonado</th>
-                  <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Pendiente</th>
-                  <th className="text-center px-4 py-3 text-xs text-gray-500 font-medium">Estado</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Factura</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Fecha</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Cliente</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Total</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Abonado</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Pendiente</th>
+                  <th className="text-center px-4 py-3 text-xs font-medium text-gray-500">Estado</th>
                   <th className="w-20" />
                 </tr>
               </thead>
@@ -318,13 +320,13 @@ export default function CreditSalesReport() {
 
       {/* Payment modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b">
               <div>
                 <h2 className="font-semibold text-gray-800">Registrar Abono</h2>
                 {paymentCustomer && (
-                  <p className="text-xs text-gray-400">{paymentCustomer.name}</p>
+                  <p className="text-xs text-gray-500">{paymentCustomer.name}</p>
                 )}
               </div>
               <button onClick={() => setShowPaymentModal(false)}><X size={18} /></button>
@@ -402,7 +404,7 @@ export default function CreditSalesReport() {
 
       {/* Sale detail / payment history */}
       {showDetail && detailSale && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowDetail(false)}>
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4" onClick={() => setShowDetail(false)}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-800">Abonos — {detailSale.invoiceNumber}</h3>
@@ -443,8 +445,8 @@ function CreditPaymentsLoader({ saleId, total }: { saleId: string; total: number
             <div key={i} className="flex justify-between text-sm">
               <div>
                 <p className="text-gray-700">{p.paymentMethod === 'CASH' ? 'Efectivo' : 'Transferencia'}</p>
-                {p.transferDocumentNumber && <p className="text-xs text-gray-400">Ref: {p.transferDocumentNumber}</p>}
-                <p className="text-xs text-gray-400">{format(new Date(p.createdAt), "dd/MM/yyyy HH:mm", { locale: es })} — {p.paidBy?.name}</p>
+                {p.transferDocumentNumber && <p className="text-xs text-gray-500">Ref: {p.transferDocumentNumber}</p>}
+                <p className="text-xs text-gray-500">{format(new Date(p.createdAt), "dd/MM/yyyy HH:mm", { locale: es })} — {p.paidBy?.name}</p>
               </div>
               <span className="font-bold text-green-600">Q{Number(p.amount).toFixed(2)}</span>
             </div>

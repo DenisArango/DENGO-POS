@@ -5,3 +5,6 @@
 // shown in the app (Login screen footer) actually changes, letting you
 // confirm at a glance whether a browser is still on the old cached build.
 declare const __APP_VERSION__: string
+
+// Self-hosted Inter (side-effect CSS import in main.tsx).
+declare module '@fontsource-variable/inter'

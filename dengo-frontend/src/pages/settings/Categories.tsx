@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../store'
 import { usePermissions } from '../../hooks/usePermissions'
+import PageIcon from '../../components/common/PageIcon'
 
 interface Category {
   id: string
@@ -122,11 +123,11 @@ export default function Categories() {
           <button onClick={() => navigate('/settings')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Tag size={28} /> Categorías
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+            <PageIcon icon={Tag} color="amber" /> Categorías
           </h1>
         </div>
-        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-8 text-center">
           <Lock className="mx-auto text-gray-400 mb-3" size={32} />
           <p className="text-gray-600">No tienes permiso para gestionar categorías.</p>
         </div>
@@ -141,8 +142,8 @@ export default function Categories() {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Tag size={28} /> Categorías
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+            <PageIcon icon={Tag} color="amber" /> Categorías
           </h1>
           <p className="text-gray-600 text-sm mt-1">
             Categorías de productos — renómbralas, fusiona duplicadas (ej. una mal escrita) en una sola, o elimínalas.
@@ -150,7 +151,7 @@ export default function Categories() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         {isAdmin && (
           <div className="flex gap-2 mb-5 pb-5 border-b border-gray-100">
             <input

@@ -8,8 +8,10 @@ import {
 import { toast } from 'sonner'
 import ProductModal from '../components/products/ProductModal'
 import { api } from '../lib/api'
+import StatStrip from '../components/common/StatStrip'
 import { usePermissions } from '../hooks/usePermissions'
 import { useAuthStore } from '../store'
+import PageIcon from '../components/common/PageIcon'
 
 interface Category {
   id: string
@@ -387,8 +389,8 @@ export default function Products() {
     <div className={`space-y-6 transition-opacity ${loading ? 'opacity-60' : ''}`}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <Package size={28} />
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+          <PageIcon icon={Package} color="blue" />
           Gestión de Productos
         </h1>
         {canCreate && (
@@ -403,47 +405,22 @@ export default function Products() {
       </div>
 
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Total Productos</span>
-            <Package className="text-primary-600" size={20} />
-          </div>
-          <p className="text-2xl font-bold text-gray-800">{stats.total}</p>
-        </div>
-        {canViewMoneyTotals && (
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm" title="Stock × precio de venta. El costo del inventario está en Inventario → Costo Total.">Valor de Venta Inventario</span>
-              <DollarSign className="text-green-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-gray-800">
-              Q{stats.totalValue.toFixed(2)}
-            </p>
-          </div>
-        )}
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Stock Bajo</span>
-            <AlertTriangle className="text-yellow-600" size={20} />
-          </div>
-          <p className="text-2xl font-bold text-gray-800">
-            {stats.lowStock}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm">Sin Stock</span>
-            <Archive className="text-red-600" size={20} />
-          </div>
-          <p className="text-2xl font-bold text-gray-800">
-            {stats.outOfStock}
-          </p>
-        </div>
-      </div>
+      <StatStrip
+        stats={[
+          { label: 'Total Productos', color: 'blue' as const, value: stats.total, icon: Package },
+          ...(canViewMoneyTotals ? [{
+            label: 'Valor de Venta Inventario', color: 'emerald' as const,
+            value: `Q${stats.totalValue.toFixed(2)}`,
+            icon: DollarSign,
+            hint: 'Stock × precio de venta',
+          }] : []),
+          { label: 'Stock Bajo', color: 'amber' as const, value: stats.lowStock, icon: AlertTriangle, valueTone: stats.lowStock > 0 ? 'warn' as const : 'neutral' as const },
+          { label: 'Sin Stock', color: 'rose' as const, value: stats.outOfStock, icon: Archive, valueTone: stats.outOfStock > 0 ? 'bad' as const : 'neutral' as const },
+        ]}
+      />
 
       {/* Controles */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Búsqueda */}
           <div className="flex-1 relative">
@@ -535,7 +512,7 @@ export default function Products() {
 
       {/* Barra de acciones masivas: reasignar categoría, eliminar o reactivar varios a la vez */}
       {canSelect && selectedIds.size > 0 && (
-        <div className="sticky top-2 z-20 bg-primary-50 border border-primary-200 rounded-lg p-3 flex flex-wrap items-center gap-3 shadow-sm">
+        <div className="sticky top-[4.5rem] z-10 bg-primary-50 border border-primary-200 rounded-lg p-3 flex flex-wrap items-center gap-3 shadow-sm">
           <span className="text-sm font-medium text-primary-800">{selectedIds.size} producto(s) seleccionado(s)</span>
           {showInactive ? (
             <>
@@ -592,7 +569,7 @@ export default function Products() {
       )}
 
       {/* Lista de productos */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         {viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {products.map((product) => (
@@ -673,13 +650,13 @@ export default function Products() {
                         onChange={toggleSelectAll} className="rounded border-gray-300" />
                     </th>
                   )}
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Producto</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">SKU</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Categoría</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-700">Precio Base</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-700">Stock</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Variaciones</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Acciones</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Producto</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">SKU</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Categoría</th>
+                  <th className="text-right py-3 px-4 text-xs font-medium text-gray-500">Precio Base</th>
+                  <th className="text-right py-3 px-4 text-xs font-medium text-gray-500">Stock</th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Variaciones</th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Acciones</th>
                 </tr>
               </thead>
               <tbody>

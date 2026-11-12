@@ -4,6 +4,8 @@ import { ArrowLeft, FileText, PlugZap, CheckCircle2, AlertTriangle, Server } fro
 import { toast } from 'sonner'
 import { api } from '../../lib/api'
 import { useLicenseStore } from '../../store'
+import PageIcon from '../../components/common/PageIcon'
+import { Clock, Ban, FileMinus, type LucideIcon } from 'lucide-react'
 
 // Facturación electrónica (FEL): read-only view of how this server is wired to
 // the certifier (.env: FEL_PROVIDER, FELPLEX_*), per-branch establishments, and
@@ -55,7 +57,7 @@ export default function FelSettings() {
       <div className="flex items-center gap-3">
         <button onClick={() => navigate('/settings')} className="p-2 hover:bg-gray-100 rounded-lg"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><FileText size={22} /> Facturación electrónica (FEL)</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={FileText} color="violet" /> Facturación electrónica (FEL)</h1>
           <p className="text-sm text-gray-500">Certificación de facturas ante la SAT a través del certificador.</p>
         </div>
       </div>
@@ -67,7 +69,7 @@ export default function FelSettings() {
       )}
 
       {c && (
-        <div className="bg-white rounded-lg shadow-sm p-5 grid sm:grid-cols-2 gap-4 text-sm">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5 grid sm:grid-cols-2 gap-4 text-sm">
           <Item label="Certificador" value={PROVIDER[c.provider] ?? c.provider} />
           <Item label="Ambiente" value={ENV[c.environment] ?? c.environment} warn={c.provider !== 'none' && c.environment !== 'production'} />
           <Item label="Tipo de documento" value={DOC[c.docType] ?? c.docType} />
@@ -82,15 +84,15 @@ export default function FelSettings() {
 
       {status && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Count label="Facturas pendientes" n={status.counts.pending} />
-          <Count label="Facturas con error" n={status.counts.failed} bad />
-          <Count label="Anulaciones con error" n={status.counts.voidFailed} bad />
-          <Count label="Notas de crédito por certificar" n={status.counts.creditNotesPending} bad />
+          <Count label="Facturas pendientes" n={status.counts.pending} icon={Clock} tile="bg-amber-50 text-amber-600" />
+          <Count label="Facturas con error" n={status.counts.failed} bad icon={AlertTriangle} tile="bg-rose-50 text-rose-600" />
+          <Count label="Anulaciones con error" n={status.counts.voidFailed} bad icon={Ban} tile="bg-orange-50 text-orange-600" />
+          <Count label="Notas de crédito por certificar" n={status.counts.creditNotesPending} bad icon={FileMinus} tile="bg-violet-50 text-violet-600" />
         </div>
       )}
 
       {status && (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-700">Establecimientos (sucursales)</h2>
             <button onClick={runTest} disabled={testing || c?.provider === 'none'} className="btn-primary btn-sm flex items-center gap-1.5">
@@ -133,11 +135,18 @@ function Item({ label, value, warn }: { label: string; value: string; warn?: boo
   )
 }
 
-function Count({ label, n, bad }: { label: string; n: number; bad?: boolean }) {
+function Count({ label, n, bad, icon: Icon, tile }: { label: string; n: number; bad?: boolean; icon: LucideIcon; tile: string }) {
+  // All clear shows a green check; anything pending keeps its own colour.
+  const ok = n === 0
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4">
-      <p className="text-xs text-gray-400">{label}</p>
-      <p className={`text-2xl font-bold ${n > 0 && bad ? 'text-red-600' : 'text-gray-800'}`}>{n}</p>
+    <div className="group bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-start justify-between gap-3 transition-[transform,box-shadow] duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5">
+      <div className="min-w-0">
+        <p className="text-xs text-gray-500">{label}</p>
+        <p className={`text-2xl font-bold ${n > 0 && bad ? 'text-red-600' : 'text-gray-800'}`}>{n}</p>
+      </div>
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-transform duration-300 motion-safe:group-hover:scale-110 ${ok ? 'bg-emerald-50 text-emerald-600' : tile}`}>
+        {ok ? <CheckCircle2 size={18} aria-hidden /> : <Icon size={18} className="motion-safe:group-hover:animate-wiggle" aria-hidden />}
+      </span>
     </div>
   )
 }

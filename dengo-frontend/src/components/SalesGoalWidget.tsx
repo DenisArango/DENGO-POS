@@ -50,7 +50,7 @@ export default function SalesGoalWidget({ branchId, compact = false }: { branchI
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+    <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm text-gray-500 flex items-center gap-1.5">
           <Target size={15} className="text-primary-600" /> Meta del Mes

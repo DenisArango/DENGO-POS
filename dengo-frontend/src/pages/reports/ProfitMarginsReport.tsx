@@ -9,6 +9,8 @@ import { useStore } from '../../contexts/StoreContext'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
 import { SortableTh, sortRows, type SortState } from '../../components/common/SortableTh'
+import { BarChart3 as PageBarChart3 } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 interface ProductMargin {
   rank: number
@@ -80,16 +82,16 @@ export default function ProfitMarginsReport() {
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Márgenes de Ganancia</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageBarChart3} color="yellow" />Márgenes de Ganancia</h1>
           <p className="text-gray-600 text-sm mt-0.5">Rentabilidad por producto en el período</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-wrap items-center gap-3">
         <Calendar size={16} className="text-gray-400" />
-        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input" />
+        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input w-auto" />
         <span className="text-gray-400">–</span>
-        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input" />
+        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input w-auto" />
         <div className="flex items-center gap-2">
           <Percent size={14} className="text-gray-400" />
           <input type="number" value={minMargin} onChange={e => setMinMargin(e.target.value)} placeholder="Margen mín. %" className="input w-32" min="0" max="100" />
@@ -104,15 +106,15 @@ export default function ProfitMarginsReport() {
           { label: 'Ganancia neta', value: `Q${totalProfit.toFixed(2)}`, icon: TrendingUp, color: 'text-blue-600 bg-blue-100' },
           { label: 'Margen promedio', value: `${avgMargin.toFixed(1)}%`, icon: Percent, color: avgMargin >= 30 ? 'text-green-600 bg-green-100' : avgMargin >= 15 ? 'text-yellow-600 bg-yellow-100' : 'text-red-600 bg-red-100' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg ${s.color}`}><s.icon size={20} /></div>
-            <div><p className="text-xs text-gray-400">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
+            <div className={`stat-tile p-2.5 rounded-xl ${s.color}`}><s.icon size={20} /></div>
+            <div><p className="text-xs text-gray-500">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
           </div>
         ))}
       </div>
 
       {chartData.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-4">Top 10 — Margen por producto (%)</h2>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
@@ -129,11 +131,11 @@ export default function ProfitMarginsReport() {
       )}
 
       {catData.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-3">Por categoría</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50/70 border-b border-gray-200/80">
                 <tr>
                   {['Categoría', 'Productos', 'Ingresos', 'Ganancia', 'Margen'].map(h => (
                     <th key={h} className={`px-4 py-2 text-xs text-gray-500 font-medium ${h === 'Categoría' ? 'text-left' : 'text-right'}`}>{h}</th>
@@ -158,13 +160,13 @@ export default function ProfitMarginsReport() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b"><h2 className="text-sm font-semibold text-gray-700">Detalle por producto</h2></div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50/70 border-b border-gray-200/80">
               <tr>
-                <th className="text-center px-3 py-2 text-xs text-gray-500 font-medium w-10">#</th>
+                <th className="text-center px-3 py-2 text-xs font-medium text-gray-500 w-10">#</th>
                 <SortableTh label="Producto" sortKey="name" sort={sort} onSort={setSort} className="!py-2 text-xs !text-gray-500" />
                 <SortableTh label="Categoría" sortKey="category" sort={sort} onSort={setSort} className="!py-2 text-xs !text-gray-500" />
                 <SortableTh label="Unidades" sortKey="quantitySold" sort={sort} onSort={setSort} align="right" firstDir="desc" className="!py-2 text-xs !text-gray-500" />

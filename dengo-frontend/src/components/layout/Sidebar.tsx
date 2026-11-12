@@ -1,99 +1,34 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import {
-  TrendingUp,
-  ShoppingCart,
-  Package,
-  Warehouse,
-  FileBarChart,
-  DollarSign,
-  ArrowLeftRight,
-  Settings,
-  Users,
-  Menu,
-  X,
-  LogOut,
-  Truck,
-  LayoutDashboard,
-  PackageCheck,
-  UserCircle,
-  ClipboardList,
-  Inbox,
-  GraduationCap,
-  School,
-  BookOpen,
-  Globe,
-  Layers,
-  BarChart2,
-  MessageSquare,
-} from 'lucide-react'
-import { useAppStore, useAuthStore, useLicenseStore } from '../../store'
+import { Menu, X, LogOut } from 'lucide-react'
+import { useAppStore, useAuthStore } from '../../store'
 import { usePendingPortalOrders } from '../../hooks/usePendingPortalOrders'
 import { useUnreadMessages } from '../../hooks/useUnreadMessages'
 import { useUnreadPortalMessages } from '../../hooks/useUnreadPortalMessages'
-import { userHasPermission } from '../../hooks/usePermissions'
 import { forgetDeviceOnLogout } from '../../lib/push'
-
-// `roles` keeps the legacy base-role gate (still how the 4 built-in roles
-// see the menu they always saw). `permissions` is an any-of fallback so a
-// custom role that was only granted fine-grained permissions — never one of
-// the 4 base roles — still gets a link to the pages it can actually use,
-// instead of only reaching them by typing the URL directly.
-const menuItems = [
-  { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['ADMIN', 'OPERATOR', 'AUDITOR', 'INVENTORY_CONTROL'] },
-  { path: '/pos', icon: ShoppingCart, label: 'Punto de Venta', roles: ['ADMIN', 'OPERATOR'], permissions: ['sales.create'] },
-  { path: '/products', icon: Package, label: 'Productos', roles: ['ADMIN', 'INVENTORY_CONTROL'], permissions: ['inventory.view'] },
-  { path: '/inventory', icon: Warehouse, label: 'Inventario', roles: ['ADMIN', 'INVENTORY_CONTROL', 'AUDITOR'], permissions: ['inventory.view'] },
-  { path: '/purchases', icon: PackageCheck, label: 'Compras', roles: ['ADMIN', 'INVENTORY_CONTROL'], permissions: ['purchases.receive'] },
-  { path: '/suppliers', icon: Truck, label: 'Proveedores', roles: ['ADMIN', 'INVENTORY_CONTROL'], permissions: ['suppliers.view'] },
-  { path: '/reports', icon: FileBarChart, label: 'Reportes', roles: ['ADMIN', 'AUDITOR'], permissions: ['reports.sales', 'reports.inventory', 'reports.financial', 'reports.audit'] },
-  { path: '/cash-register', icon: DollarSign, label: 'Caja', roles: ['ADMIN', 'OPERATOR', 'AUDITOR'], permissions: ['cash.open', 'cash.close', 'cash.movements'] },
-  { path: '/transfers', icon: ArrowLeftRight, label: 'Traslados', roles: ['ADMIN', 'INVENTORY_CONTROL'], permissions: ['transfers.view'] },
-  { path: '/customers', icon: UserCircle, label: 'Clientes', roles: ['ADMIN', 'OPERATOR'], permissions: ['customers.view'] },
-  { path: '/quotations', icon: ClipboardList, label: 'Cotizaciones', roles: ['ADMIN', 'OPERATOR'], permissions: ['quotations.view'] },
-  { path: '/website', icon: Globe, label: 'Página web', roles: ['ADMIN'], permissions: ['website.manage', 'promotions.manage', 'promotions.reports'], license: 'pageEnabled' },
-  { path: '/messages', icon: MessageSquare, label: 'Mensajes', roles: ['ADMIN', 'OPERATOR', 'AUDITOR', 'INVENTORY_CONTROL'], badge: 'unreadMessages' },
-  { path: '/settings/users', icon: Users, label: 'Usuarios', roles: ['ADMIN'], permissions: ['settings.users'] },
-  { path: '/settings', icon: Settings, label: 'Configuración', roles: ['ADMIN'], permissions: ['settings.users', 'settings.roles', 'settings.stores', 'settings.system', 'settings.cashRegisters', 'goals.manage'] },
-]
-
-const portalItems = [
-  { path: '/portal/orders', icon: Inbox, label: 'Pedidos Portal', roles: ['ADMIN'], badge: 'pendingPortalOrders' },
-  { path: '/portal/messages', icon: MessageSquare, label: 'Mensajes Maestros', roles: ['ADMIN'], badge: 'unreadPortalMessages' },
-  { path: '/portal/teachers', icon: GraduationCap, label: 'Maestros', roles: ['ADMIN'] },
-  { path: '/portal/schools', icon: School, label: 'Escuelas', roles: ['ADMIN'] },
-  { path: '/portal/programs', icon: BookOpen, label: 'Programas', roles: ['ADMIN'] },
-  { path: '/portal/program-options', icon: Layers, label: 'Paquetes', roles: ['ADMIN'] },
-  { path: '/portal/consolidated', icon: BarChart2, label: 'Consolidado', roles: ['ADMIN'] },
-  { path: '/portal/metrics', icon: TrendingUp, label: 'Rentabilidad', roles: ['ADMIN'] },
-  { path: '/portal/config', icon: Globe, label: 'Config. Portal', roles: ['ADMIN'] },
-]
+import DengoLogo from '../common/DengoLogo'
+import { roleLabel } from '../../lib/roles'
+import { useNavItems, type NavItem } from './navItems'
 
 export default function Sidebar({ offlineRestricted = false, allowedPaths = [] }: { offlineRestricted?: boolean; allowedPaths?: string[] }) {
   const { isSidebarCollapsed, toggleSidebar } = useAppStore()
   const { user, logout } = useAuthStore()
   // Unlink this device's notifications first (needs the token), then log out.
   const handleLogout = () => { void forgetDeviceOnLogout().finally(logout) }
-  const maestrosEnabled = useLicenseStore(s => s.maestrosEnabled)
-  const pageEnabled = useLicenseStore(s => s.pageEnabled)
+  const { main, portal } = useNavItems()
+  const { pathname } = useLocation()
+  // /settings/users has its own link; don't light up «Configuración» with it.
+  const activeFor = (item: NavItem, isActive: boolean) =>
+    isActive && !(item.path === '/settings' && pathname.startsWith('/settings/users'))
   const pendingPortalOrders = usePendingPortalOrders()
   const unreadMessages = useUnreadMessages()
   const unreadPortalMessages = useUnreadPortalMessages()
 
-  const filteredMenuItems = menuItems.filter(item =>
-    ((item as { license?: string }).license !== 'pageEnabled' || pageEnabled) &&
-    user && (
-      item.roles.includes(user.role) ||
-      (item as { permissions?: string[] }).permissions?.some(p => userHasPermission(user, p))
-    )
-  )
-  // Nothing to manage here if this instance's teacher-portal module is
-  // switched off by the vendor (see LicenseConfig) — a teacher can't even log
-  // in to place an order, so the admin config screens behind these links
-  // would have nothing real to do either.
-  const filteredPortalItems = maestrosEnabled
-    ? portalItems.filter(item => user && item.roles.includes(user.role))
-    : []
+  const badgeCount = (item: NavItem) =>
+    item.badge === 'pendingPortalOrders' ? pendingPortalOrders
+    : item.badge === 'unreadMessages' ? unreadMessages
+    : item.badge === 'unreadPortalMessages' ? unreadPortalMessages
+    : 0
 
   // While offline, grey out and disable every link that isn't part of the
   // selling workflow (see MainLayout's OFFLINE_ALLOWED_PATHS) instead of
@@ -102,172 +37,138 @@ export default function Sidebar({ offlineRestricted = false, allowedPaths = [] }
   // avoids the jarring click-then-snap-back.
   const isDisabled = (path: string) => offlineRestricted && !allowedPaths.some(p => path.startsWith(p))
 
+  const renderItem = (item: NavItem) => {
+    const count = badgeCount(item)
+    const disabled = isDisabled(item.path)
+    return (
+      <NavLink
+        key={item.path}
+        to={item.path}
+        onClick={e => disabled && e.preventDefault()}
+        title={disabled ? 'No disponible sin conexión' : isSidebarCollapsed ? item.label : undefined}
+        aria-disabled={disabled || undefined}
+        className={({ isActive: routeActive }) => {
+          const isActive = activeFor(item, routeActive)
+          return `group relative flex h-11 items-center rounded-lg px-3 text-[15px] font-medium transition-colors duration-150 ${
+            isSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''
+          } ${
+            disabled
+              ? 'cursor-not-allowed text-gray-300'
+              : isActive
+              ? 'bg-gradient-to-r from-primary-50 to-violet-50/70 text-primary-700'
+              : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
+          }`
+        }}
+      >
+        {({ isActive: routeActive }) => { const isActive = activeFor(item, routeActive); return (
+          <>
+            {isActive && !disabled && (
+              <span aria-hidden className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b from-primary-500 to-violet-500" />
+            )}
+            <span className="relative flex-shrink-0">
+              <item.icon
+                size={20}
+                strokeWidth={isActive ? 2.1 : 1.8}
+                className={disabled ? '' : `transition-[transform,color] duration-200 motion-safe:group-hover:scale-110 ${isActive ? 'text-primary-600' : 'text-gray-400 group-hover:text-primary-500'}`}
+              />
+              {count > 0 && isSidebarCollapsed && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white ring-2 ring-white">
+                  {count > 9 ? '9+' : count}
+                </span>
+              )}
+            </span>
+            <motion.span
+              animate={{
+                opacity: isSidebarCollapsed ? 0 : 1,
+                width: isSidebarCollapsed ? 0 : 'auto',
+              }}
+              transition={{ duration: 0.2 }}
+              className="ml-3 flex-1 overflow-hidden whitespace-nowrap"
+            >
+              {item.label}
+            </motion.span>
+            {count > 0 && !isSidebarCollapsed && (
+              <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-semibold text-white">
+                {count > 99 ? '99+' : count}
+              </span>
+            )}
+          </>
+        )}}
+      </NavLink>
+    )
+  }
+
+  const initial = user?.name?.charAt(0).toUpperCase() ?? '?'
+
   return (
-    <aside className={`fixed left-0 top-0 h-full bg-white border-r border-gray-200 transition-all duration-300 z-40 ${
+    <aside className={`fixed left-0 top-0 z-40 flex h-full flex-col border-r border-gray-200 bg-white transition-all duration-300 ${
       isSidebarCollapsed
         ? 'w-64 lg:w-16 -translate-x-full lg:translate-x-0'
         : 'w-64 translate-x-0'
     }`}>
       {/* Logo y Toggle */}
-      <div className={`h-16 flex items-center border-b border-gray-200 transition-all duration-300 ${
+      <div className={`flex h-16 flex-shrink-0 items-center border-b border-gray-200 transition-all duration-300 ${
         isSidebarCollapsed ? 'justify-center' : 'justify-between px-4'
       }`}>
         {!isSidebarCollapsed && (
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-lg flex-shrink-0" />
-            <span className="ml-3 font-bold text-lg text-gray-800 whitespace-nowrap">DENGO POS</span>
-          </div>
+          <DengoLogo className="pl-1" />
         )}
         <button
           onClick={toggleSidebar}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+          aria-label={isSidebarCollapsed ? 'Expandir menú' : 'Contraer menú'}
+          className="flex-shrink-0 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
         >
           {isSidebarCollapsed ? <Menu size={20} /> : <X size={20} />}
         </button>
       </div>
 
-      {/* Menu Items */}
-      <nav className="mt-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 9rem)' }}>
-        {filteredMenuItems.map((item) => {
-          const mBadgeCount = (item as any).badge === 'unreadMessages' ? unreadMessages : 0
-          const mShowBadge = mBadgeCount > 0
-          const disabled = isDisabled(item.path)
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              onClick={e => disabled && e.preventDefault()}
-              title={disabled ? 'No disponible sin conexión' : undefined}
-              className={({ isActive }) =>
-                `relative flex items-center px-4 py-3 mx-2 mb-1 rounded-lg transition-all ${
-                  disabled
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : isActive
-                    ? 'bg-primary-50 text-primary-600 border-l-4 border-primary-600'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`
-              }
-            >
-              <span className="relative flex-shrink-0">
-                <item.icon size={20} />
-                {mShowBadge && isSidebarCollapsed && (
-                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                    {mBadgeCount > 9 ? '9+' : mBadgeCount}
-                  </span>
-                )}
-              </span>
-              <motion.span
-                animate={{
-                  opacity: isSidebarCollapsed ? 0 : 1,
-                  width: isSidebarCollapsed ? 0 : 'auto',
-                }}
-                transition={{ duration: 0.2 }}
-                className="ml-3 whitespace-nowrap overflow-hidden flex-1"
-              >
-                {item.label}
-              </motion.span>
-              {mShowBadge && !isSidebarCollapsed && (
-                <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                  {mBadgeCount}
-                </span>
-              )}
-            </NavLink>
-          )
-        })}
+      {/* Menu Items — grows and scrolls on its own, so the user block below
+          never covers the last links. */}
+      <nav className="flex-1 space-y-0.5 overflow-y-auto overscroll-contain px-2 py-3">
+        {main.map(renderItem)}
 
-        {filteredPortalItems.length > 0 && (
+        {portal.length > 0 && (
           <>
             {!isSidebarCollapsed ? (
-              <p className="px-4 mt-5 mb-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">
-                Portal Escolar
-              </p>
+              <p className="px-3 pb-1.5 pt-5 text-xs font-medium text-gray-500">Portal Escolar</p>
             ) : (
-              <div className="mx-3 my-3 border-t border-gray-200" />
+              <div className="mx-2 my-3 border-t border-gray-200" />
             )}
-            {filteredPortalItems.map((item) => {
-              const badgeCount = item.badge === 'pendingPortalOrders' ? pendingPortalOrders : item.badge === 'unreadMessages' ? unreadMessages : item.badge === 'unreadPortalMessages' ? unreadPortalMessages : 0
-            const showBadge = badgeCount > 0
-              const disabled = isDisabled(item.path)
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={e => disabled && e.preventDefault()}
-                  title={disabled ? 'No disponible sin conexión' : undefined}
-                  className={({ isActive }) =>
-                    `relative flex items-center px-4 py-3 mx-2 mb-1 rounded-lg transition-all ${
-                      disabled
-                        ? 'text-gray-300 cursor-not-allowed'
-                        : isActive
-                        ? 'bg-primary-50 text-primary-600 border-l-4 border-primary-600'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }`
-                  }
-                >
-                  <span className="relative flex-shrink-0">
-                    <item.icon size={20} />
-                    {showBadge && isSidebarCollapsed && (
-                      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                        {badgeCount > 9 ? '9+' : badgeCount}
-                      </span>
-                    )}
-                  </span>
-                  <motion.span
-                    animate={{
-                      opacity: isSidebarCollapsed ? 0 : 1,
-                      width: isSidebarCollapsed ? 0 : 'auto',
-                    }}
-                    transition={{ duration: 0.2 }}
-                    className="ml-3 whitespace-nowrap overflow-hidden flex-1"
-                  >
-                    {item.label}
-                  </motion.span>
-                  {showBadge && !isSidebarCollapsed && (
-                    <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                      {badgeCount}
-                    </span>
-                  )}
-                </NavLink>
-              )
-            })}
+            {portal.map(renderItem)}
           </>
         )}
       </nav>
 
       {/* User Info & Logout */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+      <div className="flex-shrink-0 border-t border-gray-200 p-3">
         {isSidebarCollapsed ? (
           <div className="flex flex-col items-center gap-2">
-            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-              <span className="text-sm font-medium text-gray-700">
-                {user?.name.charAt(0).toUpperCase()}
-              </span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700" title={user?.name}>
+              {initial}
             </div>
             <button
               onClick={handleLogout}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-secondary-600"
+              className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600"
               title="Cerrar sesión"
+              aria-label="Cerrar sesión"
             >
               <LogOut size={18} />
             </button>
           </div>
         ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-gray-700">
-                  {user?.name.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-700">{user?.name}</p>
-                <p className="text-xs text-gray-500">{user?.role}</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-violet-500 text-sm font-semibold text-white">
+              {initial}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-gray-900">{user?.name}</p>
+              <p className="truncate text-xs text-gray-500">{roleLabel(user?.role)}</p>
             </div>
             <button
               onClick={handleLogout}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-secondary-600"
+              className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600"
               title="Cerrar sesión"
+              aria-label="Cerrar sesión"
             >
               <LogOut size={18} />
             </button>

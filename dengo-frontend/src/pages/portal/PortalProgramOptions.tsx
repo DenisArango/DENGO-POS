@@ -3,6 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { Plus, Trash2, X, ChevronDown, ChevronUp, Package, Edit2, Search, Lightbulb } from 'lucide-react'
 import { api } from '../../lib/api'
+import { Layers as PageLayers } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
+import { ProgramGlyph } from '../../lib/ProgramIcon'
+
+// Colour of each program's icon on an inactive tab (same as the teacher portal).
+const PROGRAM_TEXT: Record<string, string> = {
+  FOOD_PACKAGE: 'text-amber-500', SCHOOL_SUPPLIES: 'text-sky-500', TEACHING_KIT: 'text-violet-500', GRATUITY: 'text-emerald-500',
+}
 
 const PROGRAM_TYPES = [
   { value: 'FOOD_PACKAGE', label: 'Alimentación Escolar', icon: '🍽️', mandatory: true },
@@ -196,7 +204,7 @@ export default function PortalProgramOptions() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Paquetes por Programa</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageLayers} color="amber" />Paquetes por Programa</h1>
           <p className="text-gray-600 mt-1">
             Define las opciones que los maestros pueden seleccionar al hacer un pedido
           </p>
@@ -216,7 +224,7 @@ export default function PortalProgramOptions() {
               activeType === t.value ? 'bg-primary-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            <span>{t.icon}</span> {t.label}
+            <ProgramGlyph type={t.value} size={17} className={activeType === t.value ? '' : PROGRAM_TEXT[t.value]} /> {t.label}
             {t.mandatory && (
               <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${activeType === t.value ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'}`}>
                 Obligatorio
@@ -276,7 +284,7 @@ export default function PortalProgramOptions() {
         </div>
       ) : options.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <Package size={48} className="mx-auto text-gray-300 mb-4" />
+          <span className="empty-tile mb-4"><Package size={26} aria-hidden /></span>
           <p className="text-gray-600">No hay paquetes para este programa.</p>
           <button onClick={openCreate} className="btn-primary btn-md mt-4">Crear primer paquete</button>
         </div>

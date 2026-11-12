@@ -6,6 +6,8 @@ import { format, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../../lib/api'
 import AIRecommendations from '../../components/reports/AIRecommendations'
+import { UserCheck as PageUserCheck } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 const ENTITY_ICON: Record<string, React.ReactNode> = {
   Sale: <DollarSign size={15} />,
@@ -99,16 +101,16 @@ export default function UserActivityReport() {
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Actividad de Usuarios</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageUserCheck} color="slate" />Actividad de Usuarios</h1>
           <p className="text-gray-600 text-sm mt-0.5">Auditoría de acciones en el sistema</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-wrap items-center gap-3">
         <Calendar size={16} className="text-gray-400" />
-        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input" />
+        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input w-auto" />
         <span className="text-gray-400">–</span>
-        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input" />
+        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input w-auto" />
         {loading && <span className="text-sm text-gray-400">Cargando...</span>}
       </div>
 
@@ -119,9 +121,9 @@ export default function UserActivityReport() {
           { label: 'Hora pico', value: peakHour.hour, icon: Clock, color: 'text-orange-600 bg-orange-100' },
           { label: 'Logins fallidos', value: String(failedLogins.length), icon: AlertTriangle, color: failedLogins.length > 0 ? 'text-red-600 bg-red-100' : 'text-gray-600 bg-gray-100' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg ${s.color}`}><s.icon size={20} /></div>
-            <div><p className="text-xs text-gray-400">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
+            <div className={`stat-tile p-2.5 rounded-xl ${s.color}`}><s.icon size={20} /></div>
+            <div><p className="text-xs text-gray-500">{s.label}</p><p className="text-xl font-bold text-gray-800">{s.value}</p></div>
           </div>
         ))}
       </div>
@@ -129,7 +131,7 @@ export default function UserActivityReport() {
       {(hourlyData.length > 0 || entityCounts.length > 0) && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {hourlyData.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5">
               <h2 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2"><Clock size={16} />Actividad por hora</h2>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={hourlyData}>
@@ -144,7 +146,7 @@ export default function UserActivityReport() {
           )}
 
           {entityCounts.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-5">
               <h2 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2"><Activity size={16} />Acciones por entidad</h2>
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
@@ -161,16 +163,16 @@ export default function UserActivityReport() {
       )}
 
       {userSummary.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b"><h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2"><UserCheck size={16} />Resumen por usuario</h2></div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50/70 border-b border-gray-200/80">
                 <tr>
-                  <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">Usuario</th>
-                  <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">Acciones</th>
-                  <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">Tipos de acción</th>
-                  <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">Última actividad</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Usuario</th>
+                  <th className="text-right px-4 py-2 text-xs font-medium text-gray-500">Acciones</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Tipos de acción</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Última actividad</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -188,27 +190,27 @@ export default function UserActivityReport() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b flex items-center gap-3">
           <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2"><Activity size={16} />Registro de auditoría</h2>
           <div className="flex-1 relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar usuario, acción..." className="input pl-8 w-full text-sm py-1.5" />
           </div>
-          <select value={filterAction} onChange={e => setFilterAction(e.target.value)} className="input text-sm py-1.5">
+          <select value={filterAction} onChange={e => setFilterAction(e.target.value)} className="input w-auto text-sm py-1.5">
             <option value="">Todas las acciones</option>
             {uniqueActions.map(a => <option key={a} value={a}>{a}</option>)}
           </select>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50/70 border-b border-gray-200/80">
               <tr>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Fecha y hora</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Usuario</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Acción</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Entidad</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">IP</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Fecha y hora</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Usuario</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Acción</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Entidad</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">IP</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -245,7 +247,7 @@ export default function UserActivityReport() {
                   <p className="text-sm font-medium text-gray-800">{l.email}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{l.failReason ?? 'Credenciales incorrectas'} · IP: {l.ipAddress ?? '–'}</p>
                 </div>
-                <p className="text-xs text-gray-400">{format(new Date(l.createdAt), "dd/MM HH:mm", { locale: es })}</p>
+                <p className="text-xs text-gray-500">{format(new Date(l.createdAt), "dd/MM HH:mm", { locale: es })}</p>
               </div>
             ))}
           </div>

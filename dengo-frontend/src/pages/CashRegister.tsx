@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  TrendingUp, TrendingDown, Wallet,
+  TrendingUp, TrendingDown, Wallet, CreditCard, Banknote,
   Plus, X, Printer, Eye, Lock, Unlock
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -17,6 +17,8 @@ import {
   getPendingRegisterOps, updatePendingRegisterOp,
 } from '../lib/offlineDb'
 import { trySync, refreshPendingCount, getLocallyClosingRegisterIds } from '../lib/offlineSync'
+import DengoLogo from '../components/common/DengoLogo'
+import PageIcon from '../components/common/PageIcon'
 
 interface CashSales {
   total: number; count: number; cash: number
@@ -79,6 +81,14 @@ export default function CashRegisterPage() {
   const canMovements = hasPermission('cash.movements')
 
   const [cashRegisters, setCashRegisters] = useState<CashRegisterRecord[]>([])
+  // History is paged by the server (newest first): `cashRegisters` holds only the current page.
+  const HISTORY_PAGE_SIZE = 15
+  const [historyPage, setHistoryPage] = useState(1)
+  const [historyTotal, setHistoryTotal] = useState(0)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const historyPages = Math.max(1, Math.ceil(historyTotal / HISTORY_PAGE_SIZE))
+  const currentHistoryPage = Math.min(historyPage, historyPages)
+  const historyRows = cashRegisters
   const [openRegisters, setOpenRegisters] = useState<CashRegisterRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -109,14 +119,35 @@ export default function CashRegisterPage() {
   const [movementAmount, setMovementAmount] = useState('')
   const [movementDescription, setMovementDescription] = useState('')
 
-  const fetchRegisters = async () => {
+  const historyRequest = useRef(0)
+  const fetchHistory = async (page: number) => {
+    if (!BRANCH_ID) return
+    const req = ++historyRequest.current // a slower, older page must not overwrite a newer one
+    setHistoryLoading(true)
+    try {
+      const res = await api.get<{ data: any[]; total: number }>(`/api/cash-registers?branchId=${BRANCH_ID}&page=${page}&limit=${HISTORY_PAGE_SIZE}`)
+      if (req !== historyRequest.current) return
+      setCashRegisters((res?.data ?? []).map(normalizeRegister))
+      setHistoryTotal(res?.total ?? 0)
+    } finally {
+      if (req === historyRequest.current) setHistoryLoading(false)
+    }
+  }
+
+  // A newly opened register goes on top of page 1 only.
+  const addToHistory = (reg: CashRegisterRecord) => {
+    setHistoryTotal(t => t + 1)
+    if (historyPage === 1) setCashRegisters(prev => [reg, ...prev].slice(0, HISTORY_PAGE_SIZE))
+  }
+
+  const fetchRegisters = async (page: number = historyPage) => {
     if (!BRANCH_ID) return
     setLoading(true)
     const registerCacheKey = `registers-full-${BRANCH_ID}`
     try {
-      const [openList, list] = await Promise.all([
+      const [openList] = await Promise.all([
         api.get<any[]>(`/api/cash-registers/current?branchId=${BRANCH_ID}`),
-        api.get<any[]>(`/api/cash-registers?branchId=${BRANCH_ID}`),
+        fetchHistory(page),
       ])
       const rawOpens = (Array.isArray(openList) ? openList : (openList ? [openList] : [])).filter(Boolean)
       await setCache(registerCacheKey, rawOpens)
@@ -130,7 +161,6 @@ export default function CashRegisterPage() {
       const closingIds = await getLocallyClosingRegisterIds()
       const opens = rawOpens.filter((r: any) => !closingIds.has(r.id)).map(normalizeRegister)
       setOpenRegisters(opens)
-      setCashRegisters((list ?? []).map(normalizeRegister))
       await refreshRegisterTallies(opens.map(r => r.id))
     } catch (e) {
       // Same reasoning as POS.tsx's own register fetch and StoreContext's
@@ -181,8 +211,17 @@ export default function CashRegisterPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [BRANCH_ID, openRegisters.length])
 
+  // Turning the page loads just that page; the first load comes with fetchRegisters below.
+  const [historyReady, setHistoryReady] = useState(false)
   useEffect(() => {
-    fetchRegisters()
+    if (historyReady) void fetchHistory(historyPage)
+    else setHistoryReady(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyPage])
+
+  useEffect(() => {
+    setHistoryPage(1)
+    fetchRegisters(1)
     if (BRANCH_ID) {
       api.get<any[]>(`/api/cash-registers/register-definitions?branchId=${BRANCH_ID}`)
         .then(d => setRegisterDefinitions(d ?? []))
@@ -225,7 +264,7 @@ export default function CashRegisterPage() {
         const newReg = normalizeRegister(raw)
         await resetRegisterTally(newReg.id) // a brand-new register has no sales yet either way, but this also clears out any stale leftover under a reused id
         setOpenRegisters(prev => [...prev, newReg])
-        setCashRegisters(prev => [newReg, ...prev])
+        addToHistory(newReg)
         setShowOpenModal(false)
         setInitialAmount('')
         setSelectedDefinitionId('')
@@ -261,7 +300,7 @@ export default function CashRegisterPage() {
       const newReg = normalizeRegister(raw)
       await resetRegisterTally(newReg.id)
       setOpenRegisters(prev => [...prev, newReg])
-      setCashRegisters(prev => [newReg, ...prev])
+      addToHistory(newReg)
       setReopenSuggestion(null)
       toast.success(`Caja abierta para el siguiente día con Q${reopenSuggestion.amount}`)
     } catch (e) {
@@ -517,8 +556,8 @@ export default function CashRegisterPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Wallet size={28} /> Control de Caja
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+            <PageIcon icon={Wallet} color="emerald" /> Control de Caja
           </h1>
           <p className="text-gray-600 text-sm mt-1">Apertura, cierre y movimientos de caja</p>
         </div>
@@ -532,111 +571,123 @@ export default function CashRegisterPage() {
       {loading && <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" /></div>}
 
       {/* Cajas abiertas */}
-      {!loading && openRegisters.map(reg => (
-        <motion.div key={reg.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg shadow-lg p-6 text-white">
-          <div className="flex flex-wrap items-start justify-between mb-4 gap-y-3">
+      {!loading && openRegisters.map(reg => {
+        const sales = getDisplaySales(reg)
+        const income = (reg.movements ?? []).filter(m => m.type === 'INCOME').reduce((s, m) => s + m.amount, 0)
+        const expense = (reg.movements ?? []).filter(m => m.type === 'EXPENSE').reduce((s, m) => s + m.amount, 0)
+        return (
+        <motion.section key={reg.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          className="overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-md">
+          {/* Who / since when / actions */}
+          <div className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden bg-gradient-to-r from-primary-600 via-primary-600 to-violet-600 px-5 py-4 text-white">
+            <span aria-hidden className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-white bg-opacity-20 rounded-lg"><Unlock size={24} /></div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-white ring-1 ring-inset ring-white/25"><Unlock size={20} /></div>
               <div>
-                <p className="text-sm opacity-90">{reg.name ?? 'Caja'} #{reg.registerNumber ?? '–'} — Abierta</p>
-                <p className="text-xl font-bold">{reg.openedBy ?? user?.name ?? '—'}</p>
+                <p className="flex items-center gap-2 text-sm text-white/85">
+                  {reg.name ?? 'Caja'} #{reg.registerNumber ?? '–'}
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-xs font-medium text-white ring-1 ring-inset ring-white/25">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 motion-safe:animate-pulse" aria-hidden /> Abierta
+                  </span>
+                </p>
+                <p className="text-lg font-semibold tracking-tight text-white">{reg.openedBy ?? user?.name ?? '—'}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="text-right text-sm">
-                <p className="opacity-90">Apertura</p>
-                <p className="font-medium">{format(new Date(reg.openedAt), "HH:mm", { locale: es })}</p>
-              </div>
-              <div className="flex gap-2">
-                {canMovements && (
-                  <button
-                    onClick={() => { setRegisterForMovement(reg); setShowMovementModal(true) }}
-                    className="px-3 py-1.5 text-xs font-medium bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg flex items-center gap-1">
-                    <Plus size={13} /> Movimiento
-                  </button>
-                )}
-                {canClose && (
-                  <button
-                    onClick={() => { setRegisterToClose(reg); setFinalCount(''); setExternalSalesTotalInput(''); setShowCloseModal(true); refreshRegisterTallies([reg.id]); void refreshOpenRegisters() }}
-                    className="px-3 py-1.5 text-xs font-medium bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg flex items-center gap-1">
-                    <Lock size={13} /> Cerrar
-                  </button>
-                )}
-              </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-sm text-white/80">
+                Apertura <span className="font-semibold text-white">{format(new Date(reg.openedAt), "HH:mm", { locale: es })}</span>
+              </p>
+              {canMovements && (
+                <button
+                  onClick={() => { setRegisterForMovement(reg); setShowMovementModal(true) }}
+                  className="btn btn-sm bg-white/15 text-white ring-1 ring-inset ring-white/25 hover:bg-white/25 focus-visible:ring-white">
+                  <Plus size={14} /> Movimiento
+                </button>
+              )}
+              {canClose && (
+                <button
+                  onClick={() => { setRegisterToClose(reg); setFinalCount(''); setExternalSalesTotalInput(''); setShowCloseModal(true); refreshRegisterTallies([reg.id]); void refreshOpenRegisters() }}
+                  className="btn btn-sm bg-white text-primary-700 shadow-sm hover:bg-primary-50 focus-visible:ring-white">
+                  <Lock size={14} /> Cerrar caja
+                </button>
+              )}
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white bg-opacity-10 rounded-lg p-4">
-              <p className="text-sm opacity-90 mb-1">Monto Inicial</p>
-              <p className="text-2xl font-bold">Q{reg.initialAmount.toFixed(2)}</p>
+          {/* Figures */}
+          <div className="grid grid-cols-2 gap-px bg-gray-200/80 md:grid-cols-4">
+            <div className="bg-white px-5 py-4">
+              <p className="flex items-center gap-1.5 text-sm font-medium text-gray-600"><Wallet size={15} className="text-sky-500" aria-hidden /> Monto Inicial</p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-gray-900">Q{reg.initialAmount.toFixed(2)}</p>
             </div>
-            <div className="bg-white bg-opacity-10 rounded-lg p-4">
-              <p className="text-sm opacity-90 mb-1">Ventas del Día</p>
-              <p className="text-2xl font-bold">Q{getDisplaySales(reg).total.toFixed(2)}</p>
-              <p className="text-xs opacity-75">{getDisplaySales(reg).count} transacciones</p>
+            <div className="bg-white px-5 py-4">
+              <p className="flex items-center gap-1.5 text-sm font-medium text-gray-600"><TrendingUp size={15} className="text-violet-500" aria-hidden /> Ventas del Día</p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-gray-900">Q{sales.total.toFixed(2)}</p>
+              <p className="mt-1 text-xs text-gray-500">{sales.count} transacciones</p>
             </div>
-            <div className="bg-white bg-opacity-10 rounded-lg p-4">
-              <p className="text-sm opacity-90 mb-2">Por Método</p>
-              <div className="space-y-0.5 text-xs">
-                <div className="flex justify-between"><span className="opacity-75">Efectivo:</span><span className="font-semibold">Q{getDisplaySales(reg).cash.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="opacity-75">Tarjeta:</span><span className="font-semibold">Q{getDisplaySales(reg).card.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="opacity-75">Transfer.:</span><span className="font-semibold">Q{getDisplaySales(reg).transfer.toFixed(2)}</span></div>
-                {getDisplaySales(reg).credit > 0 && <div className="flex justify-between"><span className="opacity-75">Crédito:</span><span className="font-semibold">Q{getDisplaySales(reg).credit.toFixed(2)}</span></div>}
-              </div>
+            <div className="bg-white px-5 py-4">
+              <p className="mb-2 flex items-center gap-1.5 text-sm font-medium text-gray-600"><CreditCard size={15} className="text-amber-500" aria-hidden /> Por Método</p>
+              <dl className="space-y-1 text-sm">
+                <div className="flex justify-between gap-2"><dt className="text-gray-500">Efectivo</dt><dd className="font-medium text-gray-900">Q{sales.cash.toFixed(2)}</dd></div>
+                <div className="flex justify-between gap-2"><dt className="text-gray-500">Tarjeta</dt><dd className="font-medium text-gray-900">Q{sales.card.toFixed(2)}</dd></div>
+                <div className="flex justify-between gap-2"><dt className="text-gray-500">Transferencia</dt><dd className="font-medium text-gray-900">Q{sales.transfer.toFixed(2)}</dd></div>
+                {sales.credit > 0 && <div className="flex justify-between gap-2"><dt className="text-gray-500">Crédito</dt><dd className="font-medium text-gray-900">Q{sales.credit.toFixed(2)}</dd></div>}
+              </dl>
             </div>
-            <div className="bg-white bg-opacity-10 rounded-lg p-4">
-              <p className="text-sm opacity-90 mb-1">Efectivo en Caja</p>
-              <p className="text-2xl font-bold">Q{calcBalance(reg).toFixed(2)}</p>
-              <div className="flex gap-2 mt-1 text-xs opacity-75">
-                <span className="text-green-300">+Q{(reg.movements ?? []).filter(m => m.type === 'INCOME').reduce((s, m) => s + m.amount, 0).toFixed(2)} ent.</span>
-                <span className="text-red-300">-Q{(reg.movements ?? []).filter(m => m.type === 'EXPENSE').reduce((s, m) => s + m.amount, 0).toFixed(2)} sal.</span>
-              </div>
+            {/* The number the cashier will count at close — the one that leads. */}
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 px-5 py-4">
+              <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-800"><Banknote size={15} className="text-emerald-600" aria-hidden /> Efectivo en Caja</p>
+              <p className="mt-2 text-3xl font-bold tracking-tight text-emerald-700">Q{calcBalance(reg).toFixed(2)}</p>
+              <p className="mt-1 flex flex-wrap gap-x-3 text-xs">
+                <span className="text-emerald-700">+Q{income.toFixed(2)} entradas</span>
+                <span className="text-red-600">−Q{expense.toFixed(2)} salidas</span>
+              </p>
             </div>
           </div>
 
           {(reg.movements ?? []).length > 0 && (
-            <div className="mt-4">
-              <p className="text-sm opacity-90 mb-2">Movimientos Recientes</p>
-              <div className="space-y-1.5">
+            <div className="border-t border-gray-200/80 px-5 py-4">
+              <p className="mb-2 text-sm font-medium text-gray-600">Movimientos Recientes</p>
+              <ul className="divide-y divide-gray-100">
                 {(reg.movements ?? []).slice(-3).reverse().map(movement => (
-                  <div key={movement.id} className="flex items-center justify-between bg-white bg-opacity-10 rounded p-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      {movement.type === 'INCOME' ? <TrendingUp size={15} className="text-green-300" /> : <TrendingDown size={15} className="text-red-300" />}
-                      <span>{movement.description}</span>
-                    </div>
-                    <span className={movement.type === 'INCOME' ? 'text-green-300' : 'text-red-300'}>
-                      {movement.type === 'INCOME' ? '+' : '-'}Q{movement.amount.toFixed(2)}
+                  <li key={movement.id} className="flex items-center justify-between py-2 text-sm">
+                    <span className="flex items-center gap-2 text-gray-700">
+                      {movement.type === 'INCOME' ? <TrendingUp size={15} className="text-emerald-600" /> : <TrendingDown size={15} className="text-red-600" />}
+                      {movement.description}
                     </span>
-                  </div>
+                    <span className={`font-medium ${movement.type === 'INCOME' ? 'text-emerald-700' : 'text-red-600'}`}>
+                      {movement.type === 'INCOME' ? '+' : '−'}Q{movement.amount.toFixed(2)}
+                    </span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           )}
-        </motion.div>
-      ))}
+        </motion.section>
+        )
+      })}
 
       {/* Historial de cajas */}
       {!loading && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">Historial de Cajas</h2>
+        <div className="card p-0 overflow-hidden">
+          <h2 className="px-5 pt-5 pb-3 text-base font-semibold text-gray-900">Historial de Cajas</h2>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="border-y border-gray-200/80 bg-gray-50/70">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Caja / Fecha</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Responsable</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Inicial</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Final</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Diferencia</th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Estado</th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Acciones</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Caja / Fecha</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Responsable</th>
+                  <th className="text-right py-3 px-4 text-xs font-medium text-gray-500">Inicial</th>
+                  <th className="text-right py-3 px-4 text-xs font-medium text-gray-500">Final</th>
+                  <th className="text-right py-3 px-4 text-xs font-medium text-gray-500">Diferencia</th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Estado</th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {cashRegisters.slice().reverse().map((register) => (
-                  <tr key={register.id} className="border-b hover:bg-gray-50">
+                {historyRows.map((register) => (
+                  <tr key={register.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/80">
                     <td className="py-3 px-4">
                       <p className="text-sm font-medium">{register.name ?? 'Caja'} #{register.registerNumber ?? '–'}</p>
                       <p className="text-xs text-gray-500">
@@ -658,9 +709,9 @@ export default function CashRegisterPage() {
                     </td>
                     <td className="py-3 px-4 text-center">
                       {register.status === 'OPEN' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-600"><Unlock size={12} />Abierta</span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-50 text-emerald-800 ring-1 ring-inset ring-emerald-600/20"><Unlock size={12} />Abierta</span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600"><Lock size={12} />Cerrada</span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-700 ring-1 ring-inset ring-gray-500/20"><Lock size={12} />Cerrada</span>
                       )}
                     </td>
                     <td className="py-3 px-4">
@@ -683,12 +734,36 @@ export default function CashRegisterPage() {
                     </td>
                   </tr>
                 ))}
-                {cashRegisters.length === 0 && (
+                {historyTotal === 0 && !historyLoading && (
                   <tr><td colSpan={7} className="py-12 text-center text-gray-500">No hay registros de caja</td></tr>
                 )}
               </tbody>
             </table>
           </div>
+          {historyPages > 1 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200/80 px-5 py-3">
+              <p className="text-sm text-gray-600">
+                {(currentHistoryPage - 1) * HISTORY_PAGE_SIZE + 1}–{Math.min(currentHistoryPage * HISTORY_PAGE_SIZE, historyTotal)} de {historyTotal} cajas
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setHistoryPage(Math.max(1, currentHistoryPage - 1))}
+                  disabled={currentHistoryPage <= 1 || historyLoading}
+                  className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <span className="text-sm text-gray-600 tabular-nums">Página {currentHistoryPage} de {historyPages}</span>
+                <button
+                  onClick={() => setHistoryPage(Math.min(historyPages, currentHistoryPage + 1))}
+                  disabled={currentHistoryPage >= historyPages || historyLoading}
+                  className="btn-outline btn-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -696,7 +771,7 @@ export default function CashRegisterPage() {
       <AnimatePresence>
         {showOpenModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
             onClick={() => setShowOpenModal(false)}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -764,7 +839,7 @@ export default function CashRegisterPage() {
       <AnimatePresence>
         {showCloseModal && registerToClose && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
             onClick={() => setShowCloseModal(false)}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -839,7 +914,7 @@ export default function CashRegisterPage() {
               <div className="flex gap-3">
                 <button onClick={() => setShowCloseModal(false)} className="flex-1 btn-outline btn-md" disabled={saving}>Cancelar</button>
                 <button onClick={handleCloseRegister} disabled={!finalCount || parseFloat(finalCount) < 0 || saving}
-                  className="flex-1 btn-secondary btn-md disabled:opacity-50 flex items-center justify-center gap-2">
+                  className="flex-1 btn-primary btn-md disabled:opacity-50 flex items-center justify-center gap-2">
                   {saving && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
                   Cerrar Caja
                 </button>
@@ -853,7 +928,7 @@ export default function CashRegisterPage() {
       <AnimatePresence>
         {showMovementModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
             onClick={() => { setShowMovementModal(false); setRegisterForMovement(null) }}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -903,7 +978,7 @@ export default function CashRegisterPage() {
       <AnimatePresence>
         {showDetailsModal && selectedRegister && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
             onClick={() => setShowDetailsModal(false)}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -971,12 +1046,12 @@ export default function CashRegisterPage() {
                     <h4 className="font-medium text-gray-800 mb-3">Movimientos</h4>
                     <div className="border rounded-lg overflow-hidden">
                       <table className="w-full text-sm">
-                        <thead className="bg-gray-50">
+                        <thead className="bg-gray-50/70 border-b border-gray-200/80">
                           <tr>
-                            <th className="text-left py-2 px-3 font-medium text-gray-700">Tipo</th>
-                            <th className="text-left py-2 px-3 font-medium text-gray-700">Descripción</th>
-                            <th className="text-right py-2 px-3 font-medium text-gray-700">Monto</th>
-                            <th className="text-right py-2 px-3 font-medium text-gray-700">Hora</th>
+                            <th className="text-left py-2 px-3 text-xs font-medium text-gray-500">Tipo</th>
+                            <th className="text-left py-2 px-3 text-xs font-medium text-gray-500">Descripción</th>
+                            <th className="text-right py-2 px-3 text-xs font-medium text-gray-500">Monto</th>
+                            <th className="text-right py-2 px-3 text-xs font-medium text-gray-500">Hora</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1023,12 +1098,12 @@ export default function CashRegisterPage() {
       <AnimatePresence>
         {showReportModal && selectedRegister && selectedRegister.status === 'CLOSED' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 print:hidden">
+            className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50 print:hidden">
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <div id="receipt-content">
                 <div className="text-center mb-6 pb-4 border-b-2 border-gray-300">
-                  <h2 className="text-2xl font-bold text-gray-800">DENGO POS</h2>
+                  <DengoLogo className="mb-2" symbolClass="h-9 w-9" textClass="text-2xl" />
                   <p className="text-lg font-medium text-gray-700">Reporte de Cierre — {selectedRegister.name} #{selectedRegister.registerNumber}</p>
                   <p className="text-sm text-gray-600 mt-2">{format(new Date(selectedRegister.closedAt!), "d 'de' MMMM 'de' yyyy", { locale: es })}</p>
                 </div>

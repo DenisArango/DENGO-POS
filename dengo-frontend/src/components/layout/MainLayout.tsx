@@ -57,7 +57,7 @@ export default function MainLayout() {
   }, [syncState.isOnline, location.pathname, navigate])
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Backdrop for mobile — closes sidebar when tapping outside */}
       {!isSidebarCollapsed && (
         <div

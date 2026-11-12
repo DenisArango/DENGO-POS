@@ -1,4 +1,6 @@
-import { Search, Building2, Menu } from 'lucide-react'
+import { Building2, Menu } from 'lucide-react'
+import QuickNav from './QuickNav'
+import { roleLabel } from '../../lib/roles'
 import { useAuthStore } from '../../store'
 import { useAppStore } from '../../store'
 import { format } from 'date-fns'
@@ -48,40 +50,37 @@ export default function Header() {
     )
   }
 
+  // "miércoles, 11 de noviembre de 2026" → first letter only, like the portal.
+  const today = format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })
+
   return (
-    <header className="h-16 bg-white border-b border-gray-200 px-4 md:px-6 flex items-center justify-between">
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-gray-200 bg-white/95 px-4 backdrop-blur-sm supports-[backdrop-filter]:bg-white/85 md:px-6 print:hidden">
       {/* Left */}
-      <div className="flex items-center space-x-2 md:space-x-4">
+      <div className="flex min-w-0 items-center gap-2 md:gap-4">
         {/* Mobile hamburger — only visible when sidebar is hidden */}
         <button
           onClick={toggleSidebar}
-          className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
+          aria-label="Abrir menú"
+          className="rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 lg:hidden"
         >
           <Menu size={20} />
         </button>
         {renderStoreSelector()}
-        <div className="text-sm text-gray-500 border-l pl-4 hidden md:block">
-          {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+        <div className="hidden border-l border-gray-200 pl-4 text-sm text-gray-500 md:block">
+          {today.charAt(0).toUpperCase() + today.slice(1)}
         </div>
       </div>
 
       {/* Right */}
-      <div className="flex items-center space-x-3">
-        <div className="relative hidden lg:block">
-          <input
-            type="text"
-            placeholder="Buscar..."
-            className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-          />
-          <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-        </div>
+      <div className="flex items-center gap-3">
+        <QuickNav />
 
         <NotificationPanel branchId={currentStore?.id ?? user?.branchId} />
 
-        <div className="flex items-center space-x-2 border-l pl-3">
-          <div className="text-sm text-right">
-            <p className="font-medium text-gray-800 leading-none">{user?.name || 'Usuario'}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{user?.role || 'Rol'}</p>
+        <div className="flex items-center border-l border-gray-200 pl-3">
+          <div className="text-right text-sm">
+            <p className="font-medium leading-none text-gray-900">{user?.name || 'Usuario'}</p>
+            <p className="mt-1 text-xs text-gray-500">{roleLabel(user?.role) || 'Rol'}</p>
           </div>
         </div>
       </div>

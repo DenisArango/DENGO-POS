@@ -4,6 +4,7 @@ import { ArrowLeft, Building2, Save, Upload, MapPin, Phone, Mail, Globe, FileTex
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
+import PageIcon from '../../components/common/PageIcon'
 
 interface CompanyInfo {
   name: string
@@ -90,8 +91,8 @@ export default function Company() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Building2 size={28} />
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+              <PageIcon icon={Building2} color="orange" />
               Información de Empresa
             </h1>
             <p className="text-gray-600 text-sm mt-1">
@@ -123,7 +124,7 @@ export default function Company() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-lg shadow-sm p-6"
+            className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6"
           >
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Logo de la Empresa</h2>
 
@@ -162,7 +163,7 @@ export default function Company() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-white rounded-lg shadow-sm p-6"
+            className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6"
           >
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Información General</h2>
 
@@ -236,7 +237,7 @@ export default function Company() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white rounded-lg shadow-sm p-6"
+            className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6"
           >
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Información de Contacto</h2>
 

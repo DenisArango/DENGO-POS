@@ -44,7 +44,7 @@ export default function PromotionsList() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map(i => <div key={i} className="h-44 rounded-xl bg-white animate-pulse" />)}</div>
       ) : shown.length === 0 ? (
         <div className="bg-white rounded-xl border border-dashed border-gray-300 p-10 text-center">
-          <Tag size={32} className="mx-auto text-gray-300 mb-3" />
+          <span className="empty-tile mb-3"><Tag size={26} aria-hidden /></span>
           <p className="font-medium text-gray-700">{rows.length === 0 ? 'Aún no tienes ofertas' : 'No hay ofertas en este filtro'}</p>
           <p className="text-sm text-gray-500 mt-1">Crea una oferta, publícala en tu página y tus clientes obtienen su cupón para canjearlo en caja.</p>
         </div>

@@ -166,7 +166,7 @@ export default function SiteEditor() {
         </Card>
       </div>
 
-      <aside className="lg:sticky lg:top-4 space-y-3">
+      <aside className="lg:sticky lg:top-20 space-y-3">
         <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div><p className="font-semibold text-gray-900">Publicada</p><p className="text-xs text-gray-500">{cfg.published ? 'Visible para todos' : 'Muestra "Próximamente"'}</p></div>

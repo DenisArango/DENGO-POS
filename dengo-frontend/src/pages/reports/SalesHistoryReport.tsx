@@ -12,6 +12,8 @@ import { useStore } from '../../contexts/StoreContext'
 import { usePermissions } from '../../hooks/usePermissions'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import ReportFilters, { type ReportFilterState } from '../../components/reports/ReportFilters'
+import { History as PageHistory } from 'lucide-react'
+import PageIcon from '../../components/common/PageIcon'
 
 const PM_LABEL: Record<string, string> = { CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia', CREDIT: 'Crédito', MIXED: 'Mixto' }
 const PM_COLOR: Record<string, string> = { CASH: 'bg-green-100 text-green-700', CARD: 'bg-blue-100 text-blue-700', TRANSFER: 'bg-purple-100 text-purple-700', CREDIT: 'bg-yellow-100 text-yellow-700', MIXED: 'bg-gray-100 text-gray-700' }
@@ -139,20 +141,20 @@ export default function SalesHistoryReport() {
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/reports')} className="p-2 hover:bg-gray-100 rounded-lg"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Historial de Ventas</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageHistory} color="pink" />Historial de Ventas</h1>
           <p className="text-gray-600 text-sm mt-0.5">Haz clic en una venta para ver el detalle completo, imprimir o editar</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap gap-3">
-        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input" />
-        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input" />
-        <select value={method} onChange={e => setMethod(e.target.value)} className="input">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-wrap gap-3">
+        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input w-auto" />
+        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input w-auto" />
+        <select value={method} onChange={e => setMethod(e.target.value)} className="input w-auto">
           <option value="">Todos los métodos</option>
           {Object.entries(PM_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <select value={saleTypeFilter} onChange={e => setSaleTypeFilter(e.target.value)} className="input">
+        <select value={saleTypeFilter} onChange={e => setSaleTypeFilter(e.target.value)} className="input w-auto">
           <option value="">Contado y Crédito</option>
           <option value="CASH">Solo Contado</option>
           <option value="CREDIT">Solo Crédito</option>
@@ -195,9 +197,9 @@ export default function SalesHistoryReport() {
           { label: 'Transacciones', value: String(active.length), icon: ShoppingCart, color: 'text-blue-600 bg-blue-100' },
           { label: 'Ticket promedio', value: `Q${avgTicket.toFixed(2)}`, icon: CreditCard, color: 'text-purple-600 bg-purple-100' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg ${s.color}`}><s.icon size={20} /></div>
-            <div><p className="text-xs text-gray-400">{s.label}</p><p className="text-lg font-bold text-gray-800">{s.value}</p></div>
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
+            <div className={`stat-tile p-2.5 rounded-xl ${s.color}`}><s.icon size={20} /></div>
+            <div><p className="text-xs text-gray-500">{s.label}</p><p className="text-lg font-bold text-gray-800">{s.value}</p></div>
           </div>
         ))}
       </div>
@@ -210,7 +212,7 @@ export default function SalesHistoryReport() {
           { label: 'Transferencia', value: transferTotal, color: 'text-purple-600' },
           { label: 'Crédito', value: creditTotal, color: 'text-orange-600' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl shadow-sm p-3 flex items-center justify-between">
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-3 flex items-center justify-between">
             <span className="text-sm text-gray-500">{s.label}</span>
             <span className={`font-bold ${s.color}`}>Q{s.value.toFixed(2)}</span>
           </div>
@@ -218,25 +220,25 @@ export default function SalesHistoryReport() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50/70 border-b border-gray-200/80">
               <tr>
                 {canGenerateInvoice && (
                   <th className="w-10 px-4 py-3">
                     <input type="checkbox" checked={allInvoiceableSelected} onChange={toggleAll} onClick={e => e.stopPropagation()} disabled={invoiceable.length === 0} />
                   </th>
                 )}
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Factura</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Fecha</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Cliente</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Cajero</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium">Caja</th>
-                <th className="text-center px-4 py-3 text-xs text-gray-500 font-medium">Método</th>
-                <th className="text-center px-4 py-3 text-xs text-gray-500 font-medium">Documento</th>
-                <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Total</th>
-                <th className="text-right px-4 py-3 text-xs text-gray-500 font-medium">Ganancia</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Factura</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Fecha</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Cliente</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Cajero</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Caja</th>
+                <th className="text-center px-4 py-3 text-xs font-medium text-gray-500">Método</th>
+                <th className="text-center px-4 py-3 text-xs font-medium text-gray-500">Documento</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Total</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Ganancia</th>
                 <th className="w-10" />
               </tr>
             </thead>

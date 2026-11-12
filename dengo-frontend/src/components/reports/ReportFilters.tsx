@@ -40,7 +40,7 @@ export default function ReportFilters({ value, onChange, showRegister = true }: 
         <select
           value={value.branchId}
           onChange={e => onChange({ branchId: e.target.value, cashRegisterId: '' })}
-          className="input text-sm"
+          className="input w-auto text-sm"
         >
           <option value="">Todas las sucursales</option>
           {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -50,7 +50,7 @@ export default function ReportFilters({ value, onChange, showRegister = true }: 
         <select
           value={value.cashRegisterId}
           onChange={e => onChange({ ...value, cashRegisterId: e.target.value })}
-          className="input text-sm"
+          className="input w-auto text-sm"
         >
           <option value="">Todas las cajas</option>
           {filteredRegisters.map(r => (

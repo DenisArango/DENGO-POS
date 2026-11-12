@@ -23,7 +23,46 @@ html { scroll-behavior: smooth; }
 body {
   margin: 0;
   font-family: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  /* Tabular figures: totals and order amounts line up in every table. */
+  font-feature-settings: "calt" 1, "tnum" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #1f2937;
+  color: #111827;
+  /* Soft washes of the client's colour and sky in the corners instead of a
+     flat grey sheet. */
+  background:
+    radial-gradient(56rem 28rem at 100% -8%, rgb(var(--brand-100) / 0.7), transparent 70%),
+    radial-gradient(44rem 24rem at -8% 10%, rgb(224 242 254 / 0.8), transparent 70%),
+    #f8fafc;
+  background-attachment: fixed;
+}
+
+h1, h2, h3 {
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+::selection {
+  background: rgb(var(--brand-100));
+  color: rgb(var(--brand-900));
+}
+
+/* One keyboard focus ring in the client's colour for anything that doesn't
+   draw its own. */
+:focus-visible {
+  outline: 2px solid rgb(var(--brand-500));
+  outline-offset: 2px;
+}
+
+input, textarea {
+  caret-color: rgb(var(--brand-600));
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
 }

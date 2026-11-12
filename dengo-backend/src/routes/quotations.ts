@@ -41,15 +41,39 @@ const include = {
   customer: true,
   createdBy: { select: { id: true, name: true } },
   items: { include: { product: { select: { id: true, name: true } }, variation: true } },
+  // The same quotation issued by the owner's other businesses (see schema).
+  alternates: {
+    select: {
+      id: true, quotationNumber: true, total: true, status: true, markupPct: true, createdAt: true,
+      branch: { select: { id: true, name: true, companyName: true } },
+    },
+    orderBy: { createdAt: 'asc' as const },
+  },
+  sourceQuotation: { select: { id: true, quotationNumber: true, branchId: true, branch: { select: { id: true, name: true, companyName: true } } } },
 }
+
+const round2 = (n: number) => Math.round(n * 100) / 100
+
+const alternateSchema = z.object({
+  branchId: z.string().min(1),
+  // % added to every line's price (ej. 15 → +15 %). Lines in `prices` win over it.
+  markupPct: z.number().min(-90).max(1000).default(0),
+  // Manual unit price per source line id.
+  prices: z.record(z.string(), z.number().min(0)).default({}),
+  validUntil: z.string().optional(),
+  notes: z.string().max(2000).optional(),
+})
 
 export default async function quotationRoutes(fastify: FastifyInstance) {
   fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('quotations.view')] }, async (request, reply) => {
-    const q = request.query as { status?: string; customerId?: string; branchId?: string; page?: string; limit?: string }
+    const q = request.query as { status?: string; customerId?: string; branchId?: string; page?: string; limit?: string; includeAlternates?: string }
     const branchId = resolveBranchScope(request, q.branchId)
     const statusWhere = {
       ...(branchId ? { branchId } : {}),
       ...(q.customerId ? { customerId: q.customerId } : {}),
+      // Alternates (same quotation from another business) are reached through
+      // their original and don't count in the stats — unless explicitly asked.
+      ...(q.includeAlternates === '1' ? {} : { sourceQuotationId: null }),
     }
     const where = {
       ...statusWhere,
@@ -92,8 +116,71 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
     const { id } = request.params as { id: string }
     const q = await prisma.quotation.findUnique({ where: { id }, include })
     if (!q) return reply.status(404).send({ error: 'Cotización no encontrada' })
-    if (!canAccessBranch(request, q.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
+    // An alternate can be opened (to print it) by whoever can see its original,
+    // even without access to the other business's branch.
+    const viaSource = q.sourceQuotation && canAccessBranch(request, q.sourceQuotation.branchId)
+    if (!canAccessBranch(request, q.branchId) && !viaSource) return reply.status(403).send({ error: 'Acceso denegado' })
     return reply.send(q)
+  })
+
+  // POST /:id/alternate — the same quotation issued by another branch (another
+  // of the owner's businesses), with its prices raised by a % and/or set by hand.
+  fastify.post('/:id/alternate', { preHandler: [fastify.authenticate, requirePermission('quotations.create')] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const body = alternateSchema.safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
+
+    const source = await prisma.quotation.findUnique({ where: { id }, include: { items: true } })
+    if (!source) return reply.status(404).send({ error: 'Cotización no encontrada' })
+    if (!canAccessBranch(request, source.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
+    if (source.sourceQuotationId) return reply.status(400).send({ error: 'Esta ya es una cotización de otra sucursal — créala desde la original' })
+    if (body.data.branchId === source.branchId) return reply.status(400).send({ error: 'Elige una sucursal distinta a la de la cotización original' })
+    const target = await prisma.branch.findUnique({ where: { id: body.data.branchId } })
+    if (!target || target.status !== 'active') return reply.status(400).send({ error: 'Sucursal no encontrada o inactiva' })
+
+    const factor = 1 + body.data.markupPct / 100
+    const items = source.items.map(it => {
+      const qty = Number(it.quantity)
+      const lineDiscount = Number(it.discount)
+      const manual = body.data.prices[it.id]
+      const unitPrice = round2(manual ?? Number(it.unitPrice) * factor)
+      return {
+        ...(it.productId ? { productId: it.productId } : {}),
+        ...(it.variationId ? { variationId: it.variationId } : {}),
+        ...(it.customName ? { customName: it.customName } : {}),
+        quantity: qty,
+        unitPrice,
+        discount: lineDiscount,
+        total: round2(qty * unitPrice * (1 - lineDiscount)),
+      }
+    })
+    const subtotal = round2(items.reduce((sum, it) => sum + it.total, 0))
+    const srcSubtotal = Number(source.subtotal)
+    const srcTax = Number(source.tax)
+    // Tax keeps the original's proportion; the absolute discount is kept as is.
+    const tax = srcTax > 0 && srcSubtotal > 0 ? round2(srcTax * subtotal / srcSubtotal) : 0
+    const total = round2(Number(source.total) + (subtotal - srcSubtotal) + (tax - srcTax))
+
+    const alt = await prisma.quotation.create({
+      data: {
+        quotationNumber: `COT-${Date.now().toString().slice(-8)}`,
+        branchId: target.id,
+        customerId: source.customerId,
+        subtotal,
+        tax,
+        discount: source.discount,
+        total: Math.max(0, total),
+        validUntil: body.data.validUntil ? new Date(body.data.validUntil) : source.validUntil,
+        notes: body.data.notes ?? source.notes,
+        createdById: request.user.id,
+        sourceQuotationId: source.id,
+        markupPct: body.data.markupPct,
+        items: { create: items },
+      },
+      include,
+    })
+    await log({ userId: request.user.id, action: 'CREATE', entity: 'Quotation', entityId: alt.id, newValues: { sourceQuotationId: source.id, branchId: target.id, markupPct: body.data.markupPct } })
+    return reply.status(201).send(alt)
   })
 
   fastify.post('/', { preHandler: [fastify.authenticate, requirePermission('quotations.create')] }, async (request, reply) => {
@@ -335,6 +422,8 @@ export default async function quotationRoutes(fastify: FastifyInstance) {
     const q = await prisma.quotation.findUnique({ where: { id } })
     if (!q || q.status !== 'DRAFT') return reply.status(400).send({ error: 'Solo se pueden eliminar cotizaciones en borrador' })
     if (!canAccessBranch(request, q.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
+    // Its alternates stay as quotations of their own branch, no longer linked.
+    await prisma.quotation.updateMany({ where: { sourceQuotationId: id }, data: { sourceQuotationId: null } })
     await prisma.quotation.delete({ where: { id } })
     return reply.send({ message: 'Cotización eliminada' })
   })

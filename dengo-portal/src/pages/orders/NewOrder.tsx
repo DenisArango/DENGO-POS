@@ -10,7 +10,8 @@ import PortalLayout from '../../components/layout/PortalLayout'
 import { api } from '../../lib/api'
 import type { GradeRow } from '../../lib/api'
 import type { Program, Product, Category, TeacherSchoolAssignment, PortalOrder, ProgramOption, BlockedProgram } from '../../types'
-import { programLabel, programIcon, money } from '../../lib/labels'
+import { programLabel, money } from '../../lib/labels'
+import { ProgramTile } from '../../lib/ProgramIcon'
 
 interface CartItem {
   product: Product
@@ -385,16 +386,18 @@ export default function NewOrder() {
                     key={s.id}
                     type="button"
                     onClick={() => { pickSchool(s.id); setStep(2) }}
-                    className={`text-left rounded-2xl border-2 p-5 bg-white transition-all flex items-start gap-3 ${schoolId === s.id ? 'border-brand-500 bg-brand-50' : 'border-gray-100 hover:border-brand-200'}`}
+                    className={`group text-left rounded-2xl border-2 p-5 bg-white transition-all flex items-center gap-4 motion-safe:hover:-translate-y-0.5 hover:shadow-md ${schoolId === s.id ? 'border-brand-500 bg-brand-50' : 'border-gray-100 hover:border-brand-200'}`}
                   >
-                    <SchoolIcon size={22} className="text-brand-500 flex-shrink-0 mt-0.5" />
+                    <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm transition-transform duration-300 motion-safe:group-hover:-rotate-6 motion-safe:group-hover:scale-110">
+                      <SchoolIcon size={20} />
+                    </span>
                     <span className="flex-1">
                       <span className="block font-bold text-gray-900">{s.school.name}</span>
                       <span className="block text-sm text-gray-500 mt-0.5">
                         {[s.educationalLevel && (LEVEL_LABELS[s.educationalLevel] ?? s.educationalLevel), s.grade, s.section, s.school.municipio].filter(Boolean).join(' · ')}
                       </span>
                     </span>
-                    <ArrowRight size={18} className="text-gray-300 mt-1" />
+                    <ArrowRight size={18} className="text-gray-300 transition-colors group-hover:text-brand-500 motion-safe:group-hover:animate-bounce-x" />
                   </button>
                 ))}
               </div>
@@ -418,12 +421,12 @@ export default function NewOrder() {
                       type="button"
                       disabled={!!taken}
                       onClick={() => pickProgram(p.type)}
-                      className={`text-left rounded-2xl border-2 p-5 bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
+                      className={`group text-left rounded-2xl border-2 p-5 bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed motion-safe:hover:-translate-y-0.5 hover:shadow-md ${
                         programType === p.type ? 'border-brand-500 bg-brand-50' : 'border-gray-100 hover:border-brand-200'
                       }`}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="text-3xl">{programIcon(p.type)}</div>
+                        <ProgramTile type={p.type} />
                         <div className="flex-1">
                           <p className="font-bold text-gray-900">{p.name || programLabel(p.type)}</p>
                           {p.description && <p className="text-sm text-gray-500 mt-0.5 leading-relaxed">{p.description}</p>}
@@ -755,7 +758,7 @@ export default function NewOrder() {
                 <dt className="text-gray-500">Escuela</dt>
                 <dd className="text-gray-900 font-medium text-right">{selectedSchool?.school.name}</dd>
                 <dt className="text-gray-500">Programa</dt>
-                <dd className="text-gray-900 font-medium text-right">{programIcon(programType)} {selectedProgram?.name || programLabel(programType)}</dd>
+                <dd className="text-gray-900 font-medium text-right">{selectedProgram?.name || programLabel(programType)}</dd>
                 <dt className="text-gray-500">Grados</dt>
                 <dd className="text-gray-900 font-medium text-right">
                   {grades.filter(g => g.gradeName && g.studentCount).map(g => `${g.gradeName}: ${g.studentCount}`).join(', ')}

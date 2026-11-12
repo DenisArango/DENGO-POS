@@ -168,14 +168,33 @@ export default async function cashRegisterRoutes(fastify: FastifyInstance) {
 
   // GET /  — list registers for a branch
   fastify.get('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const q = request.query as { branchId?: string; status?: string }
+    const q = request.query as { branchId?: string; status?: string; page?: string; limit?: string }
     const branchId = resolveBranchScope(request, q.branchId)
+    const where = {
+      ...(branchId ? { branchId } : {}),
+      ...(q.status ? { status: q.status as any } : {}),
+    }
+
+    // Paged history (Caja screen): newest first, with the total for the pager.
+    // Without ?page the old shape (whole list as an array) is kept for any other caller.
+    if (q.page) {
+      const page = Math.max(1, parseInt(q.page, 10) || 1)
+      const limit = Math.min(100, Math.max(1, parseInt(q.limit ?? '', 10) || 15))
+      const [total, data] = await Promise.all([
+        prisma.cashRegister.count({ where }),
+        prisma.cashRegister.findMany({
+          where,
+          include,
+          orderBy: [{ openedAt: 'desc' }, { id: 'desc' }],
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+      ])
+      return reply.send({ data, total, page, limit })
+    }
 
     const list = await prisma.cashRegister.findMany({
-      where: {
-        ...(branchId ? { branchId } : {}),
-        ...(q.status ? { status: q.status as any } : {}),
-      },
+      where,
       include,
       orderBy: [{ status: 'asc' }, { openedAt: 'desc' }],
     })

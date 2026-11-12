@@ -10,11 +10,14 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { api } from '../lib/api'
+import StatStrip from '../components/common/StatStrip'
 import { compressImageDataUrl } from '../lib/imageCompress'
 import { useAuthStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
 import { usePermissions } from '../hooks/usePermissions'
 import { ChargeModal, AccountStatement } from '../components/customers/CreditAccount'
+import { UserCircle as PageUserCircle } from 'lucide-react'
+import PageIcon from '../components/common/PageIcon'
 
 interface AbonoSale {
   id: string
@@ -370,7 +373,7 @@ export default function Customers() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Clientes</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3"><PageIcon icon={PageUserCircle} color="sky" />Clientes</h1>
           <p className="text-gray-600 mt-1">Gestiona tu cartera de clientes y créditos</p>
         </div>
         {canCreate && (
@@ -381,31 +384,28 @@ export default function Customers() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {[
-          { label: 'Total Clientes',    value: stats.total,                      Icon: User,       bg: 'bg-blue-100',    color: 'text-blue-600' },
-          { label: 'Activos',           value: stats.active,                     Icon: CheckCircle,bg: 'bg-green-100',   color: 'text-green-600' },
-          { label: 'Con Crédito',       value: stats.withCredit,                 Icon: CreditCard, bg: 'bg-purple-100',  color: 'text-purple-600' },
-          { label: 'Crédito Utilizado', value: `Q${stats.totalCreditUsed.toLocaleString()}`, Icon: TrendingUp, bg: 'bg-orange-100', color: 'text-orange-600' },
-          { label: 'Datos incompletos', value: stats.incomplete ?? 0, Icon: UserCog, bg: 'bg-amber-100', color: 'text-amber-600', filter: 'incomplete' },
-        ].map(({ label, value, Icon, bg, color, filter }) => (
-          <motion.div key={label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            onClick={filter ? () => setFilterStatus(filterStatus === filter ? 'all' : filter) : undefined}
-            title={filter ? 'Ver los clientes a los que les falta NIT o teléfono' : undefined}
-            className={`bg-white rounded-lg shadow-sm p-6 ${filter ? 'cursor-pointer hover:ring-2 hover:ring-amber-300' : ''} ${filter && filterStatus === filter ? 'ring-2 ring-amber-400' : ''}`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">{label}</p>
-                <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
-              </div>
-              <div className={`p-3 ${bg} rounded-lg`}><Icon className={color} size={24} /></div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+      <StatStrip
+        stats={[
+          { label: 'Total Clientes', color: 'blue' as const, value: stats.total, icon: User },
+          { label: 'Activos', color: 'emerald' as const, value: stats.active, icon: CheckCircle },
+          { label: 'Con Crédito', color: 'violet' as const, value: stats.withCredit, icon: CreditCard },
+          { label: 'Crédito Utilizado', color: 'orange' as const, value: `Q${stats.totalCreditUsed.toLocaleString()}`, icon: TrendingUp },
+          {
+            label: 'Datos incompletos', color: 'amber' as const,
+            value: stats.incomplete ?? 0,
+            icon: UserCog,
+            valueTone: (stats.incomplete ?? 0) > 0 ? 'warn' : 'neutral',
+            hint: filterStatus === 'incomplete' ? 'Filtro aplicado · quitar' : 'Ver cuáles',
+            hintTone: filterStatus === 'incomplete' ? 'info' : 'neutral',
+            title: 'Ver los clientes a los que les falta NIT o teléfono',
+            active: filterStatus === 'incomplete',
+            onClick: () => setFilterStatus(filterStatus === 'incomplete' ? 'all' : 'incomplete'),
+          },
+        ]}
+      />
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-col md:flex-row gap-4">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           <input type="text" placeholder="Buscar por nombre, NIT, email o teléfono…"
@@ -423,8 +423,8 @@ export default function Customers() {
 
       {/* List */}
       {customers.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-          <User size={48} className="mx-auto text-gray-400 mb-4" />
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-12 text-center">
+          <span className="empty-tile mb-4"><User size={26} aria-hidden /></span>
           <p className="text-gray-600">
             {searchTerm ? 'No se encontraron clientes' : 'No hay clientes registrados'}
           </p>
@@ -433,7 +433,7 @@ export default function Customers() {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-x-auto">
           {canDelete && selectedIds.size > 0 && (
             <div className="sticky left-0 flex flex-wrap items-center gap-3 p-3 bg-primary-50 border-b border-primary-200">
               <span className="text-sm font-medium text-primary-800">{selectedIds.size} cliente(s) seleccionado(s)</span>
@@ -444,7 +444,7 @@ export default function Customers() {
             </div>
           )}
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50/70 border-b border-gray-200/80">
               <tr>
                 {canDelete && (
                   <th className="w-10 p-4">
@@ -582,7 +582,7 @@ export default function Customers() {
       )}
 
       {totalPages > 1 && (
-        <div className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex items-center justify-between">
           <p className="text-sm text-gray-600">
             Página {page} de {totalPages} · {totalCount} clientes
           </p>
@@ -607,9 +607,9 @@ export default function Customers() {
 
       {/* ── Create/Edit Modal ── */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+            className="bg-white rounded-xl shadow-xl w-full max-w-lg">
             <div className="p-6 border-b">
               <h2 className="text-xl font-bold text-gray-800">
                 {editingCustomer ? 'Editar Cliente' : 'Nuevo Cliente'}
@@ -720,9 +720,9 @@ export default function Customers() {
 
       {/* ── Abono (credit payment) Modal ── */}
       {showAbonoModal && abonoCustomer && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b">
               <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                 <DollarSign size={20} className="text-green-600" /> Registrar Abono
@@ -794,9 +794,9 @@ export default function Customers() {
 
       {/* ── Details Modal ── */}
       {showDetailsModal && selectedCustomer && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
             <div className="p-6 border-b flex items-center justify-between flex-shrink-0">
               <div>
                 <h2 className="text-xl font-bold text-gray-800">Detalle del Cliente</h2>
@@ -988,9 +988,9 @@ export default function Customers() {
 
       {/* ── Delete Confirm ── */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-start gap-4">
               <div className="p-3 bg-red-100 rounded-full">
                 <AlertCircle className="text-red-600" size={24} />

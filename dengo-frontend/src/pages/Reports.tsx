@@ -14,8 +14,10 @@ import {
 import { format, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../lib/api'
+import StatStrip from '../components/common/StatStrip'
 import { useAuthStore, useLicenseStore } from '../store'
 import { useStore } from '../contexts/StoreContext'
+import PageIcon from '../components/common/PageIcon'
 
 interface ReportCard {
   id: string
@@ -244,69 +246,46 @@ export default function Reports() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <FileBarChart size={28} />
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+          <PageIcon icon={FileBarChart} color="violet" />
           Reportes y Análisis
         </h1>
       </div>
 
       {/* Estadísticas rápidas — datos reales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
+      <StatStrip
+        stats={[
           {
-            label: 'Ventas Hoy',
-            value: `Q${quickStats.dailySales.toLocaleString('es-GT', { minimumFractionDigits: 2 })}`,
+            label: 'Ventas Hoy', color: 'emerald' as const,
+            value: loadingCharts ? '—' : `Q${quickStats.dailySales.toLocaleString('es-GT', { minimumFractionDigits: 2 })}`,
             icon: DollarSign,
-            color: 'text-green-600',
-            bg: 'bg-green-100',
-            sub: 'Total del día',
+            hint: 'Total del día',
           },
           {
-            label: 'Transacciones',
-            value: String(quickStats.dailyTransactions),
+            label: 'Transacciones', color: 'blue' as const,
+            value: loadingCharts ? '—' : String(quickStats.dailyTransactions),
             icon: ShoppingCart,
-            color: 'text-blue-600',
-            bg: 'bg-blue-100',
-            sub: `Ticket prom: Q${quickStats.avgTicket.toFixed(2)}`,
+            hint: `Ticket prom: Q${quickStats.avgTicket.toFixed(2)}`,
           },
           {
-            label: 'Ticket Promedio',
-            value: `Q${quickStats.avgTicket.toFixed(2)}`,
+            label: 'Ticket Promedio', color: 'violet' as const,
+            value: loadingCharts ? '—' : `Q${quickStats.avgTicket.toFixed(2)}`,
             icon: TrendingUp,
-            color: 'text-purple-600',
-            bg: 'bg-purple-100',
-            sub: 'Por transacción',
+            hint: 'Por transacción',
           },
           {
-            label: 'Stock Bajo',
-            value: String(quickStats.lowStockCount),
+            label: 'Stock Bajo', color: 'amber' as const,
+            value: loadingCharts ? '—' : String(quickStats.lowStockCount),
             icon: AlertTriangle,
-            color: 'text-yellow-600',
-            bg: 'bg-yellow-100',
-            sub: quickStats.lowStockCount > 0 ? 'Requieren atención' : 'Todo en orden',
+            valueTone: !loadingCharts && quickStats.lowStockCount > 0 ? 'warn' : 'neutral',
+            hint: quickStats.lowStockCount > 0 ? 'Requieren atención' : 'Todo en orden',
+            hintTone: quickStats.lowStockCount > 0 ? 'warn' : 'neutral',
           },
-        ].map((s, i) => (
-          <motion.div
-            key={s.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.07 }}
-            className="bg-white rounded-lg shadow-sm p-4"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-500 text-sm">{s.label}</span>
-              <div className={`p-1.5 rounded-lg ${s.bg}`}>
-                <s.icon className={s.color} size={16} />
-              </div>
-            </div>
-            <p className="text-2xl font-bold text-gray-800">{loadingCharts ? '—' : s.value}</p>
-            <p className={`text-xs mt-1 ${s.color}`}>{s.sub}</p>
-          </motion.div>
-        ))}
-      </div>
+        ]}
+      />
 
       {/* Gráficos rápidos */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <h3 className="font-semibold text-gray-800 mb-5 flex items-center gap-2">
           <LineChart size={20} />
           Gráficos Rápidos
@@ -387,7 +366,7 @@ export default function Reports() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.07 }}
                   onClick={() => navigate(report.path)}
-                  className={`bg-white rounded-lg shadow-sm p-6 hover:shadow-lg transition-all cursor-pointer group ${report.category === 'ai' ? 'ring-2 ring-primary-200' : ''}`}
+                  className={`bg-white rounded-xl border border-gray-200/80 shadow-sm p-6 hover:shadow-lg transition-all cursor-pointer group ${report.category === 'ai' ? 'ring-2 ring-primary-200' : ''}`}
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className={`p-3 rounded-lg ${report.color} ${report.category === 'ai' ? '' : 'bg-opacity-10'}`}>

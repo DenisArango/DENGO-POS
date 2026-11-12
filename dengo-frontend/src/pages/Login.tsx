@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { motion } from 'framer-motion'
-import { LogIn, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '../store'
 import { resyncPush } from '../lib/push'
 import { toSessionUser } from '../lib/session'
+import DengoLogo from '../components/common/DengoLogo'
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -95,29 +95,20 @@ export default function Login() {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-8">
+    <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xl p-8 sm:p-10">
       {/* Logo */}
-      <div className="flex justify-center mb-8">
-        <motion.div
-          initial={{ rotate: 0 }}
-          animate={{ rotate: 360 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="w-16 h-16 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-2xl flex items-center justify-center"
-        >
-          <LogIn className="text-white" size={28} />
-        </motion.div>
-      </div>
+      <DengoLogo className="mb-10" symbolClass="h-9 w-9" textClass="text-[22px]" />
 
       {/* Title */}
-      <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">
+      <h2 className="text-2xl font-bold tracking-tight text-gray-900 mb-1.5">
         Iniciar Sesión
       </h2>
-      <p className="text-center text-gray-600 mb-8">
+      <p className="text-gray-600 mb-8">
         Ingresa tus credenciales para continuar
       </p>
 
       {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div>
           <label htmlFor="email" className="label">
             Correo Electrónico
@@ -130,7 +121,7 @@ export default function Login() {
             placeholder="correo@ejemplo.com"
           />
           {errors.email && (
-            <p className="mt-1 text-sm text-secondary-600">{errors.email.message}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
           )}
         </div>
 
@@ -149,13 +140,14 @@ export default function Login() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              className="absolute right-3 top-1/2 mt-0.5 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-600"
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
           {errors.password && (
-            <p className="mt-1 text-sm text-secondary-600">{errors.password.message}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
           )}
         </div>
 
@@ -175,7 +167,7 @@ export default function Login() {
         </button>
       </form>
 
-      <p className="text-center text-[11px] text-gray-300 mt-6">DENGO POS v{__APP_VERSION__}</p>
+      <p className="text-center text-[11px] text-gray-400 mt-8">DENGO POS v{__APP_VERSION__}</p>
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { MessageSquare, Send, User2, Search } from 'lucide-react'
 import { api } from '../lib/api'
 import { useSearchParams } from 'react-router-dom'
+import PageIcon from '../components/common/PageIcon'
 
 interface StaffUser {
   id: string
@@ -117,8 +118,8 @@ export default function Messages() {
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col">
       <div className="mb-4 flex-shrink-0">
-        <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-          <MessageSquare size={28} className="text-primary-600" /> Mensajes Internos
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+          <PageIcon icon={MessageSquare} color="sky" /> Mensajes Internos
         </h1>
         <p className="text-gray-600 mt-1">Comunicación entre el personal de la empresa</p>
       </div>
@@ -180,9 +181,7 @@ export default function Messages() {
         <div className="flex-1 bg-white rounded-xl border border-gray-200 flex flex-col overflow-hidden min-w-0">
           {!selected ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-                <User2 size={32} className="text-gray-400" />
-              </div>
+              <span className="empty-tile mb-4"><User2 size={28} aria-hidden /></span>
               <p className="text-gray-600 font-medium">Selecciona una conversación</p>
               <p className="text-gray-400 text-sm mt-1">Elige un empleado de la lista para ver o iniciar un chat</p>
             </div>

@@ -198,7 +198,7 @@ export default function PortalOrders() {
   const addEditProduct = (p: ProductHit) => {
     setEditItems(items => items.some(i => i.productId === p.id)
       ? items
-      : [...items, { key: p.id, productId: p.id, productName: p.name, unitPrice: String(Number(p.basePrice)), unitCost: String(Number(p.cost ?? 0)), quantity: '1' }])
+      : [{ key: p.id, productId: p.id, productName: p.name, unitPrice: String(Number(p.basePrice)), unitCost: String(Number(p.cost ?? 0)), quantity: '1' }, ...items])
     setProductQuery('')
     setProductHits([])
   }
@@ -779,7 +779,7 @@ function EditPanel(props: {
   const { kit, grades, setGrades, items, setItems, students, total, cost, expected, diff } = props
   const setField = (i: number, field: 'quantity' | 'unitPrice' | 'unitCost' | 'productName', value: string) =>
     setItems(xs => xs.map((x, j) => j === i ? { ...x, [field]: value } : x))
-  const addCustom = () => setItems(xs => [...xs, { key: `custom-${Date.now()}`, productId: null, productName: '', unitPrice: '', unitCost: '', quantity: '1' }])
+  const addCustom = () => setItems(xs => [{ key: `custom-${Date.now()}`, productId: null, productName: '', unitPrice: '', unitCost: '', quantity: '1' }, ...xs])
   return (
     <div className="space-y-5">
       <div>

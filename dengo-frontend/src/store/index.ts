@@ -8,6 +8,7 @@ interface AuthState {
   isAuthenticated: boolean
   login: (user: User, token: string) => void
   logout: () => void
+  setPermissions: (permissions: string[], customRoleId?: string | null) => void
 }
 
 interface CartState {
@@ -39,6 +40,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       login: (user, token) => set({ user, token, isAuthenticated: true }),
       logout: () => set({ user: null, token: null, isAuthenticated: false }),
+      setPermissions: (permissions, customRoleId) => set(s => s.user ? { user: { ...s.user, permissions, ...(customRoleId !== undefined ? { customRoleId } : {}) } } : {}),
     }),
     {
       name: 'auth-storage',

@@ -55,6 +55,7 @@ const PERMISSION_LABELS: Record<string, string> = {
   'inventory.editPrice': 'Editar precios y costos',
   'inventory.adjust': 'Ajustar stock manualmente',
   'inventory.transfer': 'Solicitar traslados de stock',
+  'inventory.viewAllBranches': 'Ver stock total de todas las sucursales',
   'customers.view': 'Ver clientes',
   'customers.create': 'Crear clientes',
   'customers.edit': 'Editar clientes',

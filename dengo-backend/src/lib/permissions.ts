@@ -10,7 +10,10 @@ import { getBusinessTimeMinutes } from './timezone.js'
  */
 export const PERMISSION_CATALOG = {
   sales: ['sales.view', 'sales.create', 'sales.cancel', 'sales.edit', 'sales.discount'],
-  inventory: ['inventory.view', 'inventory.create', 'inventory.edit', 'inventory.delete', 'inventory.editPrice', 'inventory.adjust', 'inventory.transfer'],
+  // inventory.viewAllBranches: the Products list shows the selected branch's
+  // stock; this adds the all-branches total under it. Left out of every
+  // default role (ADMIN always has it).
+  inventory: ['inventory.view', 'inventory.create', 'inventory.edit', 'inventory.delete', 'inventory.editPrice', 'inventory.adjust', 'inventory.transfer', 'inventory.viewAllBranches'],
   // customers.addCharge raises a customer's balance with no sale behind it
   // (debt carried over from before DENGO). Left out of every default role.
   customers: ['customers.view', 'customers.create', 'customers.edit', 'customers.delete', 'customers.editCredit', 'customers.registerPayment', 'customers.addCharge'],
@@ -107,6 +110,15 @@ export async function resolveUserPermissions(user: { role: string; customRoleId?
     })
     return rows.map(r => r.permissionKey)
   }
+  // No custom role: the system Role row of the same name is what the admin
+  // sees and edits in "Roles y Permisos". Reading the hardcoded defaults here
+  // instead meant unticking e.g. "Ajustar stock" on OPERATOR changed the
+  // screen but not the users — they kept every default permission.
+  const systemRole = await prisma.role.findUnique({
+    where: { name: user.role },
+    select: { permissions: { select: { permissionKey: true } } },
+  })
+  if (systemRole) return systemRole.permissions.map(p => p.permissionKey)
   return [...(DEFAULT_ROLE_PERMISSIONS[user.role] ?? [])]
 }
 
@@ -195,6 +207,17 @@ export async function ensureSystemRoles(): Promise<void> {
         },
       })
       continue
+    }
+
+    // A system role nobody has edited yet (updatedAt still equals createdAt —
+    // PUT /api/roles/:id always bumps it) follows the code defaults, so a key
+    // added to DEFAULT_ROLE_PERMISSIONS later reaches it. Once an admin edits
+    // the role, their choice is final and never overwritten here.
+    const untouched = Math.abs(existing.updatedAt.getTime() - existing.createdAt.getTime()) < 1000
+    if (untouched) {
+      const have = new Set(existing.permissions.map(p => p.permissionKey))
+      const missing = role.permissions.filter(k => !have.has(k))
+      if (missing.length) await prisma.rolePermission.createMany({ data: missing.map(permissionKey => ({ roleId: existing.id, permissionKey })) })
     }
 
     // Migrate renamed keys on an existing system role (see RENAMED_PERMISSIONS).

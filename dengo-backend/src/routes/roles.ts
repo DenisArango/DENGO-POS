@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { log } from '../services/audit.service.js'
 import { PERMISSION_CATALOG, ALL_PERMISSION_KEYS, requirePermission } from '../lib/permissions.js'
+import { forgetAllSessions } from '../plugins/auth.plugin.js'
 
 const roleInclude = { permissions: { select: { permissionKey: true } }, _count: { select: { users: true } } }
 
@@ -116,6 +117,7 @@ export default async function roleRoutes(fastify: FastifyInstance) {
       })
     })
 
+    forgetAllSessions()
     await log({ userId: request.user.id, action: 'UPDATE', entity: 'Role', entityId: id })
     return reply.send(serializeRole(role))
   })

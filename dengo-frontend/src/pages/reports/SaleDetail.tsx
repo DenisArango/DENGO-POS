@@ -143,7 +143,8 @@ export default function SaleDetail() {
       ))
     } else {
       const isDefault = !variation || variation.isDefault
-      setEditItems(prev => [...prev, {
+      // New line on top so it's visible right away; the sale's own lines keep their order below.
+      setEditItems(prev => [{
         productId: product.id,
         variationId: isDefault ? undefined : variation?.id,
         productName: product.name,
@@ -153,7 +154,7 @@ export default function SaleDetail() {
         discountStr: '0',
         cost: Number(product.cost ?? 0),
         convFactor: Number(variation?.conversionFactor ?? 1),
-      }])
+      }, ...prev])
     }
     setProductSearch('')
     setProductResults([])

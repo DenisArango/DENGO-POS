@@ -11,6 +11,7 @@ import { api } from '../lib/api'
 import StatStrip from '../components/common/StatStrip'
 import { usePermissions } from '../hooks/usePermissions'
 import { useAuthStore } from '../store'
+import { useStore } from '../contexts/StoreContext'
 import PageIcon from '../components/common/PageIcon'
 
 interface Category {
@@ -43,6 +44,8 @@ interface Product {
   basePrice: number
   cost?: number
   stock?: number
+  /** All branches combined — only sent to users with inventory.viewAllBranches. */
+  totalStock?: number
   minStock?: number
   maxStock?: number | null
   isActive?: boolean
@@ -58,6 +61,11 @@ export default function Products() {
   const canDelete = hasPermission('inventory.delete')
   const canEditPrice = hasPermission('inventory.editPrice')
   const canViewMoneyTotals = hasPermission('settings.system')
+  // Stock shown is the selected branch's; the chain-wide total goes under it
+  // for admins / users granted "Ver stock de todas las sucursales".
+  const { currentStore } = useStore()
+  const branchId = currentStore?.id ?? ''
+  const showTotalStock = hasPermission('inventory.viewAllBranches')
   // Row checkboxes serve both bulk category reassign (edit) and bulk delete/reactivate (delete).
   const canSelect = canEdit || canDelete
   const PAGE_SIZE = 50
@@ -107,6 +115,7 @@ export default function Products() {
     if (debouncedSearch) params.set('search', debouncedSearch)
     if (selectedCategory) params.set('categoryId', selectedCategory)
     if (showInactive) params.set('isActive', 'false')
+    if (branchId) params.set('branchId', branchId)
     Promise.all([
       api.get<{ data: Product[]; total: number; stats: { total: number; lowStock: number; outOfStock: number; totalValue: number } }>(`/api/products?${params}`),
       api.get<Category[]>('/api/categories'),
@@ -127,6 +136,7 @@ export default function Products() {
           minStock: Number(p.minStock ?? 0),
           maxStock: p.maxStock != null ? Number(p.maxStock) : null,
           stock: Number(p.stock ?? 0),
+          ...(p.totalStock != null ? { totalStock: Number(p.totalStock) } : {}),
           variations: (p.variations ?? []).map((v: ProductVariation) => ({
             ...v,
             price: Number(v.price ?? 0),
@@ -143,7 +153,7 @@ export default function Products() {
       .finally(() => { setLoading(false); setHasLoadedOnce(true) })
   }
 
-  useEffect(() => { fetchProducts() }, [page, debouncedSearch, selectedCategory, showInactive])
+  useEffect(() => { fetchProducts() }, [page, debouncedSearch, selectedCategory, showInactive, branchId])
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
@@ -389,10 +399,15 @@ export default function Products() {
     <div className={`space-y-6 transition-opacity ${loading ? 'opacity-60' : ''}`}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
-          <PageIcon icon={Package} color="blue" />
-          Gestión de Productos
-        </h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+            <PageIcon icon={Package} color="blue" />
+            Gestión de Productos
+          </h1>
+          {currentStore && (
+            <p className="text-sm text-gray-500 mt-1">Stock de <span className="font-medium text-gray-700">{currentStore.name}</span>{showTotalStock ? ' · con el total de todas las sucursales' : ''}</p>
+          )}
+        </div>
         {canCreate && (
           <button
             onClick={handleCreateProduct}
@@ -625,6 +640,12 @@ export default function Products() {
                       {product.stock ?? 0} {product.baseUnit}
                     </span>
                   </div>
+                  {showTotalStock && product.totalStock != null && product.totalStock !== product.stock && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Total sucursales:</span>
+                      <span className="font-medium text-gray-700">{product.totalStock} {product.baseUnit}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-600">Variaciones:</span>
                     <span className="font-medium">{product.variations.length}</span>
@@ -654,7 +675,7 @@ export default function Products() {
                   <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">SKU</th>
                   <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Categoría</th>
                   <th className="text-right py-3 px-4 text-xs font-medium text-gray-500">Precio Base</th>
-                  <th className="text-right py-3 px-4 text-xs font-medium text-gray-500">Stock</th>
+                  <th className="text-right py-3 px-4 text-xs font-medium text-gray-500" title={currentStore ? `Stock en ${currentStore.name}` : undefined}>Stock</th>
                   <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Variaciones</th>
                   <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Acciones</th>
                 </tr>
@@ -692,6 +713,11 @@ export default function Products() {
                       }`}>
                         {product.stock ?? 0}
                       </span>
+                      {showTotalStock && product.totalStock != null && (
+                        <span className="block text-[11px] text-gray-400 whitespace-nowrap" title="Suma de todas las sucursales">
+                          Total: {product.totalStock}
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-center">{product.variations.length}</td>
                     <td className="py-3 px-4">

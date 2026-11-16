@@ -8,6 +8,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../store'
+import { usePermissions } from '../../hooks/usePermissions'
 import AIRecommendations from '../../components/reports/AIRecommendations'
 import { toast } from 'sonner'
 import { FileText as PageFileText } from 'lucide-react'
@@ -16,6 +17,7 @@ import PageIcon from '../../components/common/PageIcon'
 export default function CreditSalesReport() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const canRegisterPayment = usePermissions().hasPermission('customers.registerPayment')
 
   const [loading, setLoading] = useState(false)
   const [customers, setCustomers] = useState<any[]>([])
@@ -244,7 +246,7 @@ export default function CreditSalesReport() {
                             </span>
                           </td>
                           <td className="px-4 py-2.5">
-                            {c.balance > 0 && (
+                            {canRegisterPayment && c.balance > 0 && (
                               <button
                                 onClick={() => openPaymentForCustomer(c.id, c.name)}
                                 className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
@@ -301,7 +303,7 @@ export default function CreditSalesReport() {
                               <button onClick={() => { setDetailSale(s); setShowDetail(true) }} className="p-1 hover:bg-gray-100 rounded text-gray-400" title="Historial abonos">
                                 <History size={13} />
                               </button>
-                              {!s.isPaid && (
+                              {canRegisterPayment && !s.isPaid && (
                                 <button onClick={() => openPaymentForSale(s)} className="flex items-center gap-0.5 px-1.5 py-1 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 rounded transition-colors">
                                   <Plus size={11} /> Abonar
                                 </button>

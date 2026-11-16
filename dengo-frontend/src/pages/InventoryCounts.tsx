@@ -378,7 +378,7 @@ export default function InventoryCounts() {
                         <Package size={36} className="mx-auto mb-2 opacity-30" />
                         Busca productos arriba para agregarlos al conteo
                       </td></tr>
-                    ) : activeCount.items.map(item => {
+                    ) : [...activeCount.items].reverse().map(item => {
                       const counted = item.countedQuantity
                       const diff = counted !== null ? Number(counted) - Number(item.systemQuantity) : null
                       return (

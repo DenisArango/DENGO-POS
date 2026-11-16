@@ -7,6 +7,7 @@ export interface User {
   branchId: string
   branchIds?: string[]
   permissions?: string[]
+  customRoleId?: string | null
   branch: Store
   createdAt: string
   updatedAt: string

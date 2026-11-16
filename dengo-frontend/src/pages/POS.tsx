@@ -225,6 +225,9 @@ export default function POS() {
           .map(r => ({ id: r.id, name: r.name ?? 'Caja', registerNumber: r.registerNumber ?? '?' }))
         setOpenRegisters(list)
         setCache(registerCacheKey, list)
+        // A branch switch can leave the picker open on a branch with no open
+        // register — nothing to pick, nothing to close. Never strand it there.
+        if (list.length === 0) setShowRegisterPanel(false)
         // Also feed CashRegister.tsx's own cache (it needs the full record —
         // initialAmount, movements, sales — not just this page's id/name/
         // registerNumber) under the SAME key it writes on its own successful
@@ -422,6 +425,8 @@ export default function POS() {
         setInvoiceBuyerName(draft.invoiceBuyerName ?? '')
         setSaleNotes(draft.saleNotes ?? '')
         toast.info('Se restauró la venta que tenías en curso')
+        // The draft's product copies may predate a variation created since.
+        window.setTimeout(() => { void refreshCartProductsRef.current() }, 0)
       }
     } catch {
       // Draft corrupto o ilegible — se ignora, no bloquea el uso normal del POS.
@@ -472,12 +477,32 @@ export default function POS() {
   // endpoint can't be reached.
   async function loadProductCatalogCache() {
     try {
-      const data = await api.get<ProductRecord[]>('/api/products?isActive=true')
+      // catalog=1: the WHOLE active catalog with variations. The plain list
+      // is capped at 50, so offline only the first 50 products existed.
+      const data = await api.get<ProductRecord[]>('/api/products?catalog=1')
       await setCache('products', data ?? [])
     } catch {
       // No network yet — whatever was cached from a previous session stays in place
     }
   }
+
+  // The snapshot used to be taken once, when the POS opened: a variation
+  // created later in the day didn't exist in it, so a search that fell back
+  // to it (a dropped connection) added the product with no presentations and
+  // it sold as the base unit. Keep it fresh, and refresh the cart's own
+  // product copies too (they also outlive the moment they were added — the
+  // cart draft survives leaving the POS).
+  useEffect(() => {
+    const refresh = () => {
+      if (!navigator.onLine) return
+      void loadProductCatalogCache()
+      void refreshCartProductsRef.current()
+    }
+    const timer = window.setInterval(refresh, 5 * 60_000)
+    window.addEventListener('online', refresh)
+    window.addEventListener('focus', refresh)
+    return () => { window.clearInterval(timer); window.removeEventListener('online', refresh); window.removeEventListener('focus', refresh) }
+  }, [])
 
   // Auto-select the branch's default customer so a sale never starts with no
   // customer chosen. Only applies while nothing has been picked yet — it
@@ -568,9 +593,7 @@ export default function POS() {
       const q = query.toLowerCase()
       const results = (cached ?? [])
         .filter(p => p.isActive !== false && (
-          p.name?.toLowerCase().includes(q) ||
-          p.barcode?.toLowerCase().includes(q) ||
-          p.sku?.toLowerCase().includes(q)
+          matchesSearch([p.name, p.barcode, p.sku, ...getVariations(p).map(v => v.barcode)], q)
         ))
         .slice(0, 50)
         .map(normaliseProduct)
@@ -650,6 +673,31 @@ export default function POS() {
   const filteredCustomers = customers.filter(c => matchesSearch([getCustomerName(c), c.nit], customerSearch))
 
   // ── Cart helpers ──────────────────────────────────────────────────────────
+  // Re-reads the products in the cart from the server and swaps in the fresh
+  // copies (same ids, so quantities/discounts/price overrides keep their
+  // keys). A line on a real variation also gets that variation's current data.
+  const cartItemsRef = useRef(cartItems)
+  cartItemsRef.current = cartItems
+  const refreshCartProductsRef = useRef(async () => {})
+  refreshCartProductsRef.current = async () => {
+    const ids = [...new Set(cartItemsRef.current.map(i => i.product.id))]
+    if (ids.length === 0) return
+    let fresh: ProductRecord[]
+    try {
+      fresh = (await api.get<ProductRecord[]>(`/api/products?ids=${ids.join(',')}`) ?? []).map(normaliseProduct)
+    } catch { return }
+    const byId = new Map(fresh.map(p => [p.id, p]))
+    setCartItems(prev => prev.map(item => {
+      const p = byId.get(item.product.id)
+      if (!p) return item
+      const product = { ...item.product, ...p, stock: item.product.stock }
+      const vid = item.variation?.id
+      const isReal = !!vid && !vid.endsWith('-default')
+      const freshVar = isReal ? p.variations?.find(v => v.id === vid) : undefined
+      return { ...item, product, ...(freshVar ? { variation: freshVar } : {}) }
+    }))
+  }
+
   function addToCart(product: ProductRecord, variation: ProductVariation, quantity: number) {
     setCartItems(prev => {
       const key = getItemKey(product.id, variation.id)
@@ -926,7 +974,8 @@ export default function POS() {
       // Server unreachable — try to resolve the barcode from the cached catalog
       const cached = await getCache<ProductRecord[]>('products')
       const match = (cached ?? []).find(p =>
-        barcodeEq(p.barcode) || getVariations(p).some(v => barcodeEq(v.barcode))
+        barcodeEq(p.barcode) || getVariations(p).some(v => barcodeEq(v.barcode)) ||
+        ((p as { altBarcodes?: { barcode: string }[] }).altBarcodes ?? []).some(a => barcodeEq(a.barcode))
       )
       if (match) {
         const product = normaliseProduct(match)
@@ -2406,7 +2455,7 @@ export default function POS() {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
-            onClick={() => selectedRegisterId && setShowRegisterPanel(false)}
+            onClick={() => setShowRegisterPanel(false)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
@@ -2417,12 +2466,19 @@ export default function POS() {
                 <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                   <Wallet size={20} className="text-primary-600" /> Selecciona una caja
                 </h3>
-                {selectedRegisterId && (
-                  <button onClick={() => setShowRegisterPanel(false)} className="text-gray-400 hover:text-gray-600">
-                    <X size={20} />
-                  </button>
-                )}
+                <button onClick={() => setShowRegisterPanel(false)} aria-label="Cerrar" className="text-gray-400 hover:text-gray-600">
+                  <X size={20} />
+                </button>
               </div>
+              {openRegisters.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-sm text-gray-600 mb-4">No hay ninguna caja abierta en esta sucursal. Abre una caja o cambia de sucursal arriba.</p>
+                  <div className="flex justify-center gap-2">
+                    <button onClick={() => setShowRegisterPanel(false)} className="btn-secondary btn-sm">Cerrar</button>
+                    <button onClick={() => { setShowRegisterPanel(false); navigate('/cash-register') }} className="btn-primary btn-sm">Abrir caja</button>
+                  </div>
+                </div>
+              ) : (<>
               <p className="text-sm text-gray-500 mb-4">Esta caja quedará asociada a tus ventas por el resto del día.</p>
               <div className="space-y-2">
                 {openRegisters.map(reg => (
@@ -2440,6 +2496,7 @@ export default function POS() {
                   </button>
                 ))}
               </div>
+              </>)}
             </motion.div>
           </motion.div>
         )}

@@ -24,10 +24,26 @@ const items = await prisma.saleItem.findMany({
   orderBy: { sale: { createdAt: 'desc' } },
 })
 
+// ── 1) Presentaciones guardadas con factor 1 que parecen traer varias unidades
+// (precio distinto del base, o nombre de empaque/número). Venderlas descuenta
+// solo 1 unidad base: la causa más común de "la variación se vende como base".
+const suspicious = await prisma.productVariation.findMany({
+  where: { conversionFactor: 1, product: { isActive: true } },
+  select: { id: true, name: true, price: true, createdAt: true, product: { select: { name: true, basePrice: true } }, _count: { select: { saleItems: true } } },
+})
+const PACK = /(caja|paquete|pqt|resma|docena|ciento|fardo|blister|bolsa|display|six|x\s*\d+|\d+\s*(u|und|unid|hojas|pzas|piezas))/i
+const flagged = suspicious.filter(v => PACK.test(v.name) || Math.abs(Number(v.price) - Number(v.product.basePrice)) > 0.009)
+console.log(`Presentaciones con factor 1 que parecen traer varias unidades: ${flagged.length}`)
+for (const v of flagged) {
+  console.log(`  ${v.product.name} → "${v.name}" | precio Q${Number(v.price).toFixed(2)} (base Q${Number(v.product.basePrice).toFixed(2)}) | ventas: ${v._count.saleItems} | creada ${v.createdAt.toISOString().slice(0, 10)}`)
+}
+console.log('')
+
 const realVariationItems = items.filter(i => Number(i.variation?.conversionFactor ?? 1) !== 1)
 
 if (realVariationItems.length === 0) {
   console.log(`No se encontraron ventas con variaciones de factor != 1 en los últimos ${days} días.`)
+  await prisma.$disconnect()
   process.exit(0)
 }
 

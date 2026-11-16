@@ -34,6 +34,7 @@ export async function staffSession(fastify: FastifyInstance, user: User) {
       email: user.email,
       name: user.name,
       role: user.role,
+      customRoleId: user.customRoleId,
       branchId: user.branchId,
       branchIds,
       permissions,
@@ -110,7 +111,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
     })
     if (!user) return reply.status(404).send({ error: 'Usuario no encontrado' })
     const { passwordHash: _, ...safe } = user
-    return reply.send(safe)
+    // Current permissions (re-resolved by authenticate), so an open POS can
+    // pick up a role change without logging out — see useSessionRefresh.
+    return reply.send({ ...safe, permissions: request.user.permissions ?? [] })
   })
 
   // POST /api/auth/logout

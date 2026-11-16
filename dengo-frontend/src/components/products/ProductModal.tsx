@@ -381,8 +381,38 @@ export default function ProductModal({
     const selectedCategory = categories.find(c => c.name === formData.category)
     const selectedUnit = units.find(u => u.name === formData.baseUnit || u.abbreviation === formData.baseUnit)
 
+    // A factor/price still being typed (committed only on blur) must not be
+    // lost if Guardar is reached without leaving the field.
+    const variations = formData.variations.map((v, i) => {
+      const f = parseFloat(numDrafts[`v${i}-factor`] ?? '')
+      const pr = parseFloat(numDrafts[`v${i}-price`] ?? '')
+      return {
+        ...v,
+        ...(isNaN(f) ? {} : { conversionFactor: Math.max(0, f) }),
+        ...(isNaN(pr) ? {} : { price: Math.max(0, pr) }),
+      }
+    })
+    const badFactor = variations.find(v => !(Number(v.conversionFactor) > 0))
+    if (badFactor) {
+      toast.error(`La presentación "${badFactor.name || 'sin nombre'}" necesita cuántas unidades base trae (factor mayor que 0)`)
+      return
+    }
+    // Factor 1 = the presentation IS one base unit: selling it takes 1 off
+    // stock. A "Resma 500 hojas" or "Caja x12" saved like that sells as the
+    // base — the usual cause of "la variación se vende como unidad".
+    const factorOne = variations.filter(v => Number(v.conversionFactor) === 1)
+    if (factorOne.length > 0 && !window.confirm(
+      `${factorOne.map(v => `"${v.name || 'sin nombre'}"`).join(', ')} tiene factor 1: al venderla se descuenta solo 1 ${formData.baseUnit || 'unidad'} del inventario.
+
+` +
+      `Si trae varias unidades (ej. caja de 12), cancela y escribe cuántas en "Factor".
+
+¿Guardar así?`
+    )) return
+
     const productData = {
       ...formData,
+      variations,
       fullName,
       imageUrl: productImage,
       id: editingProduct?.id || Date.now().toString(),
@@ -851,7 +881,7 @@ export default function ProductModal({
                           />
                         </div>
                         <div>
-                          <label className="label text-xs">Factor conversión</label>
+                          <label className="label text-xs" title="Cuántas unidades base se descuentan del inventario al vender 1 de esta presentación">Factor (unidades base que trae)</label>
                           <input
                             type="text"
                             inputMode="decimal"

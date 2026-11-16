@@ -630,7 +630,8 @@ export default function Quotations() {
                   <p className="text-sm text-center">Busca un producto por nombre o código de barras<br/>o agrega uno personalizado con el botón de arriba</p>
                 </div>
               ) : (
-                draftItems.map(item => (
+                // Newest line on top (same as the POS cart); saved/printed order stays chronological.
+                [...draftItems].reverse().map(item => (
                   <div
                     key={item.id}
                     className="grid items-center px-4 py-3 border-b hover:bg-gray-50"

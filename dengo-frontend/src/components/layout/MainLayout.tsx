@@ -5,7 +5,8 @@ import { AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import Sidebar from './Sidebar.tsx'
 import Header from './Header'
-import { useAppStore } from '../../store'
+import { useAppStore, useAuthStore } from '../../store'
+import { api } from '../../lib/api'
 import { subscribeSyncState, startOfflineSync, trySync, type SyncState } from '../../lib/offlineSync'
 import FailedOfflineItemsModal from '../common/FailedOfflineItemsModal'
 import { ConnectionDetailsToggle } from '../common/ConnectionDetails'
@@ -31,6 +32,24 @@ export default function MainLayout() {
     startOfflineSync()
     return subscribeSyncState(setSyncState)
   }, [])
+
+  // Permissions travel in the login response and used to stay frozen until
+  // the next login, so removing one from a role changed nothing on an open
+  // POS. Re-read them on focus and every couple of minutes (the backend
+  // already enforces the fresh set on every request).
+  const setPermissions = useAuthStore(s => s.setPermissions)
+  useEffect(() => {
+    const refresh = () => {
+      if (!navigator.onLine) return
+      api.get<{ permissions?: string[]; customRoleId?: string | null }>('/api/auth/me')
+        .then(me => { if (Array.isArray(me?.permissions)) setPermissions(me.permissions, me.customRoleId ?? null) })
+        .catch(() => {})
+    }
+    refresh()
+    const timer = window.setInterval(refresh, 120_000)
+    window.addEventListener('focus', refresh)
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh) }
+  }, [setPermissions])
 
   // React Router doesn't reset scroll on navigation by default (unlike a
   // real page load) — <main> isn't its own scroll container (no

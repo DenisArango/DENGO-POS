@@ -53,6 +53,18 @@ export const portalItems: NavItem[] = [
   { path: '/portal/config', icon: Globe, label: 'Config. Portal', roles: ['ADMIN'] },
 ]
 
+// A base role sees its usual menu, but only while it still holds one of the
+// item's permissions — it used to be role OR permission, so unticking e.g.
+// "Ver clientes" on OPERATOR in Roles y Permisos never hid Clientes. A custom
+// role has no menu of its own and goes by permissions alone.
+function canSeeItem(user: NonNullable<ReturnType<typeof useAuthStore.getState>['user']>, item: NavItem): boolean {
+  if (user.role === 'ADMIN') return true
+  if (!item.permissions) return item.roles.includes(user.role)
+  const hasAny = item.permissions.some(p => userHasPermission(user, p))
+  if (user.customRoleId) return hasAny
+  return item.roles.includes(user.role) && hasAny
+}
+
 /** The menu the current user is allowed to see — shared by the sidebar and the quick finder. */
 export function useNavItems() {
   const user = useAuthStore(s => s.user)
@@ -61,10 +73,7 @@ export function useNavItems() {
 
   const main = menuItems.filter(item =>
     (item.license !== 'pageEnabled' || pageEnabled) &&
-    !!user && (
-      item.roles.includes(user.role) ||
-      !!item.permissions?.some(p => userHasPermission(user, p))
-    )
+    !!user && canSeeItem(user, item)
   )
   // Nothing to manage here if this instance's teacher-portal module is
   // switched off by the vendor (see LicenseConfig) — a teacher can't even log

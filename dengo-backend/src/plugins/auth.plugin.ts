@@ -3,24 +3,34 @@ import fp from 'fastify-plugin'
 import jwt from '@fastify/jwt'
 import { config } from '../config.js'
 import { prisma } from '../lib/prisma.js'
+import { resolveUserPermissions } from '../lib/permissions.js'
 
 // A token stays valid for up to 24h, so without this a user who was
 // deactivated (or whose role changed) kept full access until it expired.
 // Looked up per request, cached briefly so the polling screens don't turn
 // every request into an extra query.
 const USER_CACHE_MS = 30_000
-const userCache = new Map<string, { at: number; isActive: boolean; role: string }>()
+// Permissions are also re-resolved here: the copy inside the token was
+// frozen at login, so a permission removed from a role (or a user moved to
+// another role) kept working for up to 24h.
+const userCache = new Map<string, { at: number; isActive: boolean; role: string; permissions: string[] }>()
 
 /** Call after deactivating a user or changing their role: effective at once. */
 export function forgetUserSession(id: string) {
   userCache.delete(id)
 }
 
+/** Call after editing or deleting a role: every user re-reads their permissions. */
+export function forgetAllSessions() {
+  userCache.clear()
+}
+
 async function currentUser(id: string) {
   const hit = userCache.get(id)
   if (hit && Date.now() - hit.at < USER_CACHE_MS) return hit
-  const u = await prisma.user.findUnique({ where: { id }, select: { isActive: true, role: true } })
-  const entry = { at: Date.now(), isActive: !!u?.isActive, role: u?.role ?? '' }
+  const u = await prisma.user.findUnique({ where: { id }, select: { isActive: true, role: true, customRoleId: true } })
+  const permissions = u && u.role !== 'TEACHER' ? await resolveUserPermissions(u) : []
+  const entry = { at: Date.now(), isActive: !!u?.isActive, role: u?.role ?? '', permissions }
   userCache.set(id, entry)
   if (userCache.size > 5000) userCache.clear()
   return entry
@@ -44,6 +54,7 @@ async function authPlugin(fastify: FastifyInstance) {
     if (!u.isActive || u.role !== role) {
       return reply.status(401).send({ error: 'Tu sesión ya no es válida. Inicia sesión de nuevo.' })
     }
+    ;(request.user as { permissions?: string[] }).permissions = u.permissions
 
     // Teacher tokens are signed with the same secret as staff tokens; they
     // must only ever reach the teacher portal API, never the POS one

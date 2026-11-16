@@ -64,7 +64,34 @@ function barcodeConflictResponse(holder: { id: string; name: string; isActive: b
 export default async function productRoutes(fastify: FastifyInstance) {
   // GET /api/products
   fastify.get('/', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
-    const q = request.query as { search?: string; categoryId?: string; isActive?: string; page?: string; limit?: string; branchId?: string }
+    const q = request.query as { search?: string; categoryId?: string; isActive?: string; page?: string; limit?: string; branchId?: string; catalog?: string; ids?: string }
+
+    // ?catalog=1 — the POS's offline snapshot: EVERY active product with its
+    // variations, lean (no images/stock). It used to call the plain list
+    // below, which is capped at 50, so offline the cashier could only find the
+    // first 50 products alphabetically — and the ones found carried whatever
+    // variations existed when the POS was opened.
+    if (q.catalog === '1') {
+      const products = await prisma.product.findMany({
+        where: { isActive: true },
+        select: {
+          id: true, name: true, barcode: true, sku: true, basePrice: true, cost: true, isActive: true,
+          variations: { orderBy: { isDefault: 'desc' }, select: { id: true, productId: true, name: true, barcode: true, conversionFactor: true, price: true, isDefault: true } },
+          altBarcodes: { select: { barcode: true } },
+        },
+        orderBy: { name: 'asc' },
+      })
+      return reply.send(products)
+    }
+
+    // ?ids=a,b,c — fresh copies of specific products (the POS refreshes the
+    // cart's snapshots with this, so a variation created after a line was
+    // added still shows up and sells with its own conversion factor).
+    if (q.ids) {
+      const ids = q.ids.split(',').map(s => s.trim()).filter(Boolean).slice(0, 200)
+      const products = await prisma.product.findMany({ where: { id: { in: ids } }, include })
+      return reply.send(products)
+    }
     const where = {
       isActive: q.isActive === 'false' ? false : true,
       ...(q.categoryId ? { categoryId: q.categoryId } : {}),
@@ -89,6 +116,18 @@ export default async function productRoutes(fastify: FastifyInstance) {
       _sum: { quantity: true },
     })
     const stockByProduct = new Map(stockRows.map(r => [r.productId, Number(r._sum.quantity ?? 0)]))
+    // Branch-scoped list + permission to see every branch → also send the
+    // chain-wide total (the Products page shows "Sucursal 75 · Total 100").
+    let totalByProduct: Map<string, number> | null = null
+    if (branchId && hasPermission(request, 'inventory.viewAllBranches')) {
+      const totalRows = await prisma.inventory.groupBy({ by: ['productId'], _sum: { quantity: true } })
+      totalByProduct = new Map(totalRows.map(r => [r.productId, Number(r._sum.quantity ?? 0)]))
+    }
+    const withStock = <T extends { id: string }>(p: T) => ({
+      ...p,
+      stock: stockByProduct.get(p.id) ?? 0,
+      ...(totalByProduct ? { totalStock: totalByProduct.get(p.id) ?? 0 } : {}),
+    })
 
     // Paginated path — used by the Products management page. `page` is the
     // opt-in signal; every other caller (POS/Purchases/Transfers/Quotations/
@@ -116,7 +155,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
 
       await attachImageUrls(products, request)
       return reply.send({
-        data: products.map(p => ({ ...p, stock: stockByProduct.get(p.id) ?? 0 })),
+        data: products.map(withStock),
         total,
         page,
         limit,
@@ -131,7 +170,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
     // this, not a hard top-N cutoff.
     const products = await prisma.product.findMany({ where, include, orderBy: { name: 'asc' }, take: 50 })
     await attachImageUrls(products, request)
-    return reply.send(products.map(p => ({ ...p, stock: stockByProduct.get(p.id) ?? 0 })))
+    return reply.send(products.map(withStock))
   })
 
   // GET /api/products/barcode/:code

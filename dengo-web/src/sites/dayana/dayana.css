@@ -13,6 +13,7 @@
 @keyframes pre-out { to { clip-path: inset(0 0 100% 0); } }
 @keyframes dy-word { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
 @keyframes dy-beat { 50% { transform: scale(1.4); } }
+@keyframes dy-pre-write { from { opacity: 0; transform: translateY(0.6em) rotate(-14deg) scale(0.6); } to { opacity: 1; transform: none; } }
 @keyframes dy-jig { 0%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-0.12em) rotate(-6deg); } 60% { transform: translateY(0.03em) rotate(4deg); } }
 
 html[data-site='dayana'] {
@@ -139,7 +140,16 @@ html[data-site='dayana'] {
   & .dy-foot__col a { text-decoration: none; font-weight: 500; color: rgb(255 255 255 / 0.9); }
   & .dy-foot__col a:hover { color: var(--yellow); }
   & .dy-foot__k { font: 700 1.6rem/1 var(--hand); color: var(--sky); margin-bottom: 4px; }
-  & .dy-foot__word { margin-top: clamp(50px, 8vw, 110px); display: flex; justify-content: center; font: 900 clamp(5rem, 22vw, 24rem)/0.8 var(--display); font-variation-settings: var(--soft); letter-spacing: -0.04em; }
+  & .dy-foot__brand { margin-top: clamp(50px, 8vw, 110px); display: grid; justify-items: center; }
+  & .dy-foot__pre { position: relative; justify-self: center; margin-bottom: -0.12em; transform: translateX(-28%) rotate(-5deg); background: none; border: 0; padding: 0 0.15em; cursor: pointer; color: #fff; font: 700 clamp(2.6rem, 1rem + 6vw, 7.5rem)/1 var(--hand); z-index: 1; }
+  & .dy-foot__pre span { display: inline-block; opacity: 0; transform: translateY(0.6em) rotate(-14deg) scale(0.6); }
+  & .dy-foot__pre.is-on span { animation: dy-pre-write 0.55s var(--ease-spring) both; animation-delay: calc(var(--i) * 70ms); }
+  & .dy-foot__pre.is-done span { animation: none; opacity: 1; transform: none; }
+  & .dy-foot__pre.is-done span:hover { animation: dy-jig 0.6s var(--ease-out); }
+  & .dy-foot__pre-line { position: absolute; left: 0.1em; right: 0.1em; bottom: -0.08em; width: calc(100% - 0.2em); height: 0.2em; overflow: visible; }
+  & .dy-foot__pre-line path { fill: none; stroke: var(--yellow); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
+  & .dy-foot__pre.is-on .dy-foot__pre-line path { transition: stroke-dashoffset 0.7s var(--ease-out) 0.75s; stroke-dashoffset: 0; }
+  & .dy-foot__word { display: flex; justify-content: center; font: 900 clamp(5rem, 22vw, 24rem)/0.8 var(--display); font-variation-settings: var(--soft); letter-spacing: -0.04em; }
   & .dy-foot__word span { display: inline-block; color: var(--c); transition: transform 0.4s var(--ease-spring); }
   & .dy-foot__word span:hover { animation: dy-jig 0.6s var(--ease-out); }
   & .dy-foot__crew { display: flex; justify-content: center; gap: clamp(4px, 2vw, 30px); margin-top: clamp(18px, 3vw, 40px); }
@@ -225,6 +235,8 @@ html[data-site='dayana'] {
   @media (prefers-reduced-motion: reduce) {
     &.d-js [data-in] { transform: none; transition: opacity 0.3s linear; }
     & .dy-live[data-open-flag='1']::before, & .dy-foot__word span:hover { animation: none; }
+    & .dy-foot__pre span, & .dy-foot__pre.is-on span { animation: none; opacity: 1; transform: none; }
+    & .dy-foot__pre-line path { stroke-dashoffset: 0; }
   }
 
   @media (max-width: 1060px) {

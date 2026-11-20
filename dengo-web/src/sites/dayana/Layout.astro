@@ -111,9 +111,18 @@ const tones = ['var(--red)', 'var(--yellow)', 'var(--sky)', 'var(--green)', 'var
           </div>
         </div>
       </div>
-      <p class="dy-foot__word" aria-hidden="true">
-        {letters.map((ch, i) => <span style={`--c:${tones[i % tones.length]}; --i:${i}`}>{ch}</span>)}
-      </p>
+      <div class="dy-foot__brand">
+        <!-- "Variedades" gets written in crayon over the giant name when the
+             footer scrolls in; each letter jigs on hover and a tap writes it
+             again. Purely decorative: the name is in the © line below. -->
+        <button class="dy-foot__pre" type="button" data-foot-pre aria-hidden="true" tabindex="-1">
+          {'Variedades'.split('').map((ch, i) => <span style={`--i:${i}`}>{ch}</span>)}
+          <svg class="dy-foot__pre-line" viewBox="0 0 300 20" preserveAspectRatio="none"><path d="M4 12 C 70 4, 150 6, 210 11 S 280 16, 296 6" pathLength="1" /></svg>
+        </button>
+        <p class="dy-foot__word" aria-hidden="true">
+          {letters.map((ch, i) => <span style={`--c:${tones[i % tones.length]}; --i:${i}`}>{ch}</span>)}
+        </p>
+      </div>
       <div class="dy-foot__crew" aria-hidden="true">
         <Crayon who="pino" pose="wave" /><Crayon who="azul" pose="cheer" /><Crayon who="roja" pose="cheer" face="grin" /><Crayon who="sol" pose="wave" />
       </div>
@@ -157,6 +166,25 @@ const tones = ['var(--red)', 'var(--yellow)', 'var(--sky)', 'var(--green)', 'var
         lastY = y
       }
       addEventListener('scroll', onScroll, { passive: true }); onScroll()
+
+      // ── Footer: "Variedades" is written in crayon when the name scrolls in ──
+      const pre = document.querySelector<HTMLElement>('[data-foot-pre]')
+      if (pre) {
+        if (reduce) pre.classList.add('is-on', 'is-done')
+        else {
+          new IntersectionObserver((entries, io) => {
+            if (!entries.some(e => e.isIntersecting)) return
+            pre.classList.add('is-on'); io.disconnect()
+          }, { threshold: 0.6 }).observe(pre)
+          // Once written, letters jig on hover; a tap writes the word again.
+          pre.addEventListener('animationend', e => {
+            if ((e as AnimationEvent).animationName === 'dy-pre-write' && e.target === pre.lastElementChild?.previousElementSibling) pre.classList.add('is-done')
+          })
+          pre.addEventListener('click', () => {
+            pre.classList.remove('is-on', 'is-done'); void pre.offsetWidth; pre.classList.add('is-on')
+          })
+        }
+      }
 
       // ── The crayon across the top grows as you read ──
       const body = document.querySelector<HTMLElement>('.dy-bar__body')

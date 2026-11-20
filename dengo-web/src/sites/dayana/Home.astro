@@ -61,8 +61,8 @@ const P = PHOTOS
     <div class="hero__glow" aria-hidden="true"></div>
     <div class="hero__fallback" aria-hidden="true"><Crayon who="roja" pose="wave" face="grin" /><Crayon who="azul" /></div>
     <div class="hero__in">
-      <p class="hero__kick dy-hand" aria-hidden="true" data-hero-in>En servicio y calidad,</p>
-      <h1 id="h-hero" class="hero__title"><span class="sr-only">{BRAND.name}. En servicio y calidad, </span><span class="hero__l">nadie nos</span> <span class="hero__l hero__l--2"><em>gana.</em><svg class="hero__scrib" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true"><path d="M6 26 C 120 6, 260 8, 380 18 S 560 34, 594 10" /></svg></span></h1>
+      <h1 id="h-hero" class="hero__title"><span class="hero__l">Variedades</span> <span class="hero__l hero__l--2"><em>Dayana</em><svg class="hero__scrib" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true"><path d="M6 26 C 120 6, 260 8, 380 18 S 560 34, 594 10" /></svg></span></h1>
+      <p class="hero__kick dy-hand" data-hero-in>En servicio y calidad, <b>nadie nos gana.</b></p>
       <p class="hero__sub" data-hero-in>Útiles escolares, oficina, Totto, arte, leyes y la canasta básica. Cuatro tiendas en Rabinal y Cubulco desde 2010.</p>
       <div class="hero__actions" data-hero-in>
         {offer && <a class="dy-btn dy-btn--yellow" href="#cupon">Recorta tu {head}{isTotto ? ' en Totto' : ''} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>}
@@ -662,15 +662,16 @@ const P = PHOTOS
   .hero:global(.no-3d) .hero__fallback { display: flex; align-items: end; gap: 10px; position: absolute; right: 7vw; bottom: 16vh; width: min(30vw, 380px); z-index: -1; }
   .hero__fallback > :global(svg) { flex: 1; }
   .hero__in { position: relative; max-width: min(62vw, 980px); }
-  .hero__kick { font-size: clamp(2.1rem, 1.3rem + 2.4vw, 3.8rem); font-weight: 700; line-height: 1; color: var(--yellow); transform: rotate(-3deg); transform-origin: left; }
-  .hero__title { margin-top: 10px; font-size: clamp(4.2rem, 1rem + 10.4vw, 12rem); font-weight: 900; line-height: 0.84; letter-spacing: -0.03em; }
+  .hero__kick { margin-top: clamp(30px, 3vw, 44px); font-size: clamp(2rem, 1.2rem + 2.2vw, 3.5rem); font-weight: 700; line-height: 1.05; color: var(--yellow); transform: rotate(-2deg); transform-origin: left; }
+  .hero__kick b { font-weight: 700; color: #fff; white-space: nowrap; }
+  .hero__title { font-size: clamp(3.6rem, 0.6rem + 9.2vw, 10.5rem); font-weight: 900; line-height: 0.84; letter-spacing: -0.03em; }
   :global(.d-js) .hero__title { opacity: 0; }
   .hero__l { display: block; }
   .hero__l--2 { position: relative; width: max-content; }
   .hero__l--2 em { font-style: normal; color: #ff4141; }
   .hero__scrib { position: absolute; left: 0; right: 0; bottom: -0.1em; width: 100%; height: 0.22em; overflow: visible; }
   .hero__scrib path { fill: none; stroke: var(--yellow); stroke-width: 10; stroke-linecap: round; }
-  .hero__sub { font-size: var(--step-lead); margin-top: clamp(30px, 3.2vw, 46px); max-width: 34ch; line-height: 1.35; color: rgb(255 255 255 / 0.92); }
+  .hero__sub { font-size: var(--step-lead); margin-top: clamp(18px, 2vw, 28px); max-width: 34ch; line-height: 1.35; color: rgb(255 255 255 / 0.92); }
   .hero__actions { display: flex; flex-wrap: wrap; gap: 14px 16px; margin-top: 32px; }
   :global(.d-js) [data-hero-in] { opacity: 0; }
 
@@ -694,7 +695,7 @@ const P = PHOTOS
     .hero { align-items: end; padding: 100px var(--m) 104px; min-height: max(100svh, 680px); }
     .hero__in { max-width: none; }
     .hero__kick { font-size: 2rem; }
-    .hero__title { font-size: clamp(3.6rem, 19vw, 6rem); }
+    .hero__title { font-size: clamp(3rem, 15vw, 5.4rem); }
     .hero__sub { margin-top: 26px; font-size: 1.1875rem; }
     .hero__actions .dy-btn { flex: 1 1 auto; }
     .badge, .hero__hint { display: none; }
@@ -860,7 +861,11 @@ const P = PHOTOS
   .path__line { fill: none; stroke: var(--red); stroke-width: 7; stroke-linecap: round; }
   .path__crayon { position: absolute; left: 0; top: 0; width: 130px; height: 30px; margin: -15px 0 0 -128px; transform-origin: 128px 15px; pointer-events: none; z-index: 3; }
   .path__crayon svg { width: 100%; height: 100%; overflow: visible; }
-  .steps { display: grid; gap: clamp(70px, 9vw, 130px); position: relative; z-index: 2; }
+  /* Desktop: the zig-zag interlocks — each card rises alongside the one
+     before it on the other side, instead of leaving a whole empty half-row
+     of yellow next to every card. Mobile stacks them (see below). */
+  .steps { display: grid; gap: 0; position: relative; z-index: 2; }
+  .step + .step { margin-top: clamp(-200px, -12vw, -120px); }
   .step { display: grid; grid-template-columns: auto 1fr; grid-template-areas: 'n card' 'n t' 'n x' 'n o'; gap: 12px 26px; width: min(540px, 100%); opacity: 0.3; transform: translateY(30px) scale(0.96); transition: opacity 500ms ease, transform 700ms var(--ease-spring); }
   .step:nth-child(even) { justify-self: end; }
   .step:global(.on) { opacity: 1; transform: none; }
@@ -875,6 +880,8 @@ const P = PHOTOS
   .path__note b { display: block; font-size: 1.9rem; line-height: 1; color: var(--red); margin-bottom: 8px; }
   @media (max-width: 760px) {
     .step, .step:nth-child(even) { justify-self: stretch; grid-template-columns: 1fr; grid-template-areas: 'n' 'card' 't' 'x' 'o'; }
+    .steps { gap: 70px; }
+    .step + .step { margin-top: 0; }
     .path__notes { grid-template-columns: 1fr; }
     .step__n { width: 60px; height: 60px; font-size: 1.8rem; justify-self: center; }
     .path__crayon { width: 96px; height: 22px; margin: -11px 0 0 -94px; transform-origin: 94px 11px; }

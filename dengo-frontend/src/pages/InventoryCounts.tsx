@@ -55,6 +55,9 @@ export default function InventoryCounts() {
   const { user } = useAuthStore()
   const { currentStore } = useStore()
   const { hasPermission } = usePermissions()
+  // Counting only needs to see inventory; applying a difference to the real
+  // stock needs inventory.adjust (backend enforces both).
+  const canCount = hasPermission('inventory.view')
   const canAdjust = hasPermission('inventory.adjust')
 
   const [view, setView] = useState<'list' | 'take'>('list')
@@ -392,7 +395,7 @@ export default function InventoryCounts() {
                             <input
                               type="text"
                               inputMode="decimal"
-                              disabled={activeCount.status === 'COMPLETED'}
+                              disabled={activeCount.status === 'COMPLETED' || item.adjusted}
                               value={qtyDrafts[item.id] ?? (counted !== null ? String(counted) : '')}
                               onChange={e => setQtyDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
                               onFocus={e => e.target.select()}
@@ -410,8 +413,13 @@ export default function InventoryCounts() {
                             {item.adjusted ? (
                               <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-1 rounded-full"><CheckCircle size={12} /> Ajustado</span>
                             ) : diff !== null && diff !== 0 ? (
-                              canAdjust && (
+                              canAdjust ? (
                                 <button onClick={() => openAdjustModal(item)} className="btn-outline btn-sm">Ajustar</button>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-full"
+                                  title="Un usuario con permiso de ajustar inventario lo aplica desde el reporte de Conteos">
+                                  <Clock size={12} /> Pendiente de ajuste
+                                </span>
                               )
                             ) : (
                               <span className="text-xs text-gray-300">—</span>
@@ -477,7 +485,7 @@ export default function InventoryCounts() {
                   </div>
                   <div className="bg-yellow-50 p-3 rounded-lg flex items-start gap-2">
                     <AlertCircle size={16} className="text-yellow-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-yellow-800">Esto actualiza el inventario real del sistema a la cantidad contada y queda registrado en el historial.</p>
+                    <p className="text-xs text-yellow-800">Esto suma o resta la diferencia ({(() => { const d = Number(adjustingItem.countedQuantity ?? 0) - Number(adjustingItem.systemQuantity); return `${d > 0 ? '+' : ''}${d.toFixed(0)}` })()}) al inventario actual del sistema y queda registrado en el historial.</p>
                   </div>
                 </div>
                 <div className="mt-5 flex gap-3">
@@ -508,7 +516,7 @@ export default function InventoryCounts() {
         </div>
         <div className="flex gap-3">
           <button onClick={() => navigate('/reports/inventory-counts')} className="btn-outline btn-md">Ver reporte completo</button>
-          {canAdjust && (
+          {canCount && (
             <button onClick={() => startOrResumeCount(counts, currentStore?.id ?? user?.branchId ?? '')} className="btn-primary btn-md flex items-center gap-2">
               <Plus size={18} /> Nueva Tarea de Conteo
             </button>

@@ -11,6 +11,6 @@ export default defineConfig({
   server: { port: 4321, host: '127.0.0.1' },
   // Coupons are posted by the browser to /api/site/* on the same domain
   // (Caddy routes /api to the backend in production; Vite proxies in dev).
-  vite: { server: { proxy: { '/api': 'http://127.0.0.1:3001' } } },
+  vite: { server: { proxy: { '/api': process.env.API_PROXY ?? 'http://127.0.0.1:3001' } } },
   security: { checkOrigin: true },
 })

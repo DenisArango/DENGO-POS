@@ -5,7 +5,8 @@ import { prisma } from '../lib/prisma.js'
 import { attachImageUrls } from '../lib/productImages.js'
 import { updateStock, setStock } from '../services/inventory.service.js'
 import { resolveBranchScope, canAccessBranch } from '../lib/branch-scope.js'
-import { hasPermission, requirePermission } from '../lib/permissions.js'
+import { hasPermission, requirePermission, resolveUserPermissions } from '../lib/permissions.js'
+import { alertInternalMessage } from '../lib/staffAlerts.js'
 import { multiWordSearch } from '../lib/search.js'
 import { parseBusinessDateParam, getBusinessDayBounds } from '../lib/timezone.js'
 
@@ -16,11 +17,11 @@ import { parseBusinessDateParam, getBusinessDayBounds } from '../lib/timezone.js
 // Sobrestock only exists against a real ceiling: a product with no
 // maxStock set is never flagged (it used to be "more than 3x the minimum",
 // which flagged almost everything with a low minimum).
-const STATUS_CASE_SQL = Prisma.sql`(CASE
-  WHEN i."QUANTITY" = 0 THEN 'critical'
-  WHEN i."QUANTITY" <= p."MIN_STOCK" * 0.5 THEN 'critical'
-  WHEN i."QUANTITY" <= p."MIN_STOCK" THEN 'low'
-  WHEN p."MAX_STOCK" IS NOT NULL AND i."QUANTITY" > p."MAX_STOCK" THEN 'overstock'
+const statusCaseSql = (qty: Prisma.Sql) => Prisma.sql`(CASE
+  WHEN ${qty} = 0 THEN 'critical'
+  WHEN ${qty} <= p."MIN_STOCK" * 0.5 THEN 'critical'
+  WHEN ${qty} <= p."MIN_STOCK" THEN 'low'
+  WHEN p."MAX_STOCK" IS NOT NULL AND ${qty} > p."MAX_STOCK" THEN 'overstock'
   ELSE 'normal'
 END)`
 
@@ -41,6 +42,10 @@ const SORT_SQL: Record<string, Prisma.Sql> = {
   // How far above its ceiling it is (no ceiling sorts as not-overstocked).
   overstock: Prisma.sql`(CASE WHEN p."MAX_STOCK" IS NOT NULL AND p."MAX_STOCK" > 0 THEN i."QUANTITY" / p."MAX_STOCK" ELSE 0 END)`,
 }
+
+// sender|product|branch → when the last "sin stock" alert went out (see
+// POST /stock-alert). In-memory is enough: it only throttles repeats.
+const stockAlertSentAt = new Map<string, number>()
 
 export default async function inventoryRoutes(fastify: FastifyInstance) {
   // GET /api/inventory?branchId=
@@ -73,8 +78,30 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
       const page = Math.max(1, parseInt(q.page, 10) || 1)
       const limit = Math.min(200, Math.max(1, parseInt(q.limit ?? '50', 10) || 50))
 
+      // With a branch, the list starts from PRODUCTS and LEFT JOINs that
+      // branch's INVENTORY row: a product that never had stock here has no
+      // row at all, and used to be invisible — so nobody could find it to
+      // add its first units. Such a product shows with quantity 0. Without a
+      // branch (ADMIN "todas") it stays one row per existing INVENTORY row.
+      const qty = branchId ? Prisma.sql`COALESCE(i."QUANTITY", 0)` : Prisma.sql`i."QUANTITY"`
+      const fromSql = branchId
+        ? Prisma.sql`FROM "PRODUCTS" p
+          JOIN "CATEGORIES" c ON c."ID" = p."CATEGORY_ID"
+          LEFT JOIN "INVENTORY" i ON i."PRODUCT_ID" = p."ID" AND i."BRANCH_ID" = ${branchId}`
+        : Prisma.sql`FROM "INVENTORY" i
+          JOIN "PRODUCTS" p ON p."ID" = i."PRODUCT_ID"
+          JOIN "CATEGORIES" c ON c."ID" = p."CATEGORY_ID"`
+      const statusSql = statusCaseSql(qty)
+      const sortSql: Record<string, Prisma.Sql> = {
+        ...SORT_SQL,
+        quantity: qty,
+        value: Prisma.sql`(${qty} * p."COST")`,
+        saleValue: Prisma.sql`(${qty} * p."BASE_PRICE")`,
+        criticality: Prisma.sql`(CASE WHEN p."MIN_STOCK" > 0 THEN ${qty} / p."MIN_STOCK" ELSE 999999 END)`,
+        overstock: Prisma.sql`(CASE WHEN p."MAX_STOCK" IS NOT NULL AND p."MAX_STOCK" > 0 THEN ${qty} / p."MAX_STOCK" ELSE 0 END)`,
+      }
+
       const conditions: Prisma.Sql[] = [Prisma.sql`p."IS_ACTIVE" = true`]
-      if (branchId) conditions.push(Prisma.sql`i."BRANCH_ID" = ${branchId}`)
       if (q.search) {
         // Same multi-word AND-of-OR as multiWordSearch() — "hojas bond"
         // matches "Hojas de Papel Bond" even though the words aren't
@@ -85,56 +112,77 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
         }
       }
       if (q.category) conditions.push(Prisma.sql`c."NAME" = ${q.category}`)
-      if (q.status) conditions.push(Prisma.sql`${STATUS_CASE_SQL} = ${q.status}`)
-      const whereSql = conditions.length ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}` : Prisma.sql``
-      const sortExpr = SORT_SQL[q.sort ?? ''] ?? SORT_SQL.name!
+      if (q.status) conditions.push(Prisma.sql`${statusSql} = ${q.status}`)
+      const whereSql = Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
+      const sortExpr = sortSql[q.sort ?? ''] ?? sortSql.name!
       const sortDir = q.dir === 'desc' ? Prisma.sql`DESC NULLS LAST` : Prisma.sql`ASC NULLS LAST`
 
       const [rows, countRows, statsRows] = await Promise.all([
-        prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
-          SELECT i."ID" as id
-          FROM "INVENTORY" i
-          JOIN "PRODUCTS" p ON p."ID" = i."PRODUCT_ID"
-          JOIN "CATEGORIES" c ON c."ID" = p."CATEGORY_ID"
+        prisma.$queryRaw<{ productId: string; branchId: string | null }[]>(Prisma.sql`
+          SELECT p."ID" as "productId", i."BRANCH_ID" as "branchId"
+          ${fromSql}
           ${whereSql}
           ORDER BY ${sortExpr} ${sortDir}, p."NAME" ASC
           LIMIT ${limit} OFFSET ${(page - 1) * limit}
         `),
         prisma.$queryRaw<{ count: bigint }[]>(Prisma.sql`
           SELECT COUNT(*)::bigint as count
-          FROM "INVENTORY" i
-          JOIN "PRODUCTS" p ON p."ID" = i."PRODUCT_ID"
-          JOIN "CATEGORIES" c ON c."ID" = p."CATEGORY_ID"
+          ${fromSql}
           ${whereSql}
         `),
-        prisma.inventory.findMany({
-          where: { ...(branchId ? { branchId } : {}), product: { isActive: true } },
-          select: { quantity: true, product: { select: { minStock: true, maxStock: true, basePrice: true, cost: true } } },
-        }),
+        prisma.$queryRaw<{ quantity: unknown; minStock: unknown; maxStock: unknown; basePrice: unknown; cost: unknown }[]>(Prisma.sql`
+          SELECT ${qty} as quantity, p."MIN_STOCK" as "minStock", p."MAX_STOCK" as "maxStock",
+                 p."BASE_PRICE" as "basePrice", p."COST" as cost
+          ${fromSql}
+          WHERE p."IS_ACTIVE" = true
+        `),
       ])
 
       const total = Number(countRows[0]?.count ?? 0)
-      const ids = rows.map(r => r.id)
-      const items = ids.length ? await prisma.inventory.findMany({
-        where: { id: { in: ids } },
-        include: {
-          product: { include: { category: true, baseUnit: true } },
-          branch: { select: { id: true, name: true } },
-        },
-      }) : []
-      await attachImageUrls(items.map(it => it.product), request)
-      const byId = new Map(items.map(it => [it.id, it]))
-      const data = ids.map(id => byId.get(id)).filter((x): x is typeof items[number] => !!x)
+      const productIds = [...new Set(rows.map(r => r.productId))]
+      const productInclude = { category: true, baseUnit: true } as const
+      let data: unknown[] = []
+      if (branchId) {
+        const [invRows, products, branch] = await Promise.all([
+          prisma.inventory.findMany({
+            where: { branchId, productId: { in: productIds } },
+            include: { product: { include: productInclude }, branch: { select: { id: true, name: true } } },
+          }),
+          prisma.product.findMany({ where: { id: { in: productIds } }, include: productInclude }),
+          prisma.branch.findUnique({ where: { id: branchId }, select: { id: true, name: true } }),
+        ])
+        await attachImageUrls([...invRows.map(it => it.product), ...products], request)
+        const invByProduct = new Map(invRows.map(it => [it.productId, it]))
+        const productById = new Map(products.map(p => [p.id, p]))
+        data = productIds.map(pid => invByProduct.get(pid) ?? (productById.get(pid) ? {
+          // No INVENTORY row yet at this branch — shown as 0 so it can be
+          // adjusted; the first adjustment creates the row (setStock).
+          id: `new-${pid}-${branchId}`,
+          productId: pid,
+          branchId,
+          quantity: 0,
+          product: productById.get(pid),
+          branch,
+        } : null)).filter(Boolean)
+      } else {
+        const items = productIds.length ? await prisma.inventory.findMany({
+          where: { productId: { in: productIds }, branchId: { in: rows.map(r => r.branchId!).filter(Boolean) } },
+          include: { product: { include: productInclude }, branch: { select: { id: true, name: true } } },
+        }) : []
+        await attachImageUrls(items.map(it => it.product), request)
+        const byKey = new Map(items.map(it => [`${it.productId}|${it.branchId}`, it]))
+        data = rows.map(r => byKey.get(`${r.productId}|${r.branchId}`)).filter(Boolean)
+      }
 
       let lowStock = 0, overstock = 0, totalValue = 0, totalSaleValue = 0
       for (const row of statsRows) {
-        const qty = Number(row.quantity)
-        const minStock = Number(row.product.minStock ?? 0)
-        const maxStock = row.product.maxStock
-        if (qty <= minStock) lowStock++
-        else if (maxStock != null && qty > maxStock) overstock++
-        totalValue += qty * Number(row.product.cost ?? 0)
-        totalSaleValue += qty * Number(row.product.basePrice ?? 0)
+        const qtyN = Number(row.quantity ?? 0)
+        const minStock = Number(row.minStock ?? 0)
+        const maxStock = row.maxStock == null ? null : Number(row.maxStock)
+        if (qtyN <= minStock) lowStock++
+        else if (maxStock != null && qtyN > maxStock) overstock++
+        totalValue += qtyN * Number(row.cost ?? 0)
+        totalSaleValue += qtyN * Number(row.basePrice ?? 0)
       }
 
       return reply.send({
@@ -327,6 +375,58 @@ export default async function inventoryRoutes(fastify: FastifyInstance) {
       performedById: request.user.id,
     })
     return reply.send({ message: 'Stock actualizado', quantity: body.data.quantity })
+  })
+
+  // POST /api/inventory/stock-alert — a cashier WITHOUT inventory.adjust hit
+  // a product with no (or not enough) stock in the POS. They can't fix it
+  // themselves, so this tells the people who can: every active user with
+  // inventory.adjust for that branch (ADMIN always) gets an internal message
+  // — which also fires the usual push for messages. Deduplicated per
+  // sender+product+branch for 10 minutes so a nervous double-click or a
+  // re-scan doesn't flood the admins.
+  fastify.post('/stock-alert', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const body = z.object({
+      productId: z.string().min(1),
+      branchId: z.string().min(1),
+      requested: z.number().min(0).max(1_000_000),
+      available: z.number().min(-1_000_000).max(1_000_000),
+    }).safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: 'Datos inválidos' })
+    const { productId, branchId, requested, available } = body.data
+    if (!canAccessBranch(request, branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
+
+    const me = request.user.id
+    const key = `${me}|${productId}|${branchId}`
+    const last = stockAlertSentAt.get(key)
+    if (last && Date.now() - last < 10 * 60_000) return reply.send({ notified: 0, alreadySent: true })
+
+    const [product, branch, sender] = await Promise.all([
+      prisma.product.findUnique({ where: { id: productId }, select: { name: true, barcode: true, sku: true } }),
+      prisma.branch.findUnique({ where: { id: branchId }, select: { name: true } }),
+      prisma.user.findUnique({ where: { id: me }, select: { name: true } }),
+    ])
+    if (!product || !branch) return reply.status(404).send({ error: 'Producto o sucursal no encontrado' })
+
+    const users = await prisma.user.findMany({
+      where: { isActive: true, role: { not: 'TEACHER' }, id: { not: me } },
+      select: { id: true, role: true, branchId: true, customRoleId: true, additionalBranches: { select: { branchId: true } } },
+    })
+    const recipients: string[] = []
+    for (const u of users) {
+      if (u.role === 'ADMIN') { recipients.push(u.id); continue }
+      if (u.branchId !== branchId && !u.additionalBranches.some(b => b.branchId === branchId)) continue
+      if ((await resolveUserPermissions(u)).includes('inventory.adjust')) recipients.push(u.id)
+    }
+    if (recipients.length === 0) return reply.status(409).send({ error: 'No hay ningún usuario con permiso de ajustar inventario para avisarle' })
+
+    const code = product.barcode ?? product.sku
+    const text = `⚠️ Sin stock en ${branch.name}: «${product.name}»${code ? ` (${code})` : ''}. ` +
+      `El sistema tiene ${available} y el cliente necesita ${requested}. ` +
+      `No tengo permiso para ajustar el inventario — ¿lo pueden revisar y ajustar?`
+    await prisma.internalMessage.createMany({ data: recipients.map(toUserId => ({ fromUserId: me, toUserId, body: text })) })
+    for (const toUserId of recipients) alertInternalMessage(toUserId, sender?.name ?? 'Un cajero', text, me)
+    stockAlertSentAt.set(key, Date.now())
+    return reply.send({ notified: recipients.length })
   })
 
   // POST /api/inventory/movements (manual IN/OUT)

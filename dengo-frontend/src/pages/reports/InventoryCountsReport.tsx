@@ -1,12 +1,16 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Calendar, ClipboardCheck, CheckCircle, Clock, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Calendar, ClipboardCheck, CheckCircle, Clock, AlertTriangle, X, AlertCircle } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import { format, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../store'
 import { ClipboardCheck as PageClipboardCheck } from 'lucide-react'
 import PageIcon from '../../components/common/PageIcon'
+import { usePermissions } from '../../hooks/usePermissions'
+import { getAdjustmentReasons, type AdjustmentReason } from '../../lib/inventoryReasons'
 
 interface CountItem {
   id: string
@@ -32,6 +36,21 @@ export default function InventoryCountsReport() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const isAdmin = user?.role === 'ADMIN'
+  // Whoever counted may not be allowed to change stock: their differences
+  // wait here, and someone with inventory.adjust applies them.
+  const { hasPermission } = usePermissions()
+  const canAdjust = hasPermission('inventory.adjust')
+  const [pendingOnly, setPendingOnly] = useState(false)
+  // One modal for a single line or "all pending lines of a count". Reasons
+  // are direction-specific (UP/DOWN), so a batch asks one reason per sign.
+  const [adjusting, setAdjusting] = useState<{ count: Count; items: CountItem[] } | null>(null)
+  const [reasonUp, setReasonUp] = useState('')
+  const [reasonDown, setReasonDown] = useState('')
+  const [reasonsUp, setReasonsUp] = useState<AdjustmentReason[]>([])
+  const [reasonsDown, setReasonsDown] = useState<AdjustmentReason[]>([])
+  const [applying, setApplying] = useState(false)
+  const lineDiff = (i: CountItem) => i.countedQuantity !== null ? Number(i.countedQuantity) - Number(i.systemQuantity) : 0
+  const isPending = (i: CountItem) => i.countedQuantity !== null && lineDiff(i) !== 0 && !i.adjusted
 
   const [from, setFrom] = useState(format(subDays(new Date(), 29), 'yyyy-MM-dd'))
   const [to, setTo] = useState(format(new Date(), 'yyyy-MM-dd'))
@@ -73,13 +92,46 @@ export default function InventoryCountsReport() {
 
   const filtered = useMemo(() => counts.filter(c =>
     (!statusFilter || c.status === statusFilter) &&
-    (!userFilter || c.createdBy.id === userFilter)
-  ), [counts, statusFilter, userFilter])
+    (!userFilter || c.createdBy.id === userFilter) &&
+    (!pendingOnly || c.items.some(isPending))
+  ), [counts, statusFilter, userFilter, pendingOnly])
 
   const totalDiscrepant = filtered.reduce((s, c) =>
     s + c.items.filter(i => i.countedQuantity !== null && Number(i.countedQuantity) !== Number(i.systemQuantity)).length, 0)
   const totalUnadjusted = filtered.reduce((s, c) =>
     s + c.items.filter(i => i.countedQuantity !== null && Number(i.countedQuantity) !== Number(i.systemQuantity) && !i.adjusted).length, 0)
+
+  async function openAdjust(count: Count, items: CountItem[]) {
+    setAdjusting({ count, items })
+    setReasonUp('')
+    setReasonDown('')
+    const [up, down] = await Promise.all([getAdjustmentReasons('UP'), getAdjustmentReasons('DOWN')])
+    setReasonsUp(up)
+    setReasonsDown(down)
+  }
+
+  async function applyAdjust() {
+    if (!adjusting) return
+    const ups = adjusting.items.filter(i => lineDiff(i) > 0)
+    const downs = adjusting.items.filter(i => lineDiff(i) < 0)
+    if ((ups.length && !reasonUp) || (downs.length && !reasonDown)) { toast.error('Selecciona el motivo del ajuste'); return }
+    setApplying(true)
+    let ok = 0
+    const failed: string[] = []
+    for (const item of adjusting.items) {
+      try {
+        await api.post(`/api/inventory-counts/${adjusting.count.id}/items/${item.id}/adjust`, { reason: lineDiff(item) > 0 ? reasonUp : reasonDown })
+        ok++
+      } catch (e) {
+        failed.push(`${item.product.name}: ${e instanceof Error ? e.message : 'error'}`)
+      }
+    }
+    setApplying(false)
+    setAdjusting(null)
+    if (ok) toast.success(ok === 1 ? 'Ajuste aplicado' : `${ok} ajustes aplicados`)
+    if (failed.length) toast.error(failed.slice(0, 3).join(' · '))
+    fetchData()
+  }
 
   return (
     <div className="space-y-6">
@@ -111,6 +163,10 @@ export default function InventoryCountsReport() {
           <option value="">Todos los usuarios</option>
           {userOptions.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
         </select>
+        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+          <input type="checkbox" checked={pendingOnly} onChange={e => setPendingOnly(e.target.checked)} className="rounded" />
+          Solo con ajustes pendientes
+        </label>
         {loading && <span className="text-sm text-gray-400">Cargando...</span>}
       </div>
 
@@ -140,10 +196,17 @@ export default function InventoryCountsReport() {
               const countedItems = count.items.filter(i => i.countedQuantity !== null)
               const diffItems = countedItems.filter(i => Number(i.countedQuantity) !== Number(i.systemQuantity))
               const expanded = expandedId === count.id
+              const pendingItems = count.items.filter(isPending)
               return (
-                <div key={count.id}>
+                <div key={count.id} className="relative">
+                  {canAdjust && pendingItems.length > 0 && (
+                    <button onClick={() => openAdjust(count, pendingItems)}
+                      className="absolute right-5 top-3 z-10 btn-primary btn-sm">
+                      Ajustar {pendingItems.length} pendiente{pendingItems.length !== 1 ? 's' : ''}
+                    </button>
+                  )}
                   <button onClick={() => setExpandedId(expanded ? null : count.id)}
-                    className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 transition-colors text-left">
+                    className={`w-full flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 transition-colors text-left ${canAdjust && pendingItems.length > 0 ? 'pr-48' : ''}`}>
                     <div className="flex items-center gap-4">
                       <div className={`p-2 rounded-lg flex-shrink-0 ${count.status === 'COMPLETED' ? 'bg-green-100' : 'bg-blue-100'}`}>
                         {count.status === 'COMPLETED' ? <CheckCircle size={16} className="text-green-600" /> : <Clock size={16} className="text-blue-600" />}
@@ -188,7 +251,11 @@ export default function InventoryCountsReport() {
                                   {diff === null ? '—' : `${diff > 0 ? '+' : ''}${diff.toFixed(0)}`}
                                 </td>
                                 <td className="py-1.5 text-gray-500 text-xs">
-                                  {item.adjusted ? (item.reason ?? 'Ajustado') : (diff !== null && diff !== 0 ? 'Sin ajustar' : '—')}
+                                  {item.adjusted ? (item.reason ?? 'Ajustado') : isPending(item) ? (
+                                    canAdjust ? (
+                                      <button onClick={() => openAdjust(count, [item])} className="btn-outline btn-sm">Ajustar</button>
+                                    ) : <span className="text-amber-700">Pendiente de ajuste</span>
+                                  ) : '—'}
                                 </td>
                               </tr>
                             )
@@ -203,6 +270,76 @@ export default function InventoryCountsReport() {
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {adjusting && (() => {
+          const ups = adjusting.items.filter(i => lineDiff(i) > 0)
+          const downs = adjusting.items.filter(i => lineDiff(i) < 0)
+          const missingReasons = (ups.length > 0 && reasonsUp.length === 0) || (downs.length > 0 && reasonsDown.length === 0)
+          return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-gray-950/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
+              onClick={() => { if (!applying) setAdjusting(null) }}>
+              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+                onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-bold text-gray-800">Aplicar ajuste{adjusting.items.length > 1 ? 's' : ''}</h3>
+                  <button onClick={() => setAdjusting(null)} disabled={applying} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                </div>
+                <p className="text-xs text-gray-500 mb-3">{adjusting.count.branch.name} · conteo de {adjusting.count.createdBy.name}</p>
+                <div className="bg-gray-50 rounded-lg divide-y divide-gray-200 mb-4 max-h-48 overflow-y-auto">
+                  {adjusting.items.map(i => {
+                    const d = lineDiff(i)
+                    return (
+                      <div key={i.id} className="flex justify-between gap-3 px-3 py-2 text-sm">
+                        <span className="text-gray-800 truncate">{i.product.name}</span>
+                        <span className={`font-semibold flex-shrink-0 ${d > 0 ? 'text-green-600' : 'text-red-500'}`}>{d > 0 ? '+' : ''}{d.toFixed(0)}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="space-y-3">
+                  {ups.length > 0 && (
+                    <div>
+                      <label className="label">Motivo de los que suben ({ups.length}) *</label>
+                      <select value={reasonUp} onChange={e => setReasonUp(e.target.value)} className="input w-full">
+                        <option value="">Seleccionar motivo</option>
+                        {reasonsUp.map(r => <option key={r.id} value={r.label}>{r.label}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  {downs.length > 0 && (
+                    <div>
+                      <label className="label">Motivo de los que bajan ({downs.length}) *</label>
+                      <select value={reasonDown} onChange={e => setReasonDown(e.target.value)} className="input w-full">
+                        <option value="">Seleccionar motivo</option>
+                        {reasonsDown.map(r => <option key={r.id} value={r.label}>{r.label}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  {missingReasons && (
+                    <p className="text-xs text-gray-400">No hay motivos configurados — agrégalos en Configuración → Motivos de Ajuste.</p>
+                  )}
+                  <div className="bg-yellow-50 p-3 rounded-lg flex items-start gap-2">
+                    <AlertCircle size={16} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-yellow-800">Se suma o resta la diferencia encontrada al inventario actual de la sucursal, así que las ventas hechas después del conteo se respetan. Queda registrado en el historial.</p>
+                  </div>
+                </div>
+                <div className="mt-5 flex gap-3">
+                  <button onClick={() => setAdjusting(null)} className="flex-1 btn-outline btn-md" disabled={applying}>Cancelar</button>
+                  <button onClick={applyAdjust}
+                    disabled={applying || (ups.length > 0 && !reasonUp) || (downs.length > 0 && !reasonDown)}
+                    className="flex-1 btn-primary btn-md flex items-center justify-center gap-2 disabled:opacity-50">
+                    {applying && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
+                    Aplicar
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )
+        })()}
+      </AnimatePresence>
     </div>
   )
 }

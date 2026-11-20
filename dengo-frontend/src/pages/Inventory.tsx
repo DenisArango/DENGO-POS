@@ -76,7 +76,7 @@ interface StockMovement {
   performedBy?: { id: string; name: string }
 }
 
-// Must match STATUS_CASE_SQL in the backend's inventory.ts. Sobrestock only
+// Must match statusCaseSql() in the backend's inventory.ts. Sobrestock only
 // applies to products with a maxStock set.
 function computeStatus(quantity: number, minStock: number, maxStock: number | null): InventoryItemWithStatus['status'] {
   if (quantity === 0) return 'critical'
@@ -415,15 +415,15 @@ export default function Inventory() {
             <ClipboardCheck size={18} />
             Conteos
           </button>
-          {canAdjustStock && (
-            <button
-              onClick={() => navigate('/inventory/counts?new=1')}
-              className="btn-primary btn-md flex items-center gap-2"
-            >
-              <ClipboardCheck size={18} />
-              Nueva Tarea de Conteo
-            </button>
-          )}
+          {/* Counting doesn't need inventory.adjust — only applying the
+              difference does (from the count or the Conteos report). */}
+          <button
+            onClick={() => navigate('/inventory/counts?new=1')}
+            className="btn-primary btn-md flex items-center gap-2"
+          >
+            <ClipboardCheck size={18} />
+            Nueva Tarea de Conteo
+          </button>
           <button
             onClick={handleExportCsv}
             disabled={totalCount === 0}

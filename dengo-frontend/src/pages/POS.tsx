@@ -462,7 +462,7 @@ export default function POS() {
   const checkoutInProgressRef = useRef(false)
 
   // Stock warning
-  const [stockIssues, setStockIssues] = useState<{ name: string; available: number; requested: number }[]>([])
+  const [stockIssues, setStockIssues] = useState<{ productId: string; name: string; available: number; requested: number }[]>([])
   const [showStockWarning, setShowStockWarning] = useState(false)
 
   // ── Fetch customers on mount ───────────────────────────────────────────────
@@ -808,7 +808,39 @@ export default function POS() {
     const totalRequested = cartDemand(product.id) + additionalQty * Number(variation.conversionFactor ?? 1)
     const available = await fetchBranchStock(product.id)
     if (available !== undefined && available < totalRequested) {
-      toast.warning(`${product.name}: sin stock suficiente en esta sucursal (disponible ${available}, necesitas ${totalRequested})`)
+      const msg = `${product.name}: sin stock suficiente en esta sucursal (disponible ${available}, necesitas ${totalRequested})`
+      if (hasPermission('inventory.adjust')) {
+        toast.warning(msg)
+      } else {
+        // Without the permission the cashier can't fix it — the warning
+        // itself offers to tell someone who can.
+        toast.error(msg, {
+          description: 'No tienes permiso para ajustar inventario.',
+          duration: 10000,
+          action: { label: 'Avisar a un administrador', onClick: () => { void notifyAdminsNoStock(product, totalRequested, available) } },
+        })
+      }
+    }
+  }
+
+  // Cashiers without inventory.adjust: sends the "sin stock" notice to every
+  // user who can adjust this branch (internal message + push). The backend
+  // throttles repeats; the row then shows "Administradores avisados".
+  const [stockAlerted, setStockAlerted] = useState<Record<string, boolean>>({})
+  async function notifyAdminsNoStock(product: ProductRecord, requested?: number, available?: number) {
+    try {
+      const res = await api.post<{ notified: number; alreadySent?: boolean }>('/api/inventory/stock-alert', {
+        productId: product.id,
+        branchId: BRANCH_ID,
+        requested: requested ?? cartDemand(product.id),
+        available: available ?? stockLevels[product.id] ?? 0,
+      })
+      setStockAlerted(prev => ({ ...prev, [product.id]: true }))
+      toast.success(res.alreadySent
+        ? 'Ya se había avisado de este producto hace poco'
+        : `Aviso enviado a ${res.notified} ${res.notified === 1 ? 'persona' : 'personas'} con permiso de inventario`)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No se pudo enviar el aviso — revisa la conexión')
     }
   }
 
@@ -1353,7 +1385,7 @@ export default function POS() {
 
     // Check inventory availability
     if (BRANCH_ID) {
-      const issues: { name: string; available: number; requested: number }[] = []
+      const issues: { productId: string; name: string; available: number; requested: number }[] = []
       // Stock is in base units and shared by every presentation of a
       // product, so demand is summed per product: 5 piezas + 1 "caja de 12"
       // need 17 units.
@@ -1369,7 +1401,7 @@ export default function POS() {
           const inv = await api.get<{ quantity: number }>(`/api/inventory/${productId}/${BRANCH_ID}`)
           const available = Number(inv?.quantity ?? 0)
           levels[productId] = available
-          if (available < requested) issues.push({ name, available, requested })
+          if (available < requested) issues.push({ productId, name, available, requested })
         } catch { /* no inventory record = allow sale */ }
       }))
 
@@ -1596,11 +1628,21 @@ export default function POS() {
                             <span className="text-[11px] font-medium text-red-700">
                               Sin stock suficiente — disponible: {stockLevels[item.product.id]}, necesitas: {cartDemand(item.product.id)}
                             </span>
-                            {hasPermission('inventory.adjust') && (
+                            {hasPermission('inventory.adjust') ? (
                               <button
                                 onClick={() => openStockPrompt(item.product)}
                                 className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-red-600 text-white hover:bg-red-700">
                                 Sumar inventario
+                              </button>
+                            ) : stockAlerted[item.product.id] ? (
+                              <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-green-50 text-green-700">
+                                Administradores avisados
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => notifyAdminsNoStock(item.product)}
+                                className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-red-600 text-white hover:bg-red-700">
+                                Avisar a un administrador
                               </button>
                             )}
                             <button
@@ -2521,7 +2563,7 @@ export default function POS() {
                   <h3 className="text-lg font-bold text-gray-800">Stock insuficiente</h3>
                   <p className="text-sm text-gray-600 mt-1">
                     No se puede cobrar: estos productos no tienen suficiente stock en esta sucursal. Están marcados en rojo en el carrito
-                    {hasPermission('inventory.adjust') ? ' — usa "Sumar inventario" en cada línea, o quítalos.' : '; quítalos o pide a alguien con permiso que ajuste el inventario.'}
+                    {hasPermission('inventory.adjust') ? ' — usa "Sumar inventario" en cada línea, o quítalos.' : '. No tienes permiso para ajustar inventario: avisa a un administrador con el botón de abajo, o quita esos productos.'}
                   </p>
                 </div>
               </div>
@@ -2535,6 +2577,23 @@ export default function POS() {
                     </div>
                   </div>
                 ))}
+                {!hasPermission('inventory.adjust') && stockIssues.length > 0 && (
+                  stockIssues.every(i => stockAlerted[i.productId]) ? (
+                    <p className="text-sm text-green-700 bg-green-50 rounded-lg p-3">Se avisó a los administradores. Puedes quitar estos productos y cobrar el resto.</p>
+                  ) : (
+                    <button
+                      onClick={async () => {
+                        for (const issue of stockIssues) {
+                          if (stockAlerted[issue.productId]) continue
+                          const product = cartItems.find(ci => ci.product.id === issue.productId)?.product
+                          if (product) await notifyAdminsNoStock(product, issue.requested, issue.available)
+                        }
+                      }}
+                      className="btn-outline btn-md w-full border-orange-300 text-orange-700 hover:bg-orange-50">
+                      Avisar a un administrador
+                    </button>
+                  )
+                )}
               </div>
               <div className="flex gap-3">
                 <button

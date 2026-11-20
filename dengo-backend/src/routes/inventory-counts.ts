@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
-import { setStock } from '../services/inventory.service.js'
+import { updateStock } from '../services/inventory.service.js'
 import { resolveBranchScope, canAccessBranch } from '../lib/branch-scope.js'
 import { requirePermission } from '../lib/permissions.js'
 import { log } from '../services/audit.service.js'
@@ -51,8 +51,14 @@ export default async function inventoryCountRoutes(fastify: FastifyInstance) {
     return reply.send(count)
   })
 
+  // Counting (start, add lines, record quantities, complete) only needs
+  // inventory.view: anyone who can see the branch's stock may count it.
+  // Changing the stock from a count stays behind inventory.adjust — see
+  // /:id/items/:itemId/adjust. Unadjusted differences wait in the Conteos
+  // report for someone with that permission.
+
   // POST /api/inventory-counts — starts a new count task for a branch.
-  fastify.post('/', { preHandler: [fastify.authenticate, requirePermission('inventory.adjust')] }, async (request, reply) => {
+  fastify.post('/', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
     const body = z.object({ branchId: z.string(), notes: z.string().optional() }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
     if (!canAccessBranch(request, body.data.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
@@ -67,7 +73,7 @@ export default async function inventoryCountRoutes(fastify: FastifyInstance) {
 
   // POST /api/inventory-counts/:id/items — add a SKU to the count, snapshotting
   // its current system quantity at this branch.
-  fastify.post('/:id/items', { preHandler: [fastify.authenticate, requirePermission('inventory.adjust')] }, async (request, reply) => {
+  fastify.post('/:id/items', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const body = z.object({ productId: z.string() }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
@@ -94,7 +100,7 @@ export default async function inventoryCountRoutes(fastify: FastifyInstance) {
   })
 
   // PUT /api/inventory-counts/:id/items/:itemId — record what was actually counted.
-  fastify.put('/:id/items/:itemId', { preHandler: [fastify.authenticate, requirePermission('inventory.adjust')] }, async (request, reply) => {
+  fastify.put('/:id/items/:itemId', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
     const { id, itemId } = request.params as { id: string; itemId: string }
     const body = z.object({ countedQuantity: z.number().min(0).max(1_000_000, 'La cantidad no puede superar 1,000,000 — ¿se escaneó un código de barras en la cantidad?'), notes: z.string().optional() }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.issues[0]?.message ?? 'Datos inválidos' })
@@ -103,6 +109,13 @@ export default async function inventoryCountRoutes(fastify: FastifyInstance) {
     if (!count) return reply.status(404).send({ error: 'Conteo no encontrado' })
     if (count.status !== 'IN_PROGRESS') return reply.status(400).send({ error: 'Este conteo ya está completado' })
     if (!canAccessBranch(request, count.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
+
+    // Now that counters and adjusters can be different people, a line that
+    // was already adjusted is frozen: re-counting it would leave the applied
+    // adjustment and the recorded count disagreeing.
+    const existing = await prisma.inventoryCountItem.findUnique({ where: { id: itemId } })
+    if (!existing || existing.countId !== id) return reply.status(404).send({ error: 'Línea no encontrada' })
+    if (existing.adjusted) return reply.status(400).send({ error: 'Esta línea ya fue ajustada — no se puede cambiar lo contado' })
 
     const item = await prisma.inventoryCountItem.update({
       where: { id: itemId },
@@ -113,7 +126,7 @@ export default async function inventoryCountRoutes(fastify: FastifyInstance) {
   })
 
   // DELETE /api/inventory-counts/:id/items/:itemId — remove a line before it's been adjusted.
-  fastify.delete('/:id/items/:itemId', { preHandler: [fastify.authenticate, requirePermission('inventory.adjust')] }, async (request, reply) => {
+  fastify.delete('/:id/items/:itemId', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
     const { id, itemId } = request.params as { id: string; itemId: string }
     const count = await prisma.inventoryCount.findUnique({ where: { id } })
     if (!count) return reply.status(404).send({ error: 'Conteo no encontrado' })
@@ -134,6 +147,11 @@ export default async function inventoryCountRoutes(fastify: FastifyInstance) {
   // just tagged with this count's id as referenceId so it's traceable back
   // here, and already showing up in the existing Ajustes de Inventario
   // report with no changes needed there.
+  //
+  // It applies the count's DIFFERENCE (counted − system at the time of the
+  // count), not the counted quantity as the new stock: the adjustment can
+  // now happen days later from the Conteos report, and setting the absolute
+  // counted figure then would wipe out every sale/intake since the count.
   fastify.post('/:id/items/:itemId/adjust', { preHandler: [fastify.authenticate, requirePermission('inventory.adjust')] }, async (request, reply) => {
     const { id, itemId } = request.params as { id: string; itemId: string }
     const body = z.object({ reason: z.string().min(1) }).safeParse(request.body)
@@ -148,16 +166,31 @@ export default async function inventoryCountRoutes(fastify: FastifyInstance) {
     if (item.adjusted) return reply.status(400).send({ error: 'Esta línea ya fue ajustada' })
     if (item.countedQuantity === null) return reply.status(400).send({ error: 'Primero ingresa la cantidad contada' })
 
-    await setStock(item.productId, count.branchId, Number(item.countedQuantity), {
-      type: 'ADJUSTMENT',
-      reason: `Conteo físico: ${body.data.reason}`,
-      performedById: request.user.id,
-      referenceId: `CONTEO-${count.id}`,
-    })
-
-    const updated = await prisma.inventoryCountItem.update({
-      where: { id: itemId },
+    // Claim the line first so two people adjusting from the report at the
+    // same moment can't both apply the same difference.
+    const claimed = await prisma.inventoryCountItem.updateMany({
+      where: { id: itemId, adjusted: false },
       data: { adjusted: true, reason: body.data.reason },
+    })
+    if (claimed.count === 0) return reply.status(400).send({ error: 'Esta línea ya fue ajustada' })
+
+    const delta = Number(item.countedQuantity) - Number(item.systemQuantity)
+    try {
+      if (delta !== 0) {
+        await updateStock(item.productId, count.branchId, delta, {
+          type: 'ADJUSTMENT',
+          reason: `Conteo físico: ${body.data.reason}`,
+          performedById: request.user.id,
+          referenceId: `CONTEO-${count.id}`,
+        })
+      }
+    } catch (err) {
+      await prisma.inventoryCountItem.update({ where: { id: itemId }, data: { adjusted: false, reason: null } })
+      throw err
+    }
+
+    const updated = await prisma.inventoryCountItem.findUnique({
+      where: { id: itemId },
       include: { product: { select: { id: true, name: true, sku: true, barcode: true } } },
     })
     return reply.send(updated)
@@ -167,7 +200,7 @@ export default async function inventoryCountRoutes(fastify: FastifyInstance) {
   // every discrepant line to be resolved first — a count can legitimately
   // close with some differences left un-adjusted (ej. to investigate later)
   // without blocking the whole task from being marked done.
-  fastify.put('/:id/complete', { preHandler: [fastify.authenticate, requirePermission('inventory.adjust')] }, async (request, reply) => {
+  fastify.put('/:id/complete', { preHandler: [fastify.authenticate, requirePermission('inventory.view')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const count = await prisma.inventoryCount.findUnique({ where: { id } })
     if (!count) return reply.status(404).send({ error: 'Conteo no encontrado' })

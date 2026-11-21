@@ -38,6 +38,14 @@ const words1 = ['Útiles escolares', 'Totto', 'Parker', 'Sheaffer', 'Acrílicos'
 const words2 = [BRAND.slogan, 'Rabinal y Cubulco', 'Desde 2010', 'Cuatro sucursales']
 const now = shopState()
 const leaves = STORY.length
+// Pino, Azul and Sol take turns living on the written pages: each one pops
+// up under the text when its page opens (see stack() in the script).
+const pageCrew: { who: CrewKey; pose: 'wave' | 'cheer' | 'point' | 'read'; acc?: ('glasses' | 'beret' | 'brush' | 'book' | 'cap' | 'backpack' | 'pen')[]; style?: string; flip?: boolean }[] = [
+  { who: 'pino', pose: 'wave', acc: ['beret', 'brush'], style: '--beret:#173a9e;--paint:#ffb800' },
+  { who: 'azul', pose: 'point', acc: ['glasses'], flip: true },
+  { who: 'sol', pose: 'cheer', acc: ['cap'], style: '--cap:#e8141c' },
+]
+const crewFor = (k: number) => pageCrew[k % pageCrew.length]!
 const P = PHOTOS
 ---
 <Layout content={content} home>
@@ -113,7 +121,8 @@ const P = PHOTOS
             <p class="pg__mark dy-hand">{STORY[leaves - 1]!.mark}</p>
             <h3 class="pg__t dy-hand">{STORY[leaves - 1]!.title}</h3>
             <p class="pg__x dy-hand">{STORY[leaves - 1]!.text}</p>
-            <div class="pg__mini"><Drawing n={STORY[leaves - 1]!.draw} class={`sc-${leaves}`} /><img class="pg__photo" src={P[STORY[leaves - 1]!.photo].src} alt={P[STORY[leaves - 1]!.photo].alt} width={P[STORY[leaves - 1]!.photo].w} height={P[STORY[leaves - 1]!.photo].h} loading="lazy" decoding="async" /></div>
+            <div class="pg__mini"><Drawing n={STORY[leaves - 1]!.draw} class={`sc-${leaves}`} /><img class="pg__photo" src={P[STORY[leaves - 1]!.photo].src} srcset={P[STORY[leaves - 1]!.photo].set} sizes="40vw" alt={P[STORY[leaves - 1]!.photo].alt} width={P[STORY[leaves - 1]!.photo].w} height={P[STORY[leaves - 1]!.photo].h} loading="lazy" decoding="async" /></div>
+            <div class="pg__crew" aria-hidden="true">{(() => { const c = crewFor(leaves - 1); return <Crayon who={c.who} pose={c.pose} acc={c.acc ?? []} style={c.style} flip={c.flip} /> })()}</div>
             <p class="pg__n dy-hand">{leaves} / {leaves}</p>
           </div>
         </div>
@@ -136,7 +145,8 @@ const P = PHOTOS
                   <p class="pg__mark dy-hand">{STORY[i - 1]!.mark}</p>
                   <h3 class="pg__t dy-hand">{STORY[i - 1]!.title}</h3>
                   <p class="pg__x dy-hand">{STORY[i - 1]!.text}</p>
-                  <div class="pg__mini"><Drawing n={STORY[i - 1]!.draw} class={`sc-${i}`} /><img class="pg__photo" src={P[STORY[i - 1]!.photo].src} alt={P[STORY[i - 1]!.photo].alt} width={P[STORY[i - 1]!.photo].w} height={P[STORY[i - 1]!.photo].h} loading="lazy" decoding="async" /></div>
+                  <div class="pg__mini"><Drawing n={STORY[i - 1]!.draw} class={`sc-${i}`} /><img class="pg__photo" src={P[STORY[i - 1]!.photo].src} srcset={P[STORY[i - 1]!.photo].set} sizes="40vw" alt={P[STORY[i - 1]!.photo].alt} width={P[STORY[i - 1]!.photo].w} height={P[STORY[i - 1]!.photo].h} loading="lazy" decoding="async" /></div>
+                  <div class="pg__crew" aria-hidden="true">{(() => { const c = crewFor(i - 1); return <Crayon who={c.who} pose={c.pose} acc={c.acc ?? []} style={c.style} flip={c.flip} /> })()}</div>
                   <p class="pg__n dy-hand">{i} / {leaves}</p>
                 </div>
               </div>
@@ -146,17 +156,22 @@ const P = PHOTOS
                 <p class="pg__mark dy-hand">{s.mark}</p>
                 <Drawing n={s.draw} class={`sc-${i + 1}`} />
                 <figure class="polaroid" style={`--rot:${i % 2 ? 4 : -4}deg`}>
-                  <img src={P[s.photo].src} alt={P[s.photo].alt} width={P[s.photo].w} height={P[s.photo].h} loading="lazy" decoding="async" />
+                  <img src={P[s.photo].src} srcset={P[s.photo].set} sizes="(max-width: 860px) 60vw, 34vw" alt={P[s.photo].alt} width={P[s.photo].w} height={P[s.photo].h} loading="lazy" decoding="async" />
                   <figcaption class="dy-hand">{P[s.photo].caption}</figcaption>
                   <span class="tape" aria-hidden="true"></span>
                 </figure>
+                {s.photo2 && (
+                  <figure class="polaroid polaroid--sm" style={`--rot:${i % 2 ? -7 : 6}deg`}>
+                    <img src={P[s.photo2].src} srcset={P[s.photo2].set} sizes="(max-width: 860px) 36vw, 18vw" alt={P[s.photo2].alt} width={P[s.photo2].w} height={P[s.photo2].h} loading="lazy" decoding="async" />
+                    <figcaption class="dy-hand">{P[s.photo2].caption}</figcaption>
+                    <span class="tape" aria-hidden="true"></span>
+                  </figure>
+                )}
               </div>
             </div>
           </div>
         ))}
       </div>
-      <div class="nb__crew nb__crew--l" aria-hidden="true"><Crayon who="pino" pose="wave" acc={['beret', 'brush']} style="--beret:#173a9e;--paint:#ffb800" /></div>
-      <div class="nb__crew nb__crew--r" aria-hidden="true"><Crayon who="azul" acc={['glasses']} flip /></div>
     </div>
   </section>
 
@@ -174,7 +189,7 @@ const P = PHOTOS
             <div class="aisle__crew" aria-hidden="true"><Crayon who={f.crew.who} pose={f.crew.pose} acc={f.crew.acc} style={f.crew.style} /></div>
             <div class="aisle__img">
               {f.choices.map((ch, j) => (
-                <img class:list={['aisle__pic', { 'is-on': j === 0 }]} data-fig={j} src={P[ch.photo].src} alt={P[ch.photo].alt} width={P[ch.photo].w} height={P[ch.photo].h} loading="lazy" decoding="async" />
+                <img class:list={['aisle__pic', { 'is-on': j === 0 }]} data-fig={j} src={P[ch.photo].src} srcset={P[ch.photo].set} sizes="(max-width: 760px) 92vw, 500px" alt={P[ch.photo].alt} width={P[ch.photo].w} height={P[ch.photo].h} loading="lazy" decoding="async" />
               ))}
             </div>
             <div class="aisle__body">
@@ -193,7 +208,7 @@ const P = PHOTOS
         ))}
         {SHELVES.map(s => (
           <article class="aisle aisle--shelf" style={`--c:${s.color}; --i:${s.ink}`} aria-label={s.name}>
-            <div class="aisle__img"><img class="aisle__pic is-on" src={P[s.photo].src} alt={P[s.photo].alt} width={P[s.photo].w} height={P[s.photo].h} loading="lazy" decoding="async" /></div>
+            <div class="aisle__img"><img class="aisle__pic is-on" src={P[s.photo].src} srcset={P[s.photo].set} sizes="(max-width: 760px) 92vw, 500px" alt={P[s.photo].alt} width={P[s.photo].w} height={P[s.photo].h} loading="lazy" decoding="async" /></div>
             <div class="aisle__body">
               <h3 class="aisle__t">{s.name}</h3>
               <p class="aisle__note dy-hand">{s.note}</p>
@@ -260,7 +275,7 @@ const P = PHOTOS
         {SERVICES.map((s, i) => (
           <li class="step" data-step>
             <span class="step__n" aria-hidden="true">{i + 1}</span>
-            <figure class="step__card"><img src={P[s.photo].src} alt={P[s.photo].alt} width={P[s.photo].w} height={P[s.photo].h} loading="lazy" decoding="async" /></figure>
+            <figure class="step__card"><img src={P[s.photo].src} srcset={P[s.photo].set} sizes="(max-width: 760px) 92vw, 540px" alt={P[s.photo].alt} width={P[s.photo].w} height={P[s.photo].h} loading="lazy" decoding="async" /></figure>
             <h3 class="step__t">{s.name}</h3>
             <p class="step__x">{s.note}</p>
             {s.only && <p class="step__only">Solo en {s.only}</p>}
@@ -301,15 +316,18 @@ const P = PHOTOS
         {HOURS.map(h => <li><span class="dy-hand">{h.days}</span><b>{h.from} a {h.to}</b></li>)}
       </ul>
       <ul class="stores__list">
-        {cards.map((card, i) => { const [c, ink] = storeTone[i % 4]!; const ph = P[card.photo]; const logo = card.logo ? P[card.logo] : null; return (
+        {cards.map((card, i) => { const [c, ink] = storeTone[i % 4]!; const ph = P[card.photo]; const inside = card.inside ? P[card.inside] : null; const logo = card.logo ? P[card.logo] : null; return (
           <li class="store" style={`--c:${c}; --i:${ink}`} data-store-card>
             <div class="store__crew" aria-hidden="true"><Crayon who={storeCrew[i % 4]!} pose="wave" asleep={!now.open} /></div>
-            <figure class="store__pic">
-              <img src={ph.src} alt={ph.alt} width={ph.w} height={ph.h} loading="lazy" decoding="async" />
+            <figure class="store__pic" data-store-pic>
+              <img class="store__face" src={ph.src} srcset={ph.set} sizes="(max-width: 760px) 92vw, 420px" alt={ph.alt} width={ph.w} height={ph.h} loading="lazy" decoding="async" />
+              {inside && <img class="store__face store__face--in" src={inside.src} srcset={inside.set} sizes="(max-width: 760px) 92vw, 420px" alt={inside.alt} width={inside.w} height={inside.h} loading="lazy" decoding="async" />}
               {logo && <img class="store__logo" src={logo.src} alt="" width={logo.w} height={logo.h} loading="lazy" decoding="async" />}
               <span class="store__n" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+              {inside && <button class="store__peek" type="button" data-store-peek aria-pressed="false"><span class="store__peek-in">Ver por dentro</span><span class="store__peek-out">Ver por fuera</span></button>}
             </figure>
             <h3 class="store__t">{card.name}</h3>
+            {card.motto && <p class="store__motto dy-hand">{card.motto}</p>}
             <p class="store__a">{card.address}</p>
             <p class="dy-live store__live" data-open-flag={now.open ? '1' : '0'} data-store data-label>{now.label}</p>
             {card.main && <p class="store__main dy-hand">Aquí empezó todo, en 2010</p>}
@@ -499,6 +517,13 @@ const P = PHOTOS
   guide.querySelector('[data-guide-x]')!.addEventListener('click', () => { off = true; try { localStorage.setItem('dayana-guia', 'off') } catch {} show() })
   gBack.addEventListener('click', () => { off = false; try { localStorage.removeItem('dayana-guia') } catch {} show(); say('¡Volví!') })
 
+  // ── Store cards: «Ver por dentro» swaps the front for the inside photo ──
+  document.querySelectorAll<HTMLButtonElement>('[data-store-peek]').forEach(btn => btn.addEventListener('click', () => {
+    const pic = btn.closest<HTMLElement>('[data-store-pic]')!
+    const on = pic.classList.toggle('is-in')
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false')
+  }))
+
   // ── The notebook turns its pages ──────────────────────────────────────
   const book = document.querySelector<HTMLElement>('[data-book]')
   if (book && !reduce) {
@@ -514,6 +539,10 @@ const P = PHOTOS
         l.style.zIndex = String(rot < -90 ? 10 + i : 10 + n - i)
       })
       if (turned !== spread) {
+        // the right-hand page now showing: the next leaf's front, or the last page under them all
+        book.querySelectorAll('.is-open').forEach(el => el.classList.remove('is-open'))
+        const open = turned < n ? leaves[turned]!.querySelector('.face--front') : book.querySelector('.page--base')
+        if (turned > 0) open?.classList.add('is-open')
         spread = turned
         if (turned > 0) { drawScene(turned); say(STORY[turned - 1]?.say) }
       }
@@ -716,11 +745,17 @@ const P = PHOTOS
 
   /* ── Notebook ────────────────────────────────────────── */
   .nb { background: var(--red); color: #fff; }
-  .nb__stage { position: relative; min-height: 100svh; display: grid; grid-template-rows: auto auto 1fr; justify-items: center; padding: clamp(90px, 10vh, 120px) var(--m) clamp(30px, 5vh, 60px); overflow: hidden; perspective: 2400px;
+  .nb__stage { position: relative; min-height: 100svh; display: grid; grid-template-rows: auto auto 1fr; justify-items: center; padding: clamp(36px, 5vh, 60px) var(--m) clamp(14px, 2.4vh, 30px); overflow: hidden; perspective: 2400px;
     background-image: radial-gradient(circle at 20% 30%, rgb(255 255 255 / 0.08) 0 2px, transparent 3px), radial-gradient(circle at 70% 70%, rgb(0 0 0 / 0.08) 0 2px, transparent 3px); background-size: 26px 26px, 34px 34px; }
-  .nb__title { text-align: center; color: #fff; }
-  .nb__hint { font-size: 1.7rem; font-weight: 700; margin-top: 6px; color: var(--yellow); }
-  .book { --pw: min(40vw, calc(66svh / 1.32), 520px); --ph: calc(var(--pw) * 1.32); position: relative; width: var(--pw); height: var(--ph); margin-top: clamp(16px, 3vh, 36px); align-self: center; }
+  .nb__title { text-align: center; color: #fff; font-size: min(clamp(2.6rem, 1.4rem + 3.6vw, 5.4rem), 7svh); }
+  .nb__hint { font-size: min(1.7rem, 3.4svh); font-weight: 700; margin-top: 6px; color: var(--yellow); }
+  /* on a computer the space goes to the book; Roja's bubble already says «baja y pasa la página» */
+  @media (min-width: 861px) { .nb__hint { display: none; } }
+  /* On a computer the open notebook (two pages) fills most of the stage;
+     the page is almost square (1.05) so it can grow in width too, and the
+     crew lives inside the pages instead of beside the book.
+     Phones keep their own size (see the 860px query). */
+  .book { --pw: min(48vw, calc((100svh - 150px) / 1.05), 900px); --ph: calc(var(--pw) * 1.05); position: relative; width: var(--pw); height: var(--ph); margin-top: clamp(4px, 1vh, 12px); align-self: start; }
   .book:global(.is-3d) { transform-style: preserve-3d; }
   .page, .face { container-type: inline-size; }
   .page { background: var(--paper); color: var(--ink); border-radius: 6px 20px 20px 6px; overflow: hidden; box-shadow: inset 18px 0 30px -18px rgb(0 0 0 / 0.35); }
@@ -750,22 +785,27 @@ const P = PHOTOS
   .pg--left { padding: 8cqw 14cqw 8cqw 8cqw; background: radial-gradient(circle at 1px 1px, rgb(23 58 158 / 0.22) 1px, transparent 1.6px) 0 0 / 5cqw 5cqw, var(--paper); }
   .pg__mark { font-size: 6cqw; font-weight: 700; color: var(--red); line-height: 1; }
   .pg__t { font-size: 9.6cqw; font-weight: 700; line-height: 0.95; color: var(--navy); font-family: var(--hand); font-variation-settings: normal; letter-spacing: 0; }
-  .pg__x { font-size: 5.7cqw; font-weight: 500; line-height: 1.16; color: #1d2a7a; }
+  .pg__x { font-size: 5.2cqw; font-weight: 500; line-height: 1.16; color: #1d2a7a; }
   .pg__n { position: absolute; right: 8cqw; bottom: 5cqw; font-size: 5cqw; color: var(--red); }
   .pg__mini { display: none; }
-  .pg--left :global(.dw) { margin-top: 1cqw; }
-  .polaroid { position: absolute; right: 8cqw; bottom: 6cqw; width: 58%; background: #fff; padding: 2.6cqw 2.6cqw 1.4cqw; box-shadow: 0 12px 26px -10px rgb(0 0 0 / 0.45); transform: rotate(var(--rot)); }
+  .pg--left :global(.dw) { margin-top: -3cqw; width: 66%; justify-self: center; }
+  .polaroid { position: absolute; right: 6cqw; bottom: 5cqw; width: 57%; background: #fff; padding: 2.6cqw 2.6cqw 1.4cqw; box-shadow: 0 12px 26px -10px rgb(0 0 0 / 0.45); transform: rotate(var(--rot)); }
   .polaroid img { aspect-ratio: 4 / 3; object-fit: cover; width: 100%; }
   .polaroid figcaption { margin-top: 1.4cqw; font-size: 4.2cqw; line-height: 1.05; text-align: center; color: var(--ink); }
+  /* a second, smaller photo taped in the bottom-left corner, under the first */
+  .polaroid--sm { right: auto; left: 4cqw; bottom: 16cqw; width: 34%; z-index: 0; padding: 2cqw 2cqw 1.2cqw; }
+  .polaroid--sm figcaption { font-size: 3.4cqw; }
+  .polaroid:not(.polaroid--sm) { z-index: 1; }
+  .book:not(:global(.is-3d)) .polaroid--sm { justify-self: start; margin-top: 0; }
   .tape { position: absolute; top: -3cqw; left: 50%; width: 34%; height: 6.5cqw; translate: -50% 0; rotate: -4deg; background: rgb(255 184 0 / 0.75); }
   .book:not(:global(.is-3d)) .polaroid { position: relative; right: auto; bottom: auto; justify-self: end; margin-top: 2cqw; }
 
-  .nb__crew { position: absolute; bottom: -10px; width: clamp(110px, 9vw, 150px); }
-  .nb__crew--l { right: calc(clamp(16px, 4vw, 70px) + clamp(100px, 8vw, 140px)); }
-  .nb__crew--r { right: clamp(16px, 4vw, 70px); }
+  /* the crayon living on each written page: hidden until its page opens, then it pops up */
+  .pg__crew { position: relative; justify-self: end; margin-right: 15cqw; width: 14cqw; transform-origin: 50% 100%; opacity: 0; transform: translateY(30%) scale(0.4) rotate(-12deg); transition: opacity 0.25s ease, transform 0.6s var(--ease-spring); }
+  :global(.is-open) > .pg > .pg__crew, .book:not(:global(.is-3d)) .pg__crew { opacity: 1; transform: none; transition-delay: 0.35s; }
   @media (max-width: 860px) {
-    .book { --pw: min(86vw, calc(64svh / 1.32)); }
-    .nb__crew { display: none; }
+    .book { --pw: min(86vw, calc(64svh / 1.32)); --ph: calc(var(--pw) * 1.32); }
+    .pg__crew { display: none; }
     .pg { padding: 7cqw 7cqw 7cqw 15cqw; gap: 2cqw; }
     .pg__t { font-size: 8.6cqw; }
     .pg__x { font-size: 5.2cqw; }
@@ -907,6 +947,17 @@ const P = PHOTOS
   .store__crew { position: absolute; right: 18px; bottom: 100%; margin-bottom: -7px; width: 92px; }
   .store__pic { position: relative; margin: 0 0 6px; border-radius: 16px; overflow: hidden; border: 3px solid var(--ink); aspect-ratio: 4 / 3; background: var(--ink); }
   .store__pic img { width: 100%; height: 100%; object-fit: cover; }
+  .store__face { position: absolute; inset: 0; transition: opacity 0.5s var(--ease-out), transform 0.7s var(--ease-out); }
+  .store__face--in { opacity: 0; transform: scale(1.08); }
+  .store__pic:global(.is-in) .store__face--in { opacity: 1; transform: none; }
+  .store__pic:global(.is-in) .store__logo { opacity: 0; }
+  .store__logo { transition: opacity 0.3s; }
+  .store__peek { position: absolute; left: 10px; bottom: 10px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 2.5px solid var(--ink); background: var(--paper); color: var(--ink); font-weight: 800; font-size: 0.875rem; cursor: pointer; box-shadow: 0 4px 0 var(--ink); transition: transform 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out); }
+  .store__peek:hover { transform: translateY(-2px); box-shadow: 0 6px 0 var(--ink); }
+  .store__peek:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--ink); }
+  .store__peek-out, .store__pic:global(.is-in) .store__peek-in { display: none; }
+  .store__pic:global(.is-in) .store__peek-out { display: inline; }
+  .store__motto { font-size: 1.45rem; font-weight: 700; line-height: 1.05; margin-top: -4px; }
   .store__pic .store__logo { position: absolute; right: 10px; bottom: 10px; width: 34%; height: auto; border-radius: 50%; background: #fff; border: 3px solid var(--ink); object-fit: contain; }
   .store__n { position: absolute; left: 12px; top: 8px; font: 900 clamp(3rem, 2.4rem + 2vw, 4.6rem)/0.8 var(--display); font-variation-settings: var(--soft); letter-spacing: -0.05em; color: #fff; -webkit-text-stroke: 2px var(--ink); paint-order: stroke; }
   .hours { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 12px; }

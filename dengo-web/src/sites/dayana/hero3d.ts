@@ -175,13 +175,20 @@ export function mountHero(canvas: HTMLCanvasElement, opts: {
   hole?: (x: number, y: number, portrait: boolean) => boolean
   onHit?: (name: string, x: number, y: number) => void
 }): HeroScene | null {
+  // Modest machines (≤4 cores or ≤4 GB, as the browser reports them) skip
+  // antialiasing and render at a lower pixel density: the scene is the same,
+  // just fewer pixels to fill. Every device also watches its own frame rate
+  // and steps the density down once if it can't keep up (see `frame`).
+  const nav = navigator as Navigator & { deviceMemory?: number }
+  const lite = (nav.hardwareConcurrency ?? 8) <= 4 || (nav.deviceMemory ?? 8) <= 4
   let renderer: WebGLRenderer
   try {
-    renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' })
+    renderer = new WebGLRenderer({ canvas, antialias: !lite, alpha: true, powerPreference: lite ? 'default' : 'high-performance' })
   } catch {
     return null
   }
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75))
+  let maxDpr = lite ? 1.25 : 1.75
+  renderer.setPixelRatio(Math.min(devicePixelRatio, maxDpr))
   renderer.outputColorSpace = SRGBColorSpace
   const scene = new Scene()
   const camera = new PerspectiveCamera(35, 1, 0.1, 100)
@@ -326,11 +333,21 @@ export function mountHero(canvas: HTMLCanvasElement, opts: {
     world.rotation.y = pointer.x * 0.1
     world.rotation.x = -pointer.y * 0.06
     renderer.render(scene, camera)
+    // frame-rate guard: if the last ~90 frames averaged under ~40 fps, drop
+    // the pixel density once (to 1×). Nothing leaves the scene.
+    const now = performance.now()
+    if (lastT) { slowSum += now - lastT; slowN++ }
+    lastT = now
+    if (slowN >= 90) {
+      if (slowSum / slowN > 25 && maxDpr > 1) { maxDpr = 1; renderer.setPixelRatio(1); resize() }
+      slowSum = 0; slowN = 0
+    }
     if (running) raf = requestAnimationFrame(frame)
   }
+  let lastT = 0, slowSum = 0, slowN = 0
 
   const start = () => { if (running || opts.still) return; running = true; raf = requestAnimationFrame(frame) }
-  const stop = () => { running = false; cancelAnimationFrame(raf) }
+  const stop = () => { running = false; cancelAnimationFrame(raf); lastT = 0 }
 
   const hop = (b: Body) => {
     if (b.jump >= 0) return

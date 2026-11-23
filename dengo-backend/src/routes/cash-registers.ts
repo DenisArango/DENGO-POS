@@ -102,6 +102,31 @@ export async function sessionTotals(reg: {
   }
 }
 
+// A CLOSED session keeps the figures written at close (totals, expected cash,
+// difference against what was handed over). When a sale is moved into or out
+// of it afterwards (Reportes → venta → Editar → Caja) those figures go stale,
+// so they're recomputed here from the sales it now holds. finalAmount — the
+// cash actually counted — is a fact and is never touched; only what it's
+// compared against changes. No-op for an OPEN session (computed live anyway).
+export async function refreshClosedRegisterTotals(id: string) {
+  const reg = await prisma.cashRegister.findUnique({ where: { id }, include: { movements: true } })
+  if (!reg || reg.status !== 'CLOSED') return
+  const movementsBalance = reg.movements.reduce(
+    (acc, m) => acc + (m.type === 'INCOME' ? Number(m.amount) : -Number(m.amount)), 0
+  )
+  const sales = await computeSales(reg.branchId, reg.openedAt, reg.closedAt, id)
+  const expectedAmount = sales.cash + movementsBalance
+  await prisma.cashRegister.update({
+    where: { id },
+    data: {
+      ...totalsColumns(sales),
+      expectedAmount,
+      ...(reg.finalAmount != null ? { difference: Number(reg.finalAmount) - expectedAmount } : {}),
+      ...(reg.externalSalesTotal != null ? { externalSalesDifference: sales.total - Number(reg.externalSalesTotal) } : {}),
+    },
+  })
+}
+
 async function withSales(reg: any) {
   if (!reg) return null
   const sales = await computeSales(reg.branchId, reg.openedAt, reg.closedAt, reg.id)

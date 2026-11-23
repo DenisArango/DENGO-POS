@@ -43,6 +43,11 @@ function toTotal(item: EditItem) {
   return qty * price * (1 - disc)
 }
 
+function linesKey(items: EditItem[]) {
+  return JSON.stringify(items.map(i => [i.productId, i.variationId ?? '', i.productName,
+    parseFloat(i.quantityStr) || 0, parseFloat(i.priceStr) || 0, parseFloat(i.discountStr) || 0]))
+}
+
 function toCost(item: EditItem) {
   const qty = parseFloat(item.quantityStr) || 0
   return item.cost * item.convFactor * qty
@@ -64,6 +69,13 @@ export default function SaleDetail() {
   const [editItems, setEditItems] = useState<EditItem[]>([])
   const [editNotes, setEditNotes] = useState('')
   const [editPaymentMethod, setEditPaymentMethod] = useState<string>('CASH')
+  const [editRegisterId, setEditRegisterId] = useState<string>('')
+  // Register sessions open when this sale was made (the only valid targets).
+  const [registerOptions, setRegisterOptions] = useState<any[] | null>(null)
+  // Lines as they were when editing started — if unchanged they aren't sent,
+  // so a certified-factura or coupon sale (whose lines are locked) can still
+  // get its register, payment method or notes corrected.
+  const [initialLinesKey, setInitialLinesKey] = useState('')
   const [saving, setSaving] = useState(false)
 
   // Add product search
@@ -97,7 +109,7 @@ export default function SaleDetail() {
 
   const startEdit = () => {
     if (!sale) return
-    setEditItems((sale.items ?? []).map((item: any) => ({
+    const initial: EditItem[] = (sale.items ?? []).map((item: any) => ({
       productId: item.product?.id ?? item.productId,
       variationId: item.variationId ?? undefined,
       productName: item.product?.name ?? item.customName ?? 'Producto',
@@ -109,9 +121,16 @@ export default function SaleDetail() {
       // backend's lib/saleCost.ts), not today's product cost.
       cost: Number(item.cost ?? item.product?.cost ?? 0),
       convFactor: Number(item.variation?.conversionFactor ?? 1),
-    })))
+    }))
+    setEditItems(initial)
+    setInitialLinesKey(linesKey(initial))
     setEditNotes(sale.notes ?? '')
     setEditPaymentMethod(sale.paymentMethod ?? 'CASH')
+    setEditRegisterId(sale.cashRegister?.id ?? '')
+    setRegisterOptions(null)
+    api.get<any[]>(`/api/sales/${sale.id}/register-options`)
+      .then(setRegisterOptions)
+      .catch(() => setRegisterOptions([]))
     setEditMode(true)
   }
 
@@ -184,7 +203,13 @@ export default function SaleDetail() {
     setSaving(true)
     try {
       const subtotal = items.reduce((s, i) => s + i.total, 0)
-      await api.put(`/api/sales/${id}`, { items, subtotal, total: subtotal, notes: editNotes, paymentMethod: editPaymentMethod })
+      const registerChanged = !!editRegisterId && editRegisterId !== (sale?.cashRegister?.id ?? '')
+      const linesChanged = linesKey(editItems) !== initialLinesKey
+      await api.put(`/api/sales/${id}`, {
+        ...(linesChanged ? { items, subtotal, total: subtotal } : {}),
+        notes: editNotes, paymentMethod: editPaymentMethod,
+        ...(registerChanged ? { cashRegisterId: editRegisterId } : {}),
+      })
       toast.success('Venta actualizada')
       setEditMode(false)
       fetchSale()
@@ -510,6 +535,37 @@ export default function SaleDetail() {
         {/* Edit payment method + notes */}
         {editMode && (
           <div className="px-5 py-4 border-t space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Caja</label>
+              {registerOptions === null ? (
+                <p className="text-xs text-gray-400">Cargando cajas…</p>
+              ) : registerOptions.length === 0 ? (
+                <p className="text-xs text-gray-500">No hay ninguna caja que estuviera abierta en esta sucursal cuando se hizo la venta.</p>
+              ) : (
+                <>
+                  <select value={editRegisterId} onChange={e => setEditRegisterId(e.target.value)}
+                    className="input text-sm py-1.5 w-full max-w-md">
+                    {!sale.cashRegister && <option value="">Sin caja</option>}
+                    {registerOptions.map((r: any) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} #{r.registerNumber} — abierta {format(new Date(r.openedAt), 'dd/MM HH:mm')}
+                        {r.closedAt ? `, cerrada ${format(new Date(r.closedAt), 'dd/MM HH:mm')}` : ' (abierta ahora)'}
+                        {r.openedBy?.name ? ` · ${r.openedBy.name}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {registerOptions.length === 1 && registerOptions[0].id === sale.cashRegister?.id ? (
+                    <p className="text-xs text-gray-500 mt-1">Solo esta caja estaba abierta a la hora de la venta.</p>
+                  ) : editRegisterId && editRegisterId !== (sale.cashRegister?.id ?? '') ? (
+                    <p className="text-xs text-blue-600 mt-1">
+                      La venta pasa a esta caja. Si alguna de las dos cajas ya está cerrada, su cierre (total vendido, efectivo esperado y diferencia) se recalcula al guardar.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-400 mt-1">Solo aparecen las cajas que estaban abiertas en esta sucursal cuando se hizo la venta.</p>
+                  )}
+                </>
+              )}
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Método de pago</label>
               {(sale.creditPayments?.length ?? 0) > 0 ? (

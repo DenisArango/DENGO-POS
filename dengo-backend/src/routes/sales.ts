@@ -9,7 +9,7 @@ import { hasPermission, requirePermission } from '../lib/permissions.js'
 import { certifySale, voidSaleFel, schoolReceiver } from '../lib/fel.js'
 import { looksLikeRealNit } from '../lib/nit.js'
 import { parseBusinessDateParam } from '../lib/timezone.js'
-import { resolveOpenRegisterId } from './cash-registers.js'
+import { resolveOpenRegisterId, refreshClosedRegisterTotals } from './cash-registers.js'
 import { saleLineCost, saleBaseUnitCost, currentUnitCosts } from '../lib/saleCost.js'
 import { alertNewSale } from '../lib/staffAlerts.js'
 import { checkCoupon, computePromotion } from '../lib/promotions.js'
@@ -627,6 +627,9 @@ export default async function salesRoutes(fastify: FastifyInstance) {
       cardReference: z.string().optional(),
       transferAmount: z.number().min(0).optional(),
       transferDocumentNumber: z.string().optional(),
+      // Move the sale to another register session (cashier rang it up on the
+      // wrong till). Must be one of GET /:id/register-options.
+      cashRegisterId: z.string().optional(),
     }).safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() })
 
@@ -638,7 +641,26 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     if (existing.isVoided) return reply.status(400).send({ error: 'No se puede editar una venta anulada' })
     if (!canAccessBranch(request, existing.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
 
-    const { items: newItems, ...simpleFields } = body.data
+    const { items: newItems, cashRegisterId: requestedRegisterId, ...simpleFields } = body.data
+
+    // A register's close counts only the sales tagged to it AND made inside its
+    // session window (computeSales), so a sale can only move to a session of the
+    // same branch that was open at the moment it was made — anywhere else it
+    // would silently drop out of every close.
+    const registerChange = requestedRegisterId && requestedRegisterId !== existing.cashRegisterId
+      ? requestedRegisterId : null
+    if (registerChange) {
+      const target = await prisma.cashRegister.findUnique({
+        where: { id: registerChange },
+        select: { branchId: true, openedAt: true, closedAt: true },
+      })
+      const fits = target && target.branchId === existing.branchId
+        && target.openedAt <= existing.createdAt
+        && (!target.closedAt || target.closedAt >= existing.createdAt)
+      if (!fits) {
+        return reply.status(400).send({ error: 'Esa caja no estaba abierta en la sucursal de esta venta cuando se hizo — elige una de las cajas abiertas a esa hora.' })
+      }
+    }
 
     // The coupon's discount was computed for these exact lines; changing
     // them would leave it wrong. Void and redo the sale instead.
@@ -727,6 +749,7 @@ export default async function salesRoutes(fastify: FastifyInstance) {
         where: { id },
         data: {
           ...simpleFields,
+          ...(registerChange ? { cashRegisterId: registerChange } : {}),
           ...(creditConversion ? {
             saleType: newSaleType,
             isPaid: newSaleType === 'CASH',
@@ -755,9 +778,42 @@ export default async function salesRoutes(fastify: FastifyInstance) {
       }
     }
 
+    // Closed sessions store their totals/expected cash at close time — refresh
+    // the one(s) this sale sits in so an edit (amount, payment method or the
+    // register itself) shows up in Caja and Flujo de caja.
+    const touchedRegisters = new Set([existing.cashRegisterId, registerChange].filter((r): r is string => !!r))
+    for (const regId of touchedRegisters) await refreshClosedRegisterTotals(regId)
+
     const updated = await prisma.sale.findUnique({ where: { id }, include: saleInclude })
-    await log({ userId: request.user.id, action: 'UPDATE', entity: 'Sale', entityId: id, newValues: { total: body.data.total } })
+    await log({
+      userId: request.user.id, action: 'UPDATE', entity: 'Sale', entityId: id,
+      ...(registerChange ? { oldValues: { cashRegisterId: existing.cashRegisterId } } : {}),
+      newValues: { total: body.data.total, ...(registerChange ? { cashRegisterId: registerChange } : {}) },
+    })
     return reply.send(await enrichSale(updated))
+  })
+
+  // GET /api/sales/:id/register-options — register sessions this sale can be
+  // moved to: same branch, open at the moment the sale was made.
+  fastify.get('/:id/register-options', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    if (!hasPermission(request, 'sales.edit')) return reply.status(403).send({ error: 'Acceso denegado' })
+    const { id } = request.params as { id: string }
+    const sale = await prisma.sale.findUnique({ where: { id }, select: { branchId: true, createdAt: true } })
+    if (!sale) return reply.status(404).send({ error: 'Venta no encontrada' })
+    if (!canAccessBranch(request, sale.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
+    const options = await prisma.cashRegister.findMany({
+      where: {
+        branchId: sale.branchId,
+        openedAt: { lte: sale.createdAt },
+        OR: [{ closedAt: null }, { closedAt: { gte: sale.createdAt } }],
+      },
+      select: {
+        id: true, name: true, registerNumber: true, status: true, openedAt: true, closedAt: true,
+        openedBy: { select: { name: true } },
+      },
+      orderBy: [{ registerNumber: 'asc' }, { openedAt: 'asc' }],
+    })
+    return reply.send(options)
   })
 
   // POST /api/sales/:id/generate-invoice — add a factura to an already-created

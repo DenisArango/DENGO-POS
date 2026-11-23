@@ -24,7 +24,11 @@ export async function computeSales(branchId: string, openedAt: Date, closedAt?: 
       isVoided: false,
       ...(cashRegisterId ? { cashRegisterId } : {}),
       createdAt: {
-        gte: openedAt,
+        // With a specific session the lower bound is dropped: a sale can only
+        // carry this session's id once it exists — except one moved here from
+        // another open till (Reportes → venta → Editar → Caja), which may have
+        // been rung up before this one was opened and must still count here.
+        ...(cashRegisterId ? {} : { gte: openedAt }),
         ...(closedAt ? { lte: closedAt } : {}),
       },
     },

@@ -8,11 +8,29 @@ import { canAccessBranch } from '../lib/branch-scope.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
 import { certifySale, voidSaleFel, schoolReceiver } from '../lib/fel.js'
 import { looksLikeRealNit } from '../lib/nit.js'
-import { parseBusinessDateParam } from '../lib/timezone.js'
+import { parseBusinessDateParam, getBusinessDayBounds } from '../lib/timezone.js'
 import { resolveOpenRegisterId, refreshClosedRegisterTotals } from './cash-registers.js'
 import { saleLineCost, saleBaseUnitCost, currentUnitCosts } from '../lib/saleCost.js'
 import { alertNewSale } from '../lib/staffAlerts.js'
 import { checkCoupon, computePromotion } from '../lib/promotions.js'
+
+// Whether a sale may still be moved to another till: its own till must still
+// be open (once closed, that day's count is final). A sale with no till at all
+// can be assigned one only on the day it was made.
+async function registerMoveCheck(sale: { cashRegisterId: string | null; createdAt: Date }): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (sale.cashRegisterId) {
+    const current = await prisma.cashRegister.findUnique({ where: { id: sale.cashRegisterId }, select: { status: true } })
+    if (current && current.status !== 'OPEN') {
+      return { ok: false, error: 'La caja de esta venta ya se cerró — ya no se puede cambiar de caja.' }
+    }
+    return { ok: true }
+  }
+  const today = getBusinessDayBounds()
+  if (sale.createdAt < today.start) {
+    return { ok: false, error: 'Esta venta no es de hoy — solo se puede asignar caja a ventas del día.' }
+  }
+  return { ok: true }
+}
 
 // A line is a catalog product (productId) OR a product typed in that isn't
 // in the catalog (customName): no stock movement, no per-product tracking,
@@ -643,22 +661,20 @@ export default async function salesRoutes(fastify: FastifyInstance) {
 
     const { items: newItems, cashRegisterId: requestedRegisterId, ...simpleFields } = body.data
 
-    // A register's close counts only the sales tagged to it AND made inside its
-    // session window (computeSales), so a sale can only move to a session of the
-    // same branch that was open at the moment it was made — anywhere else it
-    // would silently drop out of every close.
+    // Fixing a sale rung up on the wrong till: allowed only while both tills
+    // are still open (before the day's close), and only to a till of the same
+    // branch that is open right now. Once a close is done its count is final.
     const registerChange = requestedRegisterId && requestedRegisterId !== existing.cashRegisterId
       ? requestedRegisterId : null
     if (registerChange) {
+      const check = await registerMoveCheck(existing)
+      if (!check.ok) return reply.status(400).send({ error: check.error })
       const target = await prisma.cashRegister.findUnique({
         where: { id: registerChange },
-        select: { branchId: true, openedAt: true, closedAt: true },
+        select: { branchId: true, status: true },
       })
-      const fits = target && target.branchId === existing.branchId
-        && target.openedAt <= existing.createdAt
-        && (!target.closedAt || target.closedAt >= existing.createdAt)
-      if (!fits) {
-        return reply.status(400).send({ error: 'Esa caja no estaba abierta en la sucursal de esta venta cuando se hizo — elige una de las cajas abiertas a esa hora.' })
+      if (!target || target.branchId !== existing.branchId || target.status !== 'OPEN') {
+        return reply.status(400).send({ error: 'Esa caja ya no está abierta — elige una de las cajas abiertas de esta sucursal.' })
       }
     }
 
@@ -793,27 +809,25 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     return reply.send(await enrichSale(updated))
   })
 
-  // GET /api/sales/:id/register-options — register sessions this sale can be
-  // moved to: same branch, open at the moment the sale was made.
+  // GET /api/sales/:id/register-options — tills this sale can be moved to:
+  // every till of its branch open right now, as long as its own till hasn't
+  // been closed yet. canMove=false + reason when the move is no longer allowed.
   fastify.get('/:id/register-options', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     if (!hasPermission(request, 'sales.edit')) return reply.status(403).send({ error: 'Acceso denegado' })
     const { id } = request.params as { id: string }
-    const sale = await prisma.sale.findUnique({ where: { id }, select: { branchId: true, createdAt: true } })
+    const sale = await prisma.sale.findUnique({ where: { id }, select: { branchId: true, createdAt: true, cashRegisterId: true } })
     if (!sale) return reply.status(404).send({ error: 'Venta no encontrada' })
     if (!canAccessBranch(request, sale.branchId)) return reply.status(403).send({ error: 'Acceso denegado' })
-    const options = await prisma.cashRegister.findMany({
-      where: {
-        branchId: sale.branchId,
-        openedAt: { lte: sale.createdAt },
-        OR: [{ closedAt: null }, { closedAt: { gte: sale.createdAt } }],
-      },
+    const check = await registerMoveCheck(sale)
+    const options = check.ok ? await prisma.cashRegister.findMany({
+      where: { branchId: sale.branchId, status: 'OPEN' },
       select: {
-        id: true, name: true, registerNumber: true, status: true, openedAt: true, closedAt: true,
+        id: true, name: true, registerNumber: true, status: true, openedAt: true,
         openedBy: { select: { name: true } },
       },
-      orderBy: [{ registerNumber: 'asc' }, { openedAt: 'asc' }],
-    })
-    return reply.send(options)
+      orderBy: { registerNumber: 'asc' },
+    }) : []
+    return reply.send({ canMove: check.ok, reason: check.ok ? null : check.error, options })
   })
 
   // POST /api/sales/:id/generate-invoice — add a factura to an already-created

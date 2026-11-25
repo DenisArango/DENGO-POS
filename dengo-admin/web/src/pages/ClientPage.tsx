@@ -84,7 +84,7 @@ export default function ClientPage() {
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-6 xl:grid-cols-12">
         {/* Ventas */}
-        <Tile hover={false} className="self-start p-6 md:col-span-6 xl:col-span-8">
+        <Tile hover={false} className="flex flex-col p-6 md:col-span-6 xl:col-span-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-[13px] font-semibold text-ink-500">Vendido hoy</p>
@@ -101,17 +101,8 @@ export default function ClientPage() {
           </div>
           {m && (
             <>
-              {m.salesByDay.some(d => d.total) ? (
-                <>
-                  <div className="mt-6"><Bars data={m.salesByDay} height={120} /></div>
-                  <div className="mt-2 flex justify-between text-[11px] text-ink-500">{m.salesByDay.filter((_, i) => i % 3 === 0 || i === 13).map(d => <span key={d.day}>{dayLabel(d.day)}</span>)}</div>
-                </>
-              ) : (
-                <div className="mt-5 flex items-center gap-3 rounded-2xl bg-ice/70 px-4 py-3 text-[13px] text-ink-600 shadow-well">
-                  <span className="h-2 w-2 shrink-0 rounded-full bg-ink-300" />
-                  Sin ventas en los últimos 14 días{m.lastSaleAt ? ` · la última fue ${since(m.lastSaleAt)}` : ' · todavía no ha vendido'}
-                </div>
-              )}
+              <div className="mt-auto pt-6"><Bars data={m.salesByDay} height={m.salesByDay.some(d => d.total) ? 120 : 64} /></div>
+              <div className="mt-2 flex justify-between text-[11px] text-ink-500">{m.salesByDay.filter((_, i) => i % 3 === 0 || i === 13).map(d => <span key={d.day}>{dayLabel(d.day)}</span>)}</div>
               <div className="mt-4 flex flex-wrap gap-1.5">{m.branches.map(b => <span key={b.code} className="rounded-lg bg-ink-50 px-2 py-1 text-[12px] font-medium text-ink-700">{b.name} <span className="font-mono text-ink-400">{b.code}</span></span>)}</div>
             </>
           )}

@@ -84,7 +84,7 @@ export default function ClientPage() {
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-6 xl:grid-cols-12">
         {/* Ventas */}
-        <Tile hover={false} className="p-6 md:col-span-6 xl:col-span-8">
+        <Tile hover={false} className="self-start p-6 md:col-span-6 xl:col-span-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-[13px] font-semibold text-ink-500">Vendido hoy</p>

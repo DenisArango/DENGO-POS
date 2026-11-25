@@ -61,7 +61,7 @@ export function StatusPill({ status }: { status: ClientStatus }) {
   const s = STATUS[status]
   const live = status === 'online' || status === 'down'
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 ${s.pill}`}>
+    <span className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 ${s.pill}`}>
       <span className="relative flex h-2 w-2">
         {live && <span className={`absolute inline-flex h-full w-full rounded-full ${s.dot} animate-ping2`} />}
         <span className={`relative inline-flex h-2 w-2 rounded-full ${s.dot}`} />

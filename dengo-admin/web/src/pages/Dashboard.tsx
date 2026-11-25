@@ -25,7 +25,7 @@ function ClientTile({ c, i, featured = false }: { c: Client; i: number; featured
     <Tile as="button" delay={0.04 * i} onClick={() => nav(`/clientes/${c.name}`)} className={`group flex flex-col gap-4 ${featured ? 'p-7 md:col-span-2' : 'p-5'}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className={`h-display flex items-center gap-1.5 truncate leading-tight ${featured ? 'text-[28px]' : 'text-[20px]'}`}>{c.displayName}<ArrowUpRight className="h-4 w-4 shrink-0 text-coral-500 opacity-0 transition group-hover:opacity-100" aria-hidden /></h3>
+          <h3 className={`h-display flex min-w-0 items-center gap-1.5 leading-tight ${featured ? 'text-[20px] md:text-[28px]' : 'text-[20px]'}`}><span className="truncate">{c.displayName}</span><ArrowUpRight className="h-4 w-4 shrink-0 text-coral-500 opacity-0 transition group-hover:opacity-100" aria-hidden /></h3>
           <p className="mt-0.5 truncate font-mono text-[12px] text-ink-500">{c.domain ? `pos.${c.domain}` : 'sin dominio'}</p>
         </div>
         <StatusPill status={c.status} />
@@ -35,7 +35,7 @@ function ClientTile({ c, i, featured = false }: { c: Client; i: number; featured
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-[12px] font-semibold text-ink-500">Vendido hoy</p>
-            <p className={`font-display font-bold leading-none tracking-tight text-ink-950 ${featured ? 'text-[48px]' : 'text-[28px]'}`}><CountUp value={m.totalToday} format={money} /></p>
+            <p className={`font-display font-bold leading-none tracking-tight text-ink-950 ${featured ? 'text-[28px] md:text-[48px]' : 'text-[28px]'}`}><CountUp value={m.totalToday} format={money} /></p>
             <p className="mt-1 text-[12px] text-ink-500">{m.salesToday} ventas · última {since(m.lastSaleAt)}</p>
           </div>
           <div className={featured ? 'w-[58%]' : 'w-[46%]'}><Bars data={m.salesByDay} height={featured ? 92 : 52} /></div>
@@ -56,7 +56,7 @@ function ClientTile({ c, i, featured = false }: { c: Client; i: number; featured
       </div>
 
       {m && (
-        <div className="grid grid-cols-3 gap-2 border-t border-ink-900/[0.06] pt-3 text-[12px] text-ink-600">
+        <div className="grid grid-cols-3 gap-2 whitespace-nowrap border-t border-ink-900/[0.06] pt-3 text-[12px] text-ink-600">
           <span className="flex items-center gap-1.5"><Package className="h-3.5 w-3.5 text-ink-400" />{plural(m.products, 'producto', 'productos')}</span>
           <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-ink-400" />{plural(m.users, 'usuario', 'usuarios')}</span>
           <span className="flex items-center gap-1.5"><Store className="h-3.5 w-3.5 text-ink-400" />{m.branches.length} {m.branches.length === 1 ? 'tienda' : 'tiendas'}</span>

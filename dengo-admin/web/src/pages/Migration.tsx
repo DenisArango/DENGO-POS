@@ -44,7 +44,7 @@ export default function Migration() {
   const [loy, setLoy] = useState<Record<string, File | null>>({})
   const [branch, setBranch] = useState('')
   const [busy, setBusy] = useState(false)
-  const [current, setCurrent] = useState<{ batch: string; validation: Validation | null } | null>(null)
+  const [current, setCurrent] = useState<{ batch: string; validation: Validation | null; meta?: { images: number; imageNotes?: string[] } } | null>(null)
   const [job, setJob] = useState<string | null>(null)
 
   const upload = async () => {
@@ -54,7 +54,7 @@ export default function Migration() {
     else { if (branch) fd.append('branch', branch); for (const [k, f] of Object.entries(loy)) if (f) fd.append(k, f) }
     setBusy(true); setJob(null)
     try {
-      const r = await api<{ batch: string; validation: Validation | null }>(`/api/clients/${name}/migrations`, { method: 'POST', body: fd })
+      const r = await api<{ batch: string; validation: Validation | null; meta: { images: number; imageNotes?: string[] } }>(`/api/clients/${name}/migrations`, { method: 'POST', body: fd })
       setCurrent(r); void batches.reload()
       if (r.validation?.errors.length) toast.error(`${r.validation.errors.length} errores en la plantilla`)
       else toast.success('Archivo recibido')
@@ -142,6 +142,12 @@ export default function Migration() {
                     <ConfirmButton className="btn-primary" confirm="Sí, importar" onConfirm={() => run(current.batch, false)}><DatabaseZap className="h-4 w-4" />Importar</ConfirmButton>
                   </div>
                 </div>
+                {current.meta && (current.meta.images > 0 || current.meta.imageNotes?.length) ? (
+                  <p className="mb-3 flex flex-wrap items-center gap-2 text-[13px] text-ink-700">
+                    <Images className="h-4 w-4 text-emerald-600" />{current.meta.images} fotos listas
+                    {current.meta.imageNotes?.map(n => <span key={n} className="rounded-lg bg-amber-50 px-2 py-0.5 text-[12px] font-medium text-amber-900 ring-1 ring-amber-500/20">{n}</span>)}
+                  </p>
+                ) : null}
                 {v && (
                   <>
                     <div className="mb-4 flex flex-wrap gap-2">

@@ -232,7 +232,9 @@ export function validateTemplate(buf: Buffer, existing: { branchCodes: string[];
   for (const r of data.inventario) {
     for (const code of data.inventoryBranches) {
       const v = r[`qty:${code}`] ?? ''
-      if (v && parseNumber(v) === null) err('Inventario', r, code, `«${v}» no es una cantidad`)
+      const n = v ? parseNumber(v) : null
+      if (v && n === null) err('Inventario', r, code, `«${v}» no es una cantidad`)
+      else if (n !== null && n < 0) err('Inventario', r, code, 'La cantidad no puede ser negativa')
     }
   }
   for (const r of data.empleados) if (r.branch && !codes.has(r.branch.toUpperCase()) && !names.has(norm(r.branch))) err('Empleados', r, 'Sucursal', `Sucursal «${r.branch}» no existe`)
@@ -245,6 +247,13 @@ export function validateTemplate(buf: Buffer, existing: { branchCodes: string[];
   for (const r of data.clientes) {
     const bal = parseNumber(r.balance ?? '') ?? 0
     if (bal > 0 && !parseBool(r.credit ?? '', false)) warn('Clientes', r, 'Crédito', 'Tiene saldo pendiente pero Crédito = no: se le activará el crédito')
+  }
+  // the template ships with example rows; importing them by mistake creates fake products and people
+  for (const s of SHEETS) {
+    const ex = s.cols.find(c => c.required) ?? s.cols[0]!
+    for (const r of data[s.key]) {
+      if ((r[ex.key] ?? '') === String(ex.example)) warn(s.name, r, ex.header, `Parece la fila de ejemplo de la plantilla («${ex.example}»): bórrala si no es un dato real`)
+    }
   }
   if (!sheetsFound.length) err('Libro', null, null, 'No encontré ninguna hoja de la plantilla DENGO (¿es otro formato?)')
 

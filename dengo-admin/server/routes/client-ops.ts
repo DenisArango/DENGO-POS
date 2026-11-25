@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { z } from 'zod'
 import type { Config } from '../config.js'
 import { services } from '../lib/services.js'
-import { readClient, writeClientFile, type ClientRecord } from '../lib/registry.js'
+import { readClient, writeClientFile, takenPorts, type ClientRecord } from '../lib/registry.js'
 import { withClientDb, readLicense } from '../lib/clientdb.js'
 import { felEnv } from '../lib/client-env.js'
 import { normalizeDomain } from '../lib/names.js'
@@ -52,6 +52,14 @@ const profileSchema = z.object({
   caddy: z.enum(['managed', 'manual']),
 }).partial()
 
+/** A client database we couldn't use: say what to do instead of a raw 500. */
+const dbErrorStatus = (e: any) => e?.statusCode ?? (e?.code === '42703' || e?.code === '42P01' ? 409 : 502)
+function dbErrorMessage(e: any): string {
+  if (e?.code === '42703' || e?.code === '42P01') return 'La base de este cliente todavía no tiene esta función: despliega la versión nueva primero (Servidor → Desplegar).'
+  if (e?.statusCode) return e.message
+  return `No se pudo conectar con la base del cliente: ${e?.message ?? e}`
+}
+
 const ACTIONS = ['restart', 'backup', 'caddy', 'archive', 'unarchive'] as const
 
 export async function clientOpsRoutes(app: FastifyInstance, { config }: { config: Config }) {
@@ -78,14 +86,19 @@ export async function clientOpsRoutes(app: FastifyInstance, { config }: { config
     if (!body.success) return reply.status(400).send({ error: 'Datos inválidos' })
     const entries = Object.entries(body.data).filter(([, v]) => v !== undefined)
     if (!entries.length) return reply.status(400).send({ error: 'Nada que cambiar' })
-    const license = await withClientDb(r.env.DATABASE_URL!, async (db) => {
-      const sets = entries.map(([k], i) => `"${COLS[k]}" = $${i + 1}`).join(', ')
-      const u = await db.query(`UPDATE "LICENSE_CONFIG" SET ${sets}, "UPDATED_AT" = now()`, entries.map(([, v]) => v))
-      if (!u.rowCount) throw new Error('El cliente no tiene licencia (¿se corrió el seed?)')
-      return readLicense(db)
-    })
-    forgetMetrics(r.file.name)
-    return { license }
+    if (!r.env.DATABASE_URL) return reply.status(400).send({ error: 'Este cliente no tiene DATABASE_URL en su .env' })
+    try {
+      const license = await withClientDb(r.env.DATABASE_URL, async (db) => {
+        const sets = entries.map(([k], i) => `"${COLS[k]}" = $${i + 1}`).join(', ')
+        const u = await db.query(`UPDATE "LICENSE_CONFIG" SET ${sets}, "UPDATED_AT" = now()`, entries.map(([, v]) => v))
+        if (!u.rowCount) throw Object.assign(new Error('El cliente no tiene licencia: ¿se corrió el seed?'), { statusCode: 409 })
+        return readLicense(db)
+      })
+      forgetMetrics(r.file.name)
+      return { license }
+    } catch (e) {
+      return reply.status(dbErrorStatus(e)).send({ error: dbErrorMessage(e) })
+    }
   })
 
   // FEL (Digifact): the .env holds the certifier data, the licence shows/hides «factura»; then restart.
@@ -99,7 +112,12 @@ export async function clientOpsRoutes(app: FastifyInstance, { config }: { config
     const next = felEnv(config, body.data.enabled, body.data.fel)
     // turning FEL off keeps the client's data in the .env (only the provider goes to none)
     await patchClientEnv(r, body.data.enabled ? Object.fromEntries(keys.map(k => [k, next[k] ?? null])) : { FEL_PROVIDER: 'none' })
-    await withClientDb(r.env.DATABASE_URL!, db => db.query('UPDATE "LICENSE_CONFIG" SET "FEL_ENABLED" = $1, "UPDATED_AT" = now()', [body.data.enabled]))
+    if (!r.env.DATABASE_URL) return reply.status(400).send({ error: 'Este cliente no tiene DATABASE_URL en su .env' })
+    try {
+      await withClientDb(r.env.DATABASE_URL, db => db.query('UPDATE "LICENSE_CONFIG" SET "FEL_ENABLED" = $1, "UPDATED_AT" = now()', [body.data.enabled]))
+    } catch (e) {
+      return reply.status(dbErrorStatus(e)).send({ error: dbErrorMessage(e) })
+    }
     forgetMetrics(r.file.name)
     return startJob(reply, 'restart', `FEL de ${r.file.displayName}: reinicio`, r.file.name, restartSteps(config, r))
   })
@@ -110,6 +128,12 @@ export async function clientOpsRoutes(app: FastifyInstance, { config }: { config
     const body = profileSchema.safeParse(req.body)
     if (!body.success) return reply.status(400).send({ error: 'Datos inválidos' })
     const next = { ...r.file, ...body.data }
+    // the web port must be free: not this client's API, not any other client's ports or pm2 process
+    if (next.web) {
+      if (!next.webPort) return reply.status(400).send({ error: 'Con página web hace falta su puerto' })
+      const taken = await takenPorts(config, r.file.name)
+      if (next.webPort === next.apiPort || taken.has(next.webPort)) return reply.status(400).send({ error: `El puerto ${next.webPort} ya lo usa otro proceso` })
+    } else next.webPort = null
     if (body.data.domain !== undefined) {
       const d = body.data.domain ? normalizeDomain(body.data.domain) : null
       if (body.data.domain && !d) return reply.status(400).send({ error: 'Dominio inválido' })

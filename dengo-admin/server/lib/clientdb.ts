@@ -40,8 +40,15 @@ const GT_TODAY = `(date_trunc('day', now() AT TIME ZONE 'America/Guatemala') + i
 const GT_MONTH = `(date_trunc('month', now() AT TIME ZONE 'America/Guatemala') + interval '6 hours')`
 
 export async function readLicense(db: pg.Client): Promise<License | null> {
-  const r = await db.query(`SELECT "POS_ENABLED" pos, "MAESTROS_ENABLED" mae, "PAGE_ENABLED" page, "FEL_ENABLED" fel, "AI_ENABLED" ai,
-    "AI_MONTHLY_LIMIT" lim, "SUSPENDED" sus, "SUSPENDED_MESSAGE" msg FROM "LICENSE_CONFIG" ORDER BY "UPDATED_AT" LIMIT 1`)
+  const cols = `"POS_ENABLED" pos, "MAESTROS_ENABLED" mae, "PAGE_ENABLED" page, "FEL_ENABLED" fel, "AI_ENABLED" ai, "AI_MONTHLY_LIMIT" lim`
+  let r
+  try {
+    r = await db.query(`SELECT ${cols}, "SUSPENDED" sus, "SUSPENDED_MESSAGE" msg FROM "LICENSE_CONFIG" ORDER BY "UPDATED_AT" LIMIT 1`)
+  } catch (e: any) {
+    if (e?.code !== '42703') throw e
+    // a client not yet deployed with the suspension columns: everything else still reads
+    r = await db.query(`SELECT ${cols}, false sus, null msg FROM "LICENSE_CONFIG" ORDER BY "UPDATED_AT" LIMIT 1`)
+  }
   const x = r.rows[0]
   if (!x) return null
   return { posEnabled: x.pos, maestrosEnabled: x.mae, pageEnabled: x.page, felEnabled: x.fel, aiEnabled: x.ai, aiMonthlyLimit: x.lim, suspended: !!x.sus, suspendedMessage: x.msg }

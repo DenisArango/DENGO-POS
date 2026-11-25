@@ -11,6 +11,8 @@ export interface Pm2Proc {
   restarts: number
   uptimeMs: number
   cwd: string
+  /** PORT in the environment pm2 saved for it (web processes get theirs that way). */
+  port?: number
 }
 
 // ── Simulated pm2 (ADMIN_MODE=simulate): a JSON file stands in for the process list ──
@@ -58,6 +60,7 @@ export async function pm2List(c: Config, sh: Sh): Promise<Pm2Proc[]> {
       restarts: p.pm2_env?.restart_time ?? 0,
       uptimeMs: p.pm2_env?.status === 'online' ? Date.now() - (p.pm2_env?.pm_uptime ?? Date.now()) : 0,
       cwd: p.pm2_env?.pm_cwd ?? '',
+      port: Number(p.pm2_env?.env?.PORT ?? p.pm2_env?.PORT) || undefined,
     }))
   } catch { return [] }
 }

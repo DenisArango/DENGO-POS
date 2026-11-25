@@ -60,6 +60,24 @@ export class JobManager {
 
   constructor(private config: Config, private sh: Sh) {
     this.dir = join(config.adminDir, 'jobs')
+    this.markInterrupted()
+  }
+
+  /** A job saved as «running» belongs to a panel process that no longer exists: say so in the history. */
+  private markInterrupted() {
+    let files: string[] = []
+    try { files = readdirSync(this.dir).filter(f => f.endsWith('.json')) } catch { return }
+    for (const f of files) {
+      try {
+        const v = JSON.parse(readFileSync(join(this.dir, f), 'utf8')) as JobView
+        if (v.status !== 'running') continue
+        v.status = 'failed'
+        v.endedAt = v.endedAt ?? new Date().toISOString()
+        v.error = 'Interrumpido: el panel se reinició mientras corría. Revisa el log y el estado del cliente antes de repetirlo.'
+        v.steps = v.steps.map(st => (st.status === 'running' ? { ...st, status: 'failed', note: 'Interrumpido' } : st))
+        writeFileSync(join(this.dir, f), JSON.stringify(v))
+      } catch { /* unreadable file: leave it */ }
+    }
   }
 
   /** Who holds the lock that would block a job on `client` (null = global job). */

@@ -197,8 +197,9 @@ async function bootstrap() {
 
   // Vendor suspension (dengo-admin → LICENSE_CONFIG.SUSPENDED): every API answers
   // 423 except the licence (the apps read it to show «Servicio suspendido») and health.
+  // Judged on the route the router matched (decoded): the raw URL let /%61pi/... slip past.
   fastify.addHook('onRequest', async (request, reply) => {
-    const url = request.url
+    const url = request.routeOptions.url ?? ''
     if (!url.startsWith('/api/') || url.startsWith('/api/license') || url.startsWith('/api/health')) return
     if (await isSuspended()) return reply.status(423).send({ error: 'SUSPENDED', message: 'Servicio suspendido. Contacte a su proveedor.' })
   })

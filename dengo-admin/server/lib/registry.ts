@@ -4,6 +4,8 @@ import { join } from 'node:path'
 import type { Config } from '../config.js'
 import { parseEnv } from './env-file.js'
 import { splitPascal } from './names.js'
+import { pm2List } from './pm2.js'
+import { shellFor } from './runtime.js'
 
 export interface Contact { name?: string; phone?: string; email?: string }
 
@@ -85,12 +87,19 @@ export async function writeClientFile(c: Config, file: ClientFile) {
   await writeFile(join(c.clientsDir, file.name, 'cliente.json'), JSON.stringify(file, null, 2) + '\n')
 }
 
-/** Ports any client claims (backend and web), for the allocator. */
-export async function takenPorts(c: Config): Promise<Set<number>> {
+/** Ports any client claims (backend and web, `except` one client), for the allocator and the ficha.
+ * Also every PORT a pm2 process was started with: older clients (no cliente.json) only record their
+ * web port there, so a stopped web process would otherwise look free. */
+export async function takenPorts(c: Config, except?: string): Promise<Set<number>> {
   const s = new Set<number>()
   for (const r of await listClients(c)) {
+    if (r.file.name === except) continue
     if (r.file.apiPort) s.add(r.file.apiPort)
     if (r.file.webPort) s.add(r.file.webPort)
+  }
+  for (const p of await pm2List(c, shellFor(c))) {
+    if (except && (p.name === except || p.name === `${except}-web`)) continue
+    if (p.port) s.add(p.port)
   }
   return s
 }

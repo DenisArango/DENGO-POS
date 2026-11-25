@@ -211,6 +211,15 @@ export function provisionSteps(c: Config, input: ProvisionInput): Step[] {
         })
         if (r.code !== 0) throw new Error('pm2 no pudo arrancar la página web')
         await ctx.sh('pm2', ['save'])
+        if (c.mode !== 'simulate') {
+          let up = false
+          for (let i = 0; i < 20 && !up; i++) {
+            try { up = (await fetch(`http://127.0.0.1:${x.webPort}/`, { signal: AbortSignal.timeout(3000) })).status < 500 } catch { /* not yet */ }
+            if (!up) await new Promise(res => setTimeout(res, 1000))
+          }
+          if (!up) throw new Error(`La página web no respondió en el puerto ${x.webPort} (revisa pm2 logs ${x.name}-web)`)
+          ctx.log(`  Página en línea en :${x.webPort}`)
+        }
         ctx.log('  La página queda sin publicar: se publica desde el POS (Página web) cuando el cliente la revise.')
       },
       undo: async (ctx) => { if (input.web) { await ctx.sh('pm2', ['delete', `${d(ctx).name}-web`]); await ctx.sh('pm2', ['save']) } },

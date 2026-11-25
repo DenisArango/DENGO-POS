@@ -3,6 +3,7 @@ import { mkdir, writeFile, readdir, readFile, stat } from 'node:fs/promises'
 import { existsSync, writeFileSync } from 'node:fs'
 import { join, basename, extname } from 'node:path'
 import AdmZip from 'adm-zip'
+import { randomBytes } from 'node:crypto'
 import type { Config } from '../config.js'
 import { services } from '../lib/services.js'
 import { readClient } from '../lib/registry.js'
@@ -12,31 +13,49 @@ import { backupClient } from '../jobs/ops.js'
 import type { Step } from '../jobs/engine.js'
 
 const LOYVERSE_FIELDS = ['items', 'inventory', 'customers', 'suppliers', 'employees'] as const
-const BATCH_RE = /^\d{8}-\d{6}$/
-const batchStamp = () => new Date(Date.now() - 6 * 3600_000).toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-')
+// Old batches are YYYYMMDD-HHMMSS; new ones add a random suffix so two uploads in one second never collide.
+export const BATCH_RE = /^\d{8}-\d{6}(-[a-f0-9]{4})?$/
+export const batchStamp = () =>
+  `${new Date(Date.now() - 6 * 3600_000).toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-')}-${randomBytes(2).toString('hex')}`
 
 interface BatchMeta {
   batch: string
   format: 'dengo' | 'loyverse'
   files: Record<string, string>
   images: number
+  imageNotes?: string[]
   branch?: string
   createdAt: string
   lastRun?: { dry: boolean; ok: boolean; at: string; summary?: unknown }
 }
 
-/** Only image files, flattened to their base name (no paths from the zip ever reach the disk). */
-function extractImages(zipBuf: Buffer, dir: string): number {
+const ZIP_LIMITS = { perFile: 25 * 1024 * 1024, total: 600 * 1024 * 1024, files: 8000 }
+
+/**
+ * Only image files, flattened to their base name (no paths from the zip ever reach the disk).
+ * Sizes are checked from the zip's header before anything is unpacked (zip bombs), and a name
+ * already taken (same photo in two folders) keeps the first one instead of silently replacing it.
+ */
+export function extractImages(zipBuf: Buffer, dir: string) {
   const zip = new AdmZip(zipBuf)
-  let n = 0
+  const out = { saved: 0, duplicates: 0, tooBig: 0, skipped: 0, truncated: false }
+  const seen = new Set<string>()
+  let total = 0
   for (const e of zip.getEntries()) {
     if (e.isDirectory) continue
     const name = basename(e.entryName.replace(/\\/g, '/'))
-    if (!/^[\w .-]{1,120}\.(jpe?g|png|webp)$/i.test(name) || name.startsWith('.') || name.includes('..')) continue
+    if (!/^[\w .-]{1,120}\.(jpe?g|png|webp)$/i.test(name) || name.startsWith('.') || name.includes('..')) { out.skipped++; continue }
+    const size = e.header.size
+    if (size > ZIP_LIMITS.perFile) { out.tooBig++; continue }
+    if (total + size > ZIP_LIMITS.total || out.saved >= ZIP_LIMITS.files) { out.truncated = true; break }
+    const key = name.toLowerCase()
+    if (seen.has(key)) { out.duplicates++; continue }
+    seen.add(key)
     writeFileSync(join(dir, name), e.getData())
-    n++
+    total += size
+    out.saved++
   }
-  return n
+  return out
 }
 
 export async function migrationRoutes(app: FastifyInstance, { config }: { config: Config }) {
@@ -68,7 +87,13 @@ export async function migrationRoutes(app: FastifyInstance, { config }: { config
       const ext = extname(part.filename).toLowerCase()
       if (part.fieldname === 'images') {
         if (ext !== '.zip') return reply.status(400).send({ error: 'Las fotos van en un archivo .zip' })
-        meta.images = extractImages(buf, join(dir, 'fotos'))
+        const x = extractImages(buf, join(dir, 'fotos'))
+        meta.images = x.saved
+        meta.imageNotes = [
+          x.duplicates && `${x.duplicates} fotos con nombre repetido (se usó la primera)`,
+          x.tooBig && `${x.tooBig} fotos de más de 25 MB omitidas`,
+          x.truncated && 'el zip pasa de 600 MB: se cargó solo una parte',
+        ].filter(Boolean) as string[]
         continue
       }
       if (!['.xlsx', '.xls', '.csv'].includes(ext)) return reply.status(400).send({ error: `«${part.filename}» no es Excel` })

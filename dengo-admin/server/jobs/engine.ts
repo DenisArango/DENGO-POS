@@ -130,7 +130,11 @@ export class JobManager {
     let warnNote: string | null = null
     const ctx: StepCtx = {
       config: this.config, log, data, result: {},
-      sh: (cmd, args, opts: ShOpts = {}) => this.sh(cmd, args, { ...opts, onLine: (l) => { log(l); opts.onLine?.(l) } }),
+      sh: (cmd, args, opts: ShOpts = {}) => this.sh(cmd, args, { ...opts, onLine: (l) => {
+        const shown = opts.filter ? opts.filter(l) : l
+        if (shown !== null) log(shown)
+        opts.onLine?.(l)
+      } }),
       warn: (note) => { warnNote = note },
       secret: (value) => { if (value && value.length >= 4) secrets.add(value) },
     }

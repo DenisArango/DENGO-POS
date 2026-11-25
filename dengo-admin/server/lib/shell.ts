@@ -8,6 +8,8 @@ export interface ShOpts {
   onLine?: (line: string) => void
   /** Run for real even in simulate mode (only for read-only or sandbox-safe commands). */
   always?: boolean
+  /** Rewrites or hides (null) a line before it reaches the job log; onLine still gets the original. */
+  filter?: (line: string) => string | null
 }
 export interface ShResult { code: number; out: string }
 

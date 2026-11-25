@@ -1,0 +1,506 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-25T12:41:52+00:00",
+  "title": "Design System: DENGO Consola de clientes",
+  "extensions": {
+    "colorMeta": {
+      "ink-rail": {
+        "role": "primary",
+        "displayName": "Ink Rail Blue",
+        "canonical": "#1E4D68",
+        "tonalRamp": [
+          "#0b1f2a",
+          "#11303f",
+          "#173c52",
+          "#1E4D68",
+          "#2b5b79",
+          "#3b6e8f",
+          "#86adc7",
+          "#d9e6ef"
+        ]
+      },
+      "ink-deep": {
+        "role": "primary",
+        "displayName": "Ink Deep",
+        "canonical": "#11303f",
+        "tonalRamp": [
+          "#0b1f2a",
+          "#11303f",
+          "#173c52",
+          "#1E4D68",
+          "#2b5b79",
+          "#3b6e8f",
+          "#86adc7",
+          "#d9e6ef"
+        ]
+      },
+      "ink-night": {
+        "role": "neutral",
+        "displayName": "Ink Night",
+        "canonical": "#0b1f2a",
+        "tonalRamp": [
+          "#0b1f2a",
+          "#11303f",
+          "#173c52",
+          "#1E4D68",
+          "#2b5b79",
+          "#3b6e8f",
+          "#86adc7",
+          "#d9e6ef"
+        ]
+      },
+      "ink-mid": {
+        "role": "neutral",
+        "displayName": "Ink Mid",
+        "canonical": "#3b6e8f",
+        "tonalRamp": [
+          "#0b1f2a",
+          "#11303f",
+          "#173c52",
+          "#1E4D68",
+          "#2b5b79",
+          "#3b6e8f",
+          "#86adc7",
+          "#d9e6ef"
+        ]
+      },
+      "ink-mist": {
+        "role": "neutral",
+        "displayName": "Ink Mist",
+        "canonical": "#b3cddf",
+        "tonalRamp": [
+          "#0b1f2a",
+          "#11303f",
+          "#173c52",
+          "#1E4D68",
+          "#2b5b79",
+          "#3b6e8f",
+          "#86adc7",
+          "#d9e6ef"
+        ]
+      },
+      "ink-haze": {
+        "role": "neutral",
+        "displayName": "Ink Haze",
+        "canonical": "#eef4f8",
+        "tonalRamp": [
+          "#0b1f2a",
+          "#11303f",
+          "#173c52",
+          "#1E4D68",
+          "#2b5b79",
+          "#3b6e8f",
+          "#86adc7",
+          "#d9e6ef"
+        ]
+      },
+      "coral": {
+        "role": "secondary",
+        "displayName": "Coral",
+        "canonical": "#E07A5F",
+        "tonalRamp": [
+          "#6d3428",
+          "#863d2c",
+          "#a74a33",
+          "#c95f43",
+          "#E07A5F",
+          "#efa088",
+          "#f6c4b6",
+          "#fdf3f0"
+        ]
+      },
+      "coral-press": {
+        "role": "secondary",
+        "displayName": "Coral Press",
+        "canonical": "#c95f43",
+        "tonalRamp": [
+          "#6d3428",
+          "#863d2c",
+          "#a74a33",
+          "#c95f43",
+          "#E07A5F",
+          "#efa088",
+          "#f6c4b6",
+          "#fdf3f0"
+        ]
+      },
+      "coral-glow": {
+        "role": "secondary",
+        "displayName": "Coral Glow",
+        "canonical": "#efa088",
+        "tonalRamp": [
+          "#6d3428",
+          "#863d2c",
+          "#a74a33",
+          "#c95f43",
+          "#E07A5F",
+          "#efa088",
+          "#f6c4b6",
+          "#fdf3f0"
+        ]
+      },
+      "ice-floor": {
+        "role": "neutral",
+        "displayName": "Ice Floor",
+        "canonical": "#EEF3F7",
+        "tonalRamp": [
+          "#3b6e8f",
+          "#86adc7",
+          "#b3cddf",
+          "#d9e6ef",
+          "#e3ecf2",
+          "#EEF3F7",
+          "#f2f6f9",
+          "#fbfdfe"
+        ]
+      },
+      "tile-white": {
+        "role": "neutral",
+        "displayName": "Tile White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#d9e6ef",
+          "#e3ecf2",
+          "#EEF3F7",
+          "#f2f6f9",
+          "#f7fafc",
+          "#fbfdfe",
+          "#fdfeff",
+          "#ffffff"
+        ]
+      },
+      "status-online": {
+        "role": "tertiary",
+        "displayName": "Online Emerald",
+        "canonical": "#10b981",
+        "tonalRamp": [
+          "#022c22",
+          "#064e3b",
+          "#047857",
+          "#059669",
+          "#10b981",
+          "#34d399",
+          "#a7f3d0",
+          "#ecfdf5"
+        ]
+      },
+      "status-pending": {
+        "role": "tertiary",
+        "displayName": "Pending Amber",
+        "canonical": "#f59e0b",
+        "tonalRamp": [
+          "#451a03",
+          "#78350f",
+          "#b45309",
+          "#d97706",
+          "#f59e0b",
+          "#fbbf24",
+          "#fde68a",
+          "#fffbeb"
+        ]
+      },
+      "status-down": {
+        "role": "tertiary",
+        "displayName": "Down Rose",
+        "canonical": "#f43f5e",
+        "tonalRamp": [
+          "#4c0519",
+          "#881337",
+          "#be123c",
+          "#e11d48",
+          "#f43f5e",
+          "#fb7185",
+          "#fecdd3",
+          "#fff1f2"
+        ]
+      },
+      "status-running": {
+        "role": "tertiary",
+        "displayName": "Running Sky",
+        "canonical": "#0ea5e9",
+        "tonalRamp": [
+          "#082f49",
+          "#0c4a6e",
+          "#0369a1",
+          "#0284c7",
+          "#0ea5e9",
+          "#38bdf8",
+          "#bae6fd",
+          "#f0f9ff"
+        ]
+      },
+      "status-archived": {
+        "role": "tertiary",
+        "displayName": "Archived Slate",
+        "canonical": "#94a3b8",
+        "tonalRamp": [
+          "#020617",
+          "#1e293b",
+          "#334155",
+          "#64748b",
+          "#94a3b8",
+          "#cbd5e1",
+          "#e2e8f0",
+          "#f8fafc"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero sales figure on the client page and featured tile (48-52px), via CountUp."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page titles, 32-34px."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Tile titles and client names, 17-22px; 28px on the featured tile."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Buttons, inputs, nav, page intros."
+      },
+      "body-small": {
+        "displayName": "Body small",
+        "purpose": "Most reading text inside tiles."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field and metric captions, sentence case."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Domains, credentials, codes, job log only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "tile",
+        "value": "0 1px 0 0 rgba(255,255,255,.9) inset, 0 1px 2px rgba(17,48,63,.06), 0 6px 16px -6px rgba(17,48,63,.12), 0 18px 40px -18px rgba(17,48,63,.18)",
+        "purpose": "Resting tiles, soft and ink buttons."
+      },
+      {
+        "name": "lift",
+        "value": "0 1px 0 0 rgba(255,255,255,.9) inset, 0 2px 4px rgba(17,48,63,.07), 0 12px 24px -8px rgba(17,48,63,.18), 0 30px 60px -24px rgba(17,48,63,.28)",
+        "purpose": "Hovered tiles, ink tile, terminal, completed job."
+      },
+      {
+        "name": "well",
+        "value": "inset 0 2px 4px rgba(17,48,63,.08), inset 0 0 0 1px rgba(17,48,63,.06)",
+        "purpose": "Inputs, meters, progress tracks, credential boxes."
+      },
+      {
+        "name": "coral",
+        "value": "0 1px 0 0 rgba(255,255,255,.35) inset, 0 6px 14px -4px rgba(201,95,67,.55), 0 2px 4px rgba(201,95,67,.3)",
+        "purpose": "Primary button only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "spring-tile",
+        "value": "spring(stiffness 380, damping 30)",
+        "purpose": "Tile entrance (opacity 0, y 14, scale .985) and toggle knob; 40ms stagger per tile."
+      },
+      {
+        "name": "spring-nav",
+        "value": "spring(stiffness 420, damping 34)",
+        "purpose": "Active rail pad sliding between items."
+      },
+      {
+        "name": "spring-bars",
+        "value": "spring(stiffness 220, damping 22), 25ms stagger",
+        "purpose": "Sales bars growing in."
+      },
+      {
+        "name": "spring-step",
+        "value": "spring(stiffness 500, damping 18)",
+        "purpose": "Step dot popping when its state changes."
+      },
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "CountUp (0.9s) and route transitions (0.22s)."
+      },
+      {
+        "name": "ease-draw",
+        "value": "cubic-bezier(0.65, 0, 0.35, 1) 380ms",
+        "purpose": "Self-drawing check on finished steps."
+      },
+      {
+        "name": "ping",
+        "value": "ping2 1.8s cubic-bezier(0,0,.2,1) infinite",
+        "purpose": "Live status dots and running step."
+      },
+      {
+        "name": "press",
+        "value": "scale(0.97), 150ms",
+        "purpose": "Button active state."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: durations 0.01ms; components skip initial states",
+        "purpose": "All motion is gated."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      },
+      {
+        "name": "content-max",
+        "value": "1440px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one main action of a view.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg>Nuevo cliente</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:10px 16px;font:600 14px/1.4 'Inter Variable',Inter,system-ui,sans-serif;cursor:pointer;transition:background .15s,transform .15s;background:#E07A5F;color:#fff;box-shadow:0 1px 0 0 rgba(255,255,255,.35) inset, 0 6px 14px -4px rgba(201,95,67,.55), 0 2px 4px rgba(201,95,67,.3);} .ds-btn-primary:hover{background:#c95f43;} .ds-btn-primary:active{transform:scale(.97);} .ds-btn-primary:focus-visible{outline:2px solid #E07A5F;outline-offset:2px;}"
+    },
+    {
+      "name": "Ink Button",
+      "kind": "button",
+      "refersTo": "button-ink",
+      "description": "Onward navigation, e.g. to a client's page.",
+      "html": "<button class=\"ds-btn-ink\">Ir a la ficha</button>",
+      "css": ".ds-btn-ink{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:10px 16px;font:600 14px/1.4 'Inter Variable',Inter,system-ui,sans-serif;cursor:pointer;transition:background .15s,transform .15s;background:#1E4D68;color:#fff;box-shadow:0 1px 0 0 rgba(255,255,255,.9) inset, 0 1px 2px rgba(17,48,63,.06), 0 6px 16px -6px rgba(17,48,63,.12), 0 18px 40px -18px rgba(17,48,63,.18);} .ds-btn-ink:hover{background:#173c52;} .ds-btn-ink:active{transform:scale(.97);} .ds-btn-ink:focus-visible{outline:2px solid #E07A5F;outline-offset:2px;}"
+    },
+    {
+      "name": "Soft Button",
+      "kind": "button",
+      "refersTo": "button-soft",
+      "description": "Secondary actions.",
+      "html": "<button class=\"ds-btn-soft\">Desplegar versión</button>",
+      "css": ".ds-btn-soft{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:10px 16px;font:600 14px/1.4 'Inter Variable',Inter,system-ui,sans-serif;cursor:pointer;transition:background .15s,transform .15s;background:#fff;color:#173c52;box-shadow:0 1px 0 0 rgba(255,255,255,.9) inset, 0 1px 2px rgba(17,48,63,.06), 0 6px 16px -6px rgba(17,48,63,.12), 0 18px 40px -18px rgba(17,48,63,.18), 0 0 0 1px rgba(17,48,63,.1);} .ds-btn-soft:hover{background:#eef4f8;} .ds-btn-soft:active{transform:scale(.97);} .ds-btn-soft:focus-visible{outline:2px solid #E07A5F;outline-offset:2px;}"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Pressed-in well with a coral focus ring.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-cap\">Nombre del negocio</span><input class=\"ds-input\" placeholder=\"Librería El Búho\"><span class=\"ds-field-hint\">Así aparece en el POS.</span></label>",
+      "css": ".ds-field{display:block;font-family:'Inter Variable',Inter,system-ui,sans-serif;max-width:320px;} .ds-field-cap{display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:#173c52;} .ds-field-hint{display:block;margin-top:4px;font-size:12px;color:#3b6e8f;} .ds-input{width:100%;border:0;border-radius:12px;background:#fff;padding:10px 14px;font-size:14px;color:#0b1f2a;caret-color:#E07A5F;box-shadow:inset 0 2px 4px rgba(17,48,63,.08), inset 0 0 0 1px rgba(17,48,63,.06), 0 0 0 1px rgba(17,48,63,.1);transition:box-shadow .15s;} .ds-input::placeholder{color:#3b6e8f;} .ds-input:focus{outline:none;box-shadow:inset 0 2px 4px rgba(17,48,63,.08), inset 0 0 0 1px rgba(17,48,63,.06), 0 0 0 2px #e8886b;}"
+    },
+    {
+      "name": "Rail Navigation",
+      "kind": "nav",
+      "refersTo": "nav",
+      "description": "Ink gradient rail; active item is a frosted pad with a coral icon.",
+      "html": "<nav class=\"ds-rail\"><a class=\"ds-rail-item is-active\" href=\"#\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/></svg>Clientes</a><a class=\"ds-rail-item\" href=\"#\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"2\" y=\"3\" width=\"20\" height=\"7\" rx=\"2\"/><rect x=\"2\" y=\"14\" width=\"20\" height=\"7\" rx=\"2\"/></svg>Servidor</a></nav>",
+      "css": ".ds-rail{display:flex;flex-direction:column;gap:4px;width:200px;padding:16px;border-radius:16px;background:radial-gradient(140% 60% at 0% 0%,#2b5b79 0%,transparent 70%),linear-gradient(180deg,#1E4D68,#11303f);font:600 14px 'Inter Variable',Inter,system-ui,sans-serif;} .ds-rail-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;color:#d9e6ef;text-decoration:none;transition:background .15s,color .15s;} .ds-rail-item:hover{background:rgba(255,255,255,.05);color:#fff;} .ds-rail-item.is-active{color:#fff;background:rgba(255,255,255,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 6px 14px -6px rgba(0,0,0,.4);} .ds-rail-item.is-active svg{color:#efa088;} .ds-rail-item:focus-visible{outline:2px solid #E07A5F;outline-offset:2px;}"
+    },
+    {
+      "name": "Status Pill",
+      "kind": "chip",
+      "refersTo": "status-pill",
+      "description": "State as color plus word; live states ping.",
+      "html": "<span class=\"ds-pill ds-pill-on\"><span class=\"ds-dot\"><i></i><b></b></span>En línea</span> <span class=\"ds-pill ds-pill-sus\"><span class=\"ds-dot\"><b></b></span>Suspendido</span>",
+      "css": ".ds-pill{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;border-radius:999px;padding:4px 10px;font:600 12px 'Inter Variable',Inter,system-ui,sans-serif;} .ds-pill-on{background:#ecfdf5;color:#047857;box-shadow:0 0 0 1px rgba(5,150,105,.2);} .ds-pill-sus{background:#fffbeb;color:#92400e;box-shadow:0 0 0 1px rgba(217,119,6,.25);} .ds-dot{position:relative;display:flex;width:8px;height:8px;} .ds-dot b,.ds-dot i{position:absolute;inset:0;border-radius:999px;} .ds-pill-on .ds-dot b,.ds-pill-on .ds-dot i{background:#10b981;} .ds-pill-sus .ds-dot b{background:#f59e0b;} .ds-dot i{animation:ds-ping 1.8s cubic-bezier(0,0,.2,1) infinite;} @keyframes ds-ping{0%{transform:scale(1);opacity:.55}80%,100%{transform:scale(2.4);opacity:0}} @media (prefers-reduced-motion:reduce){.ds-dot i{animation:none}}"
+    },
+    {
+      "name": "Module Chip",
+      "kind": "chip",
+      "refersTo": "module-chip",
+      "description": "Enabled modules in their color; disabled struck through.",
+      "html": "<span class=\"ds-mod ds-mod-pos\">POS</span> <span class=\"ds-mod ds-mod-ia\">IA</span> <span class=\"ds-mod ds-mod-off\">FEL</span>",
+      "css": ".ds-mod{display:inline-flex;align-items:center;gap:4px;border-radius:8px;padding:4px 8px;font:600 11px 'Inter Variable',Inter,system-ui,sans-serif;color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.05);} .ds-mod-pos{background:#2b5b79;} .ds-mod-ia{background:#E07A5F;} .ds-mod-off{background:#eef4f8;color:#86adc7;text-decoration:line-through;box-shadow:none;}"
+    },
+    {
+      "name": "Client Tile",
+      "kind": "card",
+      "refersTo": "tile",
+      "description": "The bento tile: lit lip, layered drop, lifts on hover.",
+      "html": "<article class=\"ds-tile\"><h3>Librería El Búho</h3><span class=\"ds-tile-dom\">pos.libreriaelbuho.com</span><p class=\"ds-tile-cap\">Vendido hoy</p><p class=\"ds-tile-fig\">Q0.00</p><div class=\"ds-bars\"><i style=\"height:40%\"></i><i style=\"height:65%\"></i><i style=\"height:30%\"></i><i style=\"height:80%\"></i><i style=\"height:55%\"></i><i class=\"today\" style=\"height:90%\"></i></div></article>",
+      "css": ".ds-tile{width:300px;padding:20px;border-radius:22px;background:linear-gradient(180deg,#fff 0%,#fbfdfe 100%);box-shadow:0 1px 0 0 rgba(255,255,255,.9) inset, 0 1px 2px rgba(17,48,63,.06), 0 6px 16px -6px rgba(17,48,63,.12), 0 18px 40px -18px rgba(17,48,63,.18), 0 0 0 1px rgba(17,48,63,.06);font-family:'Inter Variable',Inter,system-ui,sans-serif;transition:transform .25s cubic-bezier(.16,1,.3,1),box-shadow .25s;} .ds-tile:hover{transform:translateY(-3px);box-shadow:0 1px 0 0 rgba(255,255,255,.9) inset, 0 2px 4px rgba(17,48,63,.07), 0 12px 24px -8px rgba(17,48,63,.18), 0 30px 60px -24px rgba(17,48,63,.28), 0 0 0 1px rgba(17,48,63,.06);} .ds-tile h3{margin:0;font:700 20px/1.25 'Bricolage Grotesque Variable','Inter Variable',sans-serif;letter-spacing:-.02em;color:#0b1f2a;} .ds-tile-dom{font:12px 'JetBrains Mono',ui-monospace,monospace;color:#3b6e8f;} .ds-tile-cap{margin:16px 0 0;font-size:12px;font-weight:600;color:#3b6e8f;} .ds-tile-fig{margin:0;font:700 28px/1 'Bricolage Grotesque Variable','Inter Variable',sans-serif;letter-spacing:-.02em;color:#0b1f2a;font-variant-numeric:tabular-nums;} .ds-bars{display:flex;align-items:flex-end;gap:3px;height:52px;margin-top:12px;} .ds-bars i{flex:1;border-radius:4px;background:linear-gradient(to top,#2b5b79,#5a8aab);} .ds-bars i.today{background:linear-gradient(to top,#c95f43,#e8886b);}"
+    },
+    {
+      "name": "Icon Badge",
+      "kind": "custom",
+      "refersTo": "icon-badge",
+      "description": "Gradient tone square with a glossy top and white line icon.",
+      "html": "<span class=\"ds-badge ds-badge-coral\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg></span> <span class=\"ds-badge ds-badge-emerald\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12.5l4.2 4.2L19 7\"/></svg></span>",
+      "css": ".ds-badge{position:relative;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1);} .ds-badge::before{content:'';position:absolute;left:4px;right:4px;top:2px;height:50%;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.35),transparent);pointer-events:none;} .ds-badge svg{position:relative;} .ds-badge-coral{background:linear-gradient(135deg,#e8886b,#a74a33);} .ds-badge-emerald{background:linear-gradient(135deg,#34d399,#047857);}"
+    },
+    {
+      "name": "Step Ribbon",
+      "kind": "custom",
+      "refersTo": "step-ribbon",
+      "description": "Live job steps that light up as the server works.",
+      "html": "<ol class=\"ds-steps\"><li class=\"ok\"><span>&#10003;</span>Crear base de datos</li><li class=\"run\"><span></span>Configurar dominio</li><li><span></span>Iniciar proceso</li></ol>",
+      "css": ".ds-steps{position:relative;list-style:none;margin:0;padding:0;font:600 14px 'Inter Variable',Inter,system-ui,sans-serif;color:#11303f;} .ds-steps::before{content:'';position:absolute;left:16px;top:16px;bottom:16px;width:1px;background:#d9e6ef;} .ds-steps li{position:relative;display:flex;align-items:center;gap:12px;padding-bottom:16px;} .ds-steps li:not(.ok):not(.run){color:#5a8aab;} .ds-steps span{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:999px;background:#d9e6ef;box-shadow:0 0 0 4px #fff;color:#fff;font-size:14px;} .ds-steps .ok span{background:#10b981;} .ds-steps .run span{background:#0ea5e9;box-shadow:0 0 0 4px #fff,0 0 0 10px rgba(14,165,233,.15);}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Living Mosaic",
+    "overview": "Every client is a tile on a bento board with real volume: white tiles stand on an ice-blue floor, lit from above by a one-pixel highlight and dropped onto it by layered, offset shadows. The board is read by color and motion before text: a pulsing dot says a client is alive, bars grow in to show fourteen days of sales, figures count up as they arrive, and a job's step ribbon lights up step by step while the server works. Nothing is flat or grey; the brand's ink blue and coral carry the frame and the action, and a small, fixed set of status hues carries state.\n\nDensity is that of an operator's console, not a marketing page: 12-14px Inter for everything you read, Bricolage Grotesque reserved for names and numbers that deserve weight. The ink rail on the left is the only dark surface besides the ink tile (server) and the job terminal; everything else lives on white tiles.",
+    "keyCharacteristics": [
+      "Bento grid of white tiles (22px radius) on an ice floor with soft radial washes of coral and ink.",
+      "Volume through layered offset shadows plus a 1px inset top light, never glows or halos.",
+      "Coral is the action color; status is emerald / amber / rose / sky / slate, always paired with a label.",
+      "Colored icon badges with a glossy top highlight; lucide line icons inside.",
+      "Spring-driven motion everywhere, all of it cancelled under reduced motion."
+    ],
+    "rules": [
+      {
+        "name": "The Coral Means Act Rule",
+        "body": "Coral marks what you can do or what is happening today: the primary action, focus, caret, today's bar. It is never a status color; failure is rose.",
+        "section": "colors"
+      },
+      {
+        "name": "The Label With Color Rule",
+        "body": "A status hue never travels alone. Dots sit inside a pill with its word (\"En línea\", \"Suspendido\"), step dots carry an icon, meters carry their numbers.",
+        "section": "colors"
+      },
+      {
+        "name": "The Numbers Get The Display Face Rule",
+        "body": "Money, counts and client names are Bricolage; everything else is Inter. All numbers are tabular (`tabular-nums` on `.tabular`, `td`, `.num`).",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono Is Technical Rule",
+        "body": "JetBrains Mono appears only for domains, emails, passwords, codes and log lines, never for decoration.",
+        "section": "typography"
+      },
+      {
+        "name": "The Lit Lip Rule",
+        "body": "Every raised surface has the 1px white inset on top and a downward, ink-tinted drop beneath. Shadows are never centered glows and never neutral black on white.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** place every new surface on white 22px tiles with the Tile shadow over the ice floor, in the 12-column grid with 20px gaps.",
+      "**Do** use coral for the one primary action of a view and for \"today\"; use Ink Rail for onward navigation.",
+      "**Do** pair every status hue with its word, icon or number (The Label With Color Rule).",
+      "**Do** head tiles with an Icon Badge in the tone that matches the tile's meaning.",
+      "**Do** set client names, page titles and money in Bricolage Grotesque bold at -0.02em, with tabular numbers.",
+      "**Do** animate with springs (entrance stiffness 380 / damping 30) and gate every animation on reduced motion, as the existing components do.",
+      "**Do** confirm destructive actions in place with the two-step ConfirmButton."
+    ],
+    "donts": [
+      "**Don't** build grey, flat or neutral screens: clients are tiles, never rows in a grey hosting-panel table; shadows are never untinted black. (Lists such as the jobs history may be tables, but inside a tile.)",
+      "**Don't** use coral for errors or status; failure is rose, pending is amber.",
+      "**Don't** use glows or centered halo shadows; depth is always offset downward with a lit top lip.",
+      "**Don't** use JetBrains Mono outside technical values and the log.",
+      "**Don't** mix in another style (frosted glass panels, hard zero-blur brutalist shadows, single-neon dark screens); this is one bento-with-volume system applied completely. The dark terminal with its status-colored log lines is part of this system, not an exception to it."
+    ]
+  }
+}

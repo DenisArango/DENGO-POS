@@ -24,7 +24,15 @@ export async function backupClient(c: Config, ctx: StepCtx, r: ClientRecord, rea
   const out = join(c.backupsDir, `${r.file.name}-${stamp()}${reason ? `-${reason}` : ''}.sql.gz`)
   const url = r.env.DATABASE_URL
   if (!url) throw new Error(`${r.file.name} no tiene DATABASE_URL`)
-  const res = await ctx.sh('bash', ['-c', 'set -o pipefail; pg_dump "$PGURL" --no-owner --no-privileges | gzip > "$OUT"'], { env: { PGURL: plainDbUrl(url), OUT: out } })
+  // pg_dump from the system, or (like dayana-web-activar.sh) from a Postgres image of the server's major version
+  const script = [
+    'set -o pipefail',
+    'if command -v pg_dump >/dev/null 2>&1; then DUMP() { pg_dump "$@"; }',
+    "else V=$(docker run --rm --network host postgres:16-alpine psql \"$PGURL\" -XtAc 'SHOW server_version' | cut -d. -f1 | tr -dc 0-9)",
+    '  DUMP() { docker run --rm --network host "postgres:${V:-16}-alpine" pg_dump "$@"; }; fi',
+    'DUMP "$PGURL" --no-owner --no-privileges | gzip > "$OUT"',
+  ].join('\n')
+  const res = await ctx.sh('bash', ['-c', script], { env: { PGURL: plainDbUrl(url), OUT: out } })
   if (res.code !== 0) throw new Error(`El respaldo de ${r.file.name} falló`)
   if (c.mode === 'simulate') writeFileSync(out, gzipSync(`-- respaldo simulado de ${r.file.name}\n`))
   const size = (await stat(out)).size

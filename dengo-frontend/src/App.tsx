@@ -4,7 +4,8 @@ import { Toaster, toast } from 'sonner'
 import Router from './router'
 import ErrorBoundary from './components/ErrorBoundary'
 import { StoreProvider } from './contexts/StoreContext'
-import { CONNECTIVITY_ERROR_MESSAGE, api } from './lib/api'
+import { CONNECTIVITY_ERROR_MESSAGE, SUSPENDED_EVENT, api } from './lib/api'
+import SuspendedScreen from './components/common/SuspendedScreen'
 import { useLicenseStore } from './store'
 import { ConnectionLogModal, SHOW_CONN_LOG_EVENT } from './components/common/ConnectionDetails'
 
@@ -55,15 +56,21 @@ function useDisableNumberInputScroll() {
 // own DEFAULT_LICENSE fallback when no LicenseConfig row exists yet.
 function useLicense() {
   useEffect(() => {
-    api.get<{ posEnabled: boolean; maestrosEnabled: boolean; pageEnabled: boolean; felEnabled?: boolean; aiEnabled?: boolean }>('/api/license')
+    api.get<{ posEnabled: boolean; maestrosEnabled: boolean; pageEnabled: boolean; felEnabled?: boolean; aiEnabled?: boolean; suspended?: boolean; suspendedMessage?: string | null }>('/api/license')
       .then(license => useLicenseStore.getState().setLicense(license))
       .catch(() => {})
+    const onSuspended = () => useLicenseStore.getState().setSuspended(true)
+    window.addEventListener(SUSPENDED_EVENT, onSuspended)
+    return () => window.removeEventListener(SUSPENDED_EVENT, onSuspended)
   }, [])
 }
 
 function App() {
   useDisableNumberInputScroll()
   useLicense()
+  const suspended = useLicenseStore(s => s.suspended)
+  const suspendedMessage = useLicenseStore(s => s.suspendedMessage)
+  if (suspended) return <SuspendedScreen message={suspendedMessage} />
   return (
     <ErrorBoundary>
       <StoreProvider>

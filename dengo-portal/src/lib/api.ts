@@ -22,6 +22,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       ...options?.headers,
     },
   })
+  if (res.status === 423) {
+    // The vendor suspended this client: App swaps the whole portal for «Servicio suspendido».
+    window.dispatchEvent(new CustomEvent('dengo:suspended'))
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Error de red' }))
     throw new Error(typeof err.error === 'string' ? err.error : `HTTP ${res.status}`)

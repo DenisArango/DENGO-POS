@@ -26,6 +26,15 @@ export async function getContent(): Promise<SiteContent | null> {
   return data
 }
 
+// Vendor suspension (dengo-admin): checked at most every 15 s per process.
+let suspension: { at: number; value: { message: string | null } | null } | null = null
+export async function getSuspension(): Promise<{ message: string | null } | null> {
+  if (suspension && Date.now() - suspension.at < 15_000) return suspension.value
+  const l = await get<{ suspended?: boolean; suspendedMessage?: string | null }>('/api/license')
+  suspension = { at: Date.now(), value: l?.suspended ? { message: l.suspendedMessage ?? null } : null }
+  return suspension.value
+}
+
 export const getPromotion = (slug: string) => get<Promotion>(`/api/site/promotions/${encodeURIComponent(slug)}`)
 export const getCoupon = (code: string) => get<CouponView>(`/api/site/coupons/${encodeURIComponent(code)}`)
 

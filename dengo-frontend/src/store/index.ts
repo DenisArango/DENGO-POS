@@ -313,8 +313,13 @@ interface LicenseState {
   // AI add-on (analista + recomendaciones). Same hidden-until-loaded default
   // as felEnabled — it's a paid extra, not something to flash then yank.
   aiEnabled: boolean
+  // The vendor suspended this client (dengo-admin): the whole app is replaced by
+  // «Servicio suspendido». Set from the licence or from any API answering 423.
+  suspended: boolean
+  suspendedMessage: string | null
   loaded: boolean
-  setLicense: (license: { posEnabled: boolean; maestrosEnabled: boolean; pageEnabled: boolean; felEnabled?: boolean; aiEnabled?: boolean }) => void
+  setLicense: (license: { posEnabled: boolean; maestrosEnabled: boolean; pageEnabled: boolean; felEnabled?: boolean; aiEnabled?: boolean; suspended?: boolean; suspendedMessage?: string | null }) => void
+  setSuspended: (suspended: boolean) => void
 }
 
 export const useLicenseStore = create<LicenseState>((set) => ({
@@ -323,8 +328,11 @@ export const useLicenseStore = create<LicenseState>((set) => ({
   pageEnabled: true,
   felEnabled: false,
   aiEnabled: false,
+  suspended: false,
+  suspendedMessage: null,
   loaded: false,
-  setLicense: (license) => set({ ...license, felEnabled: license.felEnabled ?? false, aiEnabled: license.aiEnabled ?? true, loaded: true }),
+  setLicense: (license) => set({ ...license, felEnabled: license.felEnabled ?? false, aiEnabled: license.aiEnabled ?? true, suspended: license.suspended ?? false, suspendedMessage: license.suspendedMessage ?? null, loaded: true }),
+  setSuspended: (suspended) => set({ suspended }),
 }))
 
 // Store de la aplicación (solo UI state)

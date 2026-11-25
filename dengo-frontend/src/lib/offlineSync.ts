@@ -161,6 +161,10 @@ async function classifyPost(run: () => Promise<unknown>, networkErrorMessage: st
     if (err instanceof TypeError) {
       return { ok: false, networkError: true, message: 'Sin conexión con el servidor' }
     }
+    if (err instanceof ApiError && err.status === 423) {
+      // Suspended by the vendor: keep it queued, it goes through once reactivated.
+      return { ok: false, networkError: true, message: 'Servicio suspendido — se enviará cuando se reactive' }
+    }
     if (err instanceof ApiError && err.status === 401) {
       return { ok: false, networkError: true, message: 'Sesión expirada — se enviará automáticamente al iniciar sesión de nuevo' }
     }

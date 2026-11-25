@@ -3,6 +3,9 @@ import { logConn, newRequestId, explainNetworkFailure, explainBadStatus } from '
 
 const BASE_URL = import.meta.env.VITE_API_URL as string
 
+/** Fired when any API answers 423 (client suspended by the vendor). */
+export const SUSPENDED_EVENT = 'dengo:suspended'
+
 /** A link the backend gave as a path (e.g. the signed FEL PDF) → full URL on the API's host. */
 export function apiUrl(pathOrUrl: string): string {
   return pathOrUrl.startsWith('/') ? `${BASE_URL ?? ''}${pathOrUrl}` : pathOrUrl
@@ -110,6 +113,12 @@ async function apiFetch<T = unknown>(
     // and retry once the user logs back in, not get marked 'failed' forever
     // just because the specific error wasn't a TypeError or a 5xx.
     throw new ApiError('No autorizado — inicia sesión de nuevo', 401)
+  }
+
+  if (res.status === 423) {
+    // The vendor suspended this client: App swaps the whole UI for «Servicio suspendido».
+    window.dispatchEvent(new CustomEvent(SUSPENDED_EVENT))
+    throw new ApiError('Servicio suspendido. Contacte a su proveedor.', 423)
   }
 
   let data: unknown

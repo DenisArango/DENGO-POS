@@ -1379,6 +1379,8 @@ model LicenseConfig {
   felEnabled      Boolean  @default(false) @map("FEL_ENABLED") // facturación electrónica (Guatemala FEL) — oculta "generar factura" en POS hasta que esté certificada para este cliente
   aiEnabled       Boolean  @default(true) @map("AI_ENABLED") // add-on de IA (analista de datos + recomendaciones en reportes); apagado = se oculta y el servidor rechaza las llamadas
   aiMonthlyLimit  Int?     @default(100) @map("AI_MONTHLY_LIMIT") // consultas de IA por mes calendario (hora de Guatemala); null = sin límite
+  suspended        Boolean  @default(false) @map("SUSPENDED") // el proveedor suspendió el servicio (dengo-admin): toda la API responde 423 salvo licencia y health
+  suspendedMessage String?  @map("SUSPENDED_MESSAGE") @db.VarChar(300) // texto opcional para la pantalla «Servicio suspendido»
   updatedAt       DateTime @updatedAt @map("UPDATED_AT")
 
   @@map("LICENSE_CONFIG")

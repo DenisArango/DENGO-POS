@@ -30,7 +30,7 @@ import auditRoutes from './routes/audit.js'
 import unitRoutes from './routes/units.js'
 import roleRoutes from './routes/roles.js'
 import settingsRoutes from './routes/settings.js'
-import licenseRoutes from './routes/license.js'
+import licenseRoutes, { isSuspended } from './routes/license.js'
 import goalsRoutes from './routes/goals.js'
 import aiRoutes from './routes/ai.js'
 import portalRoutes from './routes/portal.js'
@@ -193,6 +193,14 @@ async function bootstrap() {
   })
   fastify.addHook('onRequestAbort', async (request) => {
     request.log.warn({ tag: 'abortada', method: request.method, url: request.url.split('?')[0], ip: request.ip }, `el cliente cerró la conexión antes de recibir respuesta: ${request.method} ${request.url.split('?')[0]}`)
+  })
+
+  // Vendor suspension (dengo-admin → LICENSE_CONFIG.SUSPENDED): every API answers
+  // 423 except the licence (the apps read it to show «Servicio suspendido») and health.
+  fastify.addHook('onRequest', async (request, reply) => {
+    const url = request.url
+    if (!url.startsWith('/api/') || url.startsWith('/api/license') || url.startsWith('/api/health')) return
+    if (await isSuspended()) return reply.status(423).send({ error: 'SUSPENDED', message: 'Servicio suspendido. Contacte a su proveedor.' })
   })
 
   // Auth (JWT + authenticate decorator)

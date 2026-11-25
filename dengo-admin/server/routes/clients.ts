@@ -4,7 +4,7 @@ import { listClients, readClient, maskEnv, type ClientRecord } from '../lib/regi
 import { pm2List, health, type Pm2Proc } from '../lib/pm2.js'
 import { clientMetrics, type ClientMetrics } from '../lib/clientdb.js'
 import { checkDns, serverInfo } from '../lib/system.js'
-import { shellFor } from '../lib/runtime.js'
+import { services } from '../lib/services.js'
 
 const withTimeout = <T>(p: Promise<T>, ms: number) =>
   Promise.race([p, new Promise<never>((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), ms))])
@@ -46,7 +46,7 @@ export function summarize(r: ClientRecord, procs: Pm2Proc[], h: { ok: boolean; u
 }
 
 export async function clientRoutes(app: FastifyInstance, { config }: { config: Config }) {
-  const sh = shellFor(config)
+  const { sh } = services(config)
 
   app.get('/api/clients', async () => {
     const [records, procs] = await Promise.all([listClients(config), pm2List(config, sh)])

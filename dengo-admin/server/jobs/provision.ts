@@ -120,7 +120,7 @@ export function provisionSteps(c: Config, input: ProvisionInput): Step[] {
           ['# Base de datos', { DATABASE_URL: x.url }],
           ['# Secretos propios de este cliente', { JWT_SECRET: jwt, LICENSE_ADMIN_SECRET: lic }],
           ['# Dominios que pueden llamar a la API', { CORS_ORIGIN: corsFor(x.domain, input.web) }],
-          ['# IA (clave global del panel; el límite mensual va en la licencia)', input.modules.ai ? aiEnv(c) : { ANTHROPIC_API_KEY: '' }],
+          ['# IA (clave global del panel; encendido y límite mensual van en la licencia)', aiEnv(c)],
           ['# Facturación electrónica — Digifact', felEnv(c, input.modules.fel, input.fel ?? null)],
         ])
         await writeFile(join(x.dir, '.env'), text, { mode: 0o600 })

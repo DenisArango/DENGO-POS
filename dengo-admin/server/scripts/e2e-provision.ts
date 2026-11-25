@@ -1,3 +1,4 @@
+export {}
 // Prueba de punta a punta contra un panel corriendo (ADMIN_MODE=simulate + Postgres local):
 //   npx tsx server/scripts/e2e-provision.ts [clave] [falla]
 // Con «falla» manda una sucursal con código inválido a nivel de base para forzar el deshacer.

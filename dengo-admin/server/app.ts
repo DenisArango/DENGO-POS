@@ -13,6 +13,12 @@ export type RouteModule = (app: import('fastify').FastifyInstance, opts: { confi
 
 export async function buildApp(config: Config, routes: RouteModule[] = []) {
   const app = Fastify({ logger: process.env.NODE_ENV === 'test' ? false : { level: 'warn' }, bodyLimit: 5 * 1024 * 1024 })
+  // Actions are POSTs with nothing to send: an empty JSON body means {}.
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    const text = String(body ?? '').trim()
+    if (!text) return done(null, {})
+    try { done(null, JSON.parse(text)) } catch { done(Object.assign(new Error('JSON inválido'), { statusCode: 400 }), undefined) }
+  })
   await app.register(cookie, { secret: config.sessionSecret })
   await app.register(rateLimit, { global: false })
   await app.register(multipart, { limits: { fileSize: 300 * 1024 * 1024, files: 4 } })

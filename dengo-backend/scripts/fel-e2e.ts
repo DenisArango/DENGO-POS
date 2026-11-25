@@ -1,6 +1,7 @@
-// End-to-end FEL check against the running API (FEL_PROVIDER=mock, demo DB).
+// End-to-end FEL check against the running API (demo DB). Works with FEL_PROVIDER=mock
+// or with a certifier's TEST environment (digifact / felplex stage).
 // npx tsx scripts/fel-e2e.ts
-const API = 'http://localhost:3001'
+const API = process.env.API ?? 'http://localhost:3001'
 const CENTRAL = 'cmvtxvvzj00007zd5m6bn27p4'
 const REGISTER = process.env.REG ?? 'e7ba14ac-5803-498a-84d2-7ad0a8651eab'
 const CALC = '6e560f7f-8040-48c9-9a84-2aaa0bf824a9'
@@ -20,9 +21,12 @@ const check = (name: string, ok: boolean, extra = '') => { console.log(`${ok ? '
 token = (await call('POST', '/api/auth/login', { email: 'admin@dengo.gt', password: 'Admin1234!' })).token
 
 const st = await call('GET', '/api/fel/status')
-check('estado: proveedor simulador', st.config.provider === 'mock', JSON.stringify(st.counts))
+const MOCK = st.config.provider === 'mock'
+check(`estado: proveedor ${st.config.provider} (${st.config.environment})`, st.config.provider !== 'none' && st.config.environment !== 'production', JSON.stringify(st.counts))
+if (st.config.environment === 'production') { console.log('Ambiente de producción: abortado (consumiría DTE reales)'); process.exit(1) }
 
-const nit = await call('GET', '/api/fel/tax-id/NIT/1607421')
+const BUYER_NIT = process.env.BUYER_NIT ?? (MOCK ? '1607421' : '77454820')
+const nit = await call('GET', `/api/fel/tax-id/NIT/${BUYER_NIT}`)
 check('búsqueda de NIT', nit.found === true && !!nit.name, nit.name)
 let badNit = ''
 try { await call('GET', '/api/fel/tax-id/NIT/12345678') } catch (e) { badNit = (e as Error).message }
@@ -36,11 +40,20 @@ const items = [
 const subtotal = 212.25, discount = 5, total = 207.25
 const sale = await call('POST', '/api/sales', {
   branchId: CENTRAL, cashRegisterId: REGISTER, customerId: 'cmvtxvzi80016pn9waokgwolz', items, subtotal, tax: 0, discount, total,
-  paymentMethod: 'CASH', saleType: 'CASH', cashAmount: total, requiresInvoice: true, buyerNit: '1607421', buyerName: 'John Doe',
+  paymentMethod: 'CASH', saleType: 'CASH', cashAmount: total, requiresInvoice: true, buyerNit: BUYER_NIT, buyerName: nit.name ?? 'John Doe',
   clientRequestId: `fel-e2e-${Date.now()}`,
 })
 check('venta con factura certificada al cobrar', sale.felStatus === 'CERTIFIED', `${sale.felSatSerie}-${sale.felSatNumber} aut ${sale.felAuthNumber}`)
-check('respuesta trae datos para el ticket', !!sale.felAuthNumber && sale.felEnvironment === 'mock' && sale.felDocType === 'FACT')
+check('respuesta trae datos para el ticket', !!sale.felAuthNumber && sale.felEnvironment === st.config.environment && sale.felDocType === 'FACT')
+if (sale.felPdfUrl) {
+  const pdfRes = await fetch(sale.felPdfUrl.startsWith('/') ? API + sale.felPdfUrl : sale.felPdfUrl)
+  const head = Buffer.from(await pdfRes.arrayBuffer()).subarray(0, 5).toString()
+  check('PDF oficial se abre sin sesión', pdfRes.ok && head === '%PDF-', `${pdfRes.status} ${pdfRes.headers.get('content-type')}`)
+  if (sale.felPdfUrl.startsWith('/')) {
+    const forged = await fetch(API + sale.felPdfUrl.replace(/k=.*/, 'k=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'))
+    check('PDF con firma falsa → 404', forged.status === 404)
+  }
+}
 
 // Edit lock
 let editErr = ''
@@ -67,6 +80,7 @@ const after = await call('GET', `/api/sales/${sale.id}`)
 check('anular venta anula la factura', after.felVoidStatus === 'VOIDED', v.message)
 
 // Rejection path (simulated SAT error): stays FAILED with the reason, sale still done
+if (MOCK) {
 const rej = await call('POST', '/api/sales', {
   branchId: CENTRAL, cashRegisterId: REGISTER, customerId: 'cmvtxvzi80016pn9waokgwolz', items: [{ productId: CALC, quantity: 1, unitPrice: 165, discount: 0, total: 165 }], subtotal: 165, tax: 0, discount: 0, total: 165,
   paymentMethod: 'CASH', saleType: 'CASH', cashAmount: 165, requiresInvoice: true, buyerNit: '1607421', buyerName: 'RECHAZAR prueba', clientRequestId: `fel-e2e-r-${Date.now()}`,
@@ -75,6 +89,7 @@ check('rechazo de SAT: venta hecha, factura FAILED con motivo', rej.felStatus ==
 const retry = await call('POST', `/api/fel/sales/${rej.id}/certify`, {})
 check('reintento manual vuelve a fallar igual (motivo real)', retry.status === 'FAILED')
 await call('DELETE', `/api/sales/${rej.id}`, { reason: 'Prueba FEL' })
+}
 
 console.log(fails ? `\n${fails} FALLA(S)` : '\nTodo OK')
 process.exit(fails ? 1 : 0)

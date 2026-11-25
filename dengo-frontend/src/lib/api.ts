@@ -3,6 +3,11 @@ import { logConn, newRequestId, explainNetworkFailure, explainBadStatus } from '
 
 const BASE_URL = import.meta.env.VITE_API_URL as string
 
+/** A link the backend gave as a path (e.g. the signed FEL PDF) → full URL on the API's host. */
+export function apiUrl(pathOrUrl: string): string {
+  return pathOrUrl.startsWith('/') ? `${BASE_URL ?? ''}${pathOrUrl}` : pathOrUrl
+}
+
 // Carries the HTTP status alongside the message so callers can tell a
 // server-side failure (5xx — not the user's fault, safe to retry/queue)
 // apart from a rejected business rule (4xx — needs the user to fix

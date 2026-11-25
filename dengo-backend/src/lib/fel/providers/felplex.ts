@@ -44,6 +44,8 @@ export function felplexProvider(cfg: FelConfig): FelProvider {
   return {
     name: 'felplex',
     environment: cfg.environment,
+    // FELplex's API documents no Número de Acceso field.
+    supportsContingency: false,
 
     async certify(doc: DteDocument, ctx: FelContext): Promise<CertifyResult> {
       let r
@@ -91,6 +93,14 @@ export function felplexProvider(cfg: FelConfig): FelProvider {
         address: first.address ?? undefined,
         email: Array.isArray(first.emails) && typeof first.emails[0] === 'string' ? first.emails[0] : undefined,
       }
+    },
+
+    async xml(uuid: string, ctx: FelContext): Promise<string | null> {
+      const r = await call(ctx, 'GET', `/invoices/${encodeURIComponent(uuid)}`)
+      const url = r.json?.invoice_xml
+      if (!url) return null
+      const x = await fetch(url)
+      return x.ok ? await x.text() : null
     },
 
     async credits(ctx): Promise<number | null> {

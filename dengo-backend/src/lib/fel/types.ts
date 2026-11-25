@@ -52,11 +52,15 @@ export interface DteDocument {
   /** Credit/debit notes: the FELplex id of the invoice they correct. */
   parentUuid?: string
   memo?: string
+  /** Contingency: the Número de Acceso printed on the document handed to the customer. */
+  accessNumber?: string
 }
 
 export interface FelContext {
-  /** FELplex "empresa" id — one per SAT establishment. */
+  /** FELplex "empresa" id — one per SAT establishment. With Digifact: the SAT establishment code. */
   entityId: string
+  /** The branch that issues the document (Digifact puts it in the DTE). */
+  establishment?: { code: string; name: string; address: string; city: string } | undefined
 }
 
 export interface CertifyResult {
@@ -72,6 +76,8 @@ export interface CertifyResult {
   certifierNit?: string | undefined
   pdfUrl?: string | undefined
   xmlUrl?: string | undefined
+  /** The certified DTE XML, when the certifier returns it. */
+  xml?: string | undefined
   errors: string[]
   /**
    * True only when the request never reached the certifier (DNS, refused
@@ -95,12 +101,18 @@ export interface TaxIdLookup {
 }
 
 export interface FelProvider {
-  readonly name: 'mock' | 'felplex'
+  readonly name: 'mock' | 'felplex' | 'digifact'
   readonly environment: FelEnvironment
+  /** Sends the contingency Número de Acceso with the DTE (SAT contingency procedure). */
+  readonly supportsContingency: boolean
   certify(doc: DteDocument, ctx: FelContext): Promise<CertifyResult>
   void(uuid: string, reason: string, ctx: FelContext): Promise<VoidResult>
   get(uuid: string, ctx: FelContext): Promise<CertifyResult>
   lookupTaxId(kind: 'NIT' | 'CUI', id: string, ctx: FelContext): Promise<TaxIdLookup>
   /** DTEs left in the plan, or null when the provider doesn't say. */
   credits(ctx: FelContext): Promise<number | null>
+  /** The official PDF, for certifiers that hand it over as a file instead of a public link. */
+  pdf?(uuid: string, ctx: FelContext): Promise<Buffer | null>
+  /** The certified XML, to archive it and draw our own invoice from it. */
+  xml?(uuid: string, ctx: FelContext): Promise<string | null>
 }

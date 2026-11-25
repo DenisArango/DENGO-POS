@@ -34,6 +34,8 @@ interface BranchData {
   invoiceSeries?: string
   felEntityId?: string | null
   felEstablishmentCode?: string | null
+  invoiceColor?: string | null
+  invoiceFooter?: string | null
   receiptSeries?: string
   salesReconciliationEnabled?: boolean
   createdAt?: string
@@ -621,7 +623,7 @@ export default function Stores() {
                   </div>
                   <div className="border border-purple-200 bg-purple-50 rounded-lg p-3 sm:col-span-2 grid sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="label">ID de empresa en FELplex</label>
+                      <label className="label">ID de empresa en FELplex (solo FELplex)</label>
                       <input type="text" maxLength={60} value={formData.felEntityId ?? ''}
                         onChange={e => setFormData({ ...formData, felEntityId: e.target.value.trim() })}
                         className="input w-full font-mono" placeholder="Vacío = el del servidor" />
@@ -632,7 +634,27 @@ export default function Stores() {
                         onChange={e => setFormData({ ...formData, felEstablishmentCode: e.target.value.trim() })}
                         className="input w-full" placeholder="Ej: 1" />
                     </div>
-                    <p className="sm:col-span-2 text-xs text-gray-600">Cada sucursal es un establecimiento ante la SAT y una «empresa» en FELplex. Si la dejas vacía, usa la configurada en el servidor (FELPLEX_ENTITY_ID).</p>
+                    <p className="sm:col-span-2 text-xs text-gray-600">Cada sucursal es un establecimiento ante la SAT. Con Digifact solo cuenta el código de establecimiento (vacío = DIGIFACT_ESTABLISHMENT del servidor). Con FELplex, cada sucursal es además una «empresa» (vacío = FELPLEX_ENTITY_ID).</p>
+                  </div>
+                  <div className="border border-gray-200 rounded-lg p-3 sm:col-span-2 grid sm:grid-cols-[auto_1fr] gap-3 items-start">
+                    <div>
+                      <label className="label">Color de la factura</label>
+                      <div className="flex items-center gap-2">
+                        <input type="color" value={formData.invoiceColor || '#1E3A8A'}
+                          onChange={e => setFormData({ ...formData, invoiceColor: e.target.value.toUpperCase() })}
+                          className="h-9 w-12 rounded border border-gray-300 cursor-pointer" aria-label="Color de la factura" />
+                        {formData.invoiceColor && (
+                          <button type="button" onClick={() => setFormData({ ...formData, invoiceColor: null })} className="text-xs text-gray-500 hover:text-gray-700">Quitar</button>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="label">Pie de la factura (opcional)</label>
+                      <input type="text" maxLength={300} value={formData.invoiceFooter ?? ''}
+                        onChange={e => setFormData({ ...formData, invoiceFooter: e.target.value })}
+                        className="input w-full" placeholder="Ej: Cambios dentro de 8 días presentando esta factura" />
+                    </div>
+                    <p className="sm:col-span-2 text-xs text-gray-500">La factura en PDF que reciben tus clientes lleva el logo, el nombre de la empresa, el teléfono, el sitio web y el lema de esta sucursal, con este color y este pie. Los datos fiscales (NIT, serie, número, autorización y frases) salen tal como los certificó la SAT.</p>
                   </div>
                 </div>
               </div>

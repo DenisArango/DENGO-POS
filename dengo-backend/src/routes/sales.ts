@@ -8,6 +8,7 @@ import { canAccessBranch } from '../lib/branch-scope.js'
 import { hasPermission, requirePermission } from '../lib/permissions.js'
 import { certifySale, voidSaleFel, schoolReceiver } from '../lib/fel.js'
 import { looksLikeRealNit } from '../lib/nit.js'
+import { generateAccessNumber } from '../lib/fel/sat-rules.js'
 import { parseBusinessDateParam, getBusinessDayBounds } from '../lib/timezone.js'
 import { resolveOpenRegisterId, refreshClosedRegisterTotals } from './cash-registers.js'
 import { saleLineCost, saleBaseUnitCost, currentUnitCosts } from '../lib/saleCost.js'
@@ -56,6 +57,7 @@ const catalogItems = <T extends { productId?: string | null | undefined }>(items
 // What the POS needs back about a factura right after checkout (receipt).
 const FEL_SELECT = {
   felStatus: true, felError: true, felUuid: true, felAuthNumber: true, felSatSerie: true, felSatNumber: true,
+  felAccessNumber: true, felIssuedAt: true,
   felCertifiedAt: true, felPdfUrl: true, felCertifierName: true, felCertifierNit: true, felEnvironment: true, felDocType: true,
   buyerNit: true, buyerName: true,
 } as const
@@ -113,6 +115,10 @@ const createSaleSchema = z.object({
   // Set only by the offline queue (see dengo-frontend/src/lib/offlineDb.ts) —
   // lets a retried sync POST be replayed safely instead of double-creating.
   clientRequestId: z.string().optional(),
+  // FEL contingency, offline queue only: the POS printed a "Documento en
+  // contingencia" with this Numero de Acceso at felIssuedAt (lib/fel/sat-rules.ts).
+  felAccessNumber: z.string().regex(/^[1-9]\d{8}$/).optional(),
+  felIssuedAt: z.string().datetime({ offset: true }).optional(),
   // Website coupon (scanned QR/barcode or typed code), single use.
   couponCode: z.string().max(300).optional(),
 }).refine(
@@ -436,12 +442,23 @@ export default async function salesRoutes(fastify: FastifyInstance) {
     let buyerNit: string | undefined
     let buyerName: string | undefined
     let requiresInvoice = data.requiresInvoice
+    let contingency: { felAccessNumber: string; felIssuedAt: Date; felContingencyReason: string } | undefined
+    if (isOfflineReplay && data.requiresInvoice && data.felAccessNumber) {
+      const printedAt = data.felIssuedAt ? new Date(data.felIssuedAt) : new Date()
+      const taken = await prisma.sale.findUnique({ where: { felAccessNumber: data.felAccessNumber }, select: { id: true } })
+      contingency = {
+        felAccessNumber: taken ? generateAccessNumber() : data.felAccessNumber,
+        felIssuedAt: printedAt.getTime() > Date.now() ? new Date() : printedAt,
+        felContingencyReason: 'Venta hecha sin conexión con el servidor',
+      }
+      if (taken) offlineDiscrepancies.push(`El No. de acceso ${data.felAccessNumber} impreso en contingencia ya lo tenía otra venta; se certificará con ${contingency.felAccessNumber} — avisa al cliente`)
+    }
     if (requiresInvoice) {
       buyerNit = data.buyerNit?.trim() || customer?.nit || undefined
       buyerName = data.buyerName?.trim() || customer?.name
       if (!looksLikeRealNit(buyerNit)) {
         if (!isOfflineReplay) return reply.status(400).send({ error: 'Se necesita un NIT válido para generar factura — el cliente no tiene uno registrado' })
-        offlineDiscrepancies.push('Se pidió factura pero no había NIT válido — se guardó como recibo; genera la factura manualmente después de corregir el NIT')
+        offlineDiscrepancies.push(`Se pidió factura pero no había NIT válido — se guardó como recibo; genera la factura manualmente después de corregir el NIT${data.felAccessNumber ? ` (el cliente se llevó un documento en contingencia con No. de acceso ${data.felAccessNumber}, que no se certificará)` : ''}`)
         requiresInvoice = false
         buyerNit = undefined
         buyerName = undefined
@@ -558,6 +575,7 @@ export default async function salesRoutes(fastify: FastifyInstance) {
           buyerNit,
           buyerName,
           felStatus: requiresInvoice ? 'PENDING' : 'NONE',
+          ...(requiresInvoice && contingency ? contingency : {}),
           ...(couponPlan ? { couponId: couponPlan.id, promoDiscount: couponPlan.total } : {}),
           items: {
             create: data.items.map((item, k) => ({

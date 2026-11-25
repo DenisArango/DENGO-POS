@@ -12,6 +12,7 @@ import { useStore } from '../../contexts/StoreContext'
 import { usePermissions } from '../../hooks/usePermissions'
 import { toast } from 'sonner'
 import ThermalReceipt from '../../components/print/ThermalReceipt'
+import { useFelReceiptInfo, felReceiptFields } from '../../lib/felReceipt'
 import SaleFelPanel from '../../components/fel/SaleFelPanel'
 
 const PM_LABEL: Record<string, string> = {
@@ -62,6 +63,7 @@ export default function SaleDetail() {
   const canEdit = hasPermission('sales.edit')
   const canVoid = hasPermission('sales.cancel')
   const felEnabled = useLicenseStore(s => s.felEnabled)
+  const felInfo = useFelReceiptInfo(!!felEnabled)
 
   const [sale, setSale] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
@@ -740,6 +742,7 @@ export default function SaleDetail() {
         felSatSerie: sale.felSatSerie, felSatNumber: sale.felSatNumber, felAuthNumber: sale.felAuthNumber,
         felCertifiedAt: sale.felCertifiedAt, felCertifierName: sale.felCertifierName, felCertifierNit: sale.felCertifierNit,
         felEnvironment: sale.felEnvironment, felDocType: sale.felDocType,
+        ...felReceiptFields(felInfo, sale),
       }}
     />
     </>

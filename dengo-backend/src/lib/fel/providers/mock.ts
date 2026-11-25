@@ -17,6 +17,7 @@ export function mockProvider(): FelProvider {
   return {
     name: 'mock',
     environment: 'mock',
+    supportsContingency: true,
 
     async certify(doc: DteDocument): Promise<CertifyResult> {
       const name = doc.receiver.name.toUpperCase()

@@ -33,6 +33,9 @@ const branchSchema = z.object({
   // from .env) and its SAT código de establecimiento (reference only).
   felEntityId: z.string().trim().max(60).nullish().transform(v => (v ? v : null)),
   felEstablishmentCode: z.string().trim().max(10).nullish().transform(v => (v ? v : null)),
+  // Our branded invoice PDF (lib/fel/invoice-pdf.ts)
+  invoiceColor: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, 'Color inválido (#RRGGBB)').nullish().or(z.literal('')).transform(v => (v ? v : null)),
+  invoiceFooter: z.string().trim().max(300).nullish().transform(v => (v ? v : null)),
   salesReconciliationEnabled: z.boolean().default(false),
   // Company branding — capped well above what a reasonable logo needs (client
   // already caps the source file at 2MB; base64 adds ~37% overhead) so a

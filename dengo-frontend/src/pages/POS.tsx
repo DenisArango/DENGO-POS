@@ -18,6 +18,7 @@ import SalesGoalWidget from '../components/SalesGoalWidget'
 import { CustomerThumb } from '../components/common/CustomerThumb'
 import { queuePendingSale, setCache, getCache, addSaleToRegisterTally } from '../lib/offlineDb'
 import { trySync, refreshPendingCount, getLocallyClosingRegisterIds } from '../lib/offlineSync'
+import { useFelReceiptInfo, generateAccessNumber, felReceiptFields } from '../lib/felReceipt'
 import { getAdjustmentReasons, type AdjustmentReason } from '../lib/inventoryReasons'
 import { matchesSearch } from '../lib/search'
 import { useCoupon, isCouponScan } from '../hooks/useCoupon'
@@ -110,6 +111,9 @@ interface CompletedSale {
   buyerNit?: string | null
   buyerName?: string | null
   felStatus?: string | null
+  /** FEL contingency: Número de Acceso and emission time printed on the document. */
+  felAccessNumber?: string | null
+  felIssuedAt?: string | null
   /** SAT data of the certified factura, printed on the receipt. */
   fel?: Pick<ThermalReceiptData, 'felSatSerie' | 'felSatNumber' | 'felAuthNumber' | 'felCertifiedAt' | 'felCertifierName' | 'felCertifierNit' | 'felEnvironment' | 'felDocType'>
   felError?: string | null
@@ -184,6 +188,7 @@ export default function POS() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const felEnabled = useLicenseStore(s => s.felEnabled)
+  const felInfo = useFelReceiptInfo(!!felEnabled)
   const { currentStore } = useStore()
   const BRANCH_ID = currentStore?.id ?? user?.branchId ?? ''
   const { hasPermission } = usePermissions()
@@ -1253,7 +1258,9 @@ export default function POS() {
           invoiceSeqNumber: created?.invoiceSeqNumber,
           buyerNit: created?.buyerNit,
           buyerName: created?.buyerName,
-          felStatus: pendingSync ? 'NONE' : created?.felStatus,
+          felStatus: pendingSync ? (payload.felAccessNumber ? 'PENDING' : 'NONE') : created?.felStatus,
+          felAccessNumber: created?.felAccessNumber ?? payload.felAccessNumber ?? null,
+          felIssuedAt: created?.felIssuedAt ?? payload.felIssuedAt ?? null,
           ...(created && created.felStatus === 'CERTIFIED' ? { fel: {
             felSatSerie: created.felSatSerie, felSatNumber: created.felSatNumber, felAuthNumber: created.felAuthNumber,
             felCertifiedAt: created.felCertifiedAt, felCertifierName: created.felCertifierName, felCertifierNit: created.felCertifierNit,
@@ -1340,6 +1347,13 @@ export default function POS() {
         // only fail again on sync.
         const isRetryable = err instanceof TypeError || (err instanceof ApiError && err.status >= 500)
         if (isRetryable) {
+          // No server: a factura handed over now is a SAT contingency document
+          // (Reglas y validaciones FEL 4.1) — it carries a Número de Acceso
+          // and is certified with it once the sale syncs.
+          if (payload.requiresInvoice && felInfo?.contingency) {
+            payload.felAccessNumber = generateAccessNumber()
+            payload.felIssuedAt = new Date().toISOString()
+          }
           const queued = await queuePendingSale(payload)
           await refreshPendingCount()
           finishLocally(null, true, 'Sin conexión con el servidor — venta guardada, se sincronizará automáticamente', queued.localId)
@@ -2789,6 +2803,7 @@ export default function POS() {
             buyerName: completedSale.buyerName,
             felStatus: completedSale.felStatus,
             ...(completedSale.fel ?? {}),
+            ...felReceiptFields(felInfo, completedSale),
             pendingSync: completedSale.pendingSync,
             offlineRef: completedSale.offlineRef,
             cardReference: completedSale.cardReference,

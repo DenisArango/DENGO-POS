@@ -1,10 +1,105 @@
-# Facturación electrónica (FEL Guatemala) con FELplex
+# Facturación electrónica (FEL Guatemala): Digifact y FELplex
 
 Estado: **listo para conectar.** Todo el flujo funciona con el simulador interno (`FEL_PROVIDER=mock`). Para facturar de verdad solo faltan las credenciales de FELplex en el `.env` de cada cliente.
 
 Referencia de la API: https://developers.felplex.com (colección de Postman). Hay una copia legible en [felplex_guatemala.txt](felplex_guatemala.txt) y la colección completa en [felplex_postman.json](felplex_postman.json).
 
 ---
+
+## 0. Digifact (certificador actual, desde nov. 2026)
+
+DENGO tiene dos certificadores: **Digifact** (`FEL_PROVIDER=digifact`) y FELplex. Lo de este documento sobre el flujo (caja, notas de crédito, anulación, reintentos) vale para los dos. Lo específico de Digifact:
+
+- **Documentación:** https://documentacion.digifact.com/gt/api (formato NUC JSON en `/gt/nuc/json`, ejemplos en `/gt/nuc/ejemplos`). Portal de pruebas: https://testgt.digifact.com/.
+- **Credenciales por cliente:** NIT del emisor, usuario y clave de API. Un solo usuario sirve para **todos los establecimientos**. La sucursal se distingue por su **código de establecimiento SAT** (*Configuración → Tiendas*; vacío = `DIGIFACT_ESTABLISHMENT`).
+- **Frases (`DIGIFACT_FRASES`):** salen del RTU del cliente. Si no coinciden, la SAT rechaza con «VALIDACION 2.6.1.4 … no corresponde a la afiliación». Ejemplos: `1:1` sujeto a pagos trimestrales ISR, `1:2` sujeto a retención definitiva ISR. Pregúntaselo al contador del cliente.
+- **PDF:** Digifact no da un enlace público. DENGO guarda un enlace propio firmado (`/api/fel/doc/<autorización>.pdf?k=…`) que pide el PDF a Digifact al abrirlo. Funciona sin sesión, así que se puede mandar al maestro del portal, pero no se puede adivinar el de otro documento.
+- **Anulación y nota de crédito:** la fecha de emisión, el receptor, la serie y el número del original se leen del XML certificado en Digifact. No hace falta guardar nada más.
+- **Saldo de DTE:** la API no lo da. «Probar conexión» solo valida el usuario. El bolsón se ve en el portal de Digifact.
+- **Consulta de CUI:** Digifact solo documenta la consulta de NIT. Con CUI, «Buscar» responde «no encontrado» y el nombre se escribe a mano.
+- **Producción:** `DIGIFACT_ENV=production`. Requiere la firma electrónica del emisor (Agencia Virtual SAT); en pruebas no.
+
+Ambiente de pruebas (verificado el 2026-11-24): emisor de prueba NIT 5888492, establecimiento **2**, frases `1:2`. El establecimiento 1 no existe para ese NIT.
+
+```
+npx tsx scripts/fel-digifact-live.ts            # certifica, nota de crédito, PDF y anula (rechaza correr en producción)
+API=http://localhost:3011 npx tsx scripts/fel-e2e.ts   # flujo completo por la API con la BD de demo
+```
+
+**Por confirmar con Digifact:**
+1. Si en producción firman ellos con la firma del emisor o la mandamos nosotros.
+2. Si existe forma de evitar duplicados por referencia interna. Con `VALIDAR_REFERENCIA_INTERNA=VALIDAR` en pruebas no los rechazó. Mientras tanto, un timeout no se reintenta solo.
+3. Cuánto dura el token en producción. En pruebas dura 30 días; DENGO lo renueva solo.
+4. ~~Receptor con CUI~~: probado el 2026-11-24 con `TaxIDType: "CUI"` (factura, nota de crédito y anulación). En pruebas la SAT es simulada y acepta cualquier CUI; en producción sí lo valida.
+5. El formato para pequeño contribuyente (FPEQ), porque el NIT de prueba es régimen general.
+
+## 0.1 Contingencia (sin conexión con el certificador)
+
+Basado en el procedimiento oficial: **«Reglas y validaciones FEL» v2.2 (abril 2026), sección 4.1 y anexos 5.4 / 2.22**. Hay una copia en [SAT_FEL_Reglas_y_validaciones_v2.2.pdf](SAT_FEL_Reglas_y_validaciones_v2.2.pdf).
+
+**Cuándo una factura entra en contingencia:**
+- **En caja, sin respuesta:** Digifact no responde al cobrar, porque no hay conexión o se agotó el tiempo. Al documento se le asigna un **número de acceso** aleatorio de 9 dígitos (100000000–999999999) y la fecha de emisión queda fija.
+- **El POS sin servidor:** la venta se guarda en la cola offline y el POS genera el número de acceso en ese momento.
+
+**Lo que se imprime** (ticket; regla 4.1, 1-b a 1-e):
+- el título **«Documento en contingencia»** y el tipo de documento;
+- **Número de acceso**;
+- emisor, NIT y frases;
+- fecha y hora de emisión;
+- receptor;
+- detalle y total.
+
+**No lleva** serie, número ni autorización. Al pie dice: «Emisión en contingencia, obtenga su DTE certificado en el sitio www.sat.gob.gt/fel». También lleva el QR del verificador de la SAT en modo contingencia (2.22.2).
+
+**Certificación posterior:**
+- **Reintento:** el reintento automático manda el documento con el mismo número de acceso (`NumeroAcceso`) y la fecha original. No cuenta el límite de intentos.
+- **Al volver la conexión:** apenas una factura se certifica, DENGO manda las pendientes («de forma inmediata», punto 3).
+- **Plazo:** la SAT rechaza una emisión con más de **5 días** de antigüedad (validación 2.2.1, regla FEL_INF300; verificado en pruebas). Pasado el plazo, DENGO no la manda y la deja «con error» explicando el motivo; lo usual es anular y emitir una factura nueva, con el visto bueno del contador.
+- **Timeout:** si se agotó el tiempo, el documento queda en contingencia pero **no** se reintenta solo, porque pudo haberse certificado. En pruebas, Digifact no rechazó un `NumeroAcceso` repetido.
+
+**Aviso de contingencia** (punto 3): en *Configuración → Facturación electrónica → Contingencias* aparecen los periodos por sucursal, con inicio, fin, establecimiento, motivo, cantidad de documentos y estado de cada uno. El botón «Copiar datos del aviso» copia lo que hay que llenar en la Agencia Virtual SAT → Factura Electrónica en Línea → Aviso de Contingencia, o en el correo a efactura@sat.gob.gt. Después se marca como presentado.
+
+Solo Digifact y el simulador mandan el número de acceso. FELplex no documenta ese campo.
+
+## 0.2 Factura en PDF personalizada
+
+El enlace «Factura PDF» (`/api/fel/doc/<autorización>.pdf?k=…`, firmado, sin sesión) ya no entrega el PDF del certificador. Entrega **nuestro PDF**, dibujado a partir del **XML certificado** (`lib/fel/dte-xml.ts` y `invoice-pdf.ts`), así que los datos fiscales siempre son exactamente los que tiene la SAT.
+
+**Marca del cliente**, por sucursal en *Configuración → Tiendas*:
+- logo;
+- nombre de la empresa;
+- teléfono, correo y sitio web;
+- lema;
+- **color de la factura**;
+- **pie de la factura**.
+
+**Contenido:**
+- **Documento:** tipo, serie, número, autorización y fecha de emisión; el número de acceso si fue contingencia.
+- **Partes:** emisor (razón social, NIT, establecimiento y dirección) y receptor (NIT, CUI o CF).
+- **Detalle:** cantidad, precio, descuento y total.
+- **Totales:** IVA incluido, total y total en letras.
+- **Frases:** con el texto oficial de la SAT.
+- **Notas de crédito:** el documento que se modifica y el motivo.
+- **Certificación:** datos del certificador y QR del verificador de la SAT (2.22.1).
+- **Marcas de agua:** «PRUEBA · SIN VALIDEZ FISCAL» fuera de producción y «ANULADO» si se anuló.
+
+**Versión del certificador:** se obtiene con `&original=1` (enlace «Versión del certificador» en el detalle de la venta).
+
+**Archivo del XML:** el XML certificado se guarda en la tabla `FEL_DOCUMENT_XML`; la SAT exige conservarlo durante el plazo de prescripción. Los documentos anteriores lo descargan del certificador la primera vez que se abre su PDF.
+
+**Vista previa sin tocar la BD:**
+
+```
+INVOICE_COLOR=#0F766E LOGO_FILE=logo.png FOOTER="..." npx tsx scripts/fel-pdf-preview.ts <autorización> salida.pdf
+```
+
+**Pruebas:**
+
+```
+DOWN=http://localhost:3012 UP=http://localhost:3013 npx tsx scripts/fel-contingency-e2e.ts
+```
+
+Para la prueba, `DOWN` es un backend con `DIGIFACT_BASE_URL` apuntando a un puerto muerto y `UP` es uno normal.
 
 ## 1. Quién hace qué
 

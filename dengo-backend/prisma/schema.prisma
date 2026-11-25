@@ -88,6 +88,10 @@ model Branch {
   // FELPLEX_ENTITY_ID from the environment (single-establishment businesses).
   felEntityId                String?  @map("FEL_ENTITY_ID") @db.VarChar(60)
   felEstablishmentCode       String?  @map("FEL_ESTABLISHMENT_CODE") @db.VarChar(10) // código de establecimiento en la SAT (referencia)
+  // Our own printable invoice (lib/fel/invoice-pdf.ts): accent colour and a
+  // free footer line, on top of the logo/company fields above.
+  invoiceColor               String?  @map("INVOICE_COLOR") @db.VarChar(9)
+  invoiceFooter              String?  @map("INVOICE_FOOTER") @db.VarChar(300)
   createdAt                  DateTime @default(now()) @map("CREATED_AT")
   updatedAt                  DateTime @updatedAt @map("UPDATED_AT")
 
@@ -657,35 +661,46 @@ model Sale {
   // before certification) and felStatus tracks progress toward a real
   // certifier — see lib/fel.ts. No certifier is wired yet: felStatus sits at
   // PENDING until that integration exists, by design, not by omission.
-  requiresInvoice  Boolean   @default(false) @map("REQUIRES_INVOICE")
-  invoiceSeries    String?   @map("INVOICE_SERIES") @db.VarChar(10)
-  invoiceSeqNumber Int?      @map("INVOICE_SEQ_NUMBER")
-  buyerNit         String?   @map("BUYER_NIT") @db.VarChar(30)
-  buyerName        String?   @map("BUYER_NAME") @db.VarChar(200)
-  felStatus        String    @default("NONE") @map("FEL_STATUS") @db.VarChar(20) // NONE | PENDING | CERTIFIED | FAILED
-  felUuid          String?   @map("FEL_UUID") @db.VarChar(60)
-  felAuthNumber    String?   @map("FEL_AUTH_NUMBER") @db.VarChar(60)
-  felCertifiedAt   DateTime? @map("FEL_CERTIFIED_AT")
-  felError         String?   @map("FEL_ERROR") @db.VarChar(500)
+  requiresInvoice          Boolean   @default(false) @map("REQUIRES_INVOICE")
+  invoiceSeries            String?   @map("INVOICE_SERIES") @db.VarChar(10)
+  invoiceSeqNumber         Int?      @map("INVOICE_SEQ_NUMBER")
+  buyerNit                 String?   @map("BUYER_NIT") @db.VarChar(30)
+  buyerName                String?   @map("BUYER_NAME") @db.VarChar(200)
+  felStatus                String    @default("NONE") @map("FEL_STATUS") @db.VarChar(20) // NONE | PENDING | CERTIFIED | FAILED
+  felUuid                  String?   @map("FEL_UUID") @db.VarChar(60)
+  felAuthNumber            String?   @map("FEL_AUTH_NUMBER") @db.VarChar(60)
+  felCertifiedAt           DateTime? @map("FEL_CERTIFIED_AT")
+  felError                 String?   @map("FEL_ERROR") @db.VarChar(500)
   // What the certifier/SAT returned (lib/fel). felAuthNumber above is the SAT
   // "número de autorización"; serie/número here are the SAT's own (not the
   // internal invoiceSeries/invoiceSeqNumber), and are what the printed
   // representation of the DTE must show.
-  felDocType       String?   @map("FEL_DOC_TYPE") @db.VarChar(10) // FACT | FPEQ | FAPE | …
-  felSatSerie      String?   @map("FEL_SAT_SERIE") @db.VarChar(40)
-  felSatNumber     String?   @map("FEL_SAT_NUMBER") @db.VarChar(40)
-  felPdfUrl        String?   @map("FEL_PDF_URL") @db.VarChar(500)
-  felXmlUrl        String?   @map("FEL_XML_URL") @db.VarChar(500)
-  felCertifierName String?   @map("FEL_CERTIFIER_NAME") @db.VarChar(150)
-  felCertifierNit  String?   @map("FEL_CERTIFIER_NIT") @db.VarChar(30)
-  felEnvironment   String?   @map("FEL_ENVIRONMENT") @db.VarChar(20) // mock | stage | production — anything but production is not a valid tax document
-  felAttempts      Int       @default(0) @map("FEL_ATTEMPTS")
-  felLastAttemptAt DateTime? @map("FEL_LAST_ATTEMPT_AT")
+  felDocType               String?   @map("FEL_DOC_TYPE") @db.VarChar(10) // FACT | FPEQ | FAPE | …
+  felSatSerie              String?   @map("FEL_SAT_SERIE") @db.VarChar(40)
+  felSatNumber             String?   @map("FEL_SAT_NUMBER") @db.VarChar(40)
+  felPdfUrl                String?   @map("FEL_PDF_URL") @db.VarChar(500)
+  felXmlUrl                String?   @map("FEL_XML_URL") @db.VarChar(500)
+  felCertifierName         String?   @map("FEL_CERTIFIER_NAME") @db.VarChar(150)
+  felCertifierNit          String?   @map("FEL_CERTIFIER_NIT") @db.VarChar(30)
+  felEnvironment           String?   @map("FEL_ENVIRONMENT") @db.VarChar(20) // mock | stage | production — anything but production is not a valid tax document
+  felAttempts              Int       @default(0) @map("FEL_ATTEMPTS")
+  felLastAttemptAt         DateTime? @map("FEL_LAST_ATTEMPT_AT")
   // Annulment of the DTE when the sale is voided (SAT allows it until the end
   // of the month after issue).
-  felVoidStatus    String    @default("NONE") @map("FEL_VOID_STATUS") @db.VarChar(20) // NONE | VOIDED | FAILED
-  felVoidedAt      DateTime? @map("FEL_VOIDED_AT")
-  felVoidError     String?   @map("FEL_VOID_ERROR") @db.VarChar(500)
+  felVoidStatus            String    @default("NONE") @map("FEL_VOID_STATUS") @db.VarChar(20) // NONE | VOIDED | FAILED
+  felVoidedAt              DateTime? @map("FEL_VOIDED_AT")
+  felVoidError             String?   @map("FEL_VOID_ERROR") @db.VarChar(500)
+  // Emission date sent in the DTE. Fixed once set: a document printed in
+  // contingency keeps the moment it was handed to the customer.
+  felIssuedAt              DateTime? @map("FEL_ISSUED_AT")
+  // Contingency (SAT "Reglas y validaciones FEL" 4.1): the certifier could not
+  // be reached when the sale was made, so the customer got a "Documento en
+  // contingencia" with this random 9-digit Número de Acceso, sent along when
+  // the DTE is finally certified (within 5 days of emission).
+  felAccessNumber          String?   @unique @map("FEL_ACCESS_NUMBER") @db.VarChar(9)
+  felContingencyReason     String?   @map("FEL_CONTINGENCY_REASON") @db.VarChar(300)
+  // When the "Aviso de contingencia" covering this document was filed at the SAT.
+  felContingencyNotifiedAt DateTime? @map("FEL_CONTINGENCY_NOTIFIED_AT")
 
   branch         Branch           @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   cashier        User             @relation("CashierSales", fields: [cashierId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -1574,4 +1589,16 @@ model CreditNoteItem {
   @@index([creditNoteId])
   @@index([saleItemId])
   @@map("CREDIT_NOTE_ITEMS")
+}
+
+// The certified DTE XML exactly as the SAT has it, by authorization number
+// (sales and credit notes alike). The emisor must keep it for the
+// prescription period (4 years), and our printable invoice is drawn from it.
+// Its own table so sale queries never drag the XML along.
+model FelDocumentXml {
+  uuid      String   @id @map("UUID") @db.VarChar(60)
+  xml       String   @map("XML")
+  createdAt DateTime @default(now()) @map("CREATED_AT")
+
+  @@map("FEL_DOCUMENT_XML")
 }

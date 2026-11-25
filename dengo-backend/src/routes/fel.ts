@@ -11,14 +11,17 @@ import { log } from '../services/audit.service.js'
 import { updateStock } from '../services/inventory.service.js'
 import { felConfig, felConfigSummary } from '../lib/fel/config.js'
 import { buildDteForSale, DteBuildError, saleLineNets, type BuildSaleInput } from '../lib/fel/build.js'
-import { certifySale, certifyCreditNote, refreshSaleFel, voidSaleFel, getProvider, contextFor, schoolReceiver } from '../lib/fel/service.js'
+import { certifySale, certifyCreditNote, refreshSaleFel, voidSaleFel, getProvider, contextFor, schoolReceiver, felBranchSelect } from '../lib/fel/service.js'
+import { verifyFelDocKey } from '../lib/fel/doc-link.js'
+import { renderDocumentPdf } from '../lib/fel/invoice-doc.js'
+import { phraseText, contingencyDeadline, CONTINGENCY_TITLE, CONTINGENCY_FOOTER } from '../lib/fel/sat-rules.js'
 import { isValidGtNit, normalizeNit } from '../lib/nit.js'
 
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
 
 const dteSaleInclude = {
   customer: { select: { nit: true, name: true, email: true, address: true } },
-  branch: { select: { name: true, city: true, felEntityId: true } },
+  branch: { select: felBranchSelect },
   items: { include: { product: { select: { name: true } }, variation: { select: { name: true, isDefault: true, conversionFactor: true } } } },
   quotation: { select: { portalOrder: { select: { school: { select: { name: true, nit: true, invoiceName: true, address: true } } } } } },
 } as const
@@ -37,7 +40,9 @@ export default async function felRoutes(fastify: FastifyInstance) {
     return {
       config: felConfigSummary(cfg),
       counts: { pending, failed, voidFailed, creditNotesPending: notesPending },
-      branches: branches.map(b => ({ ...b, entityId: b.felEntityId || cfg.defaultEntityId, ready: cfg.provider === 'mock' || !!(b.felEntityId || cfg.defaultEntityId) })),
+      branches: branches.map(b => (cfg.provider === 'digifact'
+        ? { ...b, entityId: b.felEstablishmentCode || cfg.digifact.establishment, felEstablishmentCode: b.felEstablishmentCode || cfg.digifact.establishment, ready: true }
+        : { ...b, entityId: b.felEntityId || cfg.defaultEntityId, ready: cfg.provider === 'mock' || !!(b.felEntityId || cfg.defaultEntityId) })),
     }
   })
 
@@ -46,11 +51,13 @@ export default async function felRoutes(fastify: FastifyInstance) {
     const cfg = felConfig()
     const provider = getProvider(cfg)
     if (!provider) return reply.status(400).send({ error: 'FEL no está activo en este servidor (FEL_PROVIDER=none)' })
-    const branches = await prisma.branch.findMany({ where: { status: 'active' }, select: { id: true, name: true, felEntityId: true } })
+    const branches = await prisma.branch.findMany({ where: { status: 'active' }, select: { id: true, ...felBranchSelect } })
     const results = []
     for (const b of branches) {
       const ctx = contextFor(b, cfg)
       if (!ctx) { results.push({ branch: b.name, ok: false, error: 'Sin empresa de FELplex configurada' }); continue }
+      // Digifact has one login for every establishment: test it once.
+      if (provider.name === 'digifact' && results.some(r => r.ok)) { results.push({ branch: b.name, entityId: ctx.entityId, ok: true, credits: null }); continue }
       try {
         const credits = await provider.credits(ctx)
         results.push({ branch: b.name, entityId: ctx.entityId, ok: true, credits })
@@ -59,6 +66,130 @@ export default async function felRoutes(fastify: FastifyInstance) {
       }
     }
     return { provider: provider.name, environment: provider.environment, results }
+  })
+
+  // GET /api/fel/doc/:uuid.pdf?k=… — our branded invoice drawn from the
+  // certified XML (lib/fel/invoice-pdf.ts); &original=1 gives the certifier's
+  // own PDF instead. No login: the signed key in the link is the access.
+  fastify.get('/doc/:file', async (request, reply) => {
+    const { file } = request.params as { file: string }
+    const { k, original } = request.query as { k?: string; original?: string }
+    const uuid = file.replace(/\.pdf$/i, '').toUpperCase()
+    if (!/^[0-9A-F-]{36}$/.test(uuid) || !verifyFelDocKey(uuid, k)) return reply.status(404).send({ error: 'Documento no encontrado' })
+    try {
+      let pdf: Buffer | null = null
+      if (original !== '1') pdf = await renderDocumentPdf(uuid)
+      if (!pdf) {
+        const cfg = felConfig()
+        const provider = getProvider(cfg)
+        const ctx = contextFor({}, cfg)
+        if (provider?.pdf && ctx) pdf = await provider.pdf(uuid, ctx)
+      }
+      if (!pdf) return reply.status(404).send({ error: 'Documento no encontrado' })
+      return reply
+        .header('Content-Type', 'application/pdf')
+        .header('Content-Disposition', `inline; filename="DTE-${uuid}.pdf"`)
+        // Short: the copy shows ANULADO once the sale is voided.
+        .header('Cache-Control', 'private, max-age=300')
+        .send(pdf)
+    } catch (err: any) {
+      request.log.error({ err }, 'FEL PDF')
+      return reply.status(502).send({ error: `No se pudo generar el PDF: ${err?.message ?? err}` })
+    }
+  })
+
+  // GET /api/fel/receipt-info — what the POS prints on a factura it builds
+  // itself (contingency tickets, also offline): emisor, phrases, SAT legends.
+  // Cached by the POS for offline use.
+  let emisorNameCache: { nit: string; name: string | null } | null = null
+  fastify.get('/receipt-info', { preHandler: [fastify.authenticate] }, async () => {
+    const cfg = felConfig()
+    const provider = getProvider(cfg)
+    let emisorName = cfg.provider === 'digifact' ? cfg.digifact.sellerName : null
+    if (cfg.provider === 'digifact' && !emisorName && cfg.digifact.nit) {
+      if (emisorNameCache?.nit !== cfg.digifact.nit) {
+        const ctx = contextFor({}, cfg)
+        const found = provider && ctx ? await provider.lookupTaxId('NIT', cfg.digifact.nit, ctx).catch(() => null) : null
+        if (found?.name) emisorNameCache = { nit: cfg.digifact.nit, name: found.name }
+      }
+      emisorName = emisorNameCache?.name ?? null
+    }
+    return {
+      enabled: !!provider,
+      contingency: !!provider?.supportsContingency,
+      emisorNit: cfg.provider === 'digifact' ? cfg.digifact.nit : null,
+      emisorName,
+      phrases: (cfg.provider === 'digifact' ? cfg.digifact.frases : []).map(([t, e]) => phraseText(t, e)),
+      contingencyTitle: CONTINGENCY_TITLE,
+      contingencyFooter: CONTINGENCY_FOOTER,
+    }
+  })
+
+  // GET /api/fel/contingencies?from&to — documents issued in contingency,
+  // grouped into the periods the "Aviso de contingencia" asks for (SAT 4.1:
+  // start, end, establishment, reason, number of documents).
+  fastify.get('/contingencies', { preHandler: [fastify.authenticate, requirePermission('sales.view')] }, async (request) => {
+    const q = request.query as { from?: string; to?: string }
+    const to = q.to ? new Date(`${q.to}T23:59:59-06:00`) : new Date()
+    const from = q.from ? new Date(`${q.from}T00:00:00-06:00`) : new Date(to.getTime() - 60 * 86_400_000)
+    const docs = await prisma.sale.findMany({
+      where: { felAccessNumber: { not: null }, felIssuedAt: { gte: from, lte: to } },
+      select: {
+        id: true, invoiceNumber: true, felAccessNumber: true, felIssuedAt: true, felStatus: true, felCertifiedAt: true,
+        felSatSerie: true, felSatNumber: true, felContingencyReason: true, felContingencyNotifiedAt: true, isVoided: true, total: true,
+        branch: { select: { id: true, name: true, felEstablishmentCode: true } },
+      },
+      orderBy: { felIssuedAt: 'asc' },
+    })
+    const cfg = felConfig()
+    const GAP = 3 * 3600_000 // a new period once nothing went into contingency for 3 h
+    const periods: any[] = []
+    const lastByBranch = new Map<string, any>()
+    for (const d of docs) {
+      const at = d.felIssuedAt!.getTime()
+      let p = lastByBranch.get(d.branch.id)
+      if (!p || at - p.lastIssued > GAP) {
+        p = {
+          branchId: d.branch.id, branch: d.branch.name,
+          establishment: d.branch.felEstablishmentCode || (cfg.provider === 'digifact' ? cfg.digifact.establishment : null),
+          start: d.felIssuedAt, lastIssued: at, end: null as Date | null, reason: d.felContingencyReason, docs: [] as any[],
+        }
+        periods.push(p)
+        lastByBranch.set(d.branch.id, p)
+      }
+      p.lastIssued = at
+      p.docs.push({
+        id: d.id, invoiceNumber: d.invoiceNumber, accessNumber: d.felAccessNumber, issuedAt: d.felIssuedAt, status: d.felStatus,
+        certifiedAt: d.felCertifiedAt, serie: d.felSatSerie, number: d.felSatNumber, voided: d.isVoided, total: Number(d.total),
+        notifiedAt: d.felContingencyNotifiedAt, deadline: contingencyDeadline(d.felIssuedAt!),
+      })
+    }
+    return periods.map(p => {
+      const certified = p.docs.filter((d: any) => d.certifiedAt)
+      // The contingency ends when the certifier answered again: the first certification after the last document.
+      const firstCert = certified.map((d: any) => new Date(d.certifiedAt).getTime()).filter((t: number) => t >= p.lastIssued).sort()[0]
+      return {
+        branchId: p.branchId, branch: p.branch, establishment: p.establishment,
+        start: p.start, end: firstCert ? new Date(firstCert) : null, lastIssued: new Date(p.lastIssued),
+        reason: p.reason, count: p.docs.length,
+        certified: certified.length, pending: p.docs.filter((d: any) => d.status === 'PENDING').length,
+        failed: p.docs.filter((d: any) => d.status === 'FAILED').length,
+        notifiedAt: p.docs.every((d: any) => d.notifiedAt) ? p.docs[0].notifiedAt : null,
+        docs: p.docs,
+      }
+    }).reverse()
+  })
+
+  // POST /api/fel/contingencies/notified { saleIds } — the Aviso de contingencia was filed.
+  fastify.post('/contingencies/notified', { preHandler: [fastify.authenticate, requirePermission('settings.system')] }, async (request, reply) => {
+    const body = z.object({ saleIds: z.array(z.string()).min(1), undo: z.boolean().optional() }).safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: 'Datos inválidos' })
+    const r = await prisma.sale.updateMany({
+      where: { id: { in: body.data.saleIds }, felAccessNumber: { not: null } },
+      data: { felContingencyNotifiedAt: body.data.undo ? null : new Date() },
+    })
+    await log({ userId: request.user.id, action: body.data.undo ? 'FEL_CONTINGENCY_NOTICE_UNDO' : 'FEL_CONTINGENCY_NOTICE', entity: 'Sale', entityId: body.data.saleIds[0]!, newValues: { count: r.count } })
+    return { updated: r.count }
   })
 
   // GET /api/fel/tax-id/:kind/:id — NIT / CUI → name, from the SAT through the certifier.
@@ -70,7 +201,7 @@ export default async function felRoutes(fastify: FastifyInstance) {
     if (k === 'CUI' && !/^\d{13}$/.test(clean)) return reply.status(400).send({ error: 'El CUI debe tener 13 dígitos', valid: false })
     const cfg = felConfig()
     const provider = getProvider(cfg)
-    const branch = await prisma.branch.findUnique({ where: { id: request.user.branchId }, select: { felEntityId: true } })
+    const branch = await prisma.branch.findUnique({ where: { id: request.user.branchId }, select: felBranchSelect })
     const ctx = branch ? contextFor(branch, cfg) : contextFor({}, cfg)
     if (!provider || !ctx) return { valid: true, found: false, taxId: clean, note: 'Consulta a la SAT no disponible (FEL no configurado)' }
     try {

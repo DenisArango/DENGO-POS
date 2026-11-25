@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { FileText, RefreshCw, ExternalLink, AlertTriangle, CheckCircle2, Clock, Undo2, X, Eye } from 'lucide-react'
 import { toast } from 'sonner'
-import { api } from '../../lib/api'
+import { api, apiUrl } from '../../lib/api'
 import { usePermissions } from '../../hooks/usePermissions'
 
 // Factura (FEL) of a sale: SAT certification data, manual retry, the official
@@ -57,6 +57,9 @@ export interface SaleFel {
   felLastAttemptAt?: string | null
   felVoidStatus?: string
   felVoidError?: string | null
+  /** SAT contingency: the customer got a "Documento en contingencia" with this access number. */
+  felAccessNumber?: string | null
+  felIssuedAt?: string | null
 }
 
 interface DtePreview {
@@ -112,6 +115,7 @@ export default function SaleFelPanel({ sale, onChanged }: { sale: SaleFel; onCha
     ? { label: 'Anulada en la SAT', cls: 'bg-gray-100 text-gray-700', icon: Undo2 }
     : certified ? { label: 'Certificada', cls: 'bg-green-100 text-green-700', icon: CheckCircle2 }
     : sale.felStatus === 'FAILED' ? { label: 'Error de certificación', cls: 'bg-red-100 text-red-700', icon: AlertTriangle }
+    : sale.felAccessNumber ? { label: 'En contingencia', cls: 'bg-amber-100 text-amber-800', icon: Clock }
     : { label: 'Pendiente de certificación', cls: 'bg-amber-100 text-amber-700', icon: Clock }
   const Icon = status.icon
 
@@ -124,11 +128,16 @@ export default function SaleFelPanel({ sale, onChanged }: { sale: SaleFel; onCha
         {test && <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">Prueba · sin validez fiscal</span>}
         <div className="ml-auto flex flex-wrap gap-2">
           {certified && sale.felPdfUrl && (
-            <a href={sale.felPdfUrl} target="_blank" rel="noopener" className="btn-outline btn-sm flex items-center gap-1.5"><ExternalLink size={14} /> PDF oficial</a>
+            <>
+              <a href={apiUrl(sale.felPdfUrl)} target="_blank" rel="noopener" className="btn-outline btn-sm flex items-center gap-1.5"><ExternalLink size={14} /> Factura PDF</a>
+              {sale.felPdfUrl.startsWith('/api/fel/doc/') && (
+                <a href={apiUrl(`${sale.felPdfUrl}&original=1`)} target="_blank" rel="noopener" className="btn-sm text-xs text-gray-500 hover:text-gray-700 underline-offset-2 hover:underline" title="El PDF tal como lo genera el certificador">Versión del certificador</a>
+              )}
+            </>
           )}
           {!certified && !sale.isVoided && canRetry && (
             <button disabled={busy} onClick={() => {
-              if (sale.felStatus === 'FAILED' && /podría duplicarse/.test(sale.felError ?? '') && !confirm('El certificador no respondió la vez anterior. Revisa en FELplex que no se haya certificado antes de reintentar. ¿Reintentar ahora?')) return
+              if (sale.felStatus === 'FAILED' && /podría duplicarse/.test(sale.felError ?? '') && !confirm('El certificador no respondió la vez anterior. Revisa en el portal del certificador que no se haya certificado antes de reintentar. ¿Reintentar ahora?')) return
               act(() => api.post<CertifyOut>(`/api/fel/sales/${sale.id}/certify`, {}), 'Factura certificada')
             }} className="btn-primary btn-sm flex items-center gap-1.5">
               <RefreshCw size={14} className={busy ? 'animate-spin' : ''} /> Certificar ahora
@@ -154,11 +163,13 @@ export default function SaleFelPanel({ sale, onChanged }: { sale: SaleFel; onCha
           <>
             <Field label="Serie / Número SAT" value={`${sale.felSatSerie ?? '—'} · ${sale.felSatNumber ?? '—'}`} mono />
             <Field label="No. de autorización" value={sale.felAuthNumber ?? '—'} mono small />
-            <Field label="Certificada" value={sale.felCertifiedAt ? new Date(sale.felCertifiedAt).toLocaleString('es-GT') : '—'} sub={sale.felCertifierName ?? undefined} />
+            <Field label="Certificada" value={sale.felCertifiedAt ? new Date(sale.felCertifiedAt).toLocaleString('es-GT') : '—'} sub={sale.felAccessNumber ? `Emitida en contingencia · acceso ${sale.felAccessNumber}` : sale.felCertifierName ?? undefined} />
           </>
         ) : (
           <>
-            <Field label="Correlativo interno" value={`${sale.invoiceSeries ?? ''}-${sale.invoiceSeqNumber ?? ''}`} mono />
+            {sale.felAccessNumber
+              ? <Field label="No. de acceso (contingencia)" value={sale.felAccessNumber} mono sub={sale.felIssuedAt ? `Emitido ${new Date(sale.felIssuedAt).toLocaleString('es-GT')}` : undefined} />
+              : <Field label="Correlativo interno" value={`${sale.invoiceSeries ?? ''}-${sale.invoiceSeqNumber ?? ''}`} mono />}
             <Field label="Intentos" value={String(sale.felAttempts ?? 0)} sub={sale.felLastAttemptAt ? `Último: ${new Date(sale.felLastAttemptAt).toLocaleString('es-GT')}` : undefined} />
           </>
         )}
@@ -183,7 +194,7 @@ export default function SaleFelPanel({ sale, onChanged }: { sale: SaleFel; onCha
                   : n.felStatus === 'CERTIFIED' ? <span className="text-xs text-green-700">Certificada {n.felSatSerie ? `· ${n.felSatSerie}-${n.felSatNumber}` : ''}</span>
                   : <span className="text-xs text-red-700">{n.felStatus === 'FAILED' ? 'Error' : 'Pendiente'}{n.felError ? `: ${n.felError}` : ''}</span>}
                 <div className="ml-auto flex gap-2">
-                  {n.felPdfUrl && <a href={n.felPdfUrl} target="_blank" rel="noopener" className="text-xs text-primary-600 font-medium">PDF</a>}
+                  {n.felPdfUrl && <a href={apiUrl(n.felPdfUrl)} target="_blank" rel="noopener" className="text-xs text-primary-600 font-medium">PDF</a>}
                   {!n.isCancelled && n.felStatus !== 'CERTIFIED' && canCredit && (
                     <>
                       <button disabled={busy} onClick={() => act(() => api.post<CertifyOut>(`/api/fel/credit-notes/${n.id}/certify`, {}), 'Nota de crédito certificada')} className="text-xs text-primary-600 font-medium">Reintentar</button>

@@ -50,18 +50,24 @@ export async function readLicense(db: pg.Client): Promise<License | null> {
 export async function clientMetrics(databaseUrl: string): Promise<ClientMetrics> {
   return withClientDb(databaseUrl, async (db) => {
     const one = async (sql: string) => (await db.query(sql)).rows[0] ?? {}
-    const [license, today, days, last, prod, users, branches, ai, size] = await Promise.all([
-      readLicense(db).catch(() => null),
-      one(`SELECT count(*)::int n, coalesce(sum("TOTAL"),0)::float t FROM "SALES" WHERE "IS_VOIDED" = false AND "CREATED_AT" >= ${GT_TODAY}`),
-      db.query(`SELECT to_char(("CREATED_AT" - interval '6 hours')::date, 'YYYY-MM-DD') d, count(*)::int n, coalesce(sum("TOTAL"),0)::float t
+    // one connection runs one query at a time: run them in sequence (pg@9 drops queuing)
+    const seq = async <T extends unknown[]>(...fns: { [K in keyof T]: () => Promise<T[K]> }): Promise<T> => {
+      const out: unknown[] = []
+      for (const f of fns) out.push(await f())
+      return out as T
+    }
+    const [license, today, days, last, prod, users, branches, ai, size] = await seq(
+      () => readLicense(db).catch(() => null),
+      () => one(`SELECT count(*)::int n, coalesce(sum("TOTAL"),0)::float t FROM "SALES" WHERE "IS_VOIDED" = false AND "CREATED_AT" >= ${GT_TODAY}`),
+      () => db.query(`SELECT to_char(("CREATED_AT" - interval '6 hours')::date, 'YYYY-MM-DD') d, count(*)::int n, coalesce(sum("TOTAL"),0)::float t
         FROM "SALES" WHERE "IS_VOIDED" = false AND "CREATED_AT" >= ${GT_TODAY} - interval '13 days' GROUP BY 1 ORDER BY 1`),
-      one(`SELECT max("CREATED_AT") m FROM "SALES"`),
-      one(`SELECT count(*)::int n FROM "PRODUCTS" WHERE "IS_ACTIVE" = true`),
-      one(`SELECT count(*)::int n FROM "USERS" WHERE "IS_ACTIVE" = true`),
-      db.query(`SELECT "NAME" name, "CODE" code FROM "BRANCHES" ORDER BY "NAME"`),
-      one(`SELECT count(*)::int n FROM "AI_USAGE" WHERE "SUCCESS" = true AND "CREATED_AT" >= ${GT_MONTH}`).catch(() => ({ n: 0 })),
-      one(`SELECT pg_database_size(current_database())::float s`),
-    ])
+      () => one(`SELECT max("CREATED_AT") m FROM "SALES"`),
+      () => one(`SELECT count(*)::int n FROM "PRODUCTS" WHERE "IS_ACTIVE" = true`),
+      () => one(`SELECT count(*)::int n FROM "USERS" WHERE "IS_ACTIVE" = true`),
+      () => db.query(`SELECT "NAME" name, "CODE" code FROM "BRANCHES" ORDER BY "NAME"`),
+      () => one(`SELECT count(*)::int n FROM "AI_USAGE" WHERE "SUCCESS" = true AND "CREATED_AT" >= ${GT_MONTH}`).catch(() => ({ n: 0 })),
+      () => one(`SELECT pg_database_size(current_database())::float s`),
+    )
     // 14 days with zeros filled in, oldest first
     const byDay = new Map(days.rows.map((r: any) => [r.d, r]))
     const salesByDay = Array.from({ length: 14 }, (_, i) => {

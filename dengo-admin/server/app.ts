@@ -31,7 +31,7 @@ export async function buildApp(config: Config, routes: RouteModule[] = []) {
   const here = dirname(fileURLToPath(import.meta.url))
   const webDist = [join(here, 'web'), join(here, '..', 'dist', 'web')].find(p => existsSync(join(p, 'index.html')))
   if (webDist) {
-    await app.register(fastifyStatic, { root: webDist, wildcard: false })
+    await app.register(fastifyStatic, { root: webDist }) // wildcard: files are looked up per request, so a rebuild needs no restart
     app.setNotFoundHandler((req, reply) => {
       if (req.url.startsWith('/api/')) return reply.status(404).send({ error: 'No existe' })
       return reply.sendFile('index.html')

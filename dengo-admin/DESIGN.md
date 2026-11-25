@@ -11,6 +11,8 @@ colors:
   coral: "#E07A5F"
   coral-press: "#c95f43"
   coral-glow: "#efa088"
+  coral-action: "#B5523A"
+  coral-action-press: "#9c4530"
   ice-floor: "#EEF3F7"
   tile-white: "#ffffff"
   status-online: "#10b981"
@@ -76,13 +78,13 @@ spacing:
   tile-pad-feature: "28px"
 components:
   button-primary:
-    backgroundColor: "{colors.coral}"
+    backgroundColor: "{colors.coral-action}"
     textColor: "{colors.tile-white}"
     typography: "{typography.body}"
     rounded: "{rounded.control}"
     padding: "10px 16px"
   button-primary-hover:
-    backgroundColor: "{colors.coral-press}"
+    backgroundColor: "{colors.coral-action-press}"
   button-ink:
     backgroundColor: "{colors.ink-rail}"
     textColor: "{colors.tile-white}"
@@ -162,7 +164,7 @@ A two-brand-color palette (ink blue and coral) over a cool ice floor, with a fix
 - **Tile White** (tile-white): tile and control surfaces, with a faint vertical fade to #fbfdfe.
 
 ### Named Rules
-**The Coral Means Act Rule.** Coral marks what you can do or what is happening today: the primary action, focus, caret, today's bar. It is never a status color; failure is rose.
+**The Coral Means Act Rule.** Coral marks what you can do or what is happening today: the primary action, focus, caret, today's bar. It is never a status color; failure is rose. Buttons that carry white text use the darker action coral (#B5523A, 4.96:1; #9c4530 when pressed), because white on the brand coral #E07A5F is only 2.95:1; the brand coral stays on icons, bars and details.
 
 **The Label With Color Rule.** A status hue never travels alone. Dots sit inside a pill with its word ("En línea", "Suspendido"), step dots carry an icon, meters carry their numbers.
 

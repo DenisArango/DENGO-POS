@@ -44,7 +44,8 @@
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[14px] font-semibold transition duration-150 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50;
   }
-  .btn-primary { @apply btn bg-coral-500 text-white shadow-coral hover:bg-coral-600; }
+  /* action buttons use the darker coral: white text on #E07A5F is only 3.4:1, on #B5523A it is 4.9:1 */
+  .btn-primary { @apply btn bg-coral-cta text-white shadow-coral hover:bg-coral-cta-hover; }
   .btn-ink { @apply btn bg-ink-700 text-white shadow-tile hover:bg-ink-800; }
   .btn-soft { @apply btn bg-white text-ink-800 shadow-tile ring-1 ring-ink-900/10 hover:bg-ink-50; }
   .btn-danger { @apply btn bg-rose-600 text-white shadow-tile hover:bg-rose-700; }

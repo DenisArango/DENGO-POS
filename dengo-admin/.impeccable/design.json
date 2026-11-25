@@ -243,6 +243,12 @@
           "#e2e8f0",
           "#f8fafc"
         ]
+      },
+      "coral-action": {
+        "role": "accent",
+        "displayName": "Coral de acción",
+        "canonical": "#B5523A",
+        "note": "Fondo de botones con texto blanco (4.96:1); pressed #9c4530. El coral #E07A5F queda para íconos y detalles."
       }
     },
     "typographyMeta": {
@@ -374,7 +380,7 @@
       "refersTo": "button-primary",
       "description": "The one main action of a view.",
       "html": "<button class=\"ds-btn-primary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg>Nuevo cliente</button>",
-      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:10px 16px;font:600 14px/1.4 'Inter Variable',Inter,system-ui,sans-serif;cursor:pointer;transition:background .15s,transform .15s;background:#E07A5F;color:#fff;box-shadow:0 1px 0 0 rgba(255,255,255,.35) inset, 0 6px 14px -4px rgba(201,95,67,.55), 0 2px 4px rgba(201,95,67,.3);} .ds-btn-primary:hover{background:#c95f43;} .ds-btn-primary:active{transform:scale(.97);} .ds-btn-primary:focus-visible{outline:2px solid #E07A5F;outline-offset:2px;}"
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:10px 16px;font:600 14px/1.4 'Inter Variable',Inter,system-ui,sans-serif;cursor:pointer;transition:background .15s,transform .15s;background:#B5523A;color:#fff;box-shadow:0 1px 0 0 rgba(255,255,255,.35) inset, 0 6px 14px -4px rgba(201,95,67,.55), 0 2px 4px rgba(201,95,67,.3);} .ds-btn-primary:hover{background:#9c4530;} .ds-btn-primary:active{transform:scale(.97);} .ds-btn-primary:focus-visible{outline:2px solid #E07A5F;outline-offset:2px;}"
     },
     {
       "name": "Ink Button",

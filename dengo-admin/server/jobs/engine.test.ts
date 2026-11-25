@@ -42,7 +42,7 @@ test('candado: un segundo trabajo del mismo cliente se rechaza; otro cliente sí
 test('el resultado (contraseñas) no se guarda en disco; el aviso marca warning', async () => {
   const m = new JobManager(config, sh)
   const job = m.start({ kind: 't', title: 't', client: 'C', steps: [
-    { id: 'a', title: 'a', run: async (ctx) => { ctx.result.password = 'secreta-123'; ctx.warn('DNS pendiente') } },
+    { id: 'a', title: 'a', run: async (ctx) => { ctx.secret('secreta-123'); ctx.log('clave: secreta-123'); ctx.result.password = 'secreta-123'; ctx.warn('DNS pendiente') } },
   ] })
   const end = await waitJob(m, job.id)
   assert.equal(end.result?.password, 'secreta-123')
@@ -50,4 +50,5 @@ test('el resultado (contraseñas) no se guarda en disco; el aviso marca warning'
   const file = join(config.adminDir, 'jobs', `${job.id}.json`)
   assert.ok(existsSync(file))
   assert.ok(!readFileSync(file, 'utf8').includes('secreta-123'))
+  assert.ok(end.lines.some(l => l.text === 'clave: ••••••'))
 })

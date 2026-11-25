@@ -18,6 +18,8 @@ export interface StepCtx {
   result: Record<string, any>
   /** Marks the running step as done-with-a-warning (e.g. DNS not pointing yet) instead of ok. */
   warn: (note: string) => void
+  /** Hides this value (a password, a key) from every log line from now on. */
+  secret: (value: string) => void
 }
 
 export interface Step {
@@ -116,7 +118,10 @@ export class JobManager {
 
   private async execute(r: Running, steps: Step[], data: Record<string, any>) {
     const v = r.view
-    const log = (text: string) => {
+    const secrets = new Set<string>()
+    const log = (raw: string) => {
+      let text = raw
+      for (const sec of secrets) text = text.split(sec).join('••••••')
       const line = { t: Date.now(), text }
       v.lines.push(line)
       if (v.lines.length > MAX_LINES) v.lines.splice(0, v.lines.length - MAX_LINES)
@@ -127,6 +132,7 @@ export class JobManager {
       config: this.config, log, data, result: {},
       sh: (cmd, args, opts: ShOpts = {}) => this.sh(cmd, args, { ...opts, onLine: (l) => { log(l); opts.onLine?.(l) } }),
       warn: (note) => { warnNote = note },
+      secret: (value) => { if (value && value.length >= 4) secrets.add(value) },
     }
     const setStep = (i: number, patch: Partial<JobView['steps'][number]>) => {
       Object.assign(v.steps[i]!, patch)

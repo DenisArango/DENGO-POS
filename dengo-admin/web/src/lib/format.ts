@@ -27,5 +27,8 @@ export function duration(ms: number) {
   return h < 48 ? `${h} h` : `${Math.floor(h / 24)} días`
 }
 
+/** «1 archivo», «2 archivos» */
+export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
 export const dayLabel = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-GT', { weekday: 'short', day: 'numeric' })
 export const dateTime = (iso: string) => new Date(iso).toLocaleString('es-GT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })

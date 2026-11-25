@@ -30,8 +30,10 @@ export interface Config {
   globals: Globals
 }
 
-/** Reads `.env` from the working directory into process.env (existing vars win). */
-export function loadDotEnv(dir = process.cwd()) {
+/** The panel's `.env` (in the working directory) as an object. It never goes into process.env,
+ * so nothing in it can leak to the client processes the panel starts. */
+export function readDotEnv(dir = process.cwd()): Record<string, string> {
+  const out: Record<string, string> = {}
   try {
     const text = readFileSync(resolve(dir, '.env'), 'utf8')
     for (const line of text.split(/\r?\n/)) {
@@ -39,11 +41,10 @@ export function loadDotEnv(dir = process.cwd()) {
       if (!t || t.startsWith('#')) continue
       const i = t.indexOf('=')
       if (i < 0) continue
-      const k = t.slice(0, i).trim()
-      const v = t.slice(i + 1).trim().replace(/^["']|["']$/g, '')
-      if (process.env[k] === undefined) process.env[k] = v
+      out[t.slice(0, i).trim()] = t.slice(i + 1).trim().replace(/^["']|["']$/g, '')
     }
   } catch { /* no .env */ }
+  return out
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {

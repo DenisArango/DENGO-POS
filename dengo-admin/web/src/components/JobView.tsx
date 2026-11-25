@@ -1,11 +1,20 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react'
-import { Check, X, Undo2, Minus, AlertTriangle, KeyRound, ExternalLink, PartyPopper, TerminalSquare } from 'lucide-react'
+import { X, Undo2, Minus, AlertTriangle, KeyRound, ExternalLink, PartyPopper, TerminalSquare } from 'lucide-react'
 import type { Job, JobStep } from '../lib/api'
 import { useJob } from '../lib/useJob'
 import { duration } from '../lib/format'
 import { CopyButton, Spinner, Tile } from './ui'
+
+/** The check draws itself as a stroke, like a hand ticking the step. */
+function DrawnCheck() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <motion.path d="M5 12.5l4.2 4.2L19 7" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.38, ease: [0.65, 0, 0.35, 1], delay: 0.08 }} />
+    </svg>
+  )
+}
 
 function StepDot({ s }: { s: JobStep }) {
   const base = 'relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-4 ring-white'
@@ -15,7 +24,7 @@ function StepDot({ s }: { s: JobStep }) {
     </span>
   )
   const map: Record<string, [string, ReactNode]> = {
-    ok: ['bg-emerald-500 text-white', <Check key="c" className="h-4 w-4" strokeWidth={3} />],
+    ok: ['bg-emerald-500 text-white', <DrawnCheck key="c" />],
     warning: ['bg-amber-400 text-amber-950', <AlertTriangle key="w" className="h-4 w-4" />],
     failed: ['bg-rose-500 text-white', <X key="x" className="h-4 w-4" strokeWidth={3} />],
     undone: ['bg-amber-100 text-amber-700', <Undo2 key="u" className="h-4 w-4" />],
@@ -71,7 +80,8 @@ export default function JobView({ id, compact = false }: { id: string; compact?:
 
   return (
     <div className="grid gap-5 xl:grid-cols-12">
-      <Tile hover={false} className="relative p-6 xl:col-span-5">
+      <motion.div className="xl:col-span-5" animate={job.status === 'ok' ? { y: -4 } : { y: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 18 }}>
+      <Tile hover={false} className={`relative h-full p-6 transition-shadow duration-500 ${job.status === 'ok' ? 'shadow-lift ring-emerald-500/25' : ''}`}>
         {job.status === 'ok' && job.kind === 'provision' && <Confetti />}
         <div className="mb-5 flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -104,6 +114,7 @@ export default function JobView({ id, compact = false }: { id: string; compact?:
           <p className="mt-5 rounded-xl bg-amber-50 p-3 text-[13px] text-amber-900 ring-1 ring-amber-500/20">Se deshizo lo que alcanzó a hacerse: no quedó nada a medias. Corrige el problema y vuelve a intentarlo.</p>
         )}
       </Tile>
+      </motion.div>
 
       <div className="flex min-w-0 flex-col gap-5 xl:col-span-7">
         <AnimatePresence>

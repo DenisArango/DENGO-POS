@@ -41,9 +41,12 @@ export async function authRoutes(app: FastifyInstance, opts: { config: Config })
   })
 
   // Everything else under /api needs the session.
+  // Judged on the route the router matched (already decoded), not on the raw URL: a raw check
+  // let /%61pi/... reach /api/* routes without a session.
+  const PUBLIC = new Set(['/api/login', '/api/logout', '/api/me'])
   app.addHook('onRequest', async (req, reply) => {
-    const url = req.url.split('?')[0]
-    if (!url.startsWith('/api/') || url === '/api/login' || url === '/api/logout' || url === '/api/me') return
+    const route = req.routeOptions.url ?? ''
+    if (!route.startsWith('/api/') || PUBLIC.has(route)) return
     if (!hasSession(req)) return reply.status(401).send({ error: 'Inicia sesión' })
   })
 }

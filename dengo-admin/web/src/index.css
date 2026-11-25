@@ -15,7 +15,6 @@
     background-image:
       radial-gradient(1200px 600px at 100% -10%, rgba(224, 122, 95, 0.09), transparent 60%),
       radial-gradient(900px 500px at -10% 110%, rgba(30, 77, 104, 0.08), transparent 60%);
-    background-attachment: fixed;
   }
   ::selection { background: rgba(224, 122, 95, 0.28); color: #0b1f2a; }
   :focus-visible { outline: 2px solid #E07A5F; outline-offset: 2px; border-radius: 10px; }
@@ -40,7 +39,7 @@
   .h-display { @apply font-display font-bold tracking-[-0.02em] text-ink-950; }
   .label { @apply text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-500; }
   .input {
-    @apply w-full rounded-xl border-0 bg-white px-3.5 py-2.5 text-[14px] text-ink-950 shadow-well ring-1 ring-ink-900/10 transition placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-coral-400;
+    @apply w-full rounded-xl border-0 bg-white px-3.5 py-2.5 text-[14px] text-ink-950 shadow-well ring-1 ring-ink-900/10 transition placeholder:text-ink-500/80 focus:outline-none focus:ring-2 focus:ring-coral-400;
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[14px] font-semibold transition duration-150 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50;

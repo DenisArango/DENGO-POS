@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { api, startJob, type ClientDetail, type Backup, type License } from '../lib/api'
 import { usePoll } from '../lib/usePoll'
-import { money, bytes, duration, since, dayLabel, dateTime } from '../lib/format'
+import { money, bytes, duration, since, dayLabel, dateTime, plural } from '../lib/format'
 import { Tile, IconBadge, StatusPill, CountUp, Bars, Meter, Toggle, Field, Spinner, ConfirmButton, Skeleton, CopyButton } from '../components/ui'
 import JobView from '../components/JobView'
 
@@ -87,8 +87,8 @@ export default function ClientPage() {
         <Tile hover={false} className="p-6 md:col-span-6 xl:col-span-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="label">Vendido hoy</p>
-              <p className="font-display text-[40px] font-bold leading-none tracking-tight">{m ? <CountUp value={m.totalToday} format={money} /> : '—'}</p>
+              <p className="text-[13px] font-semibold text-ink-500">Vendido hoy</p>
+              <p className="font-display text-[52px] font-bold leading-none tracking-tight">{m ? <CountUp value={m.totalToday} format={money} /> : '—'}</p>
               <p className="mt-1.5 text-[13px] text-ink-500">{m ? `${m.salesToday} ventas · última ${since(m.lastSaleAt)}` : c.metricsError}</p>
             </div>
             {m && (
@@ -101,8 +101,17 @@ export default function ClientPage() {
           </div>
           {m && (
             <>
-              <div className="mt-6"><Bars data={m.salesByDay} height={120} /></div>
-              <div className="mt-2 flex justify-between text-[11px] text-ink-400">{m.salesByDay.filter((_, i) => i % 3 === 0 || i === 13).map(d => <span key={d.day}>{dayLabel(d.day)}</span>)}</div>
+              {m.salesByDay.some(d => d.total) ? (
+                <>
+                  <div className="mt-6"><Bars data={m.salesByDay} height={120} /></div>
+                  <div className="mt-2 flex justify-between text-[11px] text-ink-500">{m.salesByDay.filter((_, i) => i % 3 === 0 || i === 13).map(d => <span key={d.day}>{dayLabel(d.day)}</span>)}</div>
+                </>
+              ) : (
+                <div className="mt-5 flex items-center gap-3 rounded-2xl bg-ice/70 px-4 py-3 text-[13px] text-ink-600 shadow-well">
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-ink-300" />
+                  Sin ventas en los últimos 14 días{m.lastSaleAt ? ` · la última fue ${since(m.lastSaleAt)}` : ' · todavía no ha vendido'}
+                </div>
+              )}
               <div className="mt-4 flex flex-wrap gap-1.5">{m.branches.map(b => <span key={b.code} className="rounded-lg bg-ink-50 px-2 py-1 text-[12px] font-medium text-ink-700">{b.name} <span className="font-mono text-ink-400">{b.code}</span></span>)}</div>
             </>
           )}
@@ -115,7 +124,7 @@ export default function ClientPage() {
             <span className="rounded-lg bg-white/10 px-2 py-1 font-mono text-[12px]">{c.name}</span>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2.5">
-            <Stat icon={HeartPulse} label="Health" value={c.health.ok ? `${c.health.ms ?? 0} ms` : 'sin respuesta'} />
+            <Stat icon={HeartPulse} label="Respuesta" value={c.health.ok ? `${c.health.ms ?? 0} ms` : 'sin respuesta'} />
             <Stat icon={Timer} label="Arriba hace" value={c.proc?.uptimeMs ? duration(c.proc.uptimeMs) : '—'} />
             <Stat icon={Cpu} label="Memoria" value={c.proc ? bytes(c.proc.memory) : '—'} />
             <Stat icon={Repeat} label="Reinicios" value={String(c.proc?.restarts ?? '—')} />
@@ -183,7 +192,7 @@ export default function ClientPage() {
           <div className="mb-4 flex items-center gap-3">
             <IconBadge icon={DatabaseBackup} tone="teal" size="sm" />
             <h3 className="font-display text-[18px] font-bold">Respaldos</h3>
-            <span className="ml-auto text-[12px] text-ink-500">{backups.data?.backups.length ?? 0} archivos</span>
+            <span className="ml-auto text-[12px] text-ink-500">{plural(backups.data?.backups.length ?? 0, 'archivo', 'archivos')}</span>
           </div>
           {backups.data?.backups.length ? (
             <ul className="max-h-[220px] space-y-1.5 overflow-auto pr-1">

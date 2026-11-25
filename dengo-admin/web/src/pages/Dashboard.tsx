@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { usePoll } from '../lib/usePoll'
 import type { Client, Job, ServerInfo } from '../lib/api'
-import { money, bytes, since } from '../lib/format'
+import { money, bytes, since, plural } from '../lib/format'
 import { Tile, IconBadge, StatusPill, CountUp, Bars, Meter, Skeleton } from '../components/ui'
 
 export const MODULES = [
@@ -17,15 +17,15 @@ export const MODULES = [
   { key: 'aiEnabled', label: 'IA', icon: Sparkles, tone: 'bg-coral-500' },
 ] as const
 
-function ClientTile({ c, i }: { c: Client; i: number }) {
+function ClientTile({ c, i, featured = false }: { c: Client; i: number; featured?: boolean }) {
   const nav = useNavigate()
   const m = c.metrics
   const lic = m?.license
   return (
-    <Tile as="button" delay={0.04 * i} onClick={() => nav(`/clientes/${c.name}`)} className="group flex flex-col gap-4 p-5">
+    <Tile as="button" delay={0.04 * i} onClick={() => nav(`/clientes/${c.name}`)} className={`group flex flex-col gap-4 ${featured ? 'p-7 md:col-span-2' : 'p-5'}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="h-display truncate text-[20px] leading-tight">{c.displayName}</h3>
+          <h3 className={`h-display flex items-center gap-1.5 truncate leading-tight ${featured ? 'text-[28px]' : 'text-[20px]'}`}>{c.displayName}<ArrowUpRight className="h-4 w-4 shrink-0 text-coral-500 opacity-0 transition group-hover:opacity-100" aria-hidden /></h3>
           <p className="mt-0.5 truncate font-mono text-[12px] text-ink-500">{c.domain ? `pos.${c.domain}` : 'sin dominio'}</p>
         </div>
         <StatusPill status={c.status} />
@@ -35,10 +35,10 @@ function ClientTile({ c, i }: { c: Client; i: number }) {
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-[12px] font-semibold text-ink-500">Vendido hoy</p>
-            <p className="font-display text-[26px] font-bold leading-none tracking-tight text-ink-950"><CountUp value={m.totalToday} format={money} /></p>
+            <p className={`font-display font-bold leading-none tracking-tight text-ink-950 ${featured ? 'text-[48px]' : 'text-[28px]'}`}><CountUp value={m.totalToday} format={money} /></p>
             <p className="mt-1 text-[12px] text-ink-500">{m.salesToday} ventas · última {since(m.lastSaleAt)}</p>
           </div>
-          <div className="w-[46%]"><Bars data={m.salesByDay} height={52} /></div>
+          <div className={featured ? 'w-[58%]' : 'w-[46%]'}><Bars data={m.salesByDay} height={featured ? 92 : 52} /></div>
         </div>
       ) : (
         <p className="flex items-center gap-2 rounded-xl bg-rose-50 px-3 py-2 text-[13px] text-rose-700"><AlertTriangle className="h-4 w-4" /> No se pudo leer su base: {c.metricsError}</p>
@@ -57,8 +57,8 @@ function ClientTile({ c, i }: { c: Client; i: number }) {
 
       {m && (
         <div className="grid grid-cols-3 gap-2 border-t border-ink-900/[0.06] pt-3 text-[12px] text-ink-600">
-          <span className="flex items-center gap-1.5"><Package className="h-3.5 w-3.5 text-ink-400" />{m.products} productos</span>
-          <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-ink-400" />{m.users} usuarios</span>
+          <span className="flex items-center gap-1.5"><Package className="h-3.5 w-3.5 text-ink-400" />{plural(m.products, 'producto', 'productos')}</span>
+          <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-ink-400" />{plural(m.users, 'usuario', 'usuarios')}</span>
           <span className="flex items-center gap-1.5"><Store className="h-3.5 w-3.5 text-ink-400" />{m.branches.length} {m.branches.length === 1 ? 'tienda' : 'tiendas'}</span>
         </div>
       )}
@@ -69,7 +69,6 @@ function ClientTile({ c, i }: { c: Client; i: number }) {
           <span className="tabular whitespace-nowrap">{m!.aiUsedThisMonth}/{lic.aiMonthlyLimit ?? '∞'} IA</span>
         </div>
       )}
-      <ArrowUpRight className="absolute right-4 top-4 h-4 w-4 text-coral-500 opacity-0 transition group-hover:opacity-100" aria-hidden />
     </Tile>
   )
 }
@@ -81,7 +80,7 @@ export function JobIcon({ status }: { status: Job['status'] }) {
   return <XCircle className="h-4 w-4 text-rose-600" />
 }
 
-function ServerTile({ s }: { s: ServerInfo | null }) {
+function ServerTile({ s, clients }: { s: ServerInfo | null; clients: Client[] }) {
   if (!s) return <Tile ink className="p-6"><Skeleton className="h-40 bg-white/10" /></Tile>
   const memUsed = s.memTotal - s.memFree
   const diskUsed = s.diskTotal - s.diskFree
@@ -94,8 +93,7 @@ function ServerTile({ s }: { s: ServerInfo | null }) {
       <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-coral-400/20 blur-2xl" />
       <div className="relative flex items-center justify-between">
         <div>
-          <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-200">Servidor</p>
-          <h3 className="font-display text-[20px] font-bold">{s.hostname}</h3>
+          <h3 className="font-display text-[22px] font-bold leading-tight">Servidor <span className="text-coral-300">{s.hostname}</span></h3>
         </div>
         <Link to="/servidor" className="rounded-lg bg-white/10 px-2.5 py-1.5 text-[12px] font-semibold text-white transition hover:bg-white/20">Ver</Link>
       </div>
@@ -120,6 +118,27 @@ function ServerTile({ s }: { s: ServerInfo | null }) {
           <span className="tabular text-white">{s.load.map(l => l.toFixed(2)).join(' · ')} <span className="text-ink-300">({s.cpus} CPU)</span></span>
         </div>
       </div>
+      <div className="relative mt-6">
+        <h4 className="mb-3 text-[13px] font-semibold text-ink-100">Memoria por cliente</h4>
+        <ul className="space-y-2.5">
+          {clients.map((c, i) => {
+            const procs = s.procs.filter(p => p.name === c.name || p.name === `${c.name}-web`)
+            const mem = procs.reduce((a, p) => a + p.memory, 0)
+            const pct = Math.min(100, (mem / (512 * 1024 * 1024)) * 100) // bar full at 512 MB
+            return (
+              <li key={c.name}>
+                <div className="mb-1 flex items-center justify-between gap-3 text-[12px]">
+                  <span className="flex min-w-0 items-center gap-2 text-white"><span className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.status === 'online' ? 'bg-emerald-400' : c.status === 'suspended' ? 'bg-amber-300' : 'bg-rose-400'}`} /><span className="truncate">{c.displayName}</span></span>
+                  <span className="shrink-0 tabular text-ink-200">{mem ? bytes(mem) : 'sin proceso'}</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ type: 'spring', stiffness: 90, damping: 18, delay: 0.35 + i * 0.05 }} className="h-full rounded-full bg-ink-200" />
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
     </Tile>
   )
 }
@@ -134,6 +153,8 @@ export default function Dashboard() {
   const archived = list.filter(c => c.archived)
   const pending = server.data?.setup.filter(x => !x.ok) ?? []
   const online = active.filter(c => c.status === 'online').length
+  // the busiest client today leads the board at double width
+  const ranked = [...active].sort((a, b) => (b.metrics?.totalToday ?? 0) - (a.metrics?.totalToday ?? 0) || (b.metrics?.products ?? 0) - (a.metrics?.products ?? 0))
 
   return (
     <div className="mx-auto max-w-[1440px]">
@@ -153,7 +174,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
         <div className="grid content-start gap-5 md:grid-cols-2 xl:col-span-8">
           {clients.loading && !clients.data && [0, 1].map(i => <div key={i} className="tile p-5"><Skeleton className="h-52" /></div>)}
-          {active.map((c, i) => <ClientTile key={c.name} c={c} i={i} />)}
+          {ranked.map((c, i) => <ClientTile key={c.name} c={c} i={i} featured={i === 0 && ranked.length > 1} />)}
           {!clients.loading && active.length === 0 && (
             <Tile className="flex flex-col items-start gap-4 p-8 md:col-span-2">
               <IconBadge icon={Store} tone="coral" size="lg" />
@@ -187,7 +208,7 @@ export default function Dashboard() {
               </div>
             </Tile>
           )}
-          <ServerTile s={server.data} />
+          <ServerTile s={server.data} clients={active} />
           <Tile delay={0.12} className="p-5" hover={false}>
             <div className="mb-3 flex items-center justify-between">
               <h3 className="font-display text-[16px] font-bold">Últimos trabajos</h3>
@@ -200,7 +221,7 @@ export default function Dashboard() {
                     <Link to={`/trabajos/${j.id}`} className="flex items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-ink-50">
                       <JobIcon status={j.status} />
                       <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink-800">{j.title}</span>
-                      <span className="shrink-0 text-[12px] text-ink-400">{since(j.startedAt)}</span>
+                      <span className="shrink-0 text-[12px] text-ink-500">{since(j.startedAt)}</span>
                     </Link>
                   </li>
                 ))}

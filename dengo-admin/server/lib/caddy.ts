@@ -64,5 +64,10 @@ export async function applyCaddy(c: Config, sh: Sh, name: string, content: strin
     throw new Error('Caddy rechazó la configuración; se dejó como estaba')
   }
   const r = await sh('sudo', ['-n', 'systemctl', 'reload', 'caddy'], { onLine: log })
-  if (r.code !== 0) throw new Error('No se pudo recargar Caddy (revisa el permiso de sudo en «Servidor»)')
+  if (r.code !== 0) {
+    // put the file back too: otherwise the next reload for any client would publish it
+    if (before === null) await rm(file, { force: true })
+    else await writeFile(file, before)
+    throw new Error('No se pudo recargar Caddy (revisa el permiso de sudo en «Servidor»); se dejó como estaba')
+  }
 }

@@ -123,7 +123,7 @@ export function Bars({ data, height = 56, tone = 'ink' }: { data: { day: string;
           />
         )
       })}
-      {empty && <span className={`absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[11px] font-semibold ${tone === 'light' ? 'text-white/70' : 'text-ink-400'}`}>Sin ventas en {data.length} días</span>}
+      {empty && <span className={`absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[11px] font-semibold ${tone === 'light' ? 'text-white/70' : 'text-ink-500'}`}>Sin ventas en {data.length} días</span>}
     </div>
   )
 }

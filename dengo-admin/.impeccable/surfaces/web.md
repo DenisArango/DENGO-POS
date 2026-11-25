@@ -19,6 +19,6 @@ STORY: Denis abre el panel, ve qué clientes están en línea y cuánto vendiero
 
 FIRST VIEWPORT: Riel a la izquierda; arriba título "Clientes" con acciones Nuevo cliente (coral) y Desplegar; debajo grilla bento de 12 columnas: mosaicos de cliente (estado con pulso, dominio, ventas de hoy, barras de 14 días, módulos), mosaico alto de servidor (RAM/disco/carga), mosaico de trabajos recientes y, si falta preparación, mosaico ámbar de checklist.
 
-FORM: bento grid con volumen fijado por el usuario. seed: none (pinned) — «bento grid con volumen, pero que tenga animaciones y cosas que le den vida». Movimiento firma: el "listón de pasos" de un trabajo que se enciende en vivo con el log SSE, con checks que se dibujan y el mosaico que se eleva al terminar.
+FORM: bento grid con volumen fijado por el usuario. seed: none (pinned) — mundo: «bento grid con volumen, pero que tenga animaciones y cosas que le den vida»; primera pantalla: «un panel de administracion para dar de alta nuevos clientes» y administrar los existentes («nuevos y existentes»). Movimiento firma: el "listón de pasos" de un trabajo que se enciende en vivo con el log SSE, con checks que se dibujan y el mosaico que se eleva al terminar.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance

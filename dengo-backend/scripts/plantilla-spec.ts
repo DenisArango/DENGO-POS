@@ -119,6 +119,14 @@ export function buildTemplate(): Buffer {
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer
 }
 
+/** A cell as text: numbers in full (no exponent, no rounding), dates as YYYY-MM-DD. */
+function cellText(v: unknown): string {
+  if (v === null || v === undefined) return ''
+  if (typeof v === 'number') return Number.isInteger(v) ? BigInt(Math.round(v)).toString() : String(v)
+  if (v instanceof Date) return v.toISOString().slice(0, 10)
+  return String(v)
+}
+
 /** Reads a filled template (any sheet may be missing or empty). */
 export function readTemplate(buf: Buffer): { data: Workbook; sheetsFound: string[]; headerIssues: Issue[] } {
   const wb = XLSX.read(buf, { type: 'buffer' })
@@ -131,7 +139,9 @@ export function readTemplate(buf: Buffer): { data: Workbook; sheetsFound: string
     const real = byName.get(norm(s.name))
     if (!real) continue
     sheetsFound.push(s.name)
-    const rows = XLSX.utils.sheet_to_json<(string | number)[]>(wb.Sheets[real]!, { header: 1, defval: '', raw: false, blankrows: false })
+    // raw values: formatted text turns 13-digit barcodes into «7.40123E+12»
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[real]!, { header: 1, defval: '', raw: true, blankrows: false })
+      .map(r => r.map(cellText))
     if (!rows.length) continue
     const headers = rows[0]!.map(h => norm(String(h)))
     const colIndex = new Map<string, number>()

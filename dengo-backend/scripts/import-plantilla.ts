@@ -195,9 +195,17 @@ async function main() {
     }
   }
 
+  // Printed right away: if anything later fails, these users exist and nobody would see their passwords again.
+  if (creds.length) {
+    console.log('\n🔑 Contraseñas temporales (se muestran una sola vez):')
+    for (const c of creds) console.log(`   ${c.email}  →  ${c.password}`)
+    console.log('')
+  }
+
   // ── Fotos ──
   if (args.images && existsSync(args.images)) {
     let put = 0, skip = 0, unknown = 0
+    const bad: string[] = []
     const files = readdirSync(args.images, { recursive: true }).map(String).filter(f => /\.(jpe?g|png|webp)$/i.test(f))
     for (const f of files) {
       const key = basename(f, extname(f)).trim()
@@ -205,21 +213,20 @@ async function main() {
       if (!pid || pid.startsWith(DRY)) { if (!pid) unknown++; else put++; continue }
       const p = await prisma.product.findUnique({ where: { id: pid }, select: { imageUrl: true } })
       if (p?.imageUrl) { skip++; continue }
-      if (!dry) {
+      try { // one unreadable photo never stops the rest
         const jpg = await sharp(readFileSync(join(args.images, f))).rotate().resize({ width: 1280, height: 1280, fit: 'inside', withoutEnlargement: true })
           .flatten({ background: '#ffffff' }).jpeg({ quality: 82 }).toBuffer()
-        await prisma.product.update({ where: { id: pid }, data: { imageUrl: `data:image/jpeg;base64,${jpg.toString('base64')}` } })
+        if (!dry) await prisma.product.update({ where: { id: pid }, data: { imageUrl: `data:image/jpeg;base64,${jpg.toString('base64')}` } })
+        put++
+      } catch {
+        bad.push(f)
       }
-      put++
     }
     summary.fotos = { nuevos: put, existentes: skip, extra: unknown }
+    if (bad.length) console.log(`⚠️  ${bad.length} fotos no se pudieron leer y se omitieron: ${bad.slice(0, 10).join(', ')}`)
   }
 
   for (const [k, s] of Object.entries(summary)) console.log(k === 'inventario' ? `✅ inventario: ${s.nuevos} cantidades cargadas${s.extra ? `, ${s.extra} SKU sin producto` : ''}` : `✅ ${k}: ${s.nuevos} nuevos, ${s.existentes} ya existían${s.extra ? ` (${k === 'clientes' ? `Q${s.extra} de saldo migrado` : `${s.extra} sin producto`})` : ''}`)
-  if (creds.length) {
-    console.log('\n🔑 Contraseñas temporales (se muestran una sola vez):')
-    for (const c of creds) console.log(`   ${c.email}  →  ${c.password}`)
-  }
   console.log(dry ? '\n✅ Revisión completa: no se escribió nada.' : '\n✅ Importación completa.')
   console.log(`@@RESUMEN ${JSON.stringify({ ok: true, dry, summary, credentials: creds })}`)
 }

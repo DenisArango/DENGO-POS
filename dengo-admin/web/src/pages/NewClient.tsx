@@ -174,7 +174,7 @@ export default function NewClient() {
                 {step === 0 && (
                   <div className="grid gap-5 md:grid-cols-2">
                     <Field label="Nombre del negocio" hint="Así aparece en el panel, el POS y la factura" error={errors.displayName} className="md:col-span-2">
-                      <input className="input text-[16px]" autoFocus value={f.displayName} onChange={e => set('displayName', e.target.value)} placeholder="Librería El Búho" />
+                      <input className="input text-[16px]" autoFocus value={f.displayName} onChange={e => set('displayName', e.target.value)} placeholder="Nombre comercial, ej. Papelería La Estrella" />
                     </Field>
                     <Field label="Persona de contacto"><input className="input" value={f.contact.name} onChange={e => set('contact', { ...f.contact, name: e.target.value })} /></Field>
                     <Field label="Teléfono"><input className="input" value={f.contact.phone} onChange={e => set('contact', { ...f.contact, phone: e.target.value })} placeholder="5555 1234" /></Field>
@@ -186,7 +186,7 @@ export default function NewClient() {
                 {step === 1 && (
                   <div className="space-y-6">
                     <Field label="Dominio del cliente" hint="El que compró el cliente, sin www" error={errors.domain}>
-                      <input className="input font-mono text-[15px]" autoFocus value={f.domain} onChange={e => set('domain', e.target.value)} placeholder="libreriaelbuho.com" />
+                      <input className="input font-mono text-[15px]" autoFocus value={f.domain} onChange={e => set('domain', e.target.value)} placeholder="minegocio.com" />
                     </Field>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="well p-4">

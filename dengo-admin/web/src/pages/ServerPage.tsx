@@ -77,7 +77,7 @@ export default function ServerPage() {
               })}
             </div>
           ) : <Skeleton className="h-40 bg-white/10" />}
-          <h4 className="mb-2 mt-5 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-200">Procesos pm2</h4>
+          <h4 className="mb-2 mt-5 text-[13px] font-semibold text-ink-100">Procesos pm2</h4>
           <ul className="space-y-1.5">
             {s?.procs.map(p => (
               <li key={p.name} className="flex items-center gap-3 rounded-xl bg-white/[0.05] px-3 py-2 text-[13px]">

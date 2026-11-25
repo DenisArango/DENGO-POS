@@ -28,7 +28,8 @@ export async function provisionRoutes(app: FastifyInstance, { config }: { config
     const body = provisionSchema.safeParse(req.body)
     if (!body.success) return reply.status(400).send({ error: 'Revisa los datos', issues: issues(body.error) })
     try {
-      const job = jobs.start({ kind: 'provision', title: `Alta de ${body.data.displayName}`, client: `new:${body.data.displayName}`, steps: provisionSteps(config, body.data) })
+      const job = jobs.start({ kind: 'provision', title: `Alta de ${body.data.displayName}`, client: 'alta', steps: provisionSteps(config, body.data) })
+      // client 'alta' = one alta at a time: ports are only reserved when cliente.json is written at the end
       return reply.status(202).send({ jobId: job.id })
     } catch (e: any) {
       return reply.status(e.statusCode ?? 500).send({ error: e.message, jobId: e.jobId })

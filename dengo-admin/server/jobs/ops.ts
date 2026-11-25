@@ -50,6 +50,11 @@ export async function listBackups(c: Config, name?: string) {
 
 const procNames = (r: ClientRecord) => [r.file.name, ...(r.file.web ? [`${r.file.name}-web`] : [])]
 
+/** The backend reads its .env: restart it with a clean environment (--update-env with only the
+ * shell's allowlist) so stale variables saved in pm2 never override it. A -web process keeps
+ * the environment it was started with (HOST/PORT/DENGO_API), so no --update-env there. */
+const restartArgs = (name: string) => (name.endsWith('-web') ? ['restart', name] : ['restart', name, '--update-env'])
+
 async function waitHealthy(c: Config, ctx: StepCtx, r: ClientRecord, seconds = 25) {
   for (let i = 0; i < seconds; i++) {
     const h = await health(c, r.file.apiPort, true)
@@ -63,7 +68,7 @@ export function restartSteps(c: Config, r: ClientRecord): Step[] {
   return [
     { id: 'restart', title: 'Reiniciar procesos', run: async (ctx) => {
       for (const n of procNames(r)) {
-        const x = await ctx.sh('pm2', ['restart', n, '--update-env'])
+        const x = await ctx.sh('pm2', restartArgs(n))
         if (x.code !== 0) throw new Error(`pm2 no pudo reiniciar ${n}`)
       }
     } },
@@ -152,7 +157,7 @@ export function propagateSteps(c: Config): Step[] {
       for (const name of ctx.data.clients as string[]) {
         const r = await readClient(c, name)
         if (!r) continue
-        await ctx.sh('pm2', ['restart', name, '--update-env'])
+        await ctx.sh('pm2', restartArgs(name))
         await waitHealthy(c, ctx, r)
       }
     } },
@@ -199,7 +204,7 @@ export function deploySteps(c: Config, opts: { acceptDataLoss?: boolean } = {}):
       await npm(ctx, join(app, 'dengo-web'), ['run', 'build'])
     } },
     { id: 'restart', title: 'Reiniciar a todos los clientes', run: async (ctx) => {
-      for (const r of await active()) for (const n of procNames(r)) await ctx.sh('pm2', ['restart', n, '--update-env'])
+      for (const r of await active()) for (const n of procNames(r)) await ctx.sh('pm2', restartArgs(n))
       await ctx.sh('pm2', ['save'])
     } },
     { id: 'health', title: 'Revisar que todos respondan', run: async (ctx) => {

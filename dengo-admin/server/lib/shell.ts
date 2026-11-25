@@ -16,6 +16,18 @@ export interface ShResult { code: number; out: string }
 /** Programs that touch the real server: in simulate mode they're only logged. */
 const SIMULATED = new Set(['pm2', 'sudo', 'systemctl', 'caddy', 'git', 'npm', 'pg_dump', 'psql', 'gzip', 'bash'])
 
+// What a child (pm2, npx, pg_dump…) inherits from the panel: only what a program needs to run.
+// Never the panel's PORT/HOST, its secrets or pm2's own variables — pm2 copies the caller's
+// environment into the apps it starts, and a client backend reads process.env before its .env.
+const INHERIT = new Set(['PATH', 'Path', 'PATHEXT', 'HOME', 'USER', 'LOGNAME', 'SHELL', 'LANG', 'LC_ALL', 'TZ', 'TMPDIR', 'TEMP', 'TMP',
+  'PM2_HOME', 'SystemRoot', 'SYSTEMROOT', 'windir', 'ComSpec', 'COMSPEC', 'APPDATA', 'LOCALAPPDATA', 'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH',
+  'ProgramFiles', 'ProgramData', 'NUMBER_OF_PROCESSORS', 'PROCESSOR_ARCHITECTURE', 'DOCKER_HOST'])
+export function childEnv(extra: Record<string, string> = {}): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(process.env)) if (v !== undefined && INHERIT.has(k)) out[k] = v
+  return { ...out, ...extra }
+}
+
 export type Sh = (cmd: string, args: string[], opts?: ShOpts) => Promise<ShResult>
 
 export function makeShell(mode: Mode, simHook?: (cmd: string, args: string[]) => ShResult | void): Sh {
@@ -30,7 +42,7 @@ export function makeShell(mode: Mode, simHook?: (cmd: string, args: string[]) =>
     }
     return new Promise((resolve) => {
       const child = spawn(cmd, args, {
-        cwd: opts.cwd, env: { ...process.env, ...opts.env }, shell: process.platform === 'win32',
+        cwd: opts.cwd, env: childEnv(opts.env), shell: process.platform === 'win32',
       })
       let out = ''
       let buf = ''

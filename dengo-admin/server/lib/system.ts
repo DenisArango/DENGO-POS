@@ -54,7 +54,11 @@ export async function serverInfo(c: Config, sh: Sh): Promise<ServerInfo> {
       hint: `sudo visudo -f /etc/sudoers.d/dengo-admin\n${os.userInfo().username} ALL=(root) NOPASSWD: /usr/bin/caddy validate --config /etc/caddy/Caddyfile, /usr/bin/systemctl reload caddy` },
     { id: 'pg', label: 'PostgreSQL (rol del panel con CREATEDB y CREATEROLE)', ok: pgOk, hint: "sudo -u postgres psql -c \"CREATE ROLE dengo_admin LOGIN PASSWORD '<clave>' CREATEDB CREATEROLE\"\nY en el .env del panel: PG_ADMIN_URL=postgresql://dengo_admin:<clave>@localhost:5432/postgres" },
     { id: 'server-ip', label: 'IP pública configurada', ok: !!c.serverIp, hint: 'SERVER_IP=<ip del servidor> en el .env del panel' },
-    { id: 'globals', label: 'Claves de Anthropic y Digifact', ok: !!c.globals.anthropicKey && !!c.globals.digifactUser, hint: 'ANTHROPIC_API_KEY, DIGIFACT_USER y DIGIFACT_PASSWORD en el .env del panel' },
+    { id: 'anthropic', label: 'Clave de Claude (IA de los clientes)', ok: !!c.globals.anthropicKey, hint: `nano ${c.adminDir}/.env   → ANTHROPIC_API_KEY=sk-ant-…
+pm2 restart dengo-admin` },
+    { id: 'digifact', label: 'Usuario de Digifact (facturación)', ok: !!c.globals.digifactUser && !!c.globals.digifactPassword, hint: `nano ${c.adminDir}/.env   → DIGIFACT_USER=… y DIGIFACT_PASSWORD=…
+pm2 restart dengo-admin
+Luego: Servidor → «Pasar a todos los clientes»` },
   ]
 
   return {

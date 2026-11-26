@@ -28,3 +28,10 @@ test('sin cookie /api/clients → 401; cookie falsificada → 401', async () => 
   assert.equal((await app.inject({ method: 'GET', url: '/api/clients' })).statusCode, 401)
   assert.equal((await app.inject({ method: 'GET', url: '/api/clients', cookies: { dadm: String(Date.now() + 1e9) } })).statusCode, 401)
 })
+
+test('/api/health responde sin sesión (lo usa el monitor del servidor)', async () => {
+  const app = await buildApp(config)
+  const r = await app.inject({ method: 'GET', url: '/api/health' })
+  assert.equal(r.statusCode, 200)
+  assert.equal(r.json().status, 'ok')
+})

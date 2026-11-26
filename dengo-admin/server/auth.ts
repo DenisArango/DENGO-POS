@@ -52,6 +52,9 @@ export async function authRoutes(app: FastifyInstance, opts: { config: Config })
     return { ok: true }
   })
 
+  // For the server monitor (scripts/monitor-servidor.mjs pings /api/health of every pm2 process).
+  app.get('/api/health', { config: { rateLimit: false } }, async () => ({ status: 'ok', uptime: Math.round(process.uptime()) }))
+
   app.get('/api/me', async (req, reply) => {
     if (!hasSession(req)) return reply.status(401).send({ error: 'Inicia sesión' })
     return { ok: true, mode: config.mode }
@@ -60,7 +63,7 @@ export async function authRoutes(app: FastifyInstance, opts: { config: Config })
   // Everything else under /api needs the session.
   // Judged on the route the router matched (already decoded), not on the raw URL: a raw check
   // let /%61pi/... reach /api/* routes without a session.
-  const PUBLIC = new Set(['/api/login', '/api/logout', '/api/me'])
+  const PUBLIC = new Set(['/api/login', '/api/logout', '/api/me', '/api/health'])
   app.addHook('onRequest', async (req, reply) => {
     const route = req.routeOptions.url ?? ''
     if (!route.startsWith('/api/') || PUBLIC.has(route)) return

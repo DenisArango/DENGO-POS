@@ -26,7 +26,7 @@ export interface Config {
   frontendDist: string
   serverIp: string
   pgAdminUrl: string
-  db: { user: string; password: string; host: string; port: number }
+  db: { host: string; port: number }
   globals: Globals
 }
 
@@ -71,8 +71,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     serverIp: env.SERVER_IP || '',
     pgAdminUrl: env.PG_ADMIN_URL || '',
     db: {
-      user: env.DB_APP_USER || 'dengo',
-      password: env.DB_APP_PASSWORD || '',
       host: env.DB_HOST || 'localhost',
       port: Number(env.DB_PORT || 5432),
     },

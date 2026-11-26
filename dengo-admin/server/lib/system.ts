@@ -52,7 +52,7 @@ export async function serverInfo(c: Config, sh: Sh): Promise<ServerInfo> {
     { id: 'caddy-import', label: 'Caddy importa los bloques del panel', ok: sim || caddyfile.includes(importLine), hint: `Agrega al final de /etc/caddy/Caddyfile:\n${importLine}` },
     { id: 'sudoers', label: 'Permiso para validar y recargar Caddy', ok: sim || (sudo.code === 0 && /caddy/.test(sudo.out) && /systemctl reload caddy/.test(sudo.out)),
       hint: `sudo visudo -f /etc/sudoers.d/dengo-admin\n${os.userInfo().username} ALL=(root) NOPASSWD: /usr/bin/caddy validate --config /etc/caddy/Caddyfile, /usr/bin/systemctl reload caddy` },
-    { id: 'pg', label: 'PostgreSQL (rol con CREATEDB)', ok: pgOk, hint: 'Revisa PG_ADMIN_URL en el .env del panel' },
+    { id: 'pg', label: 'PostgreSQL (rol del panel con CREATEDB y CREATEROLE)', ok: pgOk, hint: "sudo -u postgres psql -c \"CREATE ROLE dengo_admin LOGIN PASSWORD '<clave>' CREATEDB CREATEROLE\"\nY en el .env del panel: PG_ADMIN_URL=postgresql://dengo_admin:<clave>@localhost:5432/postgres" },
     { id: 'server-ip', label: 'IP pública configurada', ok: !!c.serverIp, hint: 'SERVER_IP=<ip del servidor> en el .env del panel' },
     { id: 'globals', label: 'Claves de Anthropic y Digifact', ok: !!c.globals.anthropicKey && !!c.globals.digifactUser, hint: 'ANTHROPIC_API_KEY, DIGIFACT_USER y DIGIFACT_PASSWORD en el .env del panel' },
   ]
@@ -69,7 +69,7 @@ async function pgReachable(c: Config): Promise<boolean> {
   const db = new pg.Client({ connectionString: c.pgAdminUrl, connectionTimeoutMillis: 3000 })
   try {
     await db.connect()
-    const r = await db.query('SELECT rolcreatedb OR rolsuper AS ok FROM pg_roles WHERE rolname = current_user')
+    const r = await db.query('SELECT (rolcreatedb AND rolcreaterole) OR rolsuper AS ok FROM pg_roles WHERE rolname = current_user')
     return !!r.rows[0]?.ok
   } catch { return false } finally { await db.end().catch(() => {}) }
 }

@@ -16,10 +16,9 @@ export const hex = (bytes: number) => randomBytes(bytes).toString('hex')
 /** A Prisma-compatible id for rows the panel inserts with plain SQL. */
 export const newId = () => `c${hex(12)}`
 
-export function databaseUrl(c: Config, db: string) {
-  const u = encodeURIComponent(c.db.user)
-  const p = encodeURIComponent(c.db.password)
-  return `postgresql://${u}${c.db.password ? `:${p}` : ''}@${c.db.host}:${c.db.port}/${db}?schema=public`
+/** The client's DATABASE_URL: its own user (same name as its database) and password. */
+export function databaseUrl(c: Config, db: string, user: string, password: string) {
+  return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${c.db.host}:${c.db.port}/${db}?schema=public`
 }
 
 /** The Digifact/FEL part of a client's .env. Usuario y clave son los globales del panel. */

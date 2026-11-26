@@ -1,7 +1,6 @@
 import { mkdir, writeFile, rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import pg from 'pg'
 import { z } from 'zod'
 import type { Config } from '../config.js'
 import type { Step, StepCtx } from './engine.js'
@@ -12,6 +11,7 @@ import { takenPorts, writeClientFile, type ClientFile } from '../lib/registry.js
 import { withClientDb } from '../lib/clientdb.js'
 import { applyCaddy, renderClientCaddy } from '../lib/caddy.js'
 import { checkDns } from '../lib/system.js'
+import { createClientDb, dropClientDb, clientDbExists } from '../lib/pgadmin.js'
 import { databaseUrl, felEnv, aiEnv, corsFor, hex, newId } from '../lib/client-env.js'
 import { health } from '../lib/pm2.js'
 
@@ -50,13 +50,6 @@ export const provisionSchema = z.object({
 })
 export type ProvisionInput = z.infer<typeof provisionSchema>
 
-async function adminDb<T>(c: Config, fn: (db: pg.Client) => Promise<T>): Promise<T> {
-  if (!c.pgAdminUrl) throw new Error('Falta PG_ADMIN_URL en el .env del panel')
-  const db = new pg.Client({ connectionString: c.pgAdminUrl, connectionTimeoutMillis: 5000 })
-  await db.connect()
-  try { return await fn(db) } finally { await db.end().catch(() => {}) }
-}
-
 const randomPassword = () => {
   const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
   return Array.from(hex(12).match(/../g)!, h => abc[parseInt(h, 16) % abc.length]).join('') + '!7'
@@ -87,22 +80,22 @@ export function provisionSteps(c: Config, input: ProvisionInput): Step[] {
         const p = await planClient(c, input)
         const dir = join(c.clientsDir, p.name)
         if (existsSync(dir)) throw new Error(`Ya existe la carpeta del cliente ${p.name}`)
-        const exists = await adminDb(c, db => db.query('SELECT 1 FROM pg_database WHERE datname = $1', [p.db]))
-        if (exists.rowCount) throw new Error(`Ya existe la base de datos ${p.db}`)
-        Object.assign(ctx.data, p, { dir, url: databaseUrl(c, p.db), caddyPending: false })
-        ctx.secret(c.db.password)
+        if (await clientDbExists(c, p.db)) throw new Error(`Ya existe una base de datos o un usuario de base llamado ${p.db}`)
+        const dbPassword = hex(24)
+        ctx.secret(dbPassword)
+        Object.assign(ctx.data, p, { dir, dbPassword, url: databaseUrl(c, p.db, p.db, dbPassword), caddyPending: false })
         ctx.log(`  Cliente ${p.name} · base ${p.db} · API :${p.apiPort}${p.webPort ? ` · web :${p.webPort}` : ''} · ${p.domain}`)
       },
     },
     {
-      id: 'createdb', title: 'Crear la base de datos',
+      id: 'createdb', title: 'Crear su usuario y su base de datos',
       run: async (ctx) => {
-        await adminDb(c, db => db.query(`CREATE DATABASE "${d(ctx).db}" OWNER "${c.db.user.replace(/"/g, '')}" ENCODING 'UTF8'`))
-        ctx.log(`  CREATE DATABASE ${d(ctx).db}`)
+        await createClientDb(c, d(ctx).db, (ctx.data as { dbPassword: string }).dbPassword)
+        ctx.log(`  CREATE ROLE ${d(ctx).db} · CREATE DATABASE ${d(ctx).db} OWNER ${d(ctx).db}`)
       },
       undo: async (ctx) => {
-        await adminDb(c, db => db.query(`DROP DATABASE IF EXISTS "${d(ctx).db}" WITH (FORCE)`))
-        ctx.log(`  DROP DATABASE ${d(ctx).db}`)
+        await dropClientDb(c, d(ctx).db)
+        ctx.log(`  DROP DATABASE ${d(ctx).db} · DROP ROLE ${d(ctx).db}`)
       },
     },
     {

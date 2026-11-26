@@ -30,8 +30,8 @@ En el `.env` del panel llena:
 |---|---|
 | `DENGO_ROOT` | `/home/deploy/dengo` |
 | `SERVER_IP` | IP pública del servidor (se compara con el DNS de cada dominio) |
-| `PG_ADMIN_URL` | Un rol con permiso para crear bases. Lo más simple: el mismo usuario de las bases de los clientes, con `sudo -u postgres psql -c 'ALTER ROLE <usuario> CREATEDB'` |
-| `DB_APP_USER` / `DB_APP_PASSWORD` / `DB_HOST` / `DB_PORT` | El usuario que va dentro del `DATABASE_URL` de cada cliente (el mismo que usa Variedades Dayana) |
+| `PG_ADMIN_URL` | El rol del panel, con `CREATEDB` y `CREATEROLE` (no superusuario): `sudo -u postgres psql -c "CREATE ROLE dengo_admin LOGIN PASSWORD '<clave>' CREATEDB CREATEROLE"`. Con él, cada cliente nuevo recibe su propio usuario y su base, como Dayana |
+| `DB_HOST` / `DB_PORT` | Dónde se conectan los clientes (normalmente `localhost` y `5432`) |
 | `ANTHROPIC_API_KEY` | La clave única de IA |
 | `DIGIFACT_USER` / `DIGIFACT_PASSWORD` | Tu usuario de API de Digifact |
 
